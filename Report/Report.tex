@@ -1,0 +1,85 @@
+\documentclass[a4paper]{article}
+
+\usepackage[top=2cm, bottom=2cm, left=3cm, right=3cm]{geometry}
+
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+
+\usepackage{appendix}
+\usepackage[numbers]{natbib}
+
+
+% For \begin{acknowledgements}
+% From: http://www.latex-community.org/forum/viewtopic.php?f=47&t=5464
+\makeatletter
+\newcommand\ackname{Acknowledgements}
+\if@titlepage
+  \newenvironment{acknowledgements}{%
+      \titlepage
+      \null\vfil
+      \@beginparpenalty\@lowpenalty
+      \begin{center}%
+        \bfseries \ackname
+        \@endparpenalty\@M
+      \end{center}}%
+     {\par\vfil\null\endtitlepage}
+\else
+  \newenvironment{acknowledgements}{%
+      \if@twocolumn
+        \section*{\abstractname}%
+      \else
+        \small
+        \begin{center}%
+          {\bfseries \ackname\vspace{-.5em}\vspace{\z@}}%
+        \end{center}%
+        \quotation
+      \fi}
+      {\if@twocolumn\else\endquotation\fi}
+\fi
+\makeatother
+
+\title{Towards Debugging Wireless Sensor Network Applications}
+\date{October 2012 - July 2013}
+\author{}
+
+\begin{document}
+
+\maketitle
+
+%No numbering on first and second pages
+\pagestyle{empty}
+\thispagestyle{empty}
+
+\newpage
+
+\begin{abstract}
+Abstract
+\newline
+\newline
+\noindent \textbf{Keywords} - Keywords;
+\end{abstract}
+\newpage
+
+\begin{acknowledgements}
+Acknowledgements
+\end{acknowledgements}
+\newpage
+
+\pagestyle{plain}
+\setcounter{page}{1}
+
+\tableofcontents
+\clearpage
+
+\clearpage
+
+\appendixpage
+\addappheadtotoc
+\appendix
+
+\section{References}
+\renewcommand{\refname}{\vspace{-1cm}}
+\bibliographystyle{myplainnat}
+\bibliography{../Bib/references.bib}
+
+\end{document}

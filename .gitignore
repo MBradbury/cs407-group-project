@@ -6,3 +6,6 @@
 /Report/Report.blg
 /Report/Report.bbl
 /Report/Report.aux
+.DS_Store
+*.fls
+*.fdb_latexmk

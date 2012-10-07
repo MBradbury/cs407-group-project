@@ -1,140 +1,338 @@
-@article{levis2003tossim,
-  title={Tossim: A simulator for tinyos networks},
-  author={Levis, P. and Lee, N.},
-  journal={UC Berkeley, September},
-  pages={24},
-  year={2003},
-  url={http://www.cs.berkeley.edu/~pal/pubs/nido.pdf}
-},
+% This file was created with JabRef 2.8.1.
+% Encoding: Cp1252
 
-@INPROCEEDINGS{4116633,
-author={Osterlind, F. and Dunkels, A. and Eriksson, J. and Finne, N. and Voigt, T.},
-booktitle={Local Computer Networks, Proceedings 2006 31st IEEE Conference on}, title={Cross-Level Sensor Network Simulation with COOJA},
-year={2006},
-month={nov.},
-volume={},
-number={},
-pages={641 -648},
-abstract={Simulators for wireless sensor networks are a valuable tool for system development. However, current simulators can only simulate a single level of a system at once. This makes system development and evolution difficult since developers cannot use the same simulator for both high-level algorithm development and low-level development such as device-driver implementations. We propose cross-level simulation, a novel type of wireless sensor network simulation that enables holistic simultaneous simulation at different levels. We present an implementation of such a simulator, COOJA, a simulator for the Contiki sensor node operating system. COOJA allows for simultaneous simulation at the network level, the operating system level, and the machine code instruction set level. With COOJA, we show the feasibility of the cross-level simulation approach},
-keywords={COOJA simulator;Contiki sensor node operating system;cross-level sensor network simulation;holistic simultaneous simulation;wireless sensor network simulation;digital simulation;telecommunication computing;wireless sensor networks;},
-doi={10.1109/LCN.2006.322172},
-ISSN={0742-1303},
-url={http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4116633&contentType=Conference+Publications&searchField%3DSearch_All%26queryText%3Dcooja}
-},
-
-@ARTICLE{4476299,
-author={Raymond, D.R. and Marchany, R.C. and Brownfield, M.I. and Midkiff, S.F.},
-journal={Vehicular Technology, IEEE Transactions on}, title={Effects of Denial-of-Sleep Attacks on Wireless Sensor Network MAC Protocols},
-year={2009},
-month={jan. },
-volume={58},
-number={1},
-pages={367 -380},
-abstract={Wireless platforms are becoming less expensive and more powerful, enabling the promise of widespread use for everything from health monitoring to military sensing. Like other networks, sensor networks are vulnerable to malicious attack. However, the hardware simplicity of these devices makes defense mechanisms designed for traditional networks infeasible. This paper explores the denial-of-sleep attack, in which a sensor node's power supply is targeted. Attacks of this type can reduce the sensor lifetime from years to days and have a devastating impact on a sensor network. This paper classifies sensor network denial-of-sleep attacks in terms of an attacker's knowledge of the medium access control (MAC) layer protocol and ability to bypass authentication and encryption protocols. Attacks from each classification are then modeled to show the impacts on four sensor network MAC protocols, i.e., Sensor MAC (S-MAC), Timeout MAC (T-MAC), Berkeley MAC (B-MAC), and Gateway MAC (G-MAC). Implementations of selected attacks on S-MAC, T-MAC, and B-MAC are described and analyzed in detail to validate their effectiveness and analyze their efficiency. Our analysis shows that the most efficient attack on S-MAC can keep a cluster of nodes awake 100% of the time by an attacker that sleeps 99% of the time. Attacks on T-MAC can keep victims awake 100% of the time while the attacker sleeps 92% of the time. A framework for preventing denial-of-sleep attacks in sensor networks is also introduced. With full protocol knowledge and an ability to penetrate link-layer encryption, all wireless sensor network MAC protocols are susceptible to a full domination attack, which reduces the network lifetime to the minimum possible by maximizing the power consumption of the nodes' radio subsystem. Even without the ability to penetrate encryption, subtle attacks can be launched, which reduce the network lifetime by orders of magnitude. If sensor networks are to meet current expectations, they mu- - st be robust in the face of network attacks to include denial-of-sleep.},
-keywords={Berkeley MAC;Gateway MAC;MAC protocols;Sensor MAC;Timeout MAC;bypass authentication;denial-of-sleep attacks;encryption protocols;health monitoring;medium access control layer protocol;military sensing;node radio subsystem;wireless sensor network;access protocols;cryptography;wireless sensor networks;},
-doi={10.1109/TVT.2008.921621},
-ISSN={0018-9545},
-url={http://ieeexplore.ieee.org//xpl/articleDetails.jsp?tp=&arnumber=4476299&url=http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=4476299}
-},
-
-@INPROCEEDINGS{6128220,
-author={Jun Hu and Zeng Ma and Chunsheng Sun},
-booktitle={Computational Intelligence and Security (CIS), 2011 Seventh International Conference on}, title={Energy-efficient MAC Protocol Designed for Wireless Sensor Network for IoT},
-year={2011},
-month={dec.},
-volume={},
-number={},
-pages={721 -725},
-abstract={Wireless sensor network is an emerging network technology in the 21st century. Its emergence brings a new phase in the development of network. Lately, there are more and more investigations on wireless sensor network MAC protocols. The research results on MAC protocol is summarized, some typical MAC protocols are analyzed, such as S-MAC, T-MAC, #x03BC;-MAC, and etc. A new power controlled sensor MAC protocol(PC-MAC) is introduced for wireless sensor networks, which can provide an effective mechanism for improving energy efficiencies for decreasing the transmitting power directly and avoiding collision. The simulation results show that energy can be saved up to 50%-96% by it.},
-keywords={IoT;collision avoidance;emerging network technology;energy-efficient MAC protocol design;power controlled sensor MAC protocol;wireless sensor network;access protocols;telecommunication congestion control;wireless sensor networks;},
-doi={10.1109/CIS.2011.164},
-ISSN={},
-url={http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6128220&contentType=Conference+Publications&queryText%3Dwireless+sensor+network+mac}
-},
-
-@INPROCEEDINGS{4469515,
-author={Zhiwei Zhao and Xinming Zhang and Peng Sun and Pengxi Liu},
-booktitle={Communications and Networking in China, 2007. CHINACOM '07. Second International Conference on}, title={A Traffic Queue-aware MAC Protocol for Wireless Sensor Networks},
-year={2007},
-month={aug.},
-volume={},
-number={},
-pages={841 -844},
-abstract={Wireless sensor networks have been widely used in many important areas. Medium access control (MAC) protocols take charge of the distribution and administration of sensor network's wireless channel, and have a significant influence on the function and performance of sensor networks. Most traditional MAC protocols do not consider traffic loads directly, but the amount of traffic affects the efficiency of channel assignment and energy utilization. This paper summarizes existing wireless sensor network MAC protocols, and proposes a novel traffic queue-aware sensor MAC protocol (QSMAC) which is based on sensor MAC (SMAC) protocol and can predict the amount of data traffic in network with the average increase rate of data packets in a node's buffer queue. The simulation indicates that the performance of our protocol is much better than that of SMAC protocol in data packet's delay, the consumption of energy, the reception ratio of data packets and the throughput of the network.},
-keywords={buffer queue;data packets;data traffic;medium access control protocols;network throughput;traffic queue-aware MAC protocol;wireless channel;wireless sensor networks;access protocols;queueing theory;telecommunication traffic;wireless channels;wireless sensor networks;},
-doi={10.1109/CHINACOM.2007.4469515},
-ISSN={},
-url={http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4469515&contentType=Conference+Publications&queryText%3Dwireless+sensor+network+mac}
-},
-
-@INPROCEEDINGS{5751321,
-author={Bates, B. and Keating, A. and Kinicki, R.},
-booktitle={Wireless and Pervasive Computing (ISWPC), 2011 6th International Symposium on}, title={Energy analysis of four wireless sensor network MAC protocols},
-year={2011},
-month={feb.},
-volume={},
-number={},
-pages={1 -6},
-abstract={Using the MAC Layer Architecture framework, four power-aware MAC protocols were implemented in TinyOS on TelosB motes. Indoor energy measurements over a single-hop network topology were conducted using three wireless sensor network traffic patterns (broadcast, convergecast and local gossip). AS-MAC was the most energy-efficient for convergecast and local gossip traffic, while SCP-MAC was best for broadcast traffic. Over the three traffic patterns, BAS-MAC used slightly less energy than Crankshaft and BAS-MAC significantly outperformed AS-MAC in the broadcast traffic scenario.},
-keywords={AS-MAC;BAS-MAC;MAC layer architecture framework;SCP-MAC;TelosB motes;TinyOS;broadcast traffic;crankshaft;energy-efficient;four wireless sensor network MAC protocol;indoor energy measurement;single-hop network topology;three wireless sensor network traffic patterns;access protocols;telecommunication traffic;wireless sensor networks;},
-doi={10.1109/ISWPC.2011.5751321},
-ISSN={},
-url={http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=5751321&contentType=Conference+Publications&queryText%3Dwireless+sensor+network+mac}
-},
-
-@ARTICLE{4633359,
-author={Bulut, A. and Koudas, N. and Meka, A. and Singh, A.K. and Srivastava, D.},
-journal={Knowledge and Data Engineering, IEEE Transactions on}, title={Optimization Techniques for Reactive Network Monitoring},
-year={2009},
-month={sept. },
-volume={21},
-number={9},
-pages={1343 -1357},
-abstract={We develop a framework for minimizing the communication overhead of monitoring global system parameters in IP networks and sensor networks. A global system predicate is defined as a conjunction of the local properties of different network elements. A typical example is to identify the time windows when the outbound traffic from each network element exceeds a predefined threshold. Our main idea is to optimize the scheduling of local event reporting across network elements for a given network traffic load and local event frequencies. The system architecture consists of N distributed network elements coordinated by a central monitoring station. Each network element monitors a set of local properties and the central station is responsible for identifying the status of global parameters registered in the system. We design an optimal algorithm, the partition and rank (PAR) scheme, when the local events are independent; whereas, when they are dependent, we show that the problem is NP-complete and develop two efficient heuristics: the PAR for dependent events (PAR-D) and adaptive (Ada) algorithms, which adapt well to changing network conditions, and outperform the current state of the art techniques in terms of communication cost.},
-keywords={IP networks;NP-complete;adaptive algorithms;central monitoring station;communication cost;dependent events;distributed network elements;global system parameter monitoring;heuristics;optimization techniques;outbound traffic;partition and rank scheme;reactive network monitoring;sensor networks;IP networks;communication complexity;optimisation;telecommunication traffic;wireless sensor networks;},
-doi={10.1109/TKDE.2008.203},
-ISSN={1041-4347},
-url={http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4633359&contentType=Journals+%26+Magazines&searchField%3DSearch_All%26queryText%3Dwireless+sensor+network+global+predicate}
-},
-
-@ARTICLE{1368893,
-author={Al-Karaki, J.N. and Kamal, A.E.},
-journal={Wireless Communications, IEEE}, title={Routing techniques in wireless sensor networks: a survey},
-year={2004},
-month={dec.},
-volume={11},
-number={6},
-pages={ 6 - 28},
-abstract={ Wireless sensor networks consist of small nodes with sensing, computation, and wireless communications capabilities. Many routing, power management, and data dissemination protocols have been specifically designed for WSNs where energy awareness is an essential design issue. Routing protocols in WSNs might differ depending on the application and network architecture. In this article we present a survey of state-of-the-art routing techniques in WSNs. We first outline the design challenges for routing protocols in WSNs followed by a comprehensive survey of routing techniques. Overall, the routing techniques are classified into three categories based on the underlying network structure: flit, hierarchical, and location-based routing. Furthermore, these protocols can be classified into multipath-based, query-based, negotiation-based, QoS-based, and coherent-based depending on the protocol operation. We study the design trade-offs between energy and communication overhead savings in every routing paradigm. We also highlight the advantages and performance issues of each routing technique. The article concludes with possible future research areas.},
-keywords={ QoS-based protocol; coherent-based protocol; flit routing; hierarchical routing; location-based routing; multipath-based protocol; negotiation-based protocol; network structure; quality of service; query-based protocol; routing protocol; routing technique; wireless sensor network; quality of service; routing protocols; wireless sensor networks;},
-doi={10.1109/MWC.2004.1368893},
-ISSN={1536-1284},
-url={http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=1368893&contentType=Journals+%26+Magazines&sortType%3Ddesc_p_Citation_Count%26searchField%3DSearch_All%26queryText%3Dwireless+sensor+network+qos}
-},
-
-@ARTICLE{779919,
-author={Sobrinho, J.L. and Krishnakumar, A.S.},
-journal={Selected Areas in Communications, IEEE Journal on}, title={Quality-of-service in ad hoc carrier sense multiple access wireless networks},
-year={1999},
-month={aug},
-volume={17},
-number={8},
-pages={1353 -1368},
-abstract={Carrier sense multiple access (CSMA) is one of the most pervasive medium access control (MAC) schemes in ad hoc, wireless networks. However, CSMA and its current variants do not provide quality-of-service (QoS) guarantees for real-time traffic support. This paper presents and studies black-burst (BB) contention, which is a distributed MAC scheme that provides QoS real-time access to ad hoc CSMA wireless networks. With this scheme, real-time nodes contend for access to the channel with pulses of energy-so called BBs-the durations of which are a function of the delay incurred by the nodes until the channel became idle. It is shown that real-time packets are not subject to collisions and that they have access priority over data packets. When operated in an ad hoc wireless LAN, BB contention further guarantees bounded and typically very small real-time delays. The performance of the network can approach that attained under ideal time division multiplexing (TDM) via a distributed algorithm that groups real-time packet transmissions into chains. A general analysis of BB contention is given, contemplating several modes of operation. The analysis provides conditions for the scheme to be stable. Its results are complemented with simulations that evaluate the performance of an ad hoc wireless LAN with a mixed population of data and real-time nodes},
-keywords={CSMA;QoS guarantees;TDM;ad hoc wireless LAN;ad hoc wireless networks;black-burst contention;carrier sense multiple access;data nodes;data packets;distributed MAC scheme;distributed algorithm;medium access control;network performance;quality-of-service;real-time delays;real-time nodes;real-time packet transmissions;real-time packets;real-time traffic support;simulations;time division multiplexing;carrier sense multiple access;data communication;packet radio networks;quality of service;telecommunication traffic;wireless LAN;},
-doi={10.1109/49.779919},
-ISSN={0733-8716},
-url={http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=779919&contentType=Journals+%26+Magazines&sortType%3Ddesc_p_Citation_Count%26searchField%3DSearch_All%26queryText%3Dwireless+sensor+network+qos}
-},
-
-@inproceedings{dunkels2009efficient,
-  title={Efficient application integration in IP-based sensor networks},
-  author={Dunkels, A. and others},
-  booktitle={Proceedings of the First ACM Workshop on Embedded Sensing Systems for Energy-Efficiency in Buildings},
-  pages={43--48},
-  year={2009},
-  organization={ACM},
-  url={https://www.sics.se/~adam/tsiftes11database.pdf}
+@MISC{CM5000,
+  author = {{advanticsys}},
+  title = {CM5000},
+  howpublished = {Online},
+  year = {2011},
+  owner = {Matt},
+  timestamp = {2012.10.07},
+  url = {http://www.advanticsys.com/shop/mtmcm5000msp-p-14.html}
 }
 
+@MISC{UD1000,
+  author = {{advanticsys}},
+  title = {UD1000},
+  howpublished = {Online},
+  year = {2011},
+  owner = {Matt},
+  timestamp = {2012.10.07},
+  url = {http://www.advanticsys.com/shop/asud1000-p-25.html}
+}
+
+@MISC{USB1000,
+  author = {{advanticsys}},
+  title = {USB1000},
+  howpublished = {Online},
+  year = {2011},
+  owner = {Matt},
+  timestamp = {2012.10.07},
+  url = {http://www.advanticsys.com/shop/mtiusb1000-p-9.html}
+}
+
+@ARTICLE{1368893,
+  author = {Al-Karaki, J.N. and Kamal, A.E.},
+  title = {Routing techniques in wireless sensor networks: a survey},
+  journal = {Wireless Communications, IEEE},
+  year = {2004},
+  volume = {11},
+  pages = { 6 - 28},
+  number = {6},
+  month = {dec.},
+  abstract = { Wireless sensor networks consist of small nodes with sensing, computation,
+	and wireless communications capabilities. Many routing, power management,
+	and data dissemination protocols have been specifically designed
+	for WSNs where energy awareness is an essential design issue. Routing
+	protocols in WSNs might differ depending on the application and network
+	architecture. In this article we present a survey of state-of-the-art
+	routing techniques in WSNs. We first outline the design challenges
+	for routing protocols in WSNs followed by a comprehensive survey
+	of routing techniques. Overall, the routing techniques are classified
+	into three categories based on the underlying network structure:
+	flit, hierarchical, and location-based routing. Furthermore, these
+	protocols can be classified into multipath-based, query-based, negotiation-based,
+	QoS-based, and coherent-based depending on the protocol operation.
+	We study the design trade-offs between energy and communication overhead
+	savings in every routing paradigm. We also highlight the advantages
+	and performance issues of each routing technique. The article concludes
+	with possible future research areas.},
+  doi = {10.1109/MWC.2004.1368893},
+  issn = {1536-1284},
+  keywords = { QoS-based protocol; coherent-based protocol; flit routing; hierarchical
+	routing; location-based routing; multipath-based protocol; negotiation-based
+	protocol; network structure; quality of service; query-based protocol;
+	routing protocol; routing technique; wireless sensor network; quality
+	of service; routing protocols; wireless sensor networks;},
+  url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=1368893&contentType=Journals+%26+Magazines&sortType%3Ddesc_p_Citation_Count%26searchField%3DSearch_All%26queryText%3Dwireless+sensor+network+qos}
+}
+
+@INPROCEEDINGS{5751321,
+  author = {Bates, B. and Keating, A. and Kinicki, R.},
+  title = {Energy analysis of four wireless sensor network MAC protocols},
+  booktitle = {Wireless and Pervasive Computing (ISWPC), 2011 6th International
+	Symposium on},
+  year = {2011},
+  pages = {1 -6},
+  month = {feb.},
+  abstract = {Using the MAC Layer Architecture framework, four power-aware MAC protocols
+	were implemented in TinyOS on TelosB motes. Indoor energy measurements
+	over a single-hop network topology were conducted using three wireless
+	sensor network traffic patterns (broadcast, convergecast and local
+	gossip). AS-MAC was the most energy-efficient for convergecast and
+	local gossip traffic, while SCP-MAC was best for broadcast traffic.
+	Over the three traffic patterns, BAS-MAC used slightly less energy
+	than Crankshaft and BAS-MAC significantly outperformed AS-MAC in
+	the broadcast traffic scenario.},
+  doi = {10.1109/ISWPC.2011.5751321},
+  keywords = {AS-MAC;BAS-MAC;MAC layer architecture framework;SCP-MAC;TelosB motes;TinyOS;broadcast
+	traffic;crankshaft;energy-efficient;four wireless sensor network
+	MAC protocol;indoor energy measurement;single-hop network topology;three
+	wireless sensor network traffic patterns;access protocols;telecommunication
+	traffic;wireless sensor networks;},
+  url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=5751321&contentType=Conference+Publications&queryText%3Dwireless+sensor+network+mac}
+}
+
+@ARTICLE{4633359,
+  author = {Bulut, A. and Koudas, N. and Meka, A. and Singh, A.K. and Srivastava,
+	D.},
+  title = {Optimization Techniques for Reactive Network Monitoring},
+  journal = {Knowledge and Data Engineering, IEEE Transactions on},
+  year = {2009},
+  volume = {21},
+  pages = {1343 -1357},
+  number = {9},
+  month = {sept. },
+  abstract = {We develop a framework for minimizing the communication overhead of
+	monitoring global system parameters in IP networks and sensor networks.
+	A global system predicate is defined as a conjunction of the local
+	properties of different network elements. A typical example is to
+	identify the time windows when the outbound traffic from each network
+	element exceeds a predefined threshold. Our main idea is to optimize
+	the scheduling of local event reporting across network elements for
+	a given network traffic load and local event frequencies. The system
+	architecture consists of N distributed network elements coordinated
+	by a central monitoring station. Each network element monitors a
+	set of local properties and the central station is responsible for
+	identifying the status of global parameters registered in the system.
+	We design an optimal algorithm, the partition and rank (PAR) scheme,
+	when the local events are independent; whereas, when they are dependent,
+	we show that the problem is NP-complete and develop two efficient
+	heuristics: the PAR for dependent events (PAR-D) and adaptive (Ada)
+	algorithms, which adapt well to changing network conditions, and
+	outperform the current state of the art techniques in terms of communication
+	cost.},
+  doi = {10.1109/TKDE.2008.203},
+  issn = {1041-4347},
+  keywords = {IP networks;NP-complete;adaptive algorithms;central monitoring station;communication
+	cost;dependent events;distributed network elements;global system
+	parameter monitoring;heuristics;optimization techniques;outbound
+	traffic;partition and rank scheme;reactive network monitoring;sensor
+	networks;IP networks;communication complexity;optimisation;telecommunication
+	traffic;wireless sensor networks;},
+  url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4633359&contentType=Journals+%26+Magazines&searchField%3DSearch_All%26queryText%3Dwireless+sensor+network+global+predicate}
+}
+
+@INPROCEEDINGS{dunkels2009efficient,
+  author = {Dunkels, A. and others},
+  title = {Efficient application integration in IP-based sensor networks},
+  booktitle = {Proceedings of the First ACM Workshop on Embedded Sensing Systems
+	for Energy-Efficiency in Buildings},
+  year = {2009},
+  pages = {43--48},
+  organization = {ACM},
+  url = {https://www.sics.se/~adam/tsiftes11database.pdf}
+}
+
+@INPROCEEDINGS{6128220,
+  author = {Jun Hu and Zeng Ma and Chunsheng Sun},
+  title = {Energy-efficient MAC Protocol Designed for Wireless Sensor Network
+	for IoT},
+  booktitle = {Computational Intelligence and Security (CIS), 2011 Seventh International
+	Conference on},
+  year = {2011},
+  pages = {721 -725},
+  month = {dec.},
+  abstract = {Wireless sensor network is an emerging network technology in the 21st
+	century. Its emergence brings a new phase in the development of network.
+	Lately, there are more and more investigations on wireless sensor
+	network MAC protocols. The research results on MAC protocol is summarized,
+	some typical MAC protocols are analyzed, such as S-MAC, T-MAC, #x03BC;-MAC,
+	and etc. A new power controlled sensor MAC protocol(PC-MAC) is introduced
+	for wireless sensor networks, which can provide an effective mechanism
+	for improving energy efficiencies for decreasing the transmitting
+	power directly and avoiding collision. The simulation results show
+	that energy can be saved up to 50%-96% by it.},
+  doi = {10.1109/CIS.2011.164},
+  keywords = {IoT;collision avoidance;emerging network technology;energy-efficient
+	MAC protocol design;power controlled sensor MAC protocol;wireless
+	sensor network;access protocols;telecommunication congestion control;wireless
+	sensor networks;},
+  url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6128220&contentType=Conference+Publications&queryText%3Dwireless+sensor+network+mac}
+}
+
+@ARTICLE{levis2003tossim,
+  author = {Levis, P. and Lee, N.},
+  title = {Tossim: A simulator for tinyos networks},
+  journal = {UC Berkeley, September},
+  year = {2003},
+  pages = {24},
+  url = {http://www.cs.berkeley.edu/~pal/pubs/nido.pdf}
+}
+
+@INPROCEEDINGS{4116633,
+  author = {Osterlind, F. and Dunkels, A. and Eriksson, J. and Finne, N. and
+	Voigt, T.},
+  title = {Cross-Level Sensor Network Simulation with COOJA},
+  booktitle = {Local Computer Networks, Proceedings 2006 31st IEEE Conference on},
+  year = {2006},
+  pages = {641 -648},
+  month = {nov.},
+  abstract = {Simulators for wireless sensor networks are a valuable tool for system
+	development. However, current simulators can only simulate a single
+	level of a system at once. This makes system development and evolution
+	difficult since developers cannot use the same simulator for both
+	high-level algorithm development and low-level development such as
+	device-driver implementations. We propose cross-level simulation,
+	a novel type of wireless sensor network simulation that enables holistic
+	simultaneous simulation at different levels. We present an implementation
+	of such a simulator, COOJA, a simulator for the Contiki sensor node
+	operating system. COOJA allows for simultaneous simulation at the
+	network level, the operating system level, and the machine code instruction
+	set level. With COOJA, we show the feasibility of the cross-level
+	simulation approach},
+  doi = {10.1109/LCN.2006.322172},
+  issn = {0742-1303},
+  keywords = {COOJA simulator;Contiki sensor node operating system;cross-level sensor
+	network simulation;holistic simultaneous simulation;wireless sensor
+	network simulation;digital simulation;telecommunication computing;wireless
+	sensor networks;},
+  url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4116633&contentType=Conference+Publications&searchField%3DSearch_All%26queryText%3Dcooja}
+}
+
+@ARTICLE{4476299,
+  author = {Raymond, D.R. and Marchany, R.C. and Brownfield, M.I. and Midkiff,
+	S.F.},
+  title = {Effects of Denial-of-Sleep Attacks on Wireless Sensor Network MAC
+	Protocols},
+  journal = {Vehicular Technology, IEEE Transactions on},
+  year = {2009},
+  volume = {58},
+  pages = {367 -380},
+  number = {1},
+  month = {jan. },
+  abstract = {Wireless platforms are becoming less expensive and more powerful,
+	enabling the promise of widespread use for everything from health
+	monitoring to military sensing. Like other networks, sensor networks
+	are vulnerable to malicious attack. However, the hardware simplicity
+	of these devices makes defense mechanisms designed for traditional
+	networks infeasible. This paper explores the denial-of-sleep attack,
+	in which a sensor node's power supply is targeted. Attacks of this
+	type can reduce the sensor lifetime from years to days and have a
+	devastating impact on a sensor network. This paper classifies sensor
+	network denial-of-sleep attacks in terms of an attacker's knowledge
+	of the medium access control (MAC) layer protocol and ability to
+	bypass authentication and encryption protocols. Attacks from each
+	classification are then modeled to show the impacts on four sensor
+	network MAC protocols, i.e., Sensor MAC (S-MAC), Timeout MAC (T-MAC),
+	Berkeley MAC (B-MAC), and Gateway MAC (G-MAC). Implementations of
+	selected attacks on S-MAC, T-MAC, and B-MAC are described and analyzed
+	in detail to validate their effectiveness and analyze their efficiency.
+	Our analysis shows that the most efficient attack on S-MAC can keep
+	a cluster of nodes awake 100% of the time by an attacker that sleeps
+	99% of the time. Attacks on T-MAC can keep victims awake 100% of
+	the time while the attacker sleeps 92% of the time. A framework for
+	preventing denial-of-sleep attacks in sensor networks is also introduced.
+	With full protocol knowledge and an ability to penetrate link-layer
+	encryption, all wireless sensor network MAC protocols are susceptible
+	to a full domination attack, which reduces the network lifetime to
+	the minimum possible by maximizing the power consumption of the nodes'
+	radio subsystem. Even without the ability to penetrate encryption,
+	subtle attacks can be launched, which reduce the network lifetime
+	by orders of magnitude. If sensor networks are to meet current expectations,
+	they mu- - st be robust in the face of network attacks to include
+	denial-of-sleep.},
+  doi = {10.1109/TVT.2008.921621},
+  issn = {0018-9545},
+  keywords = {Berkeley MAC;Gateway MAC;MAC protocols;Sensor MAC;Timeout MAC;bypass
+	authentication;denial-of-sleep attacks;encryption protocols;health
+	monitoring;medium access control layer protocol;military sensing;node
+	radio subsystem;wireless sensor network;access protocols;cryptography;wireless
+	sensor networks;},
+  url = {http://ieeexplore.ieee.org//xpl/articleDetails.jsp?tp=&arnumber=4476299&url=http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=4476299}
+}
+
+@ARTICLE{779919,
+  author = {Sobrinho, J.L. and Krishnakumar, A.S.},
+  title = {Quality-of-service in ad hoc carrier sense multiple access wireless
+	networks},
+  journal = {Selected Areas in Communications, IEEE Journal on},
+  year = {1999},
+  volume = {17},
+  pages = {1353 -1368},
+  number = {8},
+  month = {aug},
+  abstract = {Carrier sense multiple access (CSMA) is one of the most pervasive
+	medium access control (MAC) schemes in ad hoc, wireless networks.
+	However, CSMA and its current variants do not provide quality-of-service
+	(QoS) guarantees for real-time traffic support. This paper presents
+	and studies black-burst (BB) contention, which is a distributed MAC
+	scheme that provides QoS real-time access to ad hoc CSMA wireless
+	networks. With this scheme, real-time nodes contend for access to
+	the channel with pulses of energy-so called BBs-the durations of
+	which are a function of the delay incurred by the nodes until the
+	channel became idle. It is shown that real-time packets are not subject
+	to collisions and that they have access priority over data packets.
+	When operated in an ad hoc wireless LAN, BB contention further guarantees
+	bounded and typically very small real-time delays. The performance
+	of the network can approach that attained under ideal time division
+	multiplexing (TDM) via a distributed algorithm that groups real-time
+	packet transmissions into chains. A general analysis of BB contention
+	is given, contemplating several modes of operation. The analysis
+	provides conditions for the scheme to be stable. Its results are
+	complemented with simulations that evaluate the performance of an
+	ad hoc wireless LAN with a mixed population of data and real-time
+	nodes},
+  doi = {10.1109/49.779919},
+  issn = {0733-8716},
+  keywords = {CSMA;QoS guarantees;TDM;ad hoc wireless LAN;ad hoc wireless networks;black-burst
+	contention;carrier sense multiple access;data nodes;data packets;distributed
+	MAC scheme;distributed algorithm;medium access control;network performance;quality-of-service;real-time
+	delays;real-time nodes;real-time packet transmissions;real-time packets;real-time
+	traffic support;simulations;time division multiplexing;carrier sense
+	multiple access;data communication;packet radio networks;quality
+	of service;telecommunication traffic;wireless LAN;},
+  url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=779919&contentType=Journals+%26+Magazines&sortType%3Ddesc_p_Citation_Count%26searchField%3DSearch_All%26queryText%3Dwireless+sensor+network+qos}
+}
+
+@INPROCEEDINGS{4469515,
+  author = {Zhiwei Zhao and Xinming Zhang and Peng Sun and Pengxi Liu},
+  title = {A Traffic Queue-aware MAC Protocol for Wireless Sensor Networks},
+  booktitle = {Communications and Networking in China, 2007. CHINACOM '07. Second
+	International Conference on},
+  year = {2007},
+  pages = {841 -844},
+  month = {aug.},
+  abstract = {Wireless sensor networks have been widely used in many important areas.
+	Medium access control (MAC) protocols take charge of the distribution
+	and administration of sensor network's wireless channel, and have
+	a significant influence on the function and performance of sensor
+	networks. Most traditional MAC protocols do not consider traffic
+	loads directly, but the amount of traffic affects the efficiency
+	of channel assignment and energy utilization. This paper summarizes
+	existing wireless sensor network MAC protocols, and proposes a novel
+	traffic queue-aware sensor MAC protocol (QSMAC) which is based on
+	sensor MAC (SMAC) protocol and can predict the amount of data traffic
+	in network with the average increase rate of data packets in a node's
+	buffer queue. The simulation indicates that the performance of our
+	protocol is much better than that of SMAC protocol in data packet's
+	delay, the consumption of energy, the reception ratio of data packets
+	and the throughput of the network.},
+  doi = {10.1109/CHINACOM.2007.4469515},
+  keywords = {buffer queue;data packets;data traffic;medium access control protocols;network
+	throughput;traffic queue-aware MAC protocol;wireless channel;wireless
+	sensor networks;access protocols;queueing theory;telecommunication
+	traffic;wireless channels;wireless sensor networks;},
+  url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4469515&contentType=Conference+Publications&queryText%3Dwireless+sensor+network+mac}
+}
 

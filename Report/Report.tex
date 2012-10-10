@@ -89,6 +89,7 @@ Acknowledgements
 \section{Knowledge Gained}
 \begin{enumerate}
 	\item Not possible to write WSN applications in Java and have them run on the WSN nodes. Only possible to write in C and have that code run on the physical hardware. Java code will only run in the Cooja simulator for the Contiki OS.
+	\item A Cooja plug-in that monitors and records network traffic would be specific only to the simulator and would not be possible to apply to physical nodes
 \end{enumerate}
 \clearpage
 
@@ -100,7 +101,7 @@ Acknowledgements
 % TODO: Convert this to a table that can flow over multiple pages
 \begin{table}[H]
 	\centering
-	\begin{tabular}{| l | p{6cm} | p{6cm} |}
+	\begin{tabular}{| l | p{7.5cm} | p{5cm} |}
 	Week & Activities & Task Allocation\\
 	\hline
 	1 & \begin{enumerate}
@@ -120,14 +121,21 @@ Acknowledgements
 
 	2 & \begin{enumerate}
 			\item Research if Cooja can be extended through the use of plug-ins (with the aim of extending it to replay traffic logs)
+			\item Research Clustering algorithms and find implementations
+			\item Develop a temperature dissemination application to learn Contiki and Cooja
+			\item Research TinyOS and TinyDB and see if they could be applied to predicate checking
+			\item Investigate performance of different MAC protocols
+			\item Investigate the feasibility of live monitoring of the network
+			\item Investigate QoS and how it may be applied to real life WSN deployments
+			\item Produce a literature review on chosen topic
 		\end{enumerate} &
 	\begin{enumerate}
-		\item[] Amit: 1
-		\item[] Dan: ~
-		\item[] Ivan: ~
-		\item[] Joe: ~
-		\item[] Matt: ~
-		\item[] Tim: ~
+		\item[] Amit: 1, 7, 8
+		\item[] Dan: 5, 8
+		\item[] Ivan: 6, 8
+		\item[] Joe: 4, 8
+		\item[] Matt: 3, 8
+		\item[] Tim: 2, 8
 	\end{enumerate}
 	\\ \hline
 
@@ -192,6 +200,9 @@ We decided to allocate roles in the second week after we had the first week to p
 \subsection{Working Concurrently}
 
 We signed up for a Git repository on BitBucket \cite{?} where we plan to commit all the work we produce. We initially had an issue that free private repositories hosted on BitBucket have a maximum of 5 participants, whereas we had 6 group members. Fortunately when new users sign up to the services from an invite, the person that sends the invite gets additional capacity. This meant that the person who created the repository ended up with enough capacity for all members to access the account.
+
+\subsection{Group Members Without Internet}
+Unfortunately two of our group members were without internet for the first 3 weeks of term. This was an issue because they were unable to just work in the DCS labs because the computers there didn't have the software required (such as VirtualBox or the WSN simulators). To work around this, those two members were given tasks that could be accomplished with their own machines and without internet. Once they obtained internet they were given tasks that, that access allowed them to acomplish.
 
 \clearpage
 

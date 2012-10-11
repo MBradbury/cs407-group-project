@@ -1,0 +1,64 @@
+\documentclass[a4paper]{article}
+
+\usepackage[top=2cm, bottom=2cm, left=3cm, right=3cm]{geometry}
+
+\usepackage{float}
+
+\usepackage{multirow}
+
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+
+\usepackage{appendix}
+\usepackage[numbers]{natbib}
+
+\usepackage{graphicx}
+
+\newcommand{\mytilde}{\raise.17ex\hbox{$\scriptstyle\mathtt{\sim}$} }
+
+\title{Towards Debugging Wireless Sensor Network Applications: Specification}
+\date{October 2012 - July 2013}
+\author{}
+
+\begin{document}
+
+\maketitle
+
+%No numbering on first and second pages
+\pagestyle{empty}
+\thispagestyle{empty}
+
+\newpage
+
+\begin{abstract}
+Abstract
+\newline
+\newline
+\noindent \textbf{Keywords} - Keywords;
+\end{abstract}
+\newpage
+
+
+\pagestyle{plain}
+\setcounter{page}{1}
+
+\tableofcontents
+\clearpage
+
+
+\section{Introduction}
+
+\clearpage
+
+
+\appendixpage
+\addappheadtotoc
+\appendix
+
+
+\section{References}
+\renewcommand{\refname}{\vspace{-1cm}}
+\bibliographystyle{myplainnat}
+\bibliography{../References/references}
+
+\end{document}

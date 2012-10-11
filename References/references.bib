@@ -1,6 +1,56 @@
 % This file was created with JabRef 2.8.1.
 % Encoding: Cp1252
 
+@ARTICLE{23839452,
+  author = {\"{O}sterlind, Fredrik},
+  title = {A Sensor Network Simulator for the Contiki OS},
+  year = {2006},
+  abstract = {This report introduces a new sensor network simulator for the Contiki
+	OS - the COOJA Simulator. The Contiki OS is a portable operating
+	system designed specifically for resource limited devices such as
+	sensor nodes. It is built around an event-driven kernel but supports
+	pre-emptive multithreading at a per-process basis. It also supports
+	a full TCP/IP stack via uIP and the programming abstraction Protothreads.
+	The main design goal of the COOJA Simulator is extendibility, for
+	which Interfaces and Plugins are used. An Interface represents a
+	sensor node property or device, such as a position, a button or a
+	radio transmitter. A Plugin is used to interact with a simulation,
+	for example to control the simulation speed or to watch all network
+	traffic between the simulated nodes. Both new Plugins and Interfaces
+	can easily be created and added to the simulation environment. A
+	number of other parts of the simulator, for example a radio medium
+	responsible for forwarding radio network data, can also be implemented
+	and added to the simulator. And by supporting several different simulation
+	environments at the same time in one simulation, different underlying
+	hardware platforms can be simulated in heterogeneous networks. Java
+	Native Interface is used to connect the new simulator with Contiki,
+	allowing simulated applications to run in a real Contiki system.
+	By using this approach, any simulated application can then be run
+	on a real sensor node unaltered.},
+  institution = {SICS publications database [http://eprints.sics.se/perl/oai2] (Sweden)},
+  location = {http://www.scientificcommons.org/23839452},
+  publisher = {Swedish Institute of Computer Science},
+  url = {http://eprints.sics.se/2296/}
+}
+
+@INPROCEEDINGS{Osterlind:2010:CTP:1869983.1870035,
+  author = {\"{O}sterlind, Fredrik and Eriksson, Joakim and Dunkels, Adam},
+  title = {Cooja TimeLine: a power visualizer for sensor network simulation},
+  booktitle = {Proceedings of the 8th ACM Conference on Embedded Networked Sensor
+	Systems},
+  year = {2010},
+  series = {SenSys '10},
+  pages = {385--386},
+  address = {New York, NY, USA},
+  publisher = {ACM},
+  acmid = {1870035},
+  doi = {10.1145/1869983.1870035},
+  isbn = {978-1-4503-0344-6},
+  location = {Z\&\#252;rich, Switzerland},
+  numpages = {2},
+  url = {http://doi.acm.org/10.1145/1869983.1870035}
+}
+
 @MISC{CM5000,
   author = {{advanticsys}},
   title = {{CM5000}},
@@ -133,6 +183,18 @@
   url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4633359&contentType=Journals+%26+Magazines&searchField%3DSearch_All%26queryText%3Dwireless+sensor+network+global+predicate}
 }
 
+@ARTICLE{chandra2008data,
+  author = {Chandra, P. and Kshemkalyani, A.D.},
+  title = {Data-stream-based global event monitoring using pairwise interactions},
+  journal = {Journal of Parallel and Distributed Computing},
+  year = {2008},
+  volume = {68},
+  pages = {729--751},
+  number = {6},
+  publisher = {Elsevier},
+  url = {http://www.cs.uic.edu/~ajayk/ext/JPDC2008.pdf}
+}
+
 @INPROCEEDINGS{dunkels2009efficient,
   author = {Dunkels, A. and others},
   title = {Efficient application integration in IP-based sensor networks},
@@ -142,6 +204,65 @@
   pages = {43--48},
   organization = {ACM},
   url = {https://www.sics.se/~adam/tsiftes11database.pdf}
+}
+
+@INPROCEEDINGS{1382572,
+  author = {Fahim Ali, M. and Veneris, A. and Smith, A. and Safarpour, S. and
+	Drechsler, R. and Abadir, M.},
+  title = {Debugging sequential circuits using Boolean satisfiability},
+  booktitle = {Computer Aided Design, 2004. ICCAD-2004. IEEE/ACM International Conference
+	on},
+  year = {2004},
+  pages = { 204 - 209},
+  month = {nov.},
+  abstract = { Logic debugging of today's complex sequential circuits is an important
+	problem. In this paper, a logic debugging methodology for multiple
+	errors in sequential circuits with no state equivalence is developed.
+	The proposed approach reduces the problem of debugging to an instance
+	of Boolean satisfiability. This formulation takes advantage of modern
+	Boolean satisfiability solvers that handle large circuits in a computationally
+	efficient manner. An extensive suite of experiments with large sequential
+	circuits confirm the robustness and efficiency of the proposed approach.
+	The results further suggest that Boolean satisfiability provides
+	an effective platform for sequential logic debugging.},
+  doi = {10.1109/ICCAD.2004.1382572},
+  issn = {1092-3152},
+  keywords = { Boolean satisfiability; multiple errors; sequential circuits; sequential
+	logic debugging; Boolean functions; computability; logic CAD; program
+	debugging; sequential circuits;}
+}
+
+@ARTICLE{5010224,
+  author = {Garcia-Molina, Hector and Germano, Frank and Kohler, Walter H.},
+  title = {Debugging a Distributed Computing System},
+  journal = {Software Engineering, IEEE Transactions on},
+  year = {1984},
+  volume = {SE-10},
+  pages = {210 -219},
+  number = {2},
+  month = {march },
+  abstract = {In this paper we discuss the issues involved in debugging a provide
+	distributed computing system. We describe the major differences between
+	debugging a distributed system and debugging a sequential program.
+	We suggest a methodology for distributed debugging, and we propose
+	various tools or aids.},
+  doi = {10.1109/TSE.1984.5010224},
+  issn = {0098-5589},
+  url = {http://ieeexplore.ieee.org//xpl/articleDetails.jsp?tp=&arnumber=5010224}
+}
+
+@ARTICLE{herbert2007adaptive,
+  author = {Herbert, D. and Sundaram, V. and Lu, Y.H. and Bagchi, S. and Li,
+	Z.},
+  title = {Adaptive correctness monitoring for wireless sensor networks using
+	hierarchical distributed run-time invariant checking},
+  journal = {ACM Transactions on Autonomous and Adaptive Systems (TAAS)},
+  year = {2007},
+  volume = {2},
+  pages = {8},
+  number = {3},
+  publisher = {ACM},
+  url = {https://engineering.purdue.edu/HELPS/Publications/journal.html/papers/HerbertSundaramLuBagchiLi2007TAAS.pdf}
 }
 
 @INPROCEEDINGS{6128220,
@@ -189,6 +310,48 @@
   year = {2003},
   pages = {24},
   url = {http://www.cs.berkeley.edu/~pal/pubs/nido.pdf}
+}
+
+@INPROCEEDINGS{749477,
+  author = {Malik, N. and Baumgartner, J. and Roberts, S. and Dobson, R.},
+  title = {A toolset for assisted formal verification},
+  booktitle = {Performance, Computing and Communications Conference, 1999 IEEE International},
+  year = {1999},
+  pages = {489 -492},
+  month = {feb},
+  abstract = {There has been a growing interest in applying formal methods for functional
+	and performance verification of complex and safety critical designs.
+	Model checking is one of the most common formal verification methodologies
+	utilized in verifying sequential logic due to its automated decision
+	procedures and its ability to provide ldquo;counter examples rdquo;
+	for debugging. However, model checking hasn't found broad acceptance
+	as a verification methodology due to its complexity. This arises
+	because of the need to specify correctness properties in a temporal
+	logic language and develop an environment around a partitioned model
+	under test in a non deterministic HDL-type language. Generally, engineers
+	are not trained in mathematical logic languages and becoming proficient
+	in such a language requires a steep learning curve. Furthermore,
+	defining a behavioral environment at the complex and undocumented
+	microarchitectural interface level is a time consuming and error
+	prone activity. As such, there is a strong motivation to bring the
+	model checking technology to a level such that the designers may
+	utilize this technology as a part of their design process without
+	being burdened with the details that are generally only within the
+	grasps of computer theoreticians. The paper outlines two tools which
+	greatly assist in this goal: the first, Polly, automates the difficult
+	and error prone task of developing the behavioral environment around
+	the partitioned model under test; the second Oracle, obviates the
+	need for learning temporal logic to enter specification},
+  doi = {10.1109/PCCC.1999.749477},
+  issn = {1097-2641},
+  keywords = {Oracle;Polly;assisted formal verification;automated decision procedures;behavioral
+	environment;computer theoreticians;correctness properties;counter
+	examples;debugging;design process;error prone activity;error prone
+	task;formal methods;model checking;non deterministic HDL-type language;partitioned
+	model;performance verification;safety critical designs;sequential
+	logic;specification;temporal logic;temporal logic language;undocumented
+	microarchitectural interface level;verification methodology;formal
+	specification;formal verification;software tools;temporal logic;}
 }
 
 @INPROCEEDINGS{4116633,
@@ -273,6 +436,15 @@
   url = {http://ieeexplore.ieee.org//xpl/articleDetails.jsp?tp=&arnumber=4476299&url=http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=4476299}
 }
 
+@MISC{sensiriondatasheet,
+  author = {Sensirion},
+  title = {{Datasheet SHT1X}},
+  howpublished = {Online},
+  month = {December},
+  year = {2011},
+  url = {http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/Humidity/Sensirion_Humidity_SHT1x_Datasheet_V5.pdf}
+}
+
 @ARTICLE{779919,
   author = {Sobrinho, J.L. and Krishnakumar, A.S.},
   title = {Quality-of-service in ad hoc carrier sense multiple access wireless
@@ -346,99 +518,4 @@
 	traffic;wireless channels;wireless sensor networks;},
   url = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4469515&contentType=Conference+Publications&queryText%3Dwireless+sensor+network+mac}
 }
-
-@ARTICLE{herbert2007adaptive,
-  title={Adaptive correctness monitoring for wireless sensor networks using hierarchical distributed run-time invariant checking},
-  author={Herbert, D. and Sundaram, V. and Lu, Y.H. and Bagchi, S. and Li, Z.},
-  journal={ACM Transactions on Autonomous and Adaptive Systems (TAAS)},
-  volume={2},
-  number={3},
-  pages={8},
-  year={2007},
-  publisher={ACM},
-  url={https://engineering.purdue.edu/HELPS/Publications/journal.html/papers/HerbertSundaramLuBagchiLi2007TAAS.pdf}
-}
-
-@ARTICLE{chandra2008data,
-  title={Data-stream-based global event monitoring using pairwise interactions},
-  author={Chandra, P. and Kshemkalyani, A.D.},
-  journal={Journal of Parallel and Distributed Computing},
-  volume={68},
-  number={6},
-  pages={729--751},
-  year={2008},
-  publisher={Elsevier},
-  url={http://www.cs.uic.edu/~ajayk/ext/JPDC2008.pdf}
-}
-
-@inproceedings{Osterlind:2010:CTP:1869983.1870035,
- author = {\"{O}sterlind, Fredrik and Eriksson, Joakim and Dunkels, Adam},
- title = {Cooja TimeLine: a power visualizer for sensor network simulation},
- booktitle = {Proceedings of the 8th ACM Conference on Embedded Networked Sensor Systems},
- series = {SenSys '10},
- year = {2010},
- isbn = {978-1-4503-0344-6},
- location = {Z\&\#252;rich, Switzerland},
- pages = {385--386},
- numpages = {2},
- url = {http://doi.acm.org/10.1145/1869983.1870035},
- doi = {10.1145/1869983.1870035},
- acmid = {1870035},
- publisher = {ACM},
- address = {New York, NY, USA},
-} 
-
-@article{
-	location = {http://www.scientificcommons.org/23839452},
-	title = {A Sensor Network Simulator for the Contiki OS},
-	author = {√ñsterlind, Fredrik},
-	year = {2006},
-	abstract = {This report introduces a new sensor network simulator for the Contiki OS - the COOJA Simulator. The Contiki OS is a portable operating system designed specifically for resource limited devices such as sensor nodes. It is built around an event-driven kernel but supports pre-emptive multithreading at a per-process basis. It also supports a full TCP/IP stack via uIP and the programming abstraction Protothreads. The main design goal of the COOJA Simulator is extendibility, for which Interfaces and Plugins are used. An Interface represents a sensor node property or device, such as a position, a button or a radio transmitter. A Plugin is used to interact with a simulation, for example to control the simulation speed or to watch all network traffic between the simulated nodes. Both new Plugins and Interfaces can easily be created and added to the simulation environment. A number of other parts of the simulator, for example a radio medium responsible for forwarding radio network data, can also be implemented and added to the simulator. And by supporting several different simulation environments at the same time in one simulation, different underlying hardware platforms can be simulated in heterogeneous networks. Java Native Interface is used to connect the new simulator with Contiki, allowing simulated applications to run in a real Contiki system. By using this approach, any simulated application can then be run on a real sensor node unaltered.},
-	publisher = {Swedish Institute of Computer Science},
-	url = {http://eprints.sics.se/2296/},
-	institution = {SICS publications database [http://eprints.sics.se/perl/oai2] (Sweden)},
-}
-
-@ARTICLE{5010224,
-author={Garcia-Molina, Hector and Germano, Frank and Kohler, Walter H.},
-journal={Software Engineering, IEEE Transactions on},
-title={Debugging a Distributed Computing System},
-year={1984},
-month={march },
-volume={SE-10},
-number={2},
-pages={210 -219},
-abstract={In this paper we discuss the issues involved in debugging a provide distributed computing system. We describe the major differences between debugging a distributed system and debugging a sequential program. We suggest a methodology for distributed debugging, and we propose various tools or aids.},
-keywords={},
-doi={10.1109/TSE.1984.5010224},
-ISSN={0098-5589},
-url={http://ieeexplore.ieee.org//xpl/articleDetails.jsp?tp=&arnumber=5010224}
-}
-
-@INPROCEEDINGS{1382572,
-author={Fahim Ali, M. and Veneris, A. and Smith, A. and Safarpour, S. and Drechsler, R. and Abadir, M.},
-booktitle={Computer Aided Design, 2004. ICCAD-2004. IEEE/ACM International Conference on}, title={Debugging sequential circuits using Boolean satisfiability},
-year={2004},
-month={nov.},
-volume={},
-number={},
-pages={ 204 - 209},
-abstract={ Logic debugging of today's complex sequential circuits is an important problem. In this paper, a logic debugging methodology for multiple errors in sequential circuits with no state equivalence is developed. The proposed approach reduces the problem of debugging to an instance of Boolean satisfiability. This formulation takes advantage of modern Boolean satisfiability solvers that handle large circuits in a computationally efficient manner. An extensive suite of experiments with large sequential circuits confirm the robustness and efficiency of the proposed approach. The results further suggest that Boolean satisfiability provides an effective platform for sequential logic debugging.},
-keywords={ Boolean satisfiability; multiple errors; sequential circuits; sequential logic debugging; Boolean functions; computability; logic CAD; program debugging; sequential circuits;},
-doi={10.1109/ICCAD.2004.1382572},
-ISSN={1092-3152},}
-
-@INPROCEEDINGS{749477,
-author={Malik, N. and Baumgartner, J. and Roberts, S. and Dobson, R.},
-booktitle={Performance, Computing and Communications Conference, 1999 IEEE International}, title={A toolset for assisted formal verification},
-year={1999},
-month={feb},
-volume={},
-number={},
-pages={489 -492},
-abstract={There has been a growing interest in applying formal methods for functional and performance verification of complex and safety critical designs. Model checking is one of the most common formal verification methodologies utilized in verifying sequential logic due to its automated decision procedures and its ability to provide ldquo;counter examples rdquo; for debugging. However, model checking hasn't found broad acceptance as a verification methodology due to its complexity. This arises because of the need to specify correctness properties in a temporal logic language and develop an environment around a partitioned model under test in a non deterministic HDL-type language. Generally, engineers are not trained in mathematical logic languages and becoming proficient in such a language requires a steep learning curve. Furthermore, defining a behavioral environment at the complex and undocumented microarchitectural interface level is a time consuming and error prone activity. As such, there is a strong motivation to bring the model checking technology to a level such that the designers may utilize this technology as a part of their design process without being burdened with the details that are generally only within the grasps of computer theoreticians. The paper outlines two tools which greatly assist in this goal: the first, Polly, automates the difficult and error prone task of developing the behavioral environment around the partitioned model under test; the second Oracle, obviates the need for learning temporal logic to enter specification},
-keywords={Oracle;Polly;assisted formal verification;automated decision procedures;behavioral environment;computer theoreticians;correctness properties;counter examples;debugging;design process;error prone activity;error prone task;formal methods;model checking;non deterministic HDL-type language;partitioned model;performance verification;safety critical designs;sequential logic;specification;temporal logic;temporal logic language;undocumented microarchitectural interface level;verification methodology;formal specification;formal verification;software tools;temporal logic;},
-doi={10.1109/PCCC.1999.749477},
-ISSN={1097-2641},}
-
 

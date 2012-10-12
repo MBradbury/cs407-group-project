@@ -11,6 +11,12 @@
 #include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
 
+#include "net/netstack.h"
+#include "net/rime.h"
+#include "net/rime/collect.h"
+#include "net/rime/collect-neighbor.h"
+#include "net/rime/timesynch.h"
+#include "contiki-net.h"
 
 double sht11_relative_humidity(unsigned raw)
 {
@@ -61,6 +67,36 @@ double sht11_temperature(unsigned raw)
 	return d1 + d2 * raw;
 }
 
+
+/** The structure of the message we are sending */
+typedef struct collect_msg
+{
+	double temperature;
+	double humidity;
+
+} collect_msg_t;
+
+/** The function that will be executed when a message is received */
+static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
+{
+	collect_msg_t const * msg;
+
+	msg = (collect_msg_t const *)packetbuf_dataptr();
+
+	printf("Network Data: Addr:%d.%d Seqno:%u Hops:%u Temp:%d Hudmid:%d%%\n",
+		originator->u8[0], originator->u8[1],
+		seqno, hops,
+		(int)msg->temperature, (int)msg->humidity
+	);
+}
+
+/** List of all functions to execute when a message is received */
+static const struct collect_callbacks callbacks = { recv };
+
+static struct collect_conn tc;
+
+static const int REXMITS = 4;
+
  
 PROCESS(data_collector_process, "Data Collector");
 
@@ -70,15 +106,30 @@ PROCESS_THREAD(data_collector_process, ev, data)
 {
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
-	static double humidity, temperature;
  
+	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
+
+	collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
+
+	// Set to be the sink if the address is 1.0
+	if (rimeaddr_node_addr.u8[0] == 1 &&
+		rimeaddr_node_addr.u8[1] == 0)
+	{
+		collect_set_sink(&tc, 1);
+	}
 
 	etimer_set(&et, CLOCK_SECOND);
  
 	while (1)
 	{
+		collect_msg_t * msg;
+
 		PROCESS_YIELD();
+
+		packetbuf_clear();
+		msg = (collect_msg_t *)packetbuf_dataptr();
+		packetbuf_set_datalen(sizeof(collect_msg_t));
 
 		SENSORS_ACTIVATE(sht11_sensor);
 
@@ -89,16 +140,21 @@ PROCESS_THREAD(data_collector_process, ev, data)
 
 		/* http://arduino.cc/forum/index.php?topic=37752.5;wap2 */
 
-		temperature = sht11_temperature(raw_temperature);
-		humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
+		msg->temperature = sht11_temperature(raw_temperature);
+		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
 		
 
-		printf("Temperature: %d degrees Celsius (Raw: %u)\n", (int)temperature, raw_temperature);
-		printf("Humidity: %d%% (Raw: %u)\n", (int)humidity, raw_humidity);
+		//printf("Temperature: %d degrees Celsius (Raw: %u)\n", (int)msg->temperature, raw_temperature);
+		//printf("Humidity: %d%% (Raw: %u)\n", (int)msg->humidity, raw_humidity);
+
 
 		etimer_reset(&et);
+
+		collect_send(&tc, REXMITS);
 	}
  
+exit:
+	collect_close(&tc);
 	PROCESS_END();
 }
 

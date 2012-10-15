@@ -16,28 +16,27 @@
 
 \newcommand{\mytilde}{\raise.17ex\hbox{$\scriptstyle\mathtt{\sim}$} }
 
-\title{Towards Debugging Wireless Sensor Network Applications: Specification}
-\date{October 2012 - July 2013}
-\author{}
+\title{CS407 - Project Specification:\\
+Towards Debugging Wireless Sensor Network Applications}
+\date{25th October 2012}
+\author{
+	Matthew Bradbury (0921660) \and
+	Tim Law () \and
+	Ivan Leong () \and
+	Daniel Robertson () \and
+	Amit Shah () \and
+	Joe Yarnall ()
+}
 
 \begin{document}
 
 \maketitle
 
-%No numbering on first and second pages
+%No numbering on first page
 \pagestyle{empty}
 \thispagestyle{empty}
 
 \newpage
-
-\begin{abstract}
-Abstract
-\newline
-\newline
-\noindent \textbf{Keywords} - Keywords;
-\end{abstract}
-\newpage
-
 
 \pagestyle{plain}
 \setcounter{page}{1}
@@ -48,8 +47,73 @@ Abstract
 
 \section{Introduction}
 
+The emergence of Wireless Sensor Networks (WSNs) and the decrease in their cost and size has made it feasible to use them to solve certain types of problems. To solve these problems software will need to be developed for the WSN hardware, and like all software this software will contain bugs. As sensor networks are a distributed system, this increases the classes of bugs that software can suffer from \cite{?}, such as dead-lock, live-lock and other concurrency issues. To aid in developing reliable software for WSNs, there is thus need for tools that can assist in detecting and reporting these faults, so a developer can correct them.
+
+\section{Motivation}
+
+The need for debugging has been around for as long as there has been hardware that performs a task. With a famous example being the case where the term debugging was coined \cite{?}, where a moth was picked out of a crucial relay. However, nowadays debugging searches for much more complicated problems than moths in machines.
+
 \clearpage
 
+\section{Related Work}
+
+\clearpage
+
+\section{Project Description}
+
+\subsection{Desired Outcomes}
+\begin{itemize}
+	\item An application that can check to see if for a certain subsection of the network a given predicate holds
+	\item A tool that can visualise logged network traffic
+\end{itemize}
+
+\clearpage
+
+\section{Project Management}
+
+\subsection{Management}
+
+\subsection{Required Resources}
+\begin{itemize}
+	\item Wireless Sensor Nodes and related interface hardware
+\end{itemize}
+
+\subsection{Required Tools}
+\begin{itemize}
+	\item A simulator and development environment that will allow us to test code locally, then deploy to the actual hardware. There is a choice between Contiki \cite{?} and TinyOS \cite{?}.
+\end{itemize}
+
+\subsection{Schedule}
+
+\clearpage
+
+\section{Potential Challenges}
+
+Throughout our project we expect to encounter difficulties and challenges. The following are the challenges that we think may be encountered during the project and ways that these challenges could be mitigated.
+
+
+\subsection{Challenges}
+\begin{itemize}
+	\item Needing to talk to our project supervisor (Arshad), even though he is on sabbatical.
+	\item Project drifting in the wrong direction due to uncertainty.
+	\item Lack of features in the simulator and/or wireless sensor network environment.
+	\item Problems that we have not predicted here.
+\end{itemize}
+
+\subsection{Challenge Mitigation}
+\begin{itemize}
+	\item Even though Arshad is on sabbatical he should be in the department 3 days a week. Also there are other departmental staff that can assist us if Arshad is not available.
+	\item If our project is not heading in the right direction, we will seek guidance from our supervisor who should be able to guide us onto the right track.
+	\item If our development environment lacks features we can attempt to work around those features, or implement them (if they are very desirable) and contribute back to the open source community.
+	\item For any other problem, we will use all the support that the department provides. We will make sure that the issue is discussed within the group and we will try to resolve it ourselves. if we find we cannot, then we will seek additional help.
+\end{itemize}
+
+\clearpage
+
+
+\section{Conclusion}
+
+\clearpage
 
 \appendixpage
 \addappheadtotoc

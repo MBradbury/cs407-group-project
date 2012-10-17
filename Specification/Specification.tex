@@ -53,9 +53,9 @@ The emergence of Wireless Sensor Networks (WSNs) and the decrease in their cost 
 
 The need for debugging has been around for as long as there has been hardware that performs a task. With a famous folklore example being the case where the term debugging was coined, where a moth was picked out of a crucial relay \cite{shapiro1987etymology}. However, nowadays debugging searches for much more complicated problems than moths in machines.
 
-When you have a sequential program it is easy to insert breakpoint or debug messages that allow you to inspect the state of the program at that given point of the execution. With distributed systems, you have the same issues that sequential programs have, but you also have to deal with the interaction of each of the different parts of the system. These interactions can be non-deterministic \cite{?} and make inspection of the system's state at any given point much harder \cite{?}. These interactions can lead to many types of bugs that a sequential program would not encounter, such as deadlock or livelock \cite{?}, inconsistent states \cite{?} and the need to handle failures is other disconnected parts of the system \cite{?}. While there exist algorithms to solve some of these problems (for instance TCP provides stronger guarantees of message deliver than alternative protocols such as UDP \cite{?}), there are some errors that the software developer will need to ensure they do not make when writing the software. As detecting these issues is difficult and so is reporting them, tools need to be made available to the developers, so they can focus on developing their application rather than developing debugging tools to try to fix their application.
+When you have a sequential program it is easy to insert breakpoint or debug messages that allow you to inspect the state of the program at that given point of the execution. With distributed systems, you have the same issues that sequential programs have, but you also have to deal with the interaction of each of the different parts of the system. These interactions can be non-deterministic \cite{liu2007wids} and make inspection of the system's state at any given point much harder \cite{?}. These interactions can lead to many types of bugs that a sequential program would not encounter, such as deadlock \cite{singhal1989deadlock}, inconsistent states \cite{?} and the need to handle failures in other disconnected parts of the system \cite{?}. While there exist algorithms to solve some of these problems (for instance TCP provides stronger guarantees of message deliver than alternative protocols such as UDP \cite{?}), there are some errors that the software developer will need to ensure they do not make when writing the software. As detecting these issues is difficult and so is reporting them, tools need to be made available to the developers, so they can focus on developing their application rather than developing debugging tools to try to fix their application.
 
-Wireless Sensor Networks are a class of distributed system, with a special property that they are energy constrained \cite{?}.  As they are a distributed system, the same distributed bugs can occur in software developed for them, so there is a need for tools to assist with this kind of debugging. However, as they are energy constrained developers will attempt to make certain optimisations that may not have been required with other types of distributed systems. This means any tool that is specific to them will need to be able to detect these kinds of bugs and relay them to the developer accurately.
+Wireless Sensor Networks are a class of distributed system, with a special property that they are energy constrained \cite{6023235}.  As they are a distributed system, the same distributed bugs can occur in software developed for them, so there is a need for tools to assist with this kind of debugging. However, as they are energy constrained developers will attempt to make certain optimisations that may not have been required with other types of distributed systems. This means any tool that is specific to them will need to be able to detect these kinds of bugs and relay them to the developer accurately.
 
 \section{Related Work}
 
@@ -78,6 +78,8 @@ Wireless Sensor Networks are a class of distributed system, with a special prope
 
 \subsection{Management}
 
+\cite{PMTextBook}
+
 \subsection{Required Resources}
 \begin{itemize}
 	\item Wireless Sensor Nodes and related interface hardware
@@ -87,7 +89,7 @@ Wireless Sensor Networks are a class of distributed system, with a special prope
 
 \subsection{Required Tools}
 \begin{itemize}
-	\item A simulator and development environment that will allow us to test code locally, then deploy to the actual hardware. There is a choice between Contiki \cite{?} and TinyOS \cite{?}.
+	\item A simulator and development environment that will allow us to test code locally, then deploy to the actual hardware. There is a choice between Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}.
 \end{itemize}
 
 \subsection{Schedule}
@@ -149,6 +151,7 @@ Throughout our project we expect to encounter difficulties and challenges. The f
 	\item Project drifting in the wrong direction due to uncertainty.
 	\item Lack of features in the simulator and/or wireless sensor network environment.
 	\item Problems that we have not predicted here.
+	\item Team members being unavailable to do work (eg. due to illness)
 \end{itemize}
 
 \subsection{Challenge Mitigation}
@@ -157,6 +160,7 @@ Throughout our project we expect to encounter difficulties and challenges. The f
 	\item If our project is not heading in the right direction, we will seek guidance from our supervisor who should be able to guide us onto the right track.
 	\item If our development environment lacks features we can attempt to work around those features, or implement them (if they are very desirable) and contribute back to the open source community.
 	\item For any other problem, we will use all the support that the department provides. We will make sure that the issue is discussed within the group and we will try to resolve it ourselves. if we find we cannot, then we will seek additional help.
+	\item Each member will make sure that what they are doing is well documented, so that other members can easily pick up the work. Each member of the team will also ensure their work is regularly checked in to the git repository.
 \end{itemize}
 
 

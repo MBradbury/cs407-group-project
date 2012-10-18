@@ -59,6 +59,12 @@ Wireless Sensor Networks are a class of distributed system, with a special prope
 
 \section{Related Work}
 
+\subsection{Sympathy}
+
+One of the projects that is summarised by \cite{herbert2007adaptive} is a method for identifying and localizing failures called Sympathy \cite{ramanathan2005sympathy}. Sympathy is intended to be run either in pre- or post-deployment environments where it collects data from distributed nodes at a sink. When insufficient data is received it is taken to imply that there exists a problem (insufficient data is component defined). The idea is that by monitoring data (both actively and passively) between components the system can identify what kind of failure occurred in a certain area of the network. Both of which are very useful when trying to debug a failure.
+
+It does, however, have some downsides. The first is that there is assumed to be no traffic and thus no application traffic or network congestion. These are real issues especially when applying this kind of debugging to a high throughput sensor network. There are also a number of spurious failure notification, which the authors are working on reducing, by applying a Bayes engine.
+
 \textbf{TODO}
 Talk about arshad and the departments work on Wireless Sensor Networks and distributed systems
 Talk about related work to predicate detection

@@ -1,5 +1,42 @@
 \section{Device Specifications}
 
+\subsection{Interface Module: USB1000}
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.5]{Images/USB1000}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\linewidth}{| l | l | X |}
+	\hline
+	\textbf{Item} & \textbf{Specification} & \textbf{Description} \\
+	\hline
+	\hline
+
+	\multicolumn{3}{|l|}{\textbf{Components}} \\
+	\hline
+	Interface Type & USB type A & USB 1.1 compatible. USB full speed support (12Mbps)\\
+	\hline
+	USB2UART Chip & FTDI\textregistered~ FT232BM & USB2UART converter chip\\
+	\hline
+	1kbit EEPROM & Microchip\textregistered~ 93C46 & Driver ID storage\\
+	\hline
+	Quad Buffer & Texas Instruments\textregistered~ SN74HC126 & USB Rx/Tx Communications buffer\\
+	\hline
+	Octal Switch & Analog Devices\textregistered~ ADG715 & Reset sequence recognition\\
+	\hline
+	Mote Interface & Terminal Block (ERNI\textregistered~ compatible) & Connector to CMXX00 WSN Motes (Vcc, GND, 8 port ADC, 2 port GPIO pins)\\
+	\hline
+
+	\end{tabularx}
+	\caption{Specifications for the USB1000 Interface Board \cite{USB1000}}
+	\label{tab:USB1000-spec}
+\end{table}
+
+\clearpage
+
 \subsection{Sensor Board: CM5000}
 
 \begin{figure}[H]
@@ -9,7 +46,7 @@
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{| l | l | p{5.5cm} |}
+	\begin{tabularx}{\linewidth}{| l | l | X |}
 	\hline
 	\textbf{Item} & \textbf{Specification} & \textbf{Description} \\
 	\hline
@@ -17,7 +54,8 @@
 
 	\multicolumn{3}{|l|}{\textbf{Processor}} \\
 	\hline
-	Processor Model & Texas Instruments\textregistered~ MSP430F1611 & Texas Instruments\textregistered~ MSP430 family\\
+	\multirow{2}{*}{Processor Model} & Texas Instruments\textregistered & Texas Instruments\textregistered\\
+	~ & MSP430F1611 & MSP430 family\\
 	\hline
 	\multirow{3}{*}{Memory} & 48KB & Program Flash \\
 	~ & 10KB & Data RAM \\
@@ -42,7 +80,8 @@
 	\hline
 	RF Power & -25dBm \mytilde 0dBm & Software Configurable \\
 	\hline
-	Range & \mytilde120m (outdoor), 20\mytilde30m (indoor) & Longer ranges possible with optional SMA antenna attached \\
+	\multirow{2}{*}{Range} & \mytilde120m (outdoor) & \multirow{2}{5cm}{Longer ranges possible with optional SMA antenna attached} \\
+	~ & 20~\mytilde30m (indoor) & ~ \\
 	\hline
 	\multirow{3}{*}{Current Draw} & RX: 18.8mA & \multirow{3}{5.5cm}{Lower RF Power Modes reduce consumption} \\
 	~ & TX: 17.4mA & ~ \\
@@ -68,48 +107,11 @@
 	~ & ~ & Humidity Accuracy: $\pm$ 3 \%RH (typical) \\
 	\hline
 
-	\end{tabular}
+	\end{tabularx}
 	\caption{Specifications for the CM5000 Wireless Sensor Node \cite{CM5000}}
 	\label{tab:CM5000-spec}
 \end{table}
 
-\clearpage
-
-
-\subsection{Interface Module: USB1000}
-
-\begin{figure}[H]
-\centering
-\includegraphics[scale=0.5]{Images/USB1000}
-\end{figure}
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{| l | l | p{5.5cm} |}
-	\hline
-	\textbf{Item} & \textbf{Specification} & \textbf{Description} \\
-	\hline
-	\hline
-
-	\multicolumn{3}{|l|}{\textbf{Components}} \\
-	\hline
-	Interface Type & USB type A & USB 1.1 compatible. USB full speed support (12Mbps)\\
-	\hline
-	USB2UART Chip & FTDI\textregistered~ FT232BM & USB2UART converter chip\\
-	\hline
-	1kbit EEPROM & Microchip\textregistered~ 93C46 & Driver ID storage\\
-	\hline
-	Quad Buffer & Texas Instruments\textregistered~ SN74HC126 & USB Rx/Tx Communications buffer\\
-	\hline
-	Octal Switch & Analog Devices\textregistered~ ADG715 & Reset sequence recognition\\
-	\hline
-	Mote Interface & Terminal Block (ERNI\textregistered~ compatible) & Connector to CMXX00 WSN Motes (Vcc, GND, 8 port ADC, 2 port GPIO pins)\\
-	\hline
-
-	\end{tabular}
-	\caption{Specifications for the USB1000 Interface Board \cite{USB1000}}
-	\label{tab:USB1000-spec}
-\end{table}
 
 \clearpage
 
@@ -122,7 +124,7 @@
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{| l | l | p{4.5cm} |}
+	\begin{tabularx}{\linewidth}{| l | l | X |}
 	\hline
 	\textbf{Item} & \textbf{Specification} & \textbf{Description} \\
 	\hline
@@ -185,7 +187,7 @@
 	Protection type & IP20 & Non condensing\\
 	\hline
 
-	\end{tabular}
+	\end{tabularx}
 	\caption{Specifications for the UD1000 Sensor Network Sink \cite{UD1000}}
 	\label{tab:UD1000-spec}
 \end{table}

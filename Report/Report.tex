@@ -1,4 +1,4 @@
-\documentclass[a4paper]{article}
+\documentclass[a4paper,notitlepage]{article}
 
 \usepackage[top=2cm, bottom=2cm, left=3cm, right=3cm]{geometry}
 
@@ -13,8 +13,14 @@
 \usepackage[numbers]{natbib}
 
 \usepackage{graphicx}
+\usepackage{epstopdf}
 
+
+% A better tilde (~)
 \newcommand{\mytilde}{\raise.17ex\hbox{$\scriptstyle\mathtt{\sim}$} }
+
+% For use in the title page
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 
 
 % For \begin{acknowledgements}
@@ -46,26 +52,48 @@
 \fi
 \makeatother
 
-\title{Towards Debugging Wireless Sensor Network Applications}
-\date{October 2012 - July 2013}
-\author{
-	Matthew Bradbury (0921660) \and
-	Tim Law () \and
-	Ivan Leong () \and
-	Daniel Robertson (0910210) \and
-	Amit Shah (0904778) \and
-	Joe Yarnall ()
-}
-
 \begin{document}
 
-\maketitle
+\begin{titlepage}
+\begin{center}
 
-%No numbering on first and second pages
-\pagestyle{empty}
-\thispagestyle{empty}
+% Upper part of the page
+\includegraphics[scale=1.15]{the_warwick_uni_blue.eps}\\[0.75cm]
 
-\newpage
+\textsc{\LARGE Department of Computer Science}\\[1.5cm] 
+
+\textsc{\Large Fourth Year Project}\\[0.5cm]
+
+
+% Title
+\HRule \\[0.4cm]
+{\Huge \bfseries Towards Debugging Wireless Sensor Network Applications}\\[0.4cm]
+
+\HRule \\[2cm]
+
+% Author and supervisor
+\noindent{
+\begin{minipage}{0.4\textwidth}
+\begin{flushleft} \large
+\emph{Authors:}\\
+Matthew Bradbury (0921660) \\
+Tim Law () \\
+Ivan Leong () \\
+Daniel Robertson (0910210) \\
+Amit Shah (0904778) \\
+Joe Yarnall ()\\
+\end{flushleft}
+\end{minipage}}
+\hfill
+\noindent{
+\begin{minipage}{0.4\textwidth}
+\begin{flushright} \large
+\emph{Supervisor:} \\
+Dr.~Arshad Jhumka
+\end{flushright}
+\end{minipage}}
+
+\vfill
 
 \begin{abstract}
 Abstract
@@ -73,6 +101,22 @@ Abstract
 \newline
 \noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Global Predicate Detection;
 \end{abstract}
+
+\vfill
+\vfill
+\vfill
+\vfill
+
+% Bottom of the page
+{\large October 2012 - July 2013}
+
+\end{center}
+\end{titlepage}
+
+%No numbering on first and second pages
+\pagestyle{empty}
+\thispagestyle{empty}
+
 \newpage
 
 \begin{acknowledgements}

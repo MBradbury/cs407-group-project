@@ -14,6 +14,10 @@
 
 \usepackage{graphicx}
 
+\usepackage[parfill]{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\baselineskip}
+
 \newcommand{\mytilde}{\raise.17ex\hbox{$\scriptstyle\mathtt{\sim}$} }
 
 \title{CS407 - Project Specification:\\
@@ -47,7 +51,7 @@ Towards Debugging Wireless Sensor Network Applications}
 
 \section{Introduction}
 
-The emergence of Wireless Sensor Networks (WSNs) and the decrease in their cost and size has made it feasible to use them to solve certain types of problems. To solve these problems software will need to be developed for the WSN hardware, and like all software this software will contain bugs. As sensor networks are a distributed system, this increases the classes of bugs that software can suffer from \cite{?}, such as dead-lock, live-lock and other concurrency issues. To aid in developing reliable software for WSNs, there is thus need for tools that can assist in detecting and reporting these faults, so a developer can correct them.
+The emergence of Wireless Sensor Networks (WSNs) and the decrease in their cost and size has made it feasible to use them to solve certain types of problems. To solve these problems software will need to be developed for the WSN hardware, and like all software this software will contain bugs \cite{5010224}. As sensor networks are a distributed system, this increases the classes of bugs that software can suffer from \cite{5010224}, such as dead-lock, live-lock and other concurrency issues. To aid in developing reliable software for WSNs, there is thus need for tools that can assist in detecting and reporting these faults, so a developer can correct them.
 
 \section{Motivation}
 
@@ -57,13 +61,6 @@ When you have a sequential program it is easy to insert breakpoint or debug mess
 
 Wireless Sensor Networks are a class of distributed system, with a special property that they are energy constrained \cite{6023235}.  As they are a distributed system, the same distributed bugs can occur in software developed for them, so there is a need for tools to assist with this kind of debugging. However, as they are energy constrained developers will attempt to make certain optimisations that may not have been required with other types of distributed systems. This means any tool that is specific to them will need to be able to detect these kinds of bugs and relay them to the developer accurately.
 
-\section{Related Work}
-
-\textbf{TODO}
-Talk about arshad and the departments work on Wireless Sensor Networks and distributed systems
-Talk about related work to predicate detection
-
-\clearpage
 
 \section{Project Description}
 
@@ -72,7 +69,6 @@ Talk about related work to predicate detection
 	\item An application that can check to see if for a certain subsection of the network a given predicate holds.
 	\item A visualisation tool for logged network traffic.
 	\item Implementations of various distributed algorithms to test the visualizer and the predicate checker.
-	\item \textbf{TODO}
 \end{itemize}
 
 \subsection{Visualisation Tool}
@@ -94,7 +90,7 @@ Talk about related work to predicate detection
 
 \subsection{Management}
 
-As this is a group project there are additional challenges to face compared to a solo project. Therefore, we plan to use the knowledge and experience gained in the module IB382 Project Management \cite{?} as well as our own experience to avoid common problems that could prevent us working effectively. We also plan to refer to the Project Management textbook for additional resources \cite{PMTextBook}.
+As this is a group project there are additional challenges to face compared to a solo project. Therefore, we plan to use the knowledge and experience gained in the module IB382 Project Management \cite{IB382} as well as our own experience to avoid common problems that could prevent us working effectively. We also plan to refer to the Project Management textbook for additional resources \cite{PMTextBook}.
 
 As part of the management we will make sure we meet up at least once a week to discuss our current progress, and allocate tasks for the next week. We also intent to stay in contact and discuss our progress and any resources we find in between these meetings.
 
@@ -116,8 +112,6 @@ We will also be assigning roles, in order to keep the group organised. The follo
 	\end{tabular}
 \end{table}
 
-\textbf{TODO}
-
 \subsection{Required Resources}
 \begin{itemize}
 	\item Wireless Sensor Nodes and related interface hardware
@@ -128,15 +122,15 @@ We will also be assigning roles, in order to keep the group organised. The follo
 \end{itemize}
 
 \subsection{Required Tools}
-\textbf{WORK IN PROGRESS}\\
+\textbf{WORK IN PROGRESS}
 
-A simulator and operating system needs to be chosen that will allow us to test our code locally, then provide functionality to deploy that code to the network easily. We will now provide a comparison between the two primary operating systems, Contiki\cite{23839452} and TinyOS\cite{levis2003tossim}, and their respective simulators with a view to deciding which system best suits this projects goals and motivations.\\
+A simulator and operating system needs to be chosen that will allow us to test our code locally, then provide functionality to deploy that code to the network easily. We will now provide a comparison between the two primary operating systems, Contiki\cite{23839452} and TinyOS\cite{levis2003tossim}, and their respective simulators with a view to deciding which system best suits this projects goals and motivations.
 
-TinyOS and it's simulator TOSSIM were originally created at UC Berkeley as part of the DARPA NEST Program. TinyOS is a static system where designers must allocate resources during design-time. TinyOS is also a monolithic system, in this system programs are compiled with the OS code and distributed to network nodes together as one image.\\
+TinyOS and it's simulator TOSSIM were originally created at UC Berkeley as part of the DARPA NEST Program. TinyOS is a static system where designers must allocate resources during design-time. TinyOS is also a monolithic system, in this system programs are compiled with the OS code and distributed to network nodes together as one image.
 
-Contiiki was developed by Adam Dunkels and is an open source operating system designed for the Internet of Things. Contiki is a dynamic system that allows resources to be allocated and deallocated at run-time. Contiki is a modular system where programs are compiled into an individual module that can be distributed to the network nodes which run the code dynamically.\\
+Contiiki was developed by Adam Dunkels and is an open source operating system designed for the Internet of Things. Contiki is a dynamic system that allows resources to be allocated and deallocated at run-time. Contiki is a modular system where programs are compiled into an individual module that can be distributed to the network nodes which run the code dynamically.
 
-Both systems are event driven, however Contiki also offers native multi-threading support through proto-threads where as TinyOS does not and requires a library to gain access to threading through TinyThreads\cite{?}. TinyOS programs are implemented in nesC a variation of C designed for the TinyOS platform. The simulator COOJA can run both C and Java code but the Contiki OS can only run C code. Both systems use custom wireless networking stacks that are optimised for low power consumption. In a comparison of energy and time efficiency between Contiki and TinyOS\cite{?} it is shown that the differences between the two operating systems is negligible. The study found that Contiki is quicker at sensing, TinyOS is faster at communication between nodes and they are both equally efficient at processing tasks such as executing security algorithms.\\
+Both systems are event driven, however Contiki also offers native multi-threading support through proto-threads where as TinyOS does not and requires a library to gain access to threading through TinyThreads\cite{?}. TinyOS programs are implemented in nesC a variation of C designed for the TinyOS platform. The simulator COOJA can run both C and Java code but the Contiki OS can only run C code. Both systems use custom wireless networking stacks that are optimised for low power consumption. In a comparison of energy and time efficiency between Contiki and TinyOS\cite{?} it is shown that the differences between the two operating systems is negligible. The study found that Contiki is quicker at sensing, TinyOS is faster at communication between nodes and they are both equally efficient at processing tasks such as executing security algorithms.
 
 We have chosen to use Contiki and COOJA for this project because it provides the most flexible system for developing applications that can quickly and easily be distributed to the network. Contiki also offers an easy to use fully functioning development environment and simulator tool all in one package. Finally, Contiki is almost as efficient as TinyOS in nearly every respect but provides all the additional features of a modular dynamic operating system and for these reasons this is why we have chosen it as the system we will develop for.  
 

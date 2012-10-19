@@ -59,12 +59,6 @@ Wireless Sensor Networks are a class of distributed system, with a special prope
 
 \section{Related Work}
 
-\subsection{Sympathy}
-
-One of the projects that is summarised by \cite{herbert2007adaptive} is a method for identifying and localizing failures called Sympathy \cite{ramanathan2005sympathy}. Sympathy is intended to be run either in pre- or post-deployment environments where it collects data from distributed nodes at a sink. When insufficient data is received it is taken to imply that there exists a problem (insufficient data is component defined). The idea is that by monitoring data (both actively and passively) between components the system can identify what kind of failure occurred in a certain area of the network. Both of which are very useful when trying to debug a failure.
-
-It does, however, have some downsides. The first is that there is assumed to be no traffic and thus no application traffic or network congestion. These are real issues especially when applying this kind of debugging to a high throughput sensor network. There are also a number of spurious failure notification, which the authors are working on reducing, by applying a Bayes engine.
-
 \textbf{TODO}
 Talk about arshad and the departments work on Wireless Sensor Networks and distributed systems
 Talk about related work to predicate detection
@@ -77,21 +71,21 @@ Talk about related work to predicate detection
 \begin{itemize}
 	\item An application that can check to see if for a certain subsection of the network a given predicate holds.
 	\item A visualisation tool for logged network traffic.
-	\item Implementations of various distrubted algorithms to test the visualizer and the predicate checker.
+	\item Implementations of various distributed algorithms to test the visualizer and the predicate checker.
 	\item \textbf{TODO}
 \end{itemize}
 
 \subsection{Visualisation Tool}
 \begin{itemize}
 	\item Visualisation of the sensor network with node positioning and connections.
-	\item Visulaisation of active clusters within the sensor network.
-	\item Visulaisation of messages flowing through the network, along with node logs of the information processed.
+	\item Visualisation of active clusters within the sensor network.
+	\item Visualisation of messages flowing through the network, along with node logs of the information processed.
 \end{itemize}
 
 \subsection{Predicate Checker}
 \begin{itemize}
-	\item Fuctionality to query nodes to see if a given predicate holds.
-	\item Visulaisation of nodes that are breaking a given predicate during runtime.
+	\item Functionality to query nodes to see if a given predicate holds.
+	\item Visualisation of nodes that are breaking a given predicate during runtime.
 \end{itemize}
 
 

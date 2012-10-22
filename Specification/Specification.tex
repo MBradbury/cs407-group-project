@@ -84,6 +84,23 @@ Wireless Sensor Networks are a class of distributed system, with a special prope
 	\item Visualisation of nodes that are breaking a given predicate during runtime.
 \end{itemize}
 
+\subsubsection{Predicate Specification}
+
+There are also several different ways that we can specify a predicate. The first is simply writing a function that takes some input state and produce a boolean output. We aim to produce a C library that will take this predicate, give it some state and check the result. If the result is false then the library will generate a debug message, containing logs of recent events and details of why the predicate failed, then send that message back to the base station.
+
+Another way that predicates can be defined is at run-time instead of at compile-time. The idea here is that we would send a predicate written in a scripting language to each of the nodes and then have that predicate interpreted and executed at a given interval or at a certain place. The code running on the nodes will need to register what memory locations correspond to which variable so that the interpreter can give named variables values. We expect that this may be difficult to do, due to the constrained resources of the node \cite{CM5000}. However, there is a precedence that this is possible, the fact that there exists TinyDB \cite{?} which would need to interpret SQL statements and then execute them.
+
+\subsubsection{Predicate Checking}
+
+There are several types of predicates that we may wish to check. The first kind are very simple predicates that one might check if a standard sequential non-distributed program, such as when performing an \verb|ASSERT| statement or checking a condition then throwing an exception. Here we would use the library we talked about developing above, and place these checks into the code at desired places.
+
+The next level of checking would be checking of predicates that specify some invariant of the program. These could be hard-coded into the software or provided a run-time. These could be run at given points throughout the execution (at beginning and end of functions) or randomly throughout the program's execution.
+
+The final level of checking involves network level predicates. These predicates would check for things such as permanent node failures and also be able to recognise temporary node failures. Other examples where they might be used are to check that nodes are obeying the TDMA (Time Division Multiple Access) slot they have been allocated. Or if an aggregation tree \cite{TankBible} that has been set up for a WSN is still optimal (for instance checking that the height of the tree is the same as the maximum hop count of messages received at the base station).
+
+This final network checking has some additional considerations to be made. For instance if we take mobile nodes into account then detecting crashed nodes becomes more difficult. With stationary nodes you can just check that your 1-hop neighborhood remains the same. With mobile nodes you expect the 1-hop neighborhood to change, so will have to use a different strategy.
+
+
 \subsection{Required Resources}
 \begin{itemize}
 	\item Wireless Sensor Nodes and related interface hardware

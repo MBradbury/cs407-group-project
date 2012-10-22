@@ -97,4 +97,41 @@ One of the projects that is summarised by \cite{herbert2007adaptive} is a method
 
 It does, however, have some downsides. The first is that there is assumed to be no traffic and thus no application traffic or network congestion. These are real issues especially when applying this kind of debugging to a high throughput sensor network. There are also a number of spurious failure notification, which the authors are working on reducing, by applying a Bayes engine.
 
+\subsection {DICAS: Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks\cite{dicaspaper}}
+
+Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks (DICAS) is a lightweight distributed protocol for Wireless Sensor Networks that mitigates the effects of a wide-range of control traffic attacks. DICAS does this by utilizing a unique property of a wireless sensor network, this is that each node is able to monitor a part of their neighbours network traffic. Using DICAS the authors were able to create LSR a lightweight secure routing algorithm for Wireless Sensor Networks.
+
+In DICAS nodes maintain a data structure of their first hop neighbours for local monitoring to detect malicious nodes and in local response to isolate these nodes. When a node is deployed it finds and authenticates all of its 1 hop neighbours using a pairwise shared key. These neighbours communicate their neighbours, 2 hop neighbours to the original node, and their own commitment key, which is generated using a random seed, to the newly deployed node. Each node will then have knowledge of all of its 1 hop neighbours as well as their commitment keys and all of its 2 hop neighbours.
+
+Using this knowledge the DICAS protocol can enact a collaborative detection strategy where every node monitors the traffic going in and out of it's neighbours. Each node that is within transmission range of both the sending(X) and receiving(A) nodes of a packet are considered guard nodes of A over the link from X to A. These nodes maintain a watch buffer of packets sent from X to A, the duration and information stored are determined by the attack type under consideration by the system. Each guard node maintains a malicious counter for each link it is monitoring, if A drops, delays, changes or fabricates a packet from X then the guard node will increase its malicious counter. If the malicious counter exceeds a predefined threshold the node is considered to be malicious and is removed from the neighbours list. The guard node propagates this knowledge to all the other nodes in its neighbour list. When another node receives enough authenticated alerts about the malicious node it is excluded from its neighbours list. Once all 1 hop nodes have excluded the malicious node then it is effectively isolated from the system and all packets from or to that node are ignored.      
+
+The authors tested the DICAS algorithm against 5 sets of attacks, these are:
+\begin{enumerate}
+
+\item Route Traffic Manipulation
+
+\item ID Spoofing and Sybil Attacks
+
+\item Wormhole Attacks
+
+\item Sinkhole
+
+\item Rushing Attack
+
+\end{enumerate}
+
+Additionally, the paper describes a cost analysis on the DICAS algorithm, these are the results: 
+\begin{itemize}
+\item Memory Overhead:
+
+The memory overhead is the most pressing of the overheads created by the DICAS algorithm. The algorithm must store several data structures on each node: a neighbours list, a watch buffer, a commitment key list and the alert list. These structures are variable on sizes dependent on the number of nodes in the network, the network layout and the MAC layer delay for acquiring a channel. Any implementation must consider the memory cost of the algorithm seriously.
+
+\item Computation Overhead:
+
+With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbor list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbor list structure are relatively small, the computation time required for these operations is negligible.
+
+\item Bandwith Overhead:
+
+When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases makeup a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
+\end{itemize}
 

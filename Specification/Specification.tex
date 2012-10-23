@@ -94,7 +94,7 @@ There are also several different ways that we can specify a predicate. The first
     \begin{displaymath}
 	CheckTemp(T) = T > 0 \land T < 40
 	\end{displaymath}
-	\caption{For example we would like to check that the temperature sensor is reporting values}
+	\caption{For example we would like to check that the temperature sensor is reporting values within the range its specification says it should produce}
 \end{center}
 \end{figure}
 
@@ -105,9 +105,9 @@ As for the type of logic that we intend to use, for compile-time predicate check
 \begin{figure}[H]
 \begin{center}
     \begin{displaymath}
-	NeighbourhoodHealty(T) = \forall N \in 1HopNeighbourhood : NotCrashed(N) \land |1HopNeighbourhood| = Expected
+	NeighbourhoodHealty() = \forall Node \in ExpectedNeighbourhood : NotCrashed(Node)
 	\end{displaymath}
-	\caption{Check that all nodes in the 1-hop neighbourhood have not crashed}
+	\caption{Check that all nodes in the expected 1-hop neighbourhood have not crashed}
 \end{center}
 \end{figure}
 
@@ -137,7 +137,7 @@ We plan on implementing two sets of algorithms, the first are those that will re
 
 \begin{itemize}
 	\item H-SEND \cite{herbert2007adaptive}
-	\item Our own implementation drawing on "Send to Base" style techniques \cite{?}
+	\item Our own implementation drawing on ``Send to Base'' style techniques \cite{?}
 \end{itemize}
 
 The second set of algorithms we intend to implement are those that we will use to test the algorithms that check that given predicates hold.
@@ -214,7 +214,7 @@ During the first term, we plan to do our initial research around the subject to 
 	Writing Specification & 1 & 1 & 1 & 1 & 1 & 1\\
 	Algorithm Development & 3 & 3 & 3 & 3 & 3 & 3\\
 	H-SEND Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
-	"Send to Base" Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
+	``Send to Base'' Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
 	Clustering Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
 	Aggregation Tree Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
 	Testing & 1 & 1 & 1 & 1 & 1 & 1\\
@@ -242,7 +242,7 @@ We do not expect to fully finish development for application predicates during t
 	
 	Additional Research & 1 & 1 & 1 & 1 & 1 & 1\\
 	Algorithm Development & 3 & 3 & 3 & 3 & 3 & 3\\
-	Adapt our "Send to Base" Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
+	Adapt our ``Send to Base'' Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
 	Testing & 2 & 2 & 2 & 2 & 2 & 2\\
 	Testing and adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
 	Report Writing & 2 & 2 & 2 & 2 & 2 & 2\\

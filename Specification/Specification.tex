@@ -14,6 +14,8 @@
 
 \usepackage{graphicx}
 
+\usepackage{amsmath}
+
 \usepackage[parfill]{parskip}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.75\baselineskip}
@@ -87,9 +89,36 @@ Wireless Sensor Networks are a class of distributed system, with a special prope
 
 There are also several different ways that we can specify a predicate. The first is simply writing a function that takes some input state and produce a boolean output. We aim to produce a C library that will take this predicate, give it some state and check the result. If the result is false then the library will generate a debug message, containing logs of recent events and details of why the predicate failed, then send that message back to the base station.
 
+\begin{figure}[H]
+\begin{center}
+    \begin{displaymath}
+	CheckTemp(T) = T > 0 \land T < 40
+	\end{displaymath}
+	\caption{For example we would like to check that the temperature sensor is reporting values}
+\end{center}
+\end{figure}
+
 Another way that predicates can be defined is at run-time instead of at compile-time. The idea here is that we would send a predicate written in a scripting language to each of the nodes and then have that predicate interpreted and executed at a given interval or at a certain place. The code running on the nodes will need to register what memory locations correspond to which variable so that the interpreter can give named variables values. We expect that this may be difficult to do, due to the constrained resources of the node \cite{CM5000}. However, there is a precedence that this is possible, the fact that there exists TinyDB \cite{?} which would need to interpret SQL statements and then execute them.
 
 As for the type of logic that we intend to use, for compile-time predicate checking the full expressiveness of C is available. For run-time checking there may need to be restrictions on the type of logic we can use. Initially we are aiming to use predicate logic with at least the ability to execute $\land$, $\lor$, $\lnot$, $=$, $\neq$, $<$, $>$, $\leq$ and $\geq$ on basic C types such as floating point variables and integers. If possible we would like to implement quantifiers ($\forall$ and $\exists$) as we expect these to be useful for network predicates. As for capabilities such as sets and function definitions and data structure definitions, these may be too expensive and not supported. Although we intend to investigate the use of a lightweight implementation of LUA \cite{?} or the Contiki Shell \cite{?} to evaluate these predicates, so the features that we can support will relate to what these tools are capable of.
+
+\begin{figure}[H]
+\begin{center}
+    \begin{displaymath}
+	NeighbourhoodHealty(T) = \forall N \in 1HopNeighbourhood : NotCrashed(N) \land |1HopNeighbourhood| = Expected
+	\end{displaymath}
+	\caption{Check that all nodes in the 1-hop neighbourhood have not crashed}
+\end{center}
+\end{figure}
+
+\begin{figure}[H]
+\begin{center}
+    \begin{displaymath}
+	CheckAggregrationTreeHeight(Msg) = Msg.HopCount = ExpectedDepth
+	\end{displaymath}
+	\caption{Check that on receiving a message the height of the tree is as expected. This aims to catch when a tree has been set up and the structure has now changed, making the current structure suboptimal in energy usage.}
+\end{center}
+\end{figure}
 
 \subsubsection{Predicate Checking}
 
@@ -99,8 +128,24 @@ The next level of checking would be checking of predicates that specify some inv
 
 The final level of checking involves network level predicates. These predicates would check for things such as permanent node failures and also be able to recognise temporary node failures. Other examples where they might be used are to check that nodes are obeying the TDMA (Time Division Multiple Access) slot they have been allocated. Or if an aggregation tree \cite{TankBible} that has been set up for a WSN is still optimal (for instance checking that the height of the tree is the same as the maximum hop count of messages received at the base station).
 
-This final network checking has some additional considerations to be made. For instance if we take mobile nodes into account then detecting crashed nodes becomes more difficult. With stationary nodes you can just check that your 1-hop neighborhood remains the same. With mobile nodes you expect the 1-hop neighborhood to change, so will have to use a different strategy.
+This final network checking has some additional considerations to be made. For instance if we take mobile nodes into account then detecting crashed nodes becomes more difficult. With stationary nodes you can just check that your 1-hop neighbourhood remains the same. With mobile nodes you expect the 1-hop neighbourhood to change, so will have to use a different strategy.
 
+
+\subsubsection{Algorithms to Implement}
+
+We plan on implementing two sets of algorithms, the first are those that will report the predicate failures. The following are the algorithms we intend to implement.
+
+\begin{itemize}
+	\item H-SEND \cite{herbert2007adaptive}
+	\item Our own implementation drawing on "Send to Base" style techniques \cite{?}
+\end{itemize}
+
+The second set of algorithms we intend to implement are those that we will use to test the algorithms that check that given predicates hold.
+
+\begin{itemize}
+	\item Clustering algorithm (such as LEACH) \cite{herbert2007adaptive}.
+	\item An algorithm to set up an aggregation tree (for some information like temperature average). \cite{TankBible}
+\end{itemize}
 
 \subsection{Required Resources}
 \begin{itemize}
@@ -109,7 +154,8 @@ This final network checking has some additional considerations to be made. For i
 	\item Laptop computers to act as mobile base stations, and for development
 	\item Access to academic papers that detail the previous work
 	\item A DVCS where we can store source code for the project
-	\item A simulator and development environment that will allow us to test code locally, then deploy to the actual hardware. There is a choice between Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}.
+	\item A simulator and development environment that will allow us to test code locally, then deploy to the actual hardware. There is a choice between Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}
+	\item If possible, the ability to develop code on the DCS lab machines
 \end{itemize}
 
 \section{Project Management}
@@ -124,16 +170,16 @@ We will also be assigning roles, in order to keep the group organised. The follo
 
 \begin{table}[H]
 \centering
-	\begin{tabular}{| c | c | c |}
+	\begin{tabular}{| c | c |}
 		\hline
-		Name & Role & Role Description\\
+		Name & Role\\
 		\hline
-		Matthew Bradbury & Group Leader & ~ \\
-		Tim Law & nil & ~ \\
-		Ivan Leong & nil & ~ \\
-		Daniel Robertson & nil & ~ \\
-		Amit Shah & nil & ~ \\
-		Joe Yarnall & nil & ~ \\
+		Matthew Bradbury & Group Leader\\
+		Tim Law & Developer and Researcher\\
+		Ivan Leong & Developer and Tester\\
+		Daniel Robertson & Project Manager\\
+		Amit Shah & Technical Leader\\
+		Joe Yarnall & Developer and Tester\\
 		\hline
 	\end{tabular}
 \end{table}
@@ -155,22 +201,28 @@ During the first term, we plan to do our initial research around the subject to 
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{| l | c |}
+	\begin{tabular}{| l | l | l | l | l | l | l |}
+	Task Description & \multicolumn{6}{|l|}{Time Allocated (Weeks)}\\
+	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
 	\hline
-	\textbf{Task} & \textbf{Weeks}\\
 	\hline
-	Initial Research & 1-3\\
+	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application predicate checking} \\
 	\hline
-	Specification Writing & 3\\
+
+
+	Research around the Problem & 2 & 2 & 2 & 2 & 2 & 2\\
+	Writing Specification & 1 & 1 & 1 & 1 & 1 & 1\\
+	Algorithm Development & 3 & 3 & 3 & 3 & 3 & 3\\
+	H-SEND Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
+	"Send to Base" Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
+	Clustering Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
+	Aggregation Tree Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
+	Testing & 1 & 1 & 1 & 1 & 1 & 1\\
+	Testing and adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
+	Poster Creation and Presentation preparation & 1 & 1 & 1 & 1 & 1 & 1\\
+
 	\hline
-	Algorithm Implementation & 4-6\\
-	\hline
-	Testing & 7\\
-	\hline
-	Deploying to Physical Hardware & 8-9\\
-	\hline
-	Poster Creation and Presentation Preparation & 10\\
-	\hline
+	
 	\end{tabular}
 \end{table}
 
@@ -180,23 +232,25 @@ We do not expect to fully finish development for application predicates during t
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{| l | c |}
+	\begin{tabular}{| l | l | l | l | l | l | l |}
+	Task Description & \multicolumn{6}{|l|}{Time Allocated (Weeks)}\\
+	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
 	\hline
-	\textbf{Task} & \textbf{Weeks}\\
 	\hline
-	Further Research & 1\\
+	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking (and mobile nodes)} \\
 	\hline
-	Algorithm Implementation & 2-4\\
+	
+	Additional Research & 1 & 1 & 1 & 1 & 1 & 1\\
+	Algorithm Development & 3 & 3 & 3 & 3 & 3 & 3\\
+	Adapt our "Send to Base" Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
+	Testing & 2 & 2 & 2 & 2 & 2 & 2\\
+	Testing and adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
+	Report Writing & 2 & 2 & 2 & 2 & 2 & 2\\
+	
 	\hline
-	Testing & 5-6\\
-	\hline
-	Deploying to Physical Hardware & 7-8\\
-	\hline
-	Report Writing & 9-10\\
-	\hline
+	
 	\end{tabular}
 \end{table}
-
 
 
 \section{Potential Risks}

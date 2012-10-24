@@ -256,9 +256,10 @@ The second set of algorithms we intend to implement are those that we will use
 to test the algorithms that check that given predicates hold.
 
 \begin{itemize}
-	\item Clustering algorithm (such as LEACH) \cite{herbert2007adaptive}.
+	\item Clustering Algorithm (such as LEACH) \cite{herbert2007adaptive}.
 	\item An algorithm to set up an aggregation tree (for some information
 like temperature average). \cite{TankBible}
+	\item A Routing Algorithm on top of the Clustering Algorithm
 \end{itemize}
 
 \subsection{Required Resources}
@@ -336,7 +337,7 @@ aspects of the model, it may help us reduce the chances of any risks.
 
 During the first term, we plan to do our initial research around the subject to
 find out what has been done and what is implementable for us. We then plan to
-implement some of the algorithms to detect predicate failures we researched in a
+implement some of the algorithms to detect predicate failures we have researched in a
 simulator. Once the algorithms are working in a simulator we will deploy them to
 the motes. We expect difficulty deploying to the motes due to: i) us needing to
 learn how to do it, ii) the environment being slightly different to the
@@ -357,14 +358,13 @@ for alerting when application predicates do not hold for stationary nodes.
 
 	Research around the Problem & 2 & 2 & 2 & 2 & 2 & 2\\
 	Writing Specification & 1 & 1 & 1 & 1 & 1 & 1\\
-	Algorithm Development & 3 & 3 & 3 & 3 & 3 & 3\\
-	H-SEND Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
-	``Send to Base'' Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
-	Clustering Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
-	Aggregation Tree Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
-	Testing & 1 & 1 & 1 & 1 & 1 & 1\\
-	Testing and adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
-	Poster Creation and Presentation preparation & 1 & 1 & 1 & 1 & 1 & 1\\
+	H-SEND Implementation & 3.5 & ~ & ~ & 3.5 & ~ & ~\\
+	``Send to Base'' Implementation & ~ & ~ & ~ & ~ & 2 & 1.5\\
+	Clustering Implementation & ~ & 3.5 & 2 & ~ & ~ & ~\\
+	Aggregation Tree Implementation & ~ & ~ & ~ & ~ & 1.5 & ~\\
+	Develop Visualisation Tool & ~ & ~ & 1.5 & ~ & ~ & 2\\
+	Testing and Adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
+	Poster Creation and Presentation preparation & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
 
 	\hline
 	
@@ -376,9 +376,10 @@ for alerting when application predicates do not hold for stationary nodes.
 We do not expect to fully finish development for application predicates during
 the first term, so we will continue development during the second term. We also
 aim to research and implement different algorithms focusing on different aspects
-of wireless sensor networks (such as node mobility and checking network
-predicates). Again a lot of time is devoted to testing and deployment due to the
-difficulties involved.
+of wireless sensor networks (such as checking network predicates) and looking into an
+open research problem that involves deciding which nodes should selectively evaluate predicates,
+with energy efficiency as a driver. Again a lot of time is devoted to testing and
+deployment due to the difficulties involved.
 
 \begin{table}[H]
 	\centering
@@ -387,14 +388,15 @@ difficulties involved.
 	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
 	\hline
 	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking (and mobile nodes)} \\
+	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking and where the predicate is checked} \\
 	\hline
 	
 	Additional Research & 1 & 1 & 1 & 1 & 1 & 1\\
-	Algorithm Development & 3 & 3 & 3 & 3 & 3 & 3\\
-	Adapt our ``Send to Base'' Implementation & ~ & ~ & ~ & ~ & ~ & ~\\
-	Testing & 2 & 2 & 2 & 2 & 2 & 2\\
-	Testing and adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
+	Improving Dynamic Predicate Specification & 2 & 2 & ~ & ~ & 2 & 2\\
+	Develop Visualisation Tool & 2 & ~ & 2 & 2 & ~ & 2\\
+	Modify Algorithms to Selectively Evaluate Predicates & ~ & 2 & 2 & 2 & 2 & ~\\
+	Performance Testing & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
+	Testing and Adapting to Physical Nodes & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
 	Report Writing & 2 & 2 & 2 & 2 & 2 & 2\\
 	
 	\hline

@@ -135,3 +135,36 @@ With regards to computation they found that each packet received or sent require
 When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases makeup a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
 \end{itemize}
 
+\subsection{H-SEND: Hierachichal SEnsor Network Debugging\cite{}}
+
+H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs.
+
+There are 4 main steps involved in H-SEND:
+
+\begin{enumerate}
+	\item Developer specifies invariants when writing the software
+	\item Invariant checking code is (semi--)automatically inserted during compilation
+	\item If an invariant is violated at runtime, actions are taken (such as increased logging frequency, or an error message to the base station)
+	\item Developer can use the information to fix the software, and then upload the patched version
+\end{enumerate}
+
+There are a variety of different types of invariants that can be specified, typically characterised by the following three dichotomies:
+
+\begin{itemize}
+	\item Local vs. Multi--node invariants
+	
+	Invariants dependent on state on a single node are called local, as they don't require and messaging to check. If the state of multiple nodes is required for checking, the invariant is said to be multi--node.
+
+	\item Stateless vs. Stateful invariants
+	
+	An invariant is stateless is it doesn't depend on a node's execution state, and stateful otherwise.
+
+	\item Compile--time vs. Run--time invariants
+
+	Compile--time invariants are those involving comparisons against values that do not change, whereas runtime invariants are more flexible. Runtime invariants can compare against spatial and temporal trends ---  the state of surrounding nodes, and previous states respectively.
+\end{itemize}
+
+A grammar is specified which can be used to insert invariants into source code. Existential and universal quantifiers are supported.
+
+H-SEND is optimised for WSNs in a variety of ways. For example, it minimises overhead by buffering messages it needs to send, and piggybacking them on the existing network traffic. Due to the hierachical nature of the protocol, multinode-invariants can be checked efficiently at the closest parent node with all the required information.
+

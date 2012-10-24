@@ -173,7 +173,7 @@ nodes will need to register what memory locations correspond to which variable
 so that the interpreter can give named variables values. We expect that this may
 be difficult to do, due to the constrained resources of the node \cite{CM5000}.
 However, there is a precedence that this is possible, the fact that there exists
-TinyDB \cite{?} which would need to interpret SQL statements and then execute
+TinyDB \cite{TinyDB} which would need to interpret SQL statements and then execute
 them.
 
 As for the type of logic that we intend to use, for compile-time predicate
@@ -186,14 +186,13 @@ quantifiers ($\forall$ and $\exists$) as we expect these to be useful for
 network predicates. As for capabilities such as sets and function definitions
 and data structure definitions, these may be too expensive and not supported.
 Although we intend to investigate the use of a lightweight implementation of LUA
-\cite{?} or the Contiki Shell \cite{?} to evaluate these predicates, so the
+\cite{elua} or the Contiki Shell \cite{?} to evaluate these predicates, so the
 features that we can support will relate to what these tools are capable of.
 
 \begin{figure}[H]
 \begin{center}
     \begin{displaymath}
-	NeighbourhoodHealty() = \forall Node \in ExpectedNeighbourhood :
-NotCrashed(Node)
+	NeighbourhoodHealty() = \forall Node \in ExpectedNeighbourhood : NotCrashed(Node)
 	\end{displaymath}
 	\caption{Check that all nodes in the expected 1-hop neighbourhood have
 not crashed}
@@ -250,8 +249,7 @@ implement.
 
 \begin{itemize}
 	\item H-SEND \cite{herbert2007adaptive}
-	\item Our own implementation drawing on ``Send to Base'' style
-techniques \cite{?}
+	\item Our own implementation drawing on ``Send to Base'' style techniques
 \end{itemize}
 
 The second set of algorithms we intend to implement are those that we will use
@@ -267,13 +265,10 @@ like temperature average). \cite{TankBible}
 \begin{itemize}
 	\item Wireless Sensor Nodes and related interface hardware
 	\item Operating System and Simulator for the Wireless Sensor Nodes
-	\item Laptop computers to act as mobile base stations, and for
-development
+	\item Laptop computers to act as mobile base stations, and for development
 	\item Access to academic papers that detail the previous work
 	\item A DVCS where we can store source code for the project
-	\item A simulator and development environment that will allow us to test
-code locally, then deploy to the actual hardware. There is a choice between
-Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}
+	\item A simulator and development environment that will allow us to test code locally, then deploy to the actual hardware. There is a choice between Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}
 	\item If possible, the ability to develop code on the DCS lab machines
 \end{itemize}
 
@@ -356,8 +351,7 @@ for alerting when application predicates do not hold for stationary nodes.
 	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
 	\hline
 	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application
-predicate checking} \\
+	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application predicate checking} \\
 	\hline
 
 
@@ -393,8 +387,7 @@ difficulties involved.
 	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
 	\hline
 	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate
-checking (and mobile nodes)} \\
+	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking (and mobile nodes)} \\
 	\hline
 	
 	Additional Research & 1 & 1 & 1 & 1 & 1 & 1\\
@@ -419,12 +412,10 @@ ways that these risks could be mitigated.
 
 \subsection{Risks}
 \begin{itemize}
-	\item Needing to talk to our project supervisor (Arshad), even though he
-is on sabbatical.
+	\item Needing to talk to our project supervisor (Arshad), even though he is on sabbatical.
 	\item Project drifting in the wrong direction due to uncertainty.
 	\item Availability of hardware, because it is shared by the department.
-	\item Lack of features in the simulator and/or wireless sensor network
-environment.
+	\item Lack of features in the simulator and/or wireless sensor network environment.
 	\item Problems that we have not predicted here.
 	\item Team members being unavailable to do work (eg. due to illness).
 \end{itemize}

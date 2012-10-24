@@ -95,9 +95,7 @@ bugs related with the interaction of each of the different nodes in the system.
 These interactions can be non-deterministic \cite{liu2007wids} in nature and
 this can make inspection of the system's global state at any given point during
 execution more challenging \cite{chandy1985distributed}. These links can lead to
-many types of bugs that a sequential program would never encounter, such as
-deadlock \cite{singhal1989deadlock}, inconsistent states
-\cite{chandy1985distributed} and the need to detect and handle failures in other
+many types of bugs that a sequential program would never encounter, such as detecting and handling failures in other
 nodes of the system \cite{5623434}. While there exist algorithms to solve some
 of these problems (for instance TCP provides stronger guarantees of message
 deliver than alternative protocols such as UDP

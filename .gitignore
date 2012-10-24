@@ -2,7 +2,7 @@
 /Report/Report.toc
 /Report/Report.synctex.gz
 /Report/Report.out
-/Report/Report.log
+/Report/*.log
 /Report/Report.blg
 /Report/Report.bbl
 /Report/Report.aux
@@ -17,7 +17,7 @@
 /Specification/Specification.aux
 /Specification/Specification.bbl
 /Specification/Specification.blg
-/Specification/Specification.log
+/Specification/*.log
 /Specification/Specification.out
 /Specification/Specification.synctex.gz
 /Specification/Specification.toc

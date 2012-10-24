@@ -91,7 +91,9 @@ The basic operation of QSMAC involves examining the average increase rate of dat
 
 Simulations show performance greater than that of SMAC in terms of packets' delay, energy consumption, packet reception ratio and network throughput. As above, if these benefits translate to real hardware, QSMAC potentially offers a real improvement over existing wireless MAC protocols. However, its use in our network will have to be carefully considered, as it is currently unknown whether fluctuating traffic loads will be a likely scenario.
 
-\subsection{Sympathy}
+\subsection{Global Predicate Detection}
+
+\subsubsection*{Sympathy}
 
 One of the projects that is summarised by \cite{herbert2007adaptive} is a method for identifying and localizing failures called Sympathy \cite{ramanathan2005sympathy}. Sympathy is intended to be run either in pre- or post-deployment environments where it collects data from distributed nodes at a sink. When insufficient data is received it is taken to imply that there exists a problem (insufficient data is component defined). The idea is that by monitoring data (both actively and passively) between components the system can identify what kind of failure occurred in a certain area of the network. Both of which are very useful when trying to debug a failure.
 
@@ -168,3 +170,6 @@ A grammar is specified which can be used to insert invariants into source code. 
 
 H-SEND is optimised for WSNs in a variety of ways. For example, it minimises overhead by buffering messages it needs to send, and piggybacking them on the existing network traffic. Due to the hierachical nature of the protocol, multinode-invariants can be checked efficiently at the closest parent node with all the required information.
 
+\subsubsection*{Dynamic Invariant Detection $\cup$ Checking Engine (DIDUCE)\cite{diduce}}
+
+DIDUCE is a tool which employs machine learning to dynamically generate hypotheses of invariants for a system at run-time; the invariants begin extremely strict, and are relaxed over time to allow for new correct behaviour. The machine learning aspect means that developers do not have to specify invariants themselves, which proves beneficial as accurately pinpointing the values necessary for fault-free operation is nontrivial. DIDUCE checks against the invariants continually during a program's operation and reports all violations detected at the end of the run, whereas Daicon merely presents the user with invariants found. For all its apparent usefulness, unfortunately DIDUCE was designed for large, complex systems rather than lightweight distributed systems with constrained resources (i.e. WSNs), so it is likely to prove infeasible to use this tool for GPD.

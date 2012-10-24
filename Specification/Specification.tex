@@ -52,63 +52,152 @@ Towards Debugging Wireless Sensor Network Applications}
 
 
 \section{Introduction}
-The recent emergence of Wireless Sensor Networks (WSNs) due to their decrease in cost, size and increase in battery life has seen their rising application in many real world problems \cite{wsnapps}. These applications fall into 3 categories: Military Applications - general information collection such as enemy tracking, battlefield surveillance or target classification are all areas being researched actively, Environmental Monitoring - both indoor monitoring for emergency services and outdoor monitoring with applications to monitoring ecology systems and agricultural processes and Logistics - ranging applications from asset tracking using RFIDs to monitoring a company's industrial process and heavy machinery. As can be clearly seen the applications for WSNs is vast, as such it has become a very active research area.
+The recent emergence of Wireless Sensor Networks (WSNs) due to their decrease in
+cost, size and increase in battery life has seen their rising application in
+many real world problems \cite{wsnapps}. These applications fall into 3
+categories: Military Applications - general information collection such as enemy
+tracking, battlefield surveillance or target classification are all areas being
+researched actively, Environmental Monitoring - both indoor monitoring for
+emergency services and outdoor monitoring with applications to monitoring
+ecology systems and agricultural processes and Logistics - ranging applications
+from asset tracking using RFIDs to monitoring a company's industrial process and
+heavy machinery. As can be clearly seen the applications for WSNs is vast, as
+such it has become a very active research area.
 
-However, when working with WSNs there are several considerations that a developer must consider. Firstly, typical wireless protocols are not practically applicable in these networks, due to a set of different constraints, such as energy consumptions and a limited wireless range. This presents new challenges when designing algorithms and software for these devices. In an attempt to solve these problems software will need to be developed to operate the WSN hardware, and like all software this software will contain bugs \cite{5010224}. As sensor networks are a distributed system, this increases the classes of bugs that software can suffer from \cite{5010224}, such as dead-lock, live-lock and other concurrency issues. To aid in developing reliable software for WSNs, there is thus need for tools that can assist in detecting and reporting these faults, so a developer can correct them and create reliable software.
+However, when working with WSNs there are several considerations that a
+developer must make. Typical wireless protocols are not practically
+applicable in these networks, due to a set of different constraints, such as
+energy consumptions and a limited wireless range. This presents new challenges
+when designing algorithms and software for these devices. In an attempt to solve
+these problems software will need to be developed to operate the WSN hardware,
+and like all software this software will contain bugs \cite{5010224}. As sensor
+networks are a distributed system, this increases the classes of bugs that
+software can suffer from \cite{5010224}, such as dead-lock, live-lock and other
+concurrency issues. To aid in developing reliable software for WSNs, there is
+thus need for tools that can assist in detecting and reporting these faults, so
+a developer can correct them and create reliable software.
 
 \section{Motivation}
+The need for debugging has been around for as long as there has been hardware
+that performs a task. With a famous folklore example being the case where the
+term debugging was coined, where a moth was picked out of a crucial relay
+\cite{shapiro1987etymology}. However, nowadays debugging searches for much more
+complicated problems than moths in machines. This is particularly apparent with
+WSNs which is a relatively new field, and as a result there is a limited number
+of tools available for debugging WSNs, despite large increases in the research
+into communication protocols \cite{TankBible}. 
 
-The need for debugging has been around for as long as there has been hardware that performs a task. With a famous folklore example being the case where the term debugging was coined, where a moth was picked out of a crucial relay \cite{shapiro1987etymology}. However, nowadays debugging searches for much more complicated problems than moths in machines. This is particularly apparent with WSNs which is a relatively new field, and as a result there is a limited number of tools available for debugging WSNs, despite large increases in the research into communication protocols \cite{TankBible}. 
+When you have a sequential program it is easy to insert breakpoints or debug
+messages that allow you to inspect the state of the program at any given point
+in its execution. However, with a distributed system, they can have the same
+issues that sequential programs have, but they also have the possibility of
+bugs related with the interaction of each of the different nodes in the system.
+These interactions can be non-deterministic \cite{liu2007wids} in nature and
+this can make inspection of the system's global state at any given point during
+execution more challenging \cite{chandy1985distributed}. These links can lead to
+many types of bugs that a sequential program would never encounter, such as
+deadlock \cite{singhal1989deadlock}, inconsistent states
+\cite{chandy1985distributed} and the need to detect and handle failures in other
+nodes of the system \cite{5623434}. While there exist algorithms to solve some
+of these problems (for instance TCP provides stronger guarantees of message
+deliver than alternative protocols such as UDP
+\cite[p.~532]{Tanenbaum:2002:CN:572404}), there are some errors that a WSN
+developer will need to ensure they do not make when writing their software.
 
-When you have a sequential program it is easy to insert breakpoints or debug messages that allow you to inspect the state of the program at that given point of the execution. With distributed systems, you have the same issues that sequential programs have, but you also have to deal with the interaction of each of the different parts of the system. These interactions can be non-deterministic \cite{liu2007wids} and make inspection of the system's global state at any given point more challenging \cite{chandy1985distributed}. These interactions can lead to many types of bugs that a sequential program would not encounter, such as deadlock \cite{singhal1989deadlock}, inconsistent states \cite{chandy1985distributed} and the need to detect and handle failures in other parts of the system (for example \cite{5623434}). While there exist algorithms to solve some of these problems (for instance TCP provides stronger guarantees of message deliver than alternative protocols such as UDP \cite[p.~532]{Tanenbaum:2002:CN:572404}), there are some errors that the software developer will need to ensure they do not make when writing the software. As detecting these issues is difficult and so is reporting them, tools need to be made available to the developers, so they can focus on developing their application rather than developing debugging tools to try to fix their application.
+Wireless Sensor Networks are a class of distributed system, with a special
+property that they are energy constrained \cite{6023235}. As they are a
+distributed system, the same distributed bugs can occur in software developed
+for them, therefore there is a need for tools to assist with this kind of
+debugging. However, as they are energy constrained developers will attempt to
+make certain optimisations that may not have been required with other types of
+distributed systems. This means any tool that is specific to them will need to
+be able to detect these kinds of bugs and relay them to the developer
+accurately and efficiently.
 
-Wireless Sensor Networks are a class of distributed system, with a special property that they are energy constrained \cite{6023235}.  As they are a distributed system, the same distributed bugs can occur in software developed for them, so there is a need for tools to assist with this kind of debugging. However, as they are energy constrained developers will attempt to make certain optimisations that may not have been required with other types of distributed systems. This means any tool that is specific to them will need to be able to detect these kinds of bugs and relay them to the developer accurately.
+It is apparent to us that their is a need to create tools for WSN developers,
+so that they can focus their time on developing applications rather than on
+debugging software to fix them. These tools need to be able to provide information
+to developers on errors that occur during the execution of their code when
+deployed to a WSN, as well as provide a visualisation of activity within a WSN.
 
 \section{Project Description}
 
 \subsection{Aims and Objectives}
 \begin{itemize}
-	\item An application that can check to see if for a certain subsection of the network a given predicate holds.
+	\item An application that can check to see if for a certain subsection
+of the network a given predicate holds.
 	\item A visualisation tool for logged network traffic.
-	\item Implementations of various distributed algorithms to test the visualizer and the predicate checker.
+	\item Implementations of various distributed algorithms to test the
+visualizer and the predicate checker.
 \end{itemize}
 
 \subsection{Visualisation Tool}
 \begin{itemize}
-	\item Visualisation of the sensor network with node positioning and connections.
+	\item Visualisation of the sensor network with node positioning and
+connections.
 	\item Visualisation of active clusters within the sensor network.
-	\item Visualisation of messages flowing through the network, along with node logs of the information processed.
+	\item Visualisation of messages flowing through the network, along with
+node logs of the information processed.
 \end{itemize}
 
 \subsection{Predicate Checker}
 \begin{itemize}
 	\item Functionality to query nodes to see if a given predicate holds.
-	\item Visualisation of nodes that are breaking a given predicate during runtime.
+	\item Visualisation of nodes that are breaking a given predicate during
+runtime.
 \end{itemize}
 
 \subsubsection{Predicate Specification}
 
-There are also several different ways that we can specify a predicate. The first is simply writing a function that takes some input state and produce a boolean output. We aim to produce a C library that will take this predicate, give it some state and check the result. If the result is false then the library will generate a debug message, containing logs of recent events and details of why the predicate failed, then send that message back to the base station.
+There are also several different ways that we can specify a predicate. The first
+is simply writing a function that takes some input state and produce a boolean
+output. We aim to produce a C library that will take this predicate, give it
+some state and check the result. If the result is false then the library will
+generate a debug message, containing logs of recent events and details of why
+the predicate failed, then send that message back to the base station.
 
 \begin{figure}[H]
 \begin{center}
     \begin{displaymath}
 	CheckTemp(T) = T > 0 \land T < 40
 	\end{displaymath}
-	\caption{For example we would like to check that the temperature sensor is reporting values within the range its specification says it should produce}
+	\caption{For example we would like to check that the temperature sensor
+is reporting values within the range its specification says it should produce}
 \end{center}
 \end{figure}
 
-Another way that predicates can be defined is at run-time instead of at compile-time. The idea here is that we would send a predicate written in a scripting language to each of the nodes and then have that predicate interpreted and executed at a given interval or at a certain place. The code running on the nodes will need to register what memory locations correspond to which variable so that the interpreter can give named variables values. We expect that this may be difficult to do, due to the constrained resources of the node \cite{CM5000}. However, there is a precedence that this is possible, the fact that there exists TinyDB \cite{?} which would need to interpret SQL statements and then execute them.
+Another way that predicates can be defined is at run-time instead of at
+compile-time. The idea here is that we would send a predicate written in a
+scripting language to each of the nodes and then have that predicate interpreted
+and executed at a given interval or at a certain place. The code running on the
+nodes will need to register what memory locations correspond to which variable
+so that the interpreter can give named variables values. We expect that this may
+be difficult to do, due to the constrained resources of the node \cite{CM5000}.
+However, there is a precedence that this is possible, the fact that there exists
+TinyDB \cite{?} which would need to interpret SQL statements and then execute
+them.
 
-As for the type of logic that we intend to use, for compile-time predicate checking the full expressiveness of C is available. For run-time checking there may need to be restrictions on the type of logic we can use. Initially we are aiming to use predicate logic with at least the ability to execute $\land$, $\lor$, $\lnot$, $=$, $\neq$, $<$, $>$, $\leq$ and $\geq$ on basic C types such as floating point variables and integers. If possible we would like to implement quantifiers ($\forall$ and $\exists$) as we expect these to be useful for network predicates. As for capabilities such as sets and function definitions and data structure definitions, these may be too expensive and not supported. Although we intend to investigate the use of a lightweight implementation of LUA \cite{?} or the Contiki Shell \cite{?} to evaluate these predicates, so the features that we can support will relate to what these tools are capable of.
+As for the type of logic that we intend to use, for compile-time predicate
+checking the full expressiveness of C is available. For run-time checking there
+may need to be restrictions on the type of logic we can use. Initially we are
+aiming to use predicate logic with at least the ability to execute $\land$,
+$\lor$, $\lnot$, $=$, $\neq$, $<$, $>$, $\leq$ and $\geq$ on basic C types such
+as floating point variables and integers. If possible we would like to implement
+quantifiers ($\forall$ and $\exists$) as we expect these to be useful for
+network predicates. As for capabilities such as sets and function definitions
+and data structure definitions, these may be too expensive and not supported.
+Although we intend to investigate the use of a lightweight implementation of LUA
+\cite{?} or the Contiki Shell \cite{?} to evaluate these predicates, so the
+features that we can support will relate to what these tools are capable of.
 
 \begin{figure}[H]
 \begin{center}
     \begin{displaymath}
-	NeighbourhoodHealty() = \forall Node \in ExpectedNeighbourhood : NotCrashed(Node)
+	NeighbourhoodHealty() = \forall Node \in ExpectedNeighbourhood :
+NotCrashed(Node)
 	\end{displaymath}
-	\caption{Check that all nodes in the expected 1-hop neighbourhood have not crashed}
+	\caption{Check that all nodes in the expected 1-hop neighbourhood have
+not crashed}
 \end{center}
 \end{figure}
 
@@ -117,45 +206,75 @@ As for the type of logic that we intend to use, for compile-time predicate check
     \begin{displaymath}
 	CheckAggregrationTreeHeight(Msg) = Msg.HopCount = ExpectedDepth
 	\end{displaymath}
-	\caption{Check that on receiving a message the height of the tree is as expected. This aims to catch when a tree has been set up and the structure has now changed, making the current structure suboptimal in energy usage.}
+	\caption{Check that on receiving a message the height of the tree is as
+expected. This aims to catch when a tree has been set up and the structure has
+now changed, making the current structure suboptimal in energy usage.}
 \end{center}
 \end{figure}
 
 \subsubsection{Predicate Checking}
 
-There are several types of predicates that we may wish to check. The first kind are very simple predicates that one might check if a standard sequential non-distributed program, such as when performing an \verb|ASSERT| statement or checking a condition then throwing an exception. Here we would use the library we talked about developing above, and place these checks into the code at desired places.
+There are several types of predicates that we may wish to check. The first kind
+are very simple predicates that one might check if a standard sequential
+non-distributed program, such as when performing an \verb|ASSERT| statement or
+checking a condition then throwing an exception. Here we would use the library
+we talked about developing above, and place these checks into the code at
+desired places.
 
-The next level of checking would be checking of predicates that specify some invariant of the program. These could be hard-coded into the software or provided a run-time. These could be run at given points throughout the execution (at beginning and end of functions) or randomly throughout the program's execution.
+The next level of checking would be checking of predicates that specify some
+invariant of the program. These could be hard-coded into the software or
+provided a run-time. These could be run at given points throughout the execution
+(at beginning and end of functions) or randomly throughout the program's
+execution.
 
-The final level of checking involves network level predicates. These predicates would check for things such as permanent node failures and also be able to recognise temporary node failures. Other examples where they might be used are to check that nodes are obeying the TDMA (Time Division Multiple Access) slot they have been allocated. Or if an aggregation tree \cite{TankBible} that has been set up for a WSN is still optimal (for instance checking that the height of the tree is the same as the maximum hop count of messages received at the base station).
+The final level of checking involves network level predicates. These predicates
+would check for things such as permanent node failures and also be able to
+recognise temporary node failures. Other examples where they might be used are
+to check that nodes are obeying the TDMA (Time Division Multiple Access) slot
+they have been allocated. Or if an aggregation tree \cite{TankBible} that has
+been set up for a WSN is still optimal (for instance checking that the height of
+the tree is the same as the maximum hop count of messages received at the base
+station).
 
-This final network checking has some additional considerations to be made. For instance if we take mobile nodes into account then detecting crashed nodes becomes more difficult. With stationary nodes you can just check that your 1-hop neighbourhood remains the same. With mobile nodes you expect the 1-hop neighbourhood to change, so will have to use a different strategy.
+This final network checking has some additional considerations to be made. For
+instance if we take mobile nodes into account then detecting crashed nodes
+becomes more difficult. With stationary nodes you can just check that your 1-hop
+neighbourhood remains the same. With mobile nodes you expect the 1-hop
+neighbourhood to change, so will have to use a different strategy.
 
 
 \subsubsection{Algorithms to Implement}
 
-We plan on implementing two sets of algorithms, the first are those that will report the predicate failures. The following are the algorithms we intend to implement.
+We plan on implementing two sets of algorithms, the first are those that will
+report the predicate failures. The following are the algorithms we intend to
+implement.
 
 \begin{itemize}
 	\item H-SEND \cite{herbert2007adaptive}
-	\item Our own implementation drawing on ``Send to Base'' style techniques \cite{?}
+	\item Our own implementation drawing on ``Send to Base'' style
+techniques \cite{?}
 \end{itemize}
 
-The second set of algorithms we intend to implement are those that we will use to test the algorithms that check that given predicates hold.
+The second set of algorithms we intend to implement are those that we will use
+to test the algorithms that check that given predicates hold.
 
 \begin{itemize}
 	\item Clustering algorithm (such as LEACH) \cite{herbert2007adaptive}.
-	\item An algorithm to set up an aggregation tree (for some information like temperature average). \cite{TankBible}
+	\item An algorithm to set up an aggregation tree (for some information
+like temperature average). \cite{TankBible}
 \end{itemize}
 
 \subsection{Required Resources}
 \begin{itemize}
 	\item Wireless Sensor Nodes and related interface hardware
 	\item Operating System and Simulator for the Wireless Sensor Nodes
-	\item Laptop computers to act as mobile base stations, and for development
+	\item Laptop computers to act as mobile base stations, and for
+development
 	\item Access to academic papers that detail the previous work
 	\item A DVCS where we can store source code for the project
-	\item A simulator and development environment that will allow us to test code locally, then deploy to the actual hardware. There is a choice between Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}
+	\item A simulator and development environment that will allow us to test
+code locally, then deploy to the actual hardware. There is a choice between
+Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}
 	\item If possible, the ability to develop code on the DCS lab machines
 \end{itemize}
 
@@ -163,11 +282,21 @@ The second set of algorithms we intend to implement are those that we will use t
 
 \subsection{Management}
 
-As this is a group project there are additional challenges to face compared to a solo project. Therefore, we plan to use the knowledge and experience gained in the module IB382 Project Management \cite{IB382} as well as our own experience to avoid common problems that could prevent us working effectively. We also plan to refer to the Project Management textbook for additional resources \cite{PMTextBook}.
+As this is a group project there are additional challenges to face compared to a
+solo project. Therefore, we plan to use the knowledge and experience gained in
+the module IB382 Project Management \cite{IB382} as well as our own experience
+to avoid common problems that could prevent us working effectively. We also plan
+to refer to the Project Management textbook for additional resources
+\cite{PMTextBook}.
 
-As part of the management we will make sure we meet up at least once a week to discuss our current progress, and allocate tasks for the next week. We also intent to stay in contact and discuss our progress and any resources we find in between these meetings.
+As part of the management we will make sure we meet up at least once a week to
+discuss our current progress, and allocate tasks for the next week. We also
+intent to stay in contact and discuss our progress and any resources we find in
+between these meetings.
 
-We will also be assigning roles, in order to keep the group organised. The following table shows how we assigned roles, although we intend for these to be flexible:
+We will also be assigning roles, in order to keep the group organised. The
+following table shows how we assigned roles, although we intend for these to be
+flexible:
 
 \begin{table}[H]
 \centering
@@ -188,9 +317,22 @@ We will also be assigning roles, in order to keep the group organised. The follo
 
 
 \subsection{Development Methodologies}
-In our first meeting with our project supervisor, we were given the objective to develop a wireless sensor network (WSN) with the new set of sensors that was purchased by the department of Computer Science. He proposed several ideas that we could use to implement the system (e.g. routing protocols and algorithms) and a few topics on how we can investigate the problems associated with WSN such as global predicate detection and network debugging. 
+In our first meeting with our project supervisor, we were given the objective to
+develop a wireless sensor network (WSN) with the new set of sensors that was
+purchased by the department of Computer Science. He proposed several ideas that
+we could use to implement the system (e.g. routing protocols and algorithms) and
+a few topics on how we can investigate the problems associated with WSN such as
+global predicate detection and network debugging. 
 
-For our project, we plan to follow a spiral evolutionary process model since we are expecting many changes in our system, for example trying to implement the best algorithm for predicate checking and experimenting with different routing protocols. The first circuit around the spiral will involve the development of the core functionalities and each evolutionary step may be used to build prototypes and more complex versions of the system. Each pass through the spiral may require our work to be reviewed by our supervisor and any adjustments to the project plan will be made in accordance to the feedback. With prototyping aspects of the model, it may help us reduce the chances of any risks.
+For our project, we plan to follow a spiral evolutionary process model since we
+are expecting many changes in our system, for example trying to implement the
+best algorithm for predicate checking and experimenting with different routing
+protocols. The first circuit around the spiral will involve the development of
+the core functionalities and each evolutionary step may be used to build
+prototypes and more complex versions of the system. Each pass through the spiral
+may require our work to be reviewed by our supervisor and any adjustments to the
+project plan will be made in accordance to the feedback. With prototyping
+aspects of the model, it may help us reduce the chances of any risks.
 
 
 
@@ -198,7 +340,15 @@ For our project, we plan to follow a spiral evolutionary process model since we 
 
 \subsubsection{Term 1}
 
-During the first term, we plan to do our initial research around the subject to find out what has been done and what is implementable for us. We then plan to implement some of the algorithms to detect predicate failures we researched in a simulator. Once the algorithms are working in a simulator we will deploy them to the motes. We expect difficulty deploying to the motes due to: i) us needing to learn how to do it, ii) the environment being slightly different to the simulators and iii) debugging our algorithm will be much harder on the hardware than in a simulator. By the end of week 9 we should have a basic implementation for alerting when application predicates do not hold for stationary nodes.
+During the first term, we plan to do our initial research around the subject to
+find out what has been done and what is implementable for us. We then plan to
+implement some of the algorithms to detect predicate failures we researched in a
+simulator. Once the algorithms are working in a simulator we will deploy them to
+the motes. We expect difficulty deploying to the motes due to: i) us needing to
+learn how to do it, ii) the environment being slightly different to the
+simulators and iii) debugging our algorithm will be much harder on the hardware
+than in a simulator. By the end of week 9 we should have a basic implementation
+for alerting when application predicates do not hold for stationary nodes.
 
 \begin{table}[H]
 	\centering
@@ -207,7 +357,8 @@ During the first term, we plan to do our initial research around the subject to 
 	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
 	\hline
 	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application predicate checking} \\
+	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application
+predicate checking} \\
 	\hline
 
 
@@ -229,7 +380,12 @@ During the first term, we plan to do our initial research around the subject to 
 
 \subsubsection{Term 2}
 
-We do not expect to fully finish development for application predicates during the first term, so we will continue development during the second term. We also aim to research and implement different algorithms focusing on different aspects of wireless sensor networks (such as node mobility and checking network predicates). Again a lot of time is devoted to testing and deployment due to the difficulties involved.
+We do not expect to fully finish development for application predicates during
+the first term, so we will continue development during the second term. We also
+aim to research and implement different algorithms focusing on different aspects
+of wireless sensor networks (such as node mobility and checking network
+predicates). Again a lot of time is devoted to testing and deployment due to the
+difficulties involved.
 
 \begin{table}[H]
 	\centering
@@ -238,7 +394,8 @@ We do not expect to fully finish development for application predicates during t
 	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
 	\hline
 	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking (and mobile nodes)} \\
+	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate
+checking (and mobile nodes)} \\
 	\hline
 	
 	Additional Research & 1 & 1 & 1 & 1 & 1 & 1\\
@@ -256,38 +413,66 @@ We do not expect to fully finish development for application predicates during t
 
 \section{Potential Risks}
 
-Throughout our project we expect to encounter difficulties and challenges. The following are the risks that we think may be encountered during the project and ways that these risks could be mitigated.
+Throughout our project we expect to encounter difficulties and challenges. The
+following are the risks that we think may be encountered during the project and
+ways that these risks could be mitigated.
 
 
 \subsection{Risks}
 \begin{itemize}
-	\item Needing to talk to our project supervisor (Arshad), even though he is on sabbatical.
+	\item Needing to talk to our project supervisor (Arshad), even though he
+is on sabbatical.
 	\item Project drifting in the wrong direction due to uncertainty.
 	\item Availability of hardware, because it is shared by the department.
-	\item Lack of features in the simulator and/or wireless sensor network environment.
+	\item Lack of features in the simulator and/or wireless sensor network
+environment.
 	\item Problems that we have not predicted here.
 	\item Team members being unavailable to do work (eg. due to illness).
 \end{itemize}
 
 \subsection{Risk Mitigation}
 \begin{itemize}
-	\item Even though Arshad is on sabbatical he should be in the department 3 days a week. Also there are other departmental staff that can assist us if Arshad is not available.
-	\item If our project is not heading in the right direction, we will seek guidance from our supervisor who should be able to guide us onto the right track.
-	\item Additionally to stop project drift we will have weekly meetings to assess our progress and set clear goals for each member of the group.
-	\item If our development environment lacks features we can attempt to work around those features, or implement them (if they are very desirable) and contribute back to the open source community.
-	\item For any other problem, we will use all the support that the department provides. We will make sure that the issue is discussed within the group and we will try to resolve it ourselves. if we find we cannot, then we will seek additional help.
-	\item Each member will make sure that what they are doing is well documented, so that other members can easily pick up the work. Each member of the team will also ensure their work is regularly checked in to the git repository.
+	\item Even though Arshad is on sabbatical he should be in the department
+3 days a week. Also there are other departmental staff that can assist us if
+Arshad is not available.
+	\item If our project is not heading in the right direction, we will seek
+guidance from our supervisor who should be able to guide us onto the right
+track.
+	\item Additionally to stop project drift we will have weekly meetings to
+assess our progress and set clear goals for each member of the group.
+	\item If our development environment lacks features we can attempt to
+work around those features, or implement them (if they are very desirable) and
+contribute back to the open source community.
+	\item For any other problem, we will use all the support that the
+department provides. We will make sure that the issue is discussed within the
+group and we will try to resolve it ourselves. if we find we cannot, then we
+will seek additional help.
+	\item Each member will make sure that what they are doing is well
+documented, so that other members can easily pick up the work. Each member of
+the team will also ensure their work is regularly checked in to the git
+repository.
 \end{itemize}
 
 
 \section{Legal Issues}
-In some cases there is the potential for copyright infringement when dealing with certain algorithms, this however itself is unlikely, as we will be focusing on published public algorithms. We will also not be looking to turn a profit from the use of these algorithms, but to use them for demonstrations of our developed tools.
+In some cases there is the potential for copyright infringement when dealing
+with certain algorithms, this however itself is unlikely, as we will be focusing
+on published public algorithms. We will also not be looking to turn a profit
+from the use of these algorithms, but to use them for demonstrations of our
+developed tools.
 
-There is also an issue of using pieces of open source software, we will make sure that the use of any such software is documented, with the appropriate acknowledgements given.
+There is also an issue of using pieces of open source software, we will make
+sure that the use of any such software is documented, with the appropriate
+acknowledgements given.
 
 \section{Conclusion}
 
-For our project we aim to create tools that aid in the debugging of Wireless Sensor Network applications. We plan to implement various predicate detection algorithms and have the network report to a base station in the case that these predicates are violated. We also plan to create a new tool that can control submitting new predicates and visualise the network state, including any predicate failures.
+For our project we aim to create tools that aid in the debugging of Wireless
+Sensor Network applications. We plan to implement various predicate detection
+algorithms and have the network report to a base station in the case that these
+predicates are violated. We also plan to create a new tool that can control
+submitting new predicates and visualise the network state, including any
+predicate failures.
 
 \clearpage
 

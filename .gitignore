@@ -28,3 +28,6 @@ obj_sky
 symbols.c
 symbols.h
 /Report/the_warwick_uni_blue-eps-converted-to.pdf
+*.aux
+*.sublime-project
+*.sublime-workspace

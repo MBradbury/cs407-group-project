@@ -75,6 +75,17 @@ typedef enum
 	setup_message_type
 } message_type_t;
 
+static const char * message_type_to_string(message_type_t type)
+{
+	switch (type)
+	{
+		case collect_message_type: return "Collect Message";
+		case setup_message_type: return "Setup Message";
+		default: return "Unknown Message";
+	}
+}
+
+
 typedef struct
 {
 	message_type_t type;
@@ -164,6 +175,7 @@ static void recv_aggregate(struct broadcast_conn * ptr, rimeaddr_t const * origi
 
 			
 				// Forward message onwards
+				msg->base.type = collect_message_type;
 				rimeaddr_copy(&msg->destination, &best_parent);
 		
 				broadcast_send(ptr);
@@ -172,7 +184,7 @@ static void recv_aggregate(struct broadcast_conn * ptr, rimeaddr_t const * origi
 
 		default:
 		{
-			printf("Unknown message type %u\n", bmsg->type);
+			printf("Unknown message type %u (%s)\n", bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
 }
@@ -210,7 +222,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 
 		default:
 		{
-			printf("Unknown message type %u\n", bmsg->type);
+			printf("Unknown message type %u (%s)\n", bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
 }

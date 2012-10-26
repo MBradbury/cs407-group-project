@@ -74,9 +74,15 @@ static bool is_sink()
 		rimeaddr_node_addr.u8[1] == 0;
 }
 
+typedef enum
+{
+	collect_message_type,
+	setup_message_type
+} message_type_t;
+
 typedef struct
 {
-	uint32_t type;
+	message_type_t type;
 } base_msg_t;
 
 /** The structure of the message we are sending */
@@ -100,82 +106,114 @@ typedef struct
 
 } setup_tree_msg_t;
 
-static struct etimer global_et;
+static struct ctimer ct;
 
-static struct broadcast_conn bc;
-
-static rimeaddr_t best_parent, collecting_best_parent;
+static bool has_seen_setup = false;
+static rimeaddr_t best_parent = {}, collecting_best_parent = {};
 static uint32_t best_hop = UINT32_MAX, collecting_best_hop = UINT32_MAX;
+
+PROCESS(tree_setup_process, "Aggregation Tree Setup");
+PROCESS(send_data_process, "Data Sender");
+
+static void parent_detect_finished(void * ptr)
+{
+	struct broadcast_conn * conn = (struct broadcast_conn *)ptr;
+
+	printf("Timer on %d.%d expired\n", rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
+
+	// Set the best values
+	best_parent = collecting_best_parent;
+	best_hop = collecting_best_hop;
+
+	printf("Found: Parent:%d.%d Hop:%u\n", best_parent.u8[0], best_parent.u8[1], best_hop);
+
+	setup_tree_msg_t * nextmsg;
+
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
+	nextmsg = (setup_tree_msg_t *)packetbuf_dataptr();
+
+	nextmsg->base.type = setup_message_type;
+	rimeaddr_copy(&nextmsg->id, &rimeaddr_node_addr);
+	rimeaddr_copy(&nextmsg->parent, &best_parent);
+	nextmsg->hop_count = best_hop + 1;
+
+	broadcast_send(conn);
+
+	process_start(&send_data_process, NULL);
+}
 
 /** The function that will be executed when a message is received */
 static void recv(struct broadcast_conn * ptr, rimeaddr_t const * originator)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
-	if (bmsg->type == 1)
+	switch (bmsg->type)
 	{
-		collect_msg_t * msg = (collect_msg_t *)bmsg;
-
-		// If the destination is this node
-		if (rimeaddr_cmp(&msg->destination, &rimeaddr_node_addr) != 0)
+		case collect_message_type:
 		{
-			printf("Network Data: Addr:%d.%d Temp:%d Hudmid:%d%%\n",
-				originator->u8[0], originator->u8[1],
-				(int)msg->temperature, (int)msg->humidity
-			);
+			collect_msg_t * msg = (collect_msg_t *)bmsg;
 
-			// TODO:
-			// Apply some aggregation function
+			// If the destination is this node
+			if (rimeaddr_cmp(&msg->destination, &rimeaddr_node_addr) != 0)
+			{
+				printf("Network Data: Addr:%d.%d Temp:%d Hudmid:%d%%\n",
+					originator->u8[0], originator->u8[1],
+					(int)msg->temperature, (int)msg->humidity
+				);
+
+				// TODO:
+				// Apply some aggregation function
 
 			
-			// Forward message onwards
-			rimeaddr_copy(&msg->destination, &best_parent);
+				// Forward message onwards
+				rimeaddr_copy(&msg->destination, &best_parent);
 		
-			broadcast_send(&bc);
-		}
-	}
-	else if (bmsg->type == 601)
-	{
-		static bool has_seen = false;
+				broadcast_send(ptr);
+			}
+		} break;
 
-		setup_tree_msg_t const * msg = (setup_tree_msg_t const *)bmsg;
-
-		printf("Got setup message\n");
-
-		if (!has_seen)
+		case setup_message_type:
 		{
-			has_seen = true;
-			etimer_set(&global_et, 20 * CLOCK_SECOND);
+			setup_tree_msg_t const * msg = (setup_tree_msg_t const *)bmsg;
 
-			printf("Not seen before setting timer\n");
-		}
+			printf("Got setup message from %d.%d\n", originator->u8[0], originator->u8[1]);
 
-		if (msg->hop_count < best_hop)
+			if (!has_seen_setup)
+			{
+				has_seen_setup = true;
+				ctimer_set(&ct, 15 * CLOCK_SECOND, &parent_detect_finished, ptr);
+
+				printf("Not seen setup message before, so setting timer...\n");
+			}
+
+			if (msg->hop_count < best_hop)
+			{
+				// Set the best parent, and the hop count of that node
+				rimeaddr_copy(&collecting_best_parent, &msg->id);
+				collecting_best_hop = msg->hop_count;
+
+				printf("Updating to a better parent (%d.%d)\n", collecting_best_parent.u8[0], collecting_best_parent.u8[1]);
+			}
+		} break;
+
+		default:
 		{
-			// Set the best parent, and the hop count of that node
-			rimeaddr_copy(&collecting_best_parent, &msg->id);
-			collecting_best_hop = msg->hop_count;
-
-			printf("Updating better parent\n");
-		}
-	}
-	else
-	{
-		printf("Unknown message type %u\n", bmsg->type);
+			printf("Unknown message type %u\n", bmsg->type);
+		} break;
 	}
 }
 
 /** List of all functions to execute when a message is received */
 static const struct broadcast_callbacks callbacks = { recv };
 
-
-PROCESS(tree_setup_process, "Aggregation Tree Setup");
-PROCESS(send_data_process, "Data Sender");
-
 AUTOSTART_PROCESSES(&tree_setup_process);
 
 PROCESS_THREAD(tree_setup_process, ev, data)
 {
+	static struct broadcast_conn bc;
+
+	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 	broadcast_open(&bc, 128, &callbacks);
@@ -188,56 +226,27 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 		packetbuf_set_datalen(sizeof(setup_tree_msg_t));
 		msg = (setup_tree_msg_t *)packetbuf_dataptr();
 
-		msg->base.type = 601;
+		msg->base.type = setup_message_type;
 		rimeaddr_copy(&msg->id, &rimeaddr_node_addr);
 		rimeaddr_copy(&msg->parent, &rimeaddr_null);
 		msg->hop_count = 0;
-		
+	
 		broadcast_send(&bc);
 
 		printf("IsSink, sending initial message...\n");
 	}
-	else
-	{
-		while (1)
-		{
-			PROCESS_WAIT_EVENT();
-			printf("Received event\n");
 
-			if (etimer_expired(&global_et))
-			{
-				printf("Timer expired\n");
-
-				// Set the best values
-				best_parent = collecting_best_parent;
-				best_hop = collecting_best_hop;
-
-				setup_tree_msg_t * nextmsg;
-
-				packetbuf_clear();
-				packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-				nextmsg = (setup_tree_msg_t *)packetbuf_dataptr();
-
-				nextmsg->base.type = 601;
-				rimeaddr_copy(&nextmsg->id, &rimeaddr_node_addr);
-				rimeaddr_copy(&nextmsg->parent, &best_parent);
-				nextmsg->hop_count = best_hop + 1;
-		
-				broadcast_send(&bc);
-
-				process_start(&send_data_process, NULL);
-
-				break;
-			}
-		}
-	}
-
+exit:
+//	broadcast_close(&bc);
+	(void)0;
 	PROCESS_END();
 }
 
 
 PROCESS_THREAD(send_data_process, ev, data)
 {
+	static struct broadcast_conn bc;
+
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
 
@@ -250,7 +259,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	etimer_set(&et, 3 * CLOCK_SECOND);
  
-	while (1)
+	while (true)
 	{
 		collect_msg_t * msg;
 
@@ -269,7 +278,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 		packetbuf_set_datalen(sizeof(collect_msg_t));
 		msg = (collect_msg_t *)packetbuf_dataptr();
 
-		msg->base.type = 1;
+		msg->base.type = collect_message_type;
 		
 		rimeaddr_copy(&msg->destination, &best_parent);
 		msg->temperature = sht11_temperature(raw_temperature);

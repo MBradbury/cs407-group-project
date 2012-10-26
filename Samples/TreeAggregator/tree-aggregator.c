@@ -1,8 +1,3 @@
-/**
- * This file was mostly lifted from 
- * contiki-2.6/examples/sky/sky-collect.c
- */
-
 #include "contiki.h"
 
 #include <stdio.h>
@@ -140,11 +135,13 @@ static void parent_detect_finished(void * ptr)
 
 	broadcast_send(conn);
 
+	broadcast_close(conn);
+
 	process_start(&send_data_process, NULL);
 }
 
 /** The function that will be executed when a message is received */
-static void recv(struct broadcast_conn * ptr, rimeaddr_t const * originator)
+static void recv_aggregate(struct broadcast_conn * ptr, rimeaddr_t const * originator)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
@@ -173,6 +170,20 @@ static void recv(struct broadcast_conn * ptr, rimeaddr_t const * originator)
 			}
 		} break;
 
+		default:
+		{
+			printf("Unknown message type %u\n", bmsg->type);
+		} break;
+	}
+}
+
+/** The function that will be executed when a message is received */
+static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originator)
+{
+	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
+
+	switch (bmsg->type)
+	{
 		case setup_message_type:
 		{
 			setup_tree_msg_t const * msg = (setup_tree_msg_t const *)bmsg;
@@ -205,7 +216,8 @@ static void recv(struct broadcast_conn * ptr, rimeaddr_t const * originator)
 }
 
 /** List of all functions to execute when a message is received */
-static const struct broadcast_callbacks callbacks = { recv };
+static const struct broadcast_callbacks callbacks_setup = { recv_setup };
+static const struct broadcast_callbacks callbacks_aggregate = { recv_aggregate };
 
 AUTOSTART_PROCESSES(&tree_setup_process);
 
@@ -213,10 +225,9 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 {
 	static struct broadcast_conn bc;
 
-	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	broadcast_open(&bc, 128, &callbacks);
+	broadcast_open(&bc, 128, &callbacks_setup);
 
 	if (is_sink())
 	{
@@ -236,9 +247,6 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 		printf("IsSink, sending initial message...\n");
 	}
 
-exit:
-//	broadcast_close(&bc);
-	(void)0;
 	PROCESS_END();
 }
 
@@ -252,6 +260,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
+
+	broadcast_open(&bc, 128, &callbacks_aggregate);
 
 	// By this point the tree should be set up,
 	// so now we should move to aggregating data
@@ -279,7 +289,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 		msg = (collect_msg_t *)packetbuf_dataptr();
 
 		msg->base.type = collect_message_type;
-		
 		rimeaddr_copy(&msg->destination, &best_parent);
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);

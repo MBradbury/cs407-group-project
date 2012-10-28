@@ -9,6 +9,7 @@
 #include "dev/battery-sensor.h"
 
 #include "dev/leds.h"
+#include "dev/radio-sensor.h"
 
 #include "net/netstack.h"
 #include "net/rime.h"
@@ -106,8 +107,6 @@ typedef struct
 {
 	base_msg_t base;
 
-	rimeaddr_t destination;
-
 	double temperature;
 	double humidity;
 } collect_msg_t;
@@ -149,13 +148,18 @@ static void parent_detect_finished(void * ptr)
 	printf("Found: Parent:%d.%d Hop:%u\n",
 		best_parent.u8[0], best_parent.u8[1], best_hop);
 
+	/*SENSORS_ACTIVATE(radio_sensor);
+	int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
+	int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
+	SENSORS_DEACTIVATE(radio_sensor);
+
+	printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
+
 	// Send a message that is to be received by the children
 	// of this node.
-	setup_tree_msg_t * nextmsg;
-
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-	nextmsg = (setup_tree_msg_t *)packetbuf_dataptr();
+	setup_tree_msg_t * nextmsg = (setup_tree_msg_t *)packetbuf_dataptr();
 
 	// We set the parent of this node to be the best
 	// parent we heard
@@ -175,7 +179,7 @@ static void parent_detect_finished(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct broadcast_conn * ptr, rimeaddr_t const * originator)
+static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * originator)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
@@ -183,28 +187,29 @@ static void recv_aggregate(struct broadcast_conn * ptr, rimeaddr_t const * origi
 	{
 		case collect_message_type:
 		{
-			collect_msg_t * msg = (collect_msg_t *)bmsg;
+			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
-			// If the destination is this node
-			if (rimeaddr_cmp(&msg->destination, &rimeaddr_node_addr) != 0)
-			{
-				printf("Network Data: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-					originator->u8[0], originator->u8[1],
-					msg->base.source.u8[0], msg->base.source.u8[1],
-					(int)msg->temperature, (int)msg->humidity
-				);
+			printf("Network Data: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
+				originator->u8[0], originator->u8[1],
+				msg->base.source.u8[0], msg->base.source.u8[1],
+				(int)msg->temperature, (int)msg->humidity
+			);
 
-				// TODO:
-				// Apply some aggregation function
+			// TODO:
+			// Apply some aggregation function
 
-			
-				// Forward message onwards, if not the sink
-				if (!is_sink())
-				{
-					rimeaddr_copy(&msg->destination, &best_parent);
 		
-					broadcast_send(ptr);
-				}
+			// Forward message onwards, if not the sink
+			if (!is_sink())
+			{
+				/*SENSORS_ACTIVATE(radio_sensor);
+				int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
+				int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
+				SENSORS_DEACTIVATE(radio_sensor);
+
+				printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
+
+				unicast_send(ptr, &best_parent);
 			}
 		} break;
 
@@ -240,8 +245,6 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			// Then we need to start the collect timeout
 			if (!has_seen_setup)
 			{
-				unsigned battery_raw;
-
 				has_seen_setup = true;
 
 				// Indicate that we are setting up
@@ -252,12 +255,11 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 				// parents should be related to the battery remaining.
 				// The more power remaining, the more time should be
 				// spent listening
-				SENSORS_ACTIVATE(battery_sensor);
-				battery_raw = battery_sensor.value(0);
+				/*SENSORS_ACTIVATE(battery_sensor);
+				unsigned battery_raw = battery_sensor.value(0);
 				SENSORS_DEACTIVATE(battery_sensor);
 
-
-				printf("Battery value Raw:%u Real:%dV\n", battery_raw, (int)battery_voltage(battery_raw));
+				printf("Battery value Raw:%u Real:%dV\n", battery_raw, (int)battery_voltage(battery_raw));*/
 
 				// Start the timer that will call a function when we are
 				// done detecting parents.
@@ -268,14 +270,16 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 
 			// As we have received a message we need to record the node
 			// it came from, if it is closer to the sink.
-			if (msg->hop_count < best_hop)
+			if (msg->hop_count < collecting_best_hop)
 			{
-				// Set the best parent, and the hop count of that node
-				rimeaddr_copy(&collecting_best_parent, &msg->id);
-				collecting_best_hop = msg->hop_count;
+				printf("Updating to a better parent (%d.%d H:%d) was:(%d.%d H:%d)\n",
+					msg->id.u8[0], msg->id.u8[1], msg->hop_count,
+					collecting_best_parent.u8[0], collecting_best_parent.u8[1], collecting_best_hop
+				);
 
-				printf("Updating to a better parent (%d.%d)\n",
-					collecting_best_parent.u8[0], collecting_best_parent.u8[1]);
+				// Set the best parent, and the hop count of that node
+				rimeaddr_copy(&collecting_best_parent, &(msg->id));
+				collecting_best_hop = msg->hop_count;
 			}
 		} break;
 
@@ -288,7 +292,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 
 /** List of all functions to execute when a message is received */
 static const struct broadcast_callbacks callbacks_setup = { recv_setup };
-static const struct broadcast_callbacks callbacks_aggregate = { recv_aggregate };
+static const struct unicast_callbacks callbacks_aggregate = { recv_aggregate };
 
 AUTOSTART_PROCESSES(&tree_setup_process);
 
@@ -296,14 +300,16 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 {
 	static struct etimer et;
 	static struct broadcast_conn bc;
+	static struct unicast_conn uc;
 	static int i;
 
 	PROCESS_BEGIN();
 
+	broadcast_open(&bc, 128, &callbacks_setup);
+
 	if (is_sink())
 	{
-		// Sink only needs to listen for aggregated messages
-		broadcast_open(&bc, 128, &callbacks_aggregate);
+		unicast_open(&uc, 114, &callbacks_aggregate);
 
 		leds_on(LEDS_YELLOW);
 
@@ -311,9 +317,16 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 
 		// Retry initial send a few times to make sure
 		// that the surrounding nodes will get a message
-		for (i = 0; i != 4; ++i)
+		for (i = 0; i != 2; ++i)
 		{
 			PROCESS_YIELD();
+
+			/*SENSORS_ACTIVATE(radio_sensor);
+			int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
+			int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
+			SENSORS_DEACTIVATE(radio_sensor);
+
+			printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
 
 			setup_tree_msg_t * msg;
 
@@ -335,11 +348,8 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 
 			etimer_reset(&et);
 		}
-	}
-	else
-	{
-		// Other nodes need to listen for setup messages
-		broadcast_open(&bc, 128, &callbacks_setup);
+
+		broadcast_close(&bc);
 	}
 
 	PROCESS_END();
@@ -348,7 +358,7 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 
 PROCESS_THREAD(send_data_process, ev, data)
 {
-	static struct broadcast_conn bc;
+	static struct unicast_conn uc;
 
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
@@ -356,9 +366,11 @@ PROCESS_THREAD(send_data_process, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
+	printf("Starting data generation process\n");
+
 	leds_on(LEDS_GREEN);
 
-	broadcast_open(&bc, 128, &callbacks_aggregate);
+	unicast_open(&uc, 114, &callbacks_aggregate);
 
 	// By this point the tree should be set up,
 	// so now we should move to aggregating data
@@ -370,34 +382,39 @@ PROCESS_THREAD(send_data_process, ev, data)
 	{
 		collect_msg_t * msg;
 
-		PROCESS_YIELD();
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
+		// Read the data from the temp and humidity sensors
 		SENSORS_ACTIVATE(sht11_sensor);
-
 		raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
 		raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
-
 		SENSORS_DEACTIVATE(sht11_sensor);
 
-		/* http://arduino.cc/forum/index.php?topic=37752.5;wap2 */
+		/*SENSORS_ACTIVATE(radio_sensor);
+		int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
+		int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
+		SENSORS_DEACTIVATE(radio_sensor);
 
+		printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
+
+
+		// Create the data message that we are going to send
 		packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
 		msg = (collect_msg_t *)packetbuf_dataptr();
 
 		msg->base.type = collect_message_type;
 		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
-		rimeaddr_copy(&msg->destination, &best_parent);
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
 		
-		broadcast_send(&bc);
+		unicast_send(&uc, &best_parent);
 
 		etimer_reset(&et);
 	}
  
 exit:
-	broadcast_close(&bc);
+	unicast_close(&uc);
 	PROCESS_END();
 }
 

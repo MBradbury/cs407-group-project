@@ -129,6 +129,7 @@ typedef struct
 } setup_tree_msg_t;
 
 static struct ctimer ct;
+static struct ctimer aggregate_ct;
 
 static bool has_seen_setup = false;
 static rimeaddr_t best_parent = {}, collecting_best_parent = {};
@@ -184,6 +185,49 @@ static void parent_detect_finished(void * ptr)
 	process_start(&send_data_process, NULL);
 }
 
+static bool is_collecting = false;
+static double aggregate_temperature;
+static double aggregate_humidity;
+
+static void finish_aggregate_collect(void * ptr)
+{
+	SENSORS_ACTIVATE(sht11_sensor);
+	unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+	unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+	SENSORS_DEACTIVATE(sht11_sensor);
+
+	double temp = sht11_temperature(raw_temperature);
+	aggregate_temperature += temp;
+	aggregate_humidity += sht11_relative_humidity_compensated(raw_humidity, temp);
+
+	aggregate_temperature /= 2.0;
+	aggregate_humidity /= 2.0;
+
+
+	struct unicast_conn * conn = (struct unicast_conn *)ptr;
+
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(collect_msg_t));
+	collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
+
+	msg->base.type = collect_message_type;
+	rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
+	msg->temperature = aggregate_temperature;
+	msg->humidity = aggregate_humidity;
+
+	unicast_send(conn, &best_parent);
+
+	printf("Send Agg: Addr:%d.%d Dest:%d.%d Temp:%d Hudmid:%d%%\n",
+		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1],
+		best_parent.u8[0], best_parent.u8[1],
+		(int)aggregate_temperature, (int)aggregate_humidity
+	);
+
+	is_collecting = false;
+	aggregate_temperature = 0;
+	aggregate_humidity = 0;
+}
+
 /** The function that will be executed when a message is received */
 static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * originator)
 {
@@ -195,28 +239,48 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 		{
 			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
-			printf("Network Data: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-				originator->u8[0], originator->u8[1],
-				msg->base.source.u8[0], msg->base.source.u8[1],
-				(int)msg->temperature, (int)msg->humidity
-			);
-
-			// TODO:
-			// Apply some aggregation function
-
-		
-			// Forward message onwards, if not the sink
-			if (!is_sink())
+			if (is_sink())
 			{
-				/*SENSORS_ACTIVATE(radio_sensor);
-				int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
-				int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
-				SENSORS_DEACTIVATE(radio_sensor);
-
-				printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
-
-				unicast_send(ptr, &best_parent);
+				printf("Sink rcv: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
+					originator->u8[0], originator->u8[1],
+					msg->base.source.u8[0], msg->base.source.u8[1],
+					(int)msg->temperature, (int)msg->humidity
+				);
 			}
+			else
+			{
+				// Apply some aggregation function
+				if (is_collecting)
+				{
+					printf("Cont Agg: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
+						originator->u8[0], originator->u8[1],
+						msg->base.source.u8[0], msg->base.source.u8[1],
+						(int)msg->temperature, (int)msg->humidity
+					);
+
+					aggregate_temperature += msg->temperature;
+					aggregate_humidity += msg->humidity;
+
+					aggregate_temperature /= 2.0;
+					aggregate_humidity /= 2.0;
+				}
+				else
+				{
+					printf("Star Agg: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
+						originator->u8[0], originator->u8[1],
+						msg->base.source.u8[0], msg->base.source.u8[1],
+						(int)msg->temperature, (int)msg->humidity
+					);
+
+					aggregate_temperature = msg->temperature;
+					aggregate_humidity = msg->humidity;
+
+					is_collecting = true;
+
+					ctimer_set(&aggregate_ct, 20 * CLOCK_SECOND, &finish_aggregate_collect, ptr);
+				}
+			}
+	
 		} break;
 
 		default:
@@ -383,6 +447,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	etimer_set(&et, 20 * CLOCK_SECOND);
  
+	// TODO: make it the case that only leaf nodes send these messages
 	while (true)
 	{
 		collect_msg_t * msg;

@@ -11,7 +11,7 @@ cd /var/tmp/mspgcc/MSP-GCC/binutils-2.18
             --disable-nls --disable-shared --enable-debug --disable-threads \
             --with-gcc --with-gnu-as --with-gnu-ld --with-stabs \
             --disable-multilib
-make
+make -j 5
 make install
 
 export PATH=/var/tmp/mspgcc/bin:$PATH
@@ -23,11 +23,11 @@ cd /var/tmp/mspgcc/MSP-GCC/gcc-3.2.3
             --with-gcc --with-gnu-ld --with-gnu-as --with-stabs \
             --disable-shared --disable-threads --disable-win32-registry --disable-nls \
             --enable-languages=c,c++
-make
+make -j 5
 make install
 
 cd /var/tmp/mspgcc/MSP-GCC/msp430-libc/src
-make prefix=/var/tmp/mspgcc
+make prefix=/var/tmp/mspgcc -j 5
 make install prefix=/var/tmp/mspgcc
 
 echo "export PATH=/var/tmp/mspgcc/bin:\$PATH" >> ~/.bashrc

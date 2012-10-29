@@ -23,7 +23,7 @@ static double sht11_relative_humidity(unsigned raw)
 	// http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/Humidity/Sensirion_Humidity_SHT1x_Datasheet_V5.pdf
 	// Page 8
 
-	//Values over 99% indicate fully saturated air, values should be treated as 100%
+	// Values over 99% indicate fully saturated air, values should be treated as 100%
 
 	// 12-bit
 	static const double c1 = -2.0468;
@@ -50,7 +50,13 @@ static double sht11_relative_humidity_compensated(unsigned raw, double temperatu
 
 	double humidity = sht11_relative_humidity(raw);
 
-	return (temperature - 25) * (t1 + t2 * raw) + humidity;
+	humidity = (temperature - 25) * (t1 + t2 * raw) + humidity;
+
+	// When the humidity is greater than 99% treat it as 100%
+	if (humidity > 99)
+		humidity = 100;
+
+	return humidity;
 }
 
 /** Output temperature in degrees Celcius */

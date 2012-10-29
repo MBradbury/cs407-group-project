@@ -171,7 +171,7 @@ static void parent_detect_finished(void * ptr)
 
 	// We are done with setting up the tree
 	// so stop listening for setup messages
-	broadcast_close(conn);
+	//broadcast_close(conn);
 
 	// Start the data generation process
 	process_start(&send_data_process, NULL);
@@ -180,6 +180,8 @@ static void parent_detect_finished(void * ptr)
 static bool is_collecting = false;
 static double aggregate_temperature;
 static double aggregate_humidity;
+
+static bool is_leaf_node = true;
 
 static void finish_aggregate_collect(void * ptr)
 {
@@ -343,6 +345,19 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 				rimeaddr_copy(&collecting_best_parent, originator);
 				collecting_best_hop = msg->hop_count;
 			}
+
+			
+			// If the parent of the node that sent this message is this node,
+			// then we are not a leaf
+			if (is_leaf_node && rimeaddr_cmp(&msg->parent, &rimeaddr_node_addr) != 0)
+			{
+				printf("Node (%d.%d) is our child, we are not a leaf.\n",
+					originator->u8[0], originator->u8[1]
+				);
+
+				is_leaf_node = false;
+			}
+
 		} break;
 
 		default:
@@ -383,13 +398,11 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 		{
 			PROCESS_YIELD();
 
-			setup_tree_msg_t * msg;
-
 			// Send the first message that will be used to set up the
 			// aggregation tree
 			packetbuf_clear();
 			packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-			msg = (setup_tree_msg_t *)packetbuf_dataptr();
+			setup_tree_msg_t *msg = (setup_tree_msg_t *)packetbuf_dataptr();
 
 			msg->base.type = setup_message_type;
 			rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
@@ -432,11 +445,9 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	etimer_set(&et, 20 * CLOCK_SECOND);
  
-	// TODO: make it the case that only leaf nodes send these messages
-	while (true)
+	// Only leaf nodes send these messages
+	while (is_leaf_node)
 	{
-		collect_msg_t * msg;
-
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		// Read the data from the temp and humidity sensors
@@ -449,12 +460,16 @@ PROCESS_THREAD(send_data_process, ev, data)
 		// Create the data message that we are going to send
 		packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
-		msg = (collect_msg_t *)packetbuf_dataptr();
+		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
 
 		msg->base.type = collect_message_type;
 		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
+
+		printf("Generated new message to:(%d.%d).\n",
+			best_parent.u8[0], best_parent.u8[1]
+		);
 		
 		unicast_send(&uc, &best_parent);
 
@@ -462,7 +477,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 	}
  
 exit:
-	unicast_close(&uc);
+	//unicast_close(&uc);
+	(void)0;
 	PROCESS_END();
 }
 

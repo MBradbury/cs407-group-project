@@ -9,7 +9,6 @@
 #include "dev/battery-sensor.h"
 
 #include "dev/leds.h"
-#include "dev/radio-sensor.h"
 
 #include "net/netstack.h"
 #include "net/rime.h"
@@ -155,13 +154,6 @@ static void parent_detect_finished(void * ptr)
 
 	printf("Found: Parent:%d.%d Hop:%u\n",
 		best_parent.u8[0], best_parent.u8[1], best_hop);
-
-	/*SENSORS_ACTIVATE(radio_sensor);
-	int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
-	int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
-	SENSORS_DEACTIVATE(radio_sensor);
-
-	printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
 
 	// Send a message that is to be received by the children
 	// of this node.
@@ -391,13 +383,6 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 		{
 			PROCESS_YIELD();
 
-			/*SENSORS_ACTIVATE(radio_sensor);
-			int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
-			int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
-			SENSORS_DEACTIVATE(radio_sensor);
-
-			printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
-
 			setup_tree_msg_t * msg;
 
 			// Send the first message that will be used to set up the
@@ -459,13 +444,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 		raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
 		raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
-
-		/*SENSORS_ACTIVATE(radio_sensor);
-		int radio_value_raw = radio_sensor.value(RADIO_SENSOR_LAST_VALUE);
-		int radio_packet_raw = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
-		SENSORS_DEACTIVATE(radio_sensor);
-
-		printf("Radio value %d -- %d\n", radio_value_raw, radio_packet_raw);*/
 
 
 		// Create the data message that we are going to send

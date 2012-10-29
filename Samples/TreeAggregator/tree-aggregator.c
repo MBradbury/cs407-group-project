@@ -123,7 +123,6 @@ typedef struct
 {
 	base_msg_t base;
 
-	rimeaddr_t id;
 	rimeaddr_t parent;
 	uint32_t hop_count;
 
@@ -172,7 +171,6 @@ static void parent_detect_finished(void * ptr)
 	// We set the parent of this node to be the best
 	// parent we heard
 	nextmsg->base.type = setup_message_type;
-	rimeaddr_copy(&nextmsg->id, &rimeaddr_node_addr);
 	rimeaddr_copy(&nextmsg->parent, &best_parent);
 	nextmsg->hop_count = best_hop + 1;
 
@@ -281,12 +279,12 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			if (msg->hop_count < collecting_best_hop)
 			{
 				printf("Updating to a better parent (%d.%d H:%d) was:(%d.%d H:%d)\n",
-					msg->id.u8[0], msg->id.u8[1], msg->hop_count,
+					originator->u8[0], originator->u8[1], msg->hop_count,
 					collecting_best_parent.u8[0], collecting_best_parent.u8[1], collecting_best_hop
 				);
 
 				// Set the best parent, and the hop count of that node
-				rimeaddr_copy(&collecting_best_parent, &(msg->id));
+				rimeaddr_copy(&collecting_best_parent, originator);
 				collecting_best_hop = msg->hop_count;
 			}
 		} break;
@@ -346,7 +344,6 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 
 			msg->base.type = setup_message_type;
 			rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
-			rimeaddr_copy(&msg->id, &rimeaddr_node_addr);
 			rimeaddr_copy(&msg->parent, &rimeaddr_null);
 			msg->hop_count = 0;
 	

@@ -47,7 +47,7 @@ PROCESS_THREAD(messageSenderProcess, ev, data)
 	if (rimeaddr_node_addr.u8[0] == 1 &&
 		rimeaddr_node_addr.u8[1] == 0)
 	{
-		char * msg = "Hello World!"
+		char * msg = "Hello World!";
 
 		collect_set_sink(&tc, 1);
 	

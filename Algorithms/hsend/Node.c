@@ -26,11 +26,11 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 	//Print the message received
 	printf("Message: %s\n",(char *)packetbuf_dataptr() );
 
-	static int count = 0;
-
 	//TODO, don't broadcast when receiving own message
-	if(count++ <= 8){ //only broadcast upto 8 message received
-				sendRIMEMessage("Message received");
+	if (rimeaddr_cmp(&rimeaddr_node_addr,originator) == 0)
+	{
+		printf("Sending received message\n");
+		sendRIMEMessage("Message received");
 	}
 
 }	
@@ -48,7 +48,6 @@ AUTOSTART_PROCESSES(&messageSenderProcess);
 void sendRIMEMessage(char * message)
 {
 		//open the connection, along with the callback function
-		collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
 		collect_set_sink(&tc, 1);
 	
 		packetbuf_clear(); //clear the buffer
@@ -61,8 +60,11 @@ void sendRIMEMessage(char * message)
 PROCESS_THREAD(messageSenderProcess, ev, data)
 {
 	PROCESS_BEGIN();
+	collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
+
 	printf("Sending initial message\n"); //print to the log
 	sendRIMEMessage("Hello World again!");
+
 	PROCESS_END();
 }
 

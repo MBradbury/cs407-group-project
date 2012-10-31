@@ -23,11 +23,13 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 {
 	//printf("Message received\n");
 
+	//Print the message received
 	printf("Message: %s\n",(char *)packetbuf_dataptr() );
 
 	static int count = 0;
 
-	if(count++ <= 8){
+	//TODO, don't broadcast when receiving own message
+	if(count++ <= 8){ //only broadcast upto 8 message received
 				sendRIMEMessage("Message received");
 	}
 
@@ -42,30 +44,25 @@ static const int REXMITS = 4;
 PROCESS(messageSenderProcess, "Message Sender");
 AUTOSTART_PROCESSES(&messageSenderProcess);
 
+/* Method will broadcast a message using RIME */
 void sendRIMEMessage(char * message)
 {
+		//open the connection, along with the callback function
 		collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
-	
-	/*if (rimeaddr_node_addr.u8[0] == 1 &&
-		rimeaddr_node_addr.u8[1] == 0)
-	{*/
 		collect_set_sink(&tc, 1);
 	
-		//packetbuf_clear();
-		packetbuf_copyfrom(message, strlen(message));
-		collect_send(&tc, REXMITS);
-		collect_close(&tc);
-	//}
-
+		packetbuf_clear(); //clear the buffer
+		packetbuf_copyfrom(message, strlen(message)); //copy the message to the buffer
+		collect_send(&tc, REXMITS); //send the buffer over tc
+		collect_close(&tc); //close the connection
 }
 
 
 PROCESS_THREAD(messageSenderProcess, ev, data)
 {
 	PROCESS_BEGIN();
-	printf("Sending initial message\n");
+	printf("Sending initial message\n"); //print to the log
 	sendRIMEMessage("Hello World again!");
-
 	PROCESS_END();
 }
 

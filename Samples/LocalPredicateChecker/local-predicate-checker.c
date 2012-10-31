@@ -155,7 +155,7 @@ PROCESS_THREAD(data_collector_process, ev, data)
 {
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
- 
+
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 

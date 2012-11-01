@@ -19,6 +19,9 @@
 #include "net/rime/timesynch.h"
 #include "contiki-net.h"
 
+#include "sensor-converter.h"
+#include "predicate-checker.h"
+
 
 static struct collect_conn tc;
 
@@ -72,24 +75,6 @@ typedef struct
 
 
 
-typedef bool (*predicate_checker_t)(void const *);
-typedef void (*predicate_failure_message_t)(void const *);
-
-static void check_predicate(
-	predicate_checker_t predicate,
-	predicate_failure_message_t message,
-	void const * state)
-{
-	bool result;
-
-	result = (*predicate)(state);
-
-	if (!result)
-	{
-		(*message)(state);
-	}
-}
-
 static bool temperature_validator(void const * value)
 {
 	double temperature = *(double const *)value;
@@ -134,60 +119,6 @@ static void humidity_message(void const * value)
 	collect_send(&tc, ERROR_REXMITS);
 }
 
-
-static double sht11_relative_humidity(unsigned raw)
-{
-	// FROM:
-	// http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/Humidity/Sensirion_Humidity_SHT1x_Datasheet_V5.pdf
-	// Page 8
-
-	// 12-bit
-	static const double c1 = -2.0468;
-	static const double c2 = 0.0367;
-	static const double c3 = -1.5955E-6;
-
-	// 8-bit
-	/*static const double c1 = -2.0468;
-	static const double c2 = 0.5872;
-	static const double c3 = -4.0845E-4;*/
-
-	return c1 + c2 * raw + c3 * raw * raw;
-}
-
-static double sht11_relative_humidity_compensated(unsigned raw, double temperature)
-{
-	// 12-bit
-	static const double t1 = 0.01;
-	static const double t2 = 0.00008;
-
-	// 8-bit
-	/*static const double t1 = 0.01;
-	static const double t2 = 0.00128;*/
-
-	double humidity = sht11_relative_humidity(raw);
-
-	humidity = (temperature - 25) * (t1 + t2 * raw) + humidity;
-
-	//if (humidity > 99)
-	//	humidity = 100;
-
-	return humidity;
-}
-
-/** Output temperature in degrees Celcius */
-static double sht11_temperature(unsigned raw)
-{
-	//static const double d1 = -40.1; // 5V
-	//static const double d1 = -39.8; // 4V
-	//static const double d1 = -39.7; // 3.5V
-	static const double d1 = -39.6; // 3V
-	//static const double d1 = -39.4; // 2.5V
-
-	static const double d2 = 0.01; // 14-bit
-	//static const double d2 = 0.04; // 12-bit
-
-	return d1 + d2 * raw;
-}
 
 /** The function that will be executed when a message is received */
 static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
@@ -253,7 +184,7 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		collect_set_sink(&tc, 1);
 	}
 
-	etimer_set(&et, 15 * CLOCK_SECOND);
+	etimer_set(&et, 25 * CLOCK_SECOND);
  
 	while (true)
 	{

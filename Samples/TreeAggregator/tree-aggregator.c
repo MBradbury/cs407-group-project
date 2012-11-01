@@ -13,7 +13,6 @@
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/broadcast.h"
-#include "net/rime/timesynch.h"
 #include "contiki-net.h"
 
 #include "sensor-converter.h"
@@ -218,7 +217,7 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 
 		default:
 		{
-			printf("Unknown message type %u (%s)\n", bmsg->type, message_type_to_string(bmsg->type));
+			printf("Unknown message type %d (%s)\n", bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
 }
@@ -301,7 +300,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 
 		default:
 		{
-			printf("Unknown message type %u (%s)\n", bmsg->type, message_type_to_string(bmsg->type));
+			printf("Unknown message type %d (%s)\n", bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
 }

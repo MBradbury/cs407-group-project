@@ -1,8 +1,3 @@
-/**
- * This file was mostly lifted from 
- * contiki-2.6/examples/sky/sky-collect.c
- */
-
 #include "contiki.h"
 
 #include <stdio.h>
@@ -15,23 +10,19 @@
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/collect.h"
-#include "net/rime/collect-neighbor.h"
-#include "net/rime/timesynch.h"
 #include "contiki-net.h"
 
 #include "sensor-converter.h"
 #include "predicate-checker.h"
 
 
-static struct collect_conn tc;
-
 // The number of retransmits to perform
-static const int NORMAL_REXMITS = 4;
-static const int ERROR_REXMITS = 10;
+static const int NORMAL_REXMITS = 3;
+static const int ERROR_REXMITS = 4;
 
 #define ERROR_MESSAGE_MAX_LENGTH 128
 
-
+static predicate_conn_t pc;
 
 typedef enum
 {
@@ -86,15 +77,16 @@ static void temperature_message(void const * value)
 {
 	double temperature = *(double const *)value;
 
-	packetbuf_clear();
-	packetbuf_set_datalen(sizeof(error_msg_t));
-	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
+	error_msg_t * msg = (error_msg_t *)predicate_packetbuf_dataptr(sizeof(error_msg_t));
 
 	msg->base.type = error_message_type;
 
-	msg->length = snprintf(msg->contents, ERROR_MESSAGE_MAX_LENGTH, "Temperature predicate check failed (0 < T <= 40) where T=%d\n", (int)temperature);
+	msg->length = snprintf(msg->contents,
+		ERROR_MESSAGE_MAX_LENGTH,
+		"Temperature predicate check failed (0 < T <= 40) where T=%d\n",
+		(int)temperature);
 	
-	collect_send(&tc, ERROR_REXMITS);
+	predicate_send(&pc, ERROR_REXMITS);
 }
 
 static bool humidity_validator(void const * value)
@@ -108,15 +100,16 @@ static void humidity_message(void const * value)
 {
 	double humidity = *(double const *)value;
 
-	packetbuf_clear();
-	packetbuf_set_datalen(sizeof(error_msg_t));
-	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
+	error_msg_t * msg = (error_msg_t *)predicate_packetbuf_dataptr(sizeof(error_msg_t));
 
 	msg->base.type = error_message_type;
 
-	msg->length = snprintf(msg->contents, ERROR_MESSAGE_MAX_LENGTH, "Humidity predicate check failed (0 < H <= 100) where H=%d%%\n", (int)humidity);
+	msg->length = snprintf(msg->contents,
+		ERROR_MESSAGE_MAX_LENGTH,
+		"Humidity predicate check failed (0 < H <= 100) where H=%d%%\n",
+		(int)humidity);
 	
-	collect_send(&tc, ERROR_REXMITS);
+	predicate_send(&pc, ERROR_REXMITS);
 }
 
 
@@ -151,7 +144,10 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 
 		default:
 		{
-			printf("Unknown message type %u (%s)\n", bmsg->type, message_type_to_string(bmsg->type));
+			printf("Unknown message Addr:%d.%d Seqno:%u Hops:%u Type:%d (%s)\n",
+				originator->u8[0], originator->u8[1],
+				seqno, hops,
+				bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
 
@@ -168,6 +164,7 @@ AUTOSTART_PROCESSES(&data_collector_process);
  
 PROCESS_THREAD(data_collector_process, ev, data)
 {
+	static struct collect_conn tc;
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
 	static double humidity, temperature;
@@ -176,15 +173,17 @@ PROCESS_THREAD(data_collector_process, ev, data)
 	PROCESS_BEGIN();
 
 	collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
+	predicate_conn_open(&pc, &callbacks);
 
 	// Set to be the sink if the address is 1.0
 	if (rimeaddr_node_addr.u8[0] == 1 &&
 		rimeaddr_node_addr.u8[1] == 0)
 	{
 		collect_set_sink(&tc, 1);
+		predicate_set_sink(&pc);
 	}
 
-	etimer_set(&et, 25 * CLOCK_SECOND);
+	etimer_set(&et, 40 * CLOCK_SECOND);
  
 	while (true)
 	{

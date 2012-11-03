@@ -22,7 +22,7 @@ static const int ERROR_REXMITS = 4;
 
 #define ERROR_MESSAGE_MAX_LENGTH 128
 
-static predicate_conn_t pc;
+static struct collect_conn tc;
 
 typedef enum
 {
@@ -53,6 +53,8 @@ typedef struct
 	double temperature;
 	double humidity;
 
+	bool pred_violated;
+
 } collect_msg_t;
 
 typedef struct
@@ -77,7 +79,9 @@ static void temperature_message(void const * value)
 {
 	double temperature = *(double const *)value;
 
-	error_msg_t * msg = (error_msg_t *)predicate_packetbuf_dataptr(sizeof(error_msg_t));
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(error_msg_t));
+	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
 
 	msg->base.type = error_message_type;
 
@@ -86,7 +90,7 @@ static void temperature_message(void const * value)
 		"Temperature predicate check failed (0 < T <= 40) where T=%d\n",
 		(int)temperature);
 	
-	predicate_send(&pc, ERROR_REXMITS);
+	collect_send(&tc, ERROR_REXMITS);
 }
 
 static bool humidity_validator(void const * value)
@@ -100,7 +104,9 @@ static void humidity_message(void const * value)
 {
 	double humidity = *(double const *)value;
 
-	error_msg_t * msg = (error_msg_t *)predicate_packetbuf_dataptr(sizeof(error_msg_t));
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(error_msg_t));
+	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
 
 	msg->base.type = error_message_type;
 
@@ -109,7 +115,7 @@ static void humidity_message(void const * value)
 		"Humidity predicate check failed (0 < H <= 100) where H=%d%%\n",
 		(int)humidity);
 	
-	predicate_send(&pc, ERROR_REXMITS);
+	collect_send(&tc, ERROR_REXMITS);
 }
 
 
@@ -124,10 +130,11 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 		{
 			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
-			printf("Network Data: Addr:%d.%d Seqno:%u Hops:%u Temp:%d Hudmid:%d%%\n",
+			printf("Network Data: Addr:%d.%d Seqno:%u Hops:%u Temp:%d Hudmid:%d%% Vio:%s\n",
 				originator->u8[0], originator->u8[1],
 				seqno, hops,
-				(int)msg->temperature, (int)msg->humidity
+				(int)msg->temperature, (int)msg->humidity,
+				msg->pred_violated ? "True" : "False"
 			);
 		} break;
 
@@ -164,7 +171,6 @@ AUTOSTART_PROCESSES(&data_collector_process);
  
 PROCESS_THREAD(data_collector_process, ev, data)
 {
-	static struct collect_conn tc;
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
 	static double humidity, temperature;
@@ -173,38 +179,37 @@ PROCESS_THREAD(data_collector_process, ev, data)
 	PROCESS_BEGIN();
 
 	collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
-	predicate_conn_open(&pc, &callbacks);
 
 	// Set to be the sink if the address is 1.0
 	if (rimeaddr_node_addr.u8[0] == 1 &&
 		rimeaddr_node_addr.u8[1] == 0)
 	{
 		collect_set_sink(&tc, 1);
-		predicate_set_sink(&pc);
 	}
 
-	etimer_set(&et, 40 * CLOCK_SECOND);
+	etimer_set(&et, 25 * CLOCK_SECOND);
  
 	while (true)
 	{
-		PROCESS_YIELD();
+		PROCESS_WAIT_EVENT();
 
+		// Read raw sensor data
 		SENSORS_ACTIVATE(sht11_sensor);
-
 		raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
 		raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
-
 		SENSORS_DEACTIVATE(sht11_sensor);
 
-		/* http://arduino.cc/forum/index.php?topic=37752.5;wap2 */
-
+		// Convert to human understandable
 		temperature = sht11_temperature(raw_temperature);
 		humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
 
-		check_predicate(&temperature_validator, &temperature_message, &temperature);
-		check_predicate(&humidity_validator, &humidity_message, &humidity);
+		bool violated = false;
 
+		// Check predicates
+		violated |= check_predicate(&temperature_validator, &temperature_message, &temperature);
+		violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
 
+		// Send data message
 		packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
 		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
@@ -212,13 +217,15 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		msg->base.type = collect_message_type;
 		msg->temperature = temperature;
 		msg->humidity = humidity;
-		
+		msg->pred_violated = violated;
+	
 		collect_send(&tc, NORMAL_REXMITS);
 
 		etimer_reset(&et);
 	}
  
 exit:
+	printf("Exiting process...");
 	collect_close(&tc);
 	PROCESS_END();
 }

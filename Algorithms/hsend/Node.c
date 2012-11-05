@@ -48,12 +48,13 @@ AUTOSTART_PROCESSES(&messageSenderProcess);
 void sendRIMEMessage(char * message)
 {
 		//open the connection, along with the callback function
+		//TODO: some nodes can't be set to 1, as they will be the sink, Check with ID if ==1 become sink
 		collect_set_sink(&tc, 1);
 	
 		packetbuf_clear(); //clear the buffer
 		packetbuf_copyfrom(message, strlen(message)); //copy the message to the buffer
 		collect_send(&tc, REXMITS); //send the buffer over tc
-		collect_close(&tc); //close the connection
+		//collect_close(&tc); //close the connection
 }
 
 

@@ -17,10 +17,10 @@
 
 
 // The number of retransmits to perform
-static const int NORMAL_REXMITS = 3;
-static const int ERROR_REXMITS = 4;
+static const int NORMAL_REXMITS = 4;
+static const int ERROR_REXMITS = 6;
 
-#define ERROR_MESSAGE_MAX_LENGTH 128
+#define ERROR_MESSAGE_MAX_LENGTH 96
 
 static struct collect_conn tc;
 
@@ -42,7 +42,7 @@ static const char * message_type_to_string(message_type_t type)
 
 typedef struct
 {
-	message_type_t type;
+	uint8_t type;
 } base_msg_t;
 
 /** The structure of the message we are sending */
@@ -61,11 +61,29 @@ typedef struct
 {
 	base_msg_t base;
 
-	char contents[ERROR_MESSAGE_MAX_LENGTH + 1];
 	size_t length;
+	char contents[ERROR_MESSAGE_MAX_LENGTH];
 
 } error_msg_t;
 
+
+// I was finding that sometimes packets were not
+// being set to the correct length. Lets show a
+// warning message if they aren't!
+static void debug_packet_size(size_t expected)
+{
+	uint16_t len = packetbuf_datalen();
+
+	if (len < expected)
+	{
+		printf("Bad packet length of %u, expected at least %u", len, expected);
+	}
+
+	if (len > PACKETBUF_SIZE)
+	{
+		printf("Packet of length %u is too large, should be %u or lower", len, PACKETBUF_SIZE);
+	}
+}
 
 
 static bool temperature_validator(void const * value)
@@ -81,13 +99,15 @@ static void temperature_message(void const * value)
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(error_msg_t));
+	debug_packet_size(sizeof(error_msg_t));
 	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(error_msg_t));
 
 	msg->base.type = error_message_type;
 
 	msg->length = snprintf(msg->contents,
 		ERROR_MESSAGE_MAX_LENGTH,
-		"Temperature predicate check failed (0 < T <= 40) where T=%d\n",
+		"P(T) : (0 < T <= 40) FAILED where T=%d",
 		(int)temperature);
 	
 	collect_send(&tc, ERROR_REXMITS);
@@ -106,15 +126,22 @@ static void humidity_message(void const * value)
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(error_msg_t));
+	debug_packet_size(sizeof(error_msg_t));
 	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(error_msg_t));
 
 	msg->base.type = error_message_type;
 
 	msg->length = snprintf(msg->contents,
 		ERROR_MESSAGE_MAX_LENGTH,
-		"Humidity predicate check failed (0 < H <= 100) where H=%d%%\n",
+		"P(H) : (0 < H <= 100) FAILED where H=%d%%",
 		(int)humidity);
-	
+
+	printf("Sending error message about humidity on %u.%u: %s (%u)\n",
+		rimeaddr_node_addr.u8[0],
+		rimeaddr_node_addr.u8[1],
+		msg->contents, msg->length);
+
 	collect_send(&tc, ERROR_REXMITS);
 }
 
@@ -142,8 +169,10 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 		{
 			error_msg_t const * msg = (error_msg_t const *)bmsg;
 
-			printf("Error occured on %d.%d: %s",
+			printf("Error occured on %d.%d Seqno:%u Hops:%u Type:%d (%s): %s\n",
 				originator->u8[0], originator->u8[1],
+				seqno, hops,
+				bmsg->type, message_type_to_string(bmsg->type),
 				msg->contents
 			);
 
@@ -157,8 +186,6 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 				bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
-
-	
 }
 
 /** List of all functions to execute when a message is received */
@@ -172,8 +199,6 @@ AUTOSTART_PROCESSES(&data_collector_process);
 PROCESS_THREAD(data_collector_process, ev, data)
 {
 	static struct etimer et;
-	static unsigned raw_humidity, raw_temperature;
-	static double humidity, temperature;
  
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -187,10 +212,17 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		collect_set_sink(&tc, 1);
 	}
 
-	etimer_set(&et, 25 * CLOCK_SECOND);
+	// Wait for network to settle
+	etimer_set(&et, 120 * CLOCK_SECOND);
+	PROCESS_WAIT_UNTIL(etimer_expired(&et));
+
+	etimer_set(&et, 20 * CLOCK_SECOND);
  
 	while (true)
 	{
+		static unsigned raw_humidity, raw_temperature;
+		static double humidity, temperature;
+
 		PROCESS_WAIT_EVENT();
 
 		// Read raw sensor data
@@ -210,16 +242,18 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
 
 		// Send data message
-		packetbuf_clear();
+		/*packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
+		debug_packet_size(sizeof(collect_msg_t));
 		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
+		memset(msg, 0, sizeof(collect_msg_t));
 
 		msg->base.type = collect_message_type;
 		msg->temperature = temperature;
 		msg->humidity = humidity;
 		msg->pred_violated = violated;
 	
-		collect_send(&tc, NORMAL_REXMITS);
+		collect_send(&tc, NORMAL_REXMITS);*/
 
 		etimer_reset(&et);
 	}

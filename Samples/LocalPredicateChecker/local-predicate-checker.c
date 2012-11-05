@@ -42,6 +42,8 @@ static const char * message_type_to_string(message_type_t type)
 
 typedef struct
 {
+	// This is a message_type_t, but a uint8_t is
+	// used for message size optimisation
 	uint8_t type;
 } base_msg_t;
 
@@ -53,6 +55,7 @@ typedef struct
 	double temperature;
 	double humidity;
 
+	// True if a predicate was violated
 	bool pred_violated;
 
 } collect_msg_t;
@@ -61,7 +64,11 @@ typedef struct
 {
 	base_msg_t base;
 
+	// The length of the string in contents
 	size_t length;
+
+	// The error message containing predicate
+	// failure details
 	char contents[ERROR_MESSAGE_MAX_LENGTH];
 
 } error_msg_t;

@@ -26,7 +26,9 @@ static rimeaddr_t destination;
 typedef enum
 {
 	collect_message_type,
-	error_message_type
+	error_message_type,
+	local_data_req_type,
+	local_data_resp_type
 } message_type_t;
 
 static const char * message_type_to_string(message_type_t type)
@@ -71,6 +73,21 @@ typedef struct
 	char contents[ERROR_MESSAGE_MAX_LENGTH];
 
 } error_msg_t;
+
+typedef struct
+{
+	base_msg_t base;
+
+} local_data_req_msg_t;
+
+typedef struct
+{
+	base_msg_t base;
+
+	double temperature;
+	double humidity;
+
+} local_data_resp_msg_t;
 
 
 // I was finding that sometimes packets were not
@@ -182,10 +199,41 @@ static void recv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 
 		} break;
 
+		case local_data_req_type:
+		{
+			// Read raw sensor data
+			SENSORS_ACTIVATE(sht11_sensor);
+			unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+			unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+			SENSORS_DEACTIVATE(sht11_sensor);
+
+			// Convert to human understandable values
+			double temperature = sht11_temperature(raw_temperature);
+			double humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
+
+			// Send data message
+			packetbuf_clear();
+			packetbuf_set_datalen(sizeof(local_data_resp_msg_t));
+			debug_packet_size(sizeof(local_data_resp_msg_t));
+			local_data_resp_msg_t * msg = (local_data_resp_msg_t *)packetbuf_dataptr();
+			memset(msg, 0, sizeof(local_data_resp_msg_t));
+
+			msg->base.type = local_data_resp_type;
+			msg->temperature = temperature;
+			msg->humidity = humidity;
+	
+			mesh_send(&tc, from);
+		} break;
+
+		case local_data_resp_type:
+		{
+			// TODO: Send received data to predicates
+		} break;
+
 		default:
 		{
 			printf("Unknown message Addr:%d.%d Hops:%u Type:%d (%s)\n",
-				from->u8[0], from->u8[1],
+				from->u8[sizeof(rimeaddr_t) - 2], from->u8[sizeof(rimeaddr_t) - 1],
 				hops,
 				bmsg->type, message_type_to_string(bmsg->type));
 		} break;
@@ -212,8 +260,9 @@ static const struct mesh_callbacks callbacks = { &recv, &sent, &timeout };
 
  
 PROCESS(data_collector_process, "Data Collector");
+PROCESS(predicate_checker_process, "Predicate Checker");
 
-AUTOSTART_PROCESSES(&data_collector_process);
+AUTOSTART_PROCESSES(&data_collector_process, &predicate_checker_process);
  
 PROCESS_THREAD(data_collector_process, ev, data)
 {
@@ -248,8 +297,8 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		bool violated = false;
 
 		// Check predicates
-		violated |= check_predicate(&temperature_validator, &temperature_message, &temperature);
-		violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
+		//violated |= check_predicate(&temperature_validator, &temperature_message, &temperature);
+		//violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
 
 		// Send data message
 		packetbuf_clear();
@@ -269,8 +318,45 @@ PROCESS_THREAD(data_collector_process, ev, data)
 	}
  
 exit:
-	printf("Exiting process...");
+	printf("Exiting data collector process...");
 	mesh_close(&tc);
+	PROCESS_END();
+}
+
+
+PROCESS_THREAD(predicate_checker_process, ev, data)
+{
+	static struct etimer et;
+ 
+	PROCESS_EXITHANDLER(goto exit;)
+	PROCESS_BEGIN();
+
+	// Generate data every 20 seconds
+	etimer_set(&et, 60 * CLOCK_SECOND);
+ 
+	while (true)
+	{
+		PROCESS_WAIT_EVENT();
+
+		// Read raw sensor data
+		SENSORS_ACTIVATE(sht11_sensor);
+		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		SENSORS_DEACTIVATE(sht11_sensor);
+
+		// Convert to human understandable values
+		double temperature = sht11_temperature(raw_temperature);
+		double humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
+
+		// Check predicates
+		check_predicate(&temperature_validator, &temperature_message, &temperature);
+		check_predicate(&humidity_validator, &humidity_message, &humidity);
+
+		etimer_reset(&et);
+	}
+ 
+exit:
+	printf("Exiting predicate checker process...");
 	PROCESS_END();
 }
 

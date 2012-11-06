@@ -9,7 +9,7 @@
 #include "dev/sht11-sensor.h"
 
 #include "net/rime/runicast.h"
-#include "net/rime/broadcast.h"
+#include "net/rime/ipolite.h"
 #include "contiki-net.h"
 
 #include "sensor-converter.h"
@@ -76,14 +76,16 @@ typedef struct
 
 
 static const int RETRANSMISSIONS = 25;
+static const int MAXDUPS = 6;
+static const clock_time_t POLITE_INTERVAL = 5 * CLOCK_SECOND;
 
 
-static struct broadcast_conn bc;
+static struct ipolite_conn pc;
 static struct runicast_conn rc;
 
 static predicate_fns_t current_pred = { NULL, NULL };
 
-static void bc_recv(struct broadcast_conn * ptr, rimeaddr_t const * sender)
+static void pc_recv(struct ipolite_conn * ptr, rimeaddr_t const * sender)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
@@ -126,7 +128,7 @@ static void bc_recv(struct broadcast_conn * ptr, rimeaddr_t const * sender)
 	}
 }
 
-static const struct broadcast_callbacks bc_callbacks = { &bc_recv };
+static const struct ipolite_callbacks pc_callbacks = { &pc_recv, NULL, NULL };
 
 
 
@@ -206,10 +208,9 @@ PROCESS_THREAD(one_hop_predicate_checker_process, ev, data)
 	PROCESS_BEGIN();
 
 	runicast_open(&rc, 118, &rc_callbacks);
+	ipolite_open(&pc, 132, MAXDUPS, &pc_callbacks);
 
 	printf("Sending req bcast\n");
-
-	broadcast_open(&bc, 132, &bc_callbacks);
 
 	// Send req message
 	packetbuf_clear();
@@ -220,7 +221,7 @@ PROCESS_THREAD(one_hop_predicate_checker_process, ev, data)
 
 	msg->base.type = local_data_req_type;
 
-	broadcast_send(&bc);
+	ipolite_send(&pc, POLITE_INTERVAL, sizeof(local_data_req_msg_t));
 
 	printf("Waiting for responses...\n");
 
@@ -235,7 +236,7 @@ PROCESS_THREAD(one_hop_predicate_checker_process, ev, data)
  
 exit:
 	printf("Exiting predicate checker process...\n");
-	broadcast_close(&bc);
+	ipolite_close(&pc);
 	runicast_close(&rc);
 	PROCESS_END();
 }

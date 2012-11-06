@@ -25,7 +25,7 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 	//if message was from another node, print it out
 	if (rimeaddr_cmp(&rimeaddr_node_addr,originator) == 0)
 	{
-		printf("Message received from %d: %s \n",address->u8[0],(char *)packetbuf_dataptr() );
+		printf("Message received from %d.%d: %s \n",originator->u8[0],originator->u8[0],(char *)packetbuf_dataptr() );
 	}
 }	
 

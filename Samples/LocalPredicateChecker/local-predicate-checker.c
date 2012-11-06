@@ -9,20 +9,19 @@
 
 #include "net/netstack.h"
 #include "net/rime.h"
-#include "net/rime/collect.h"
+#include "net/rime/mesh.h"
 #include "contiki-net.h"
 
 #include "sensor-converter.h"
 #include "predicate-checker.h"
 
-
-// The number of retransmits to perform
-static const int NORMAL_REXMITS = 4;
-static const int ERROR_REXMITS = 6;
-
 #define ERROR_MESSAGE_MAX_LENGTH 96
 
-static struct collect_conn tc;
+static struct mesh_conn tc;
+
+// This is the address of the node we are sending
+// the data and packets to.
+static rimeaddr_t destination;
 
 typedef enum
 {
@@ -117,7 +116,7 @@ static void temperature_message(void const * value)
 		"P(T) : (0 < T <= 40) FAILED where T=%d",
 		(int)temperature);
 	
-	collect_send(&tc, ERROR_REXMITS);
+	mesh_send(&tc, &destination);
 }
 
 static bool humidity_validator(void const * value)
@@ -145,16 +144,16 @@ static void humidity_message(void const * value)
 		(int)humidity);
 
 	printf("Sending error message about humidity on %u.%u: %s (%u)\n",
-		rimeaddr_node_addr.u8[0],
-		rimeaddr_node_addr.u8[1],
+		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
+		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1],
 		msg->contents, msg->length);
 
-	collect_send(&tc, ERROR_REXMITS);
+	mesh_send(&tc, &destination);
 }
 
 
 /** The function that will be executed when a message is received */
-static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
+static void recv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
@@ -164,9 +163,9 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 		{
 			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
-			printf("Network Data: Addr:%d.%d Seqno:%u Hops:%u Temp:%d Hudmid:%d%% Vio:%s\n",
-				originator->u8[0], originator->u8[1],
-				seqno, hops,
+			printf("Network Data: Addr:%d.%d Hops:%u Temp:%d Hudmid:%d%% Vio:%s\n",
+				from->u8[sizeof(rimeaddr_t) - 2], from->u8[sizeof(rimeaddr_t) - 1],
+				hops,
 				(int)msg->temperature, (int)msg->humidity,
 				msg->pred_violated ? "True" : "False"
 			);
@@ -176,27 +175,40 @@ static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
 		{
 			error_msg_t const * msg = (error_msg_t const *)bmsg;
 
-			printf("Error occured on %d.%d Seqno:%u Hops:%u Type:%d (%s): %s\n",
-				originator->u8[0], originator->u8[1],
-				seqno, hops,
-				bmsg->type, message_type_to_string(bmsg->type),
-				msg->contents
+			printf("Error occured on %d.%d Hops:%u: %s\n",
+				from->u8[sizeof(rimeaddr_t) - 2], from->u8[sizeof(rimeaddr_t) - 1],
+				hops, msg->contents
 			);
 
 		} break;
 
 		default:
 		{
-			printf("Unknown message Addr:%d.%d Seqno:%u Hops:%u Type:%d (%s)\n",
-				originator->u8[0], originator->u8[1],
-				seqno, hops,
+			printf("Unknown message Addr:%d.%d Hops:%u Type:%d (%s)\n",
+				from->u8[0], from->u8[1],
+				hops,
 				bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
 }
 
-/** List of all functions to execute when a message is received */
-static const struct collect_callbacks callbacks = { recv };
+/** Called when a packet is sent */
+static void sent(struct mesh_conn * c)
+{
+	printf("Sent Packet on %u.%u\n",
+		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
+		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1]);
+}
+
+/** Called when a send times-out */
+static void timeout(struct mesh_conn * c)
+{
+	printf("Packet Timeout on %u.%u\n",
+		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
+		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1]);
+}
+
+static const struct mesh_callbacks callbacks = { &recv, &sent, &timeout };
 
  
 PROCESS(data_collector_process, "Data Collector");
@@ -210,37 +222,28 @@ PROCESS_THREAD(data_collector_process, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
+	mesh_open(&tc, 147, &callbacks);
 
 	// Set to be the sink if the address is 1.0
-	if (rimeaddr_node_addr.u8[0] == 1 &&
-		rimeaddr_node_addr.u8[1] == 0)
-	{
-		collect_set_sink(&tc, 1);
-	}
+	memset(&destination, 0, sizeof(rimeaddr_t));
+	destination.u8[sizeof(rimeaddr_t) - 2] = 1;
 
-	// Wait for network to settle
-	etimer_set(&et, 120 * CLOCK_SECOND);
-	PROCESS_WAIT_UNTIL(etimer_expired(&et));
-
+	// Generate data every 20 seconds
 	etimer_set(&et, 20 * CLOCK_SECOND);
  
 	while (true)
 	{
-		static unsigned raw_humidity, raw_temperature;
-		static double humidity, temperature;
-
 		PROCESS_WAIT_EVENT();
 
 		// Read raw sensor data
 		SENSORS_ACTIVATE(sht11_sensor);
-		raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-		raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
-		// Convert to human understandable
-		temperature = sht11_temperature(raw_temperature);
-		humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
+		// Convert to human understandable values
+		double temperature = sht11_temperature(raw_temperature);
+		double humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
 
 		bool violated = false;
 
@@ -249,7 +252,7 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
 
 		// Send data message
-		/*packetbuf_clear();
+		packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
 		debug_packet_size(sizeof(collect_msg_t));
 		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
@@ -260,14 +263,14 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		msg->humidity = humidity;
 		msg->pred_violated = violated;
 	
-		collect_send(&tc, NORMAL_REXMITS);*/
+		mesh_send(&tc, &destination);
 
 		etimer_reset(&et);
 	}
  
 exit:
 	printf("Exiting process...");
-	collect_close(&tc);
+	mesh_close(&tc);
 	PROCESS_END();
 }
 

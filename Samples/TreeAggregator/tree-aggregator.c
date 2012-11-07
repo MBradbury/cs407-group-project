@@ -15,7 +15,8 @@
 #include "net/rime/broadcast.h"
 #include "contiki-net.h"
 
-#include "sensor-converter.h"
+#include "../Common/sensor-converter.h"
+#include "../Common/debug-helper.h"
 
 
 static bool is_sink()
@@ -83,15 +84,15 @@ static void parent_detect_finished(void * ptr)
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
 
-	printf("Timer on %d.%d expired\n",
-		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
+	printf("Timer on %s expired\n",
+		addr2str(&rimeaddr_node_addr));
 
 	// Set the best values
 	best_parent = collecting_best_parent;
 	best_hop = collecting_best_hop;
 
-	printf("Found: Parent:%d.%d Hop:%u\n",
-		best_parent.u8[0], best_parent.u8[1], best_hop);
+	printf("Found: Parent:%s Hop:%u\n",
+		addr2str(&best_parent), best_hop);
 
 	// Send a message that is to be received by the children
 	// of this node.
@@ -149,9 +150,9 @@ static void finish_aggregate_collect(void * ptr)
 
 	unicast_send(conn, &best_parent);
 
-	printf("Send Agg: Addr:%d.%d Dest:%d.%d Temp:%d Hudmid:%d%%\n",
-		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1],
-		best_parent.u8[0], best_parent.u8[1],
+	printf("Send Agg: Addr:%s Dest:%s Temp:%d Hudmid:%d%%\n",
+		addr2str(&rimeaddr_node_addr),
+		addr2str(&best_parent),
 		(int)aggregate_temperature, (int)aggregate_humidity
 	);
 
@@ -173,9 +174,9 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 
 			if (is_sink())
 			{
-				printf("Sink rcv: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-					originator->u8[0], originator->u8[1],
-					msg->base.source.u8[0], msg->base.source.u8[1],
+				printf("Sink rcv: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
+					addr2str(originator),
+					addr2str(&msg->base.source),
 					(int)msg->temperature, (int)msg->humidity
 				);
 			}
@@ -184,9 +185,9 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 				// Apply some aggregation function
 				if (is_collecting)
 				{
-					printf("Cont Agg: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-						originator->u8[0], originator->u8[1],
-						msg->base.source.u8[0], msg->base.source.u8[1],
+					printf("Cont Agg: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
+						addr2str(originator),
+						addr2str(&msg->base.source),
 						(int)msg->temperature, (int)msg->humidity
 					);
 
@@ -199,8 +200,8 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 				else
 				{
 					printf("Star Agg: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-						originator->u8[0], originator->u8[1],
-						msg->base.source.u8[0], msg->base.source.u8[1],
+						addr2str(originator),
+						addr2str(&msg->base.source),
 						(int)msg->temperature, (int)msg->humidity
 					);
 
@@ -233,7 +234,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 		{
 			setup_tree_msg_t const * msg = (setup_tree_msg_t const *)bmsg;
 
-			printf("Got setup message from %d.%d\n", originator->u8[0], originator->u8[1]);
+			printf("Got setup message from %s\n", addr2str(originator));
 
 			// If the sink received a setup message, then do nothing
 			// it doesn't need a parent as it is the root.
@@ -274,9 +275,9 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			// it came from, if it is closer to the sink.
 			if (msg->hop_count < collecting_best_hop)
 			{
-				printf("Updating to a better parent (%d.%d H:%d) was:(%d.%d H:%d)\n",
-					originator->u8[0], originator->u8[1], msg->hop_count,
-					collecting_best_parent.u8[0], collecting_best_parent.u8[1], collecting_best_hop
+				printf("Updating to a better parent (%s H:%d) was:(%s H:%d)\n",
+					addr2str(originator), msg->hop_count,
+					addr2str(&collecting_best_parent), collecting_best_hop
 				);
 
 				// Set the best parent, and the hop count of that node
@@ -289,9 +290,8 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			// then we are not a leaf
 			if (is_leaf_node && rimeaddr_cmp(&msg->parent, &rimeaddr_node_addr) != 0)
 			{
-				printf("Node (%d.%d) is our child, we are not a leaf.\n",
-					originator->u8[0], originator->u8[1]
-				);
+				printf("Node (%s) is our child, we are not a leaf.\n",
+					addr2str(originator));
 
 				is_leaf_node = false;
 			}
@@ -406,7 +406,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
 
 		printf("Generated new message to:(%d.%d).\n",
-			best_parent.u8[0], best_parent.u8[1]
+			addr2str(&best_parent)
 		);
 		
 		unicast_send(&uc, &best_parent);

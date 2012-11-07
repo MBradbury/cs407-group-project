@@ -41,19 +41,14 @@ PROCESS_THREAD(messageSenderProcess, ev, data)
 {
 	static struct etimer et;
 
-	//PROCESS_EXITHANDLER(mesh_close(&mesh);)
+	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
-
-	etimer_set(&et, 60 * CLOCK_SECOND);
 
 	mesh_open(&mesh, 147, &callbacks);
 
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 	etimer_set(&et, 10 * CLOCK_SECOND);
 
-
 	rimeaddr_t dest;
-
 	memset(&dest, 0, sizeof(rimeaddr_t));
 	dest.u8[sizeof(rimeaddr_t) - 2] = 1;
 
@@ -74,6 +69,8 @@ PROCESS_THREAD(messageSenderProcess, ev, data)
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 	}
 
- //}
+ exit:
+	printf("Exiting...\n");
+	mesh_close(&mesh);
 	PROCESS_END();
 }

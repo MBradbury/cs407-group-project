@@ -72,7 +72,6 @@ PROCESS_THREAD(messageSenderProcess, ev, data)
 		}
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
-
 	}
 
 	exit:

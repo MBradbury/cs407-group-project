@@ -18,6 +18,9 @@
 
 #include "sensor-converter.h"
 
+static struct mesh_conn mc;
+
+static rimeaddr_t destination;
 
 static bool is_sink()
 {
@@ -113,10 +116,10 @@ static void CH_detect_finished(void * ptr)
 		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
 
 	// Set the best values
-	best_CH = collecting_best_CH;
+	destination = collecting_best_CH;
 	best_hop = collecting_best_hop;
 
-	printf("Found: Parent:%u.%u Hop:%u\n",
+	printf("Found: Head:%u.%u Hop:%u\n",
 		best_CH.u8[0], best_CH.u8[1], best_hop);
 
 	// Send a message that is to be received by the children
@@ -181,7 +184,7 @@ static void finish_aggregate_collect(void * ptr)
 	msg->temperature = aggregate_temperature;
 	msg->humidity = aggregate_humidity;
 
-	unicast_send(conn, &best_CH);
+	unicast_send(conn, &destination);
 
 	printf("Send Agg: Addr:%d.%d Dest:%d.%d Temp:%d Hudmid:%d%%\n",
 		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1],
@@ -291,6 +294,8 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 				is_CH = elect_clusterhead();
 				if (is_CH)
 					leds_on(LEDS_BLUE);
+					memset(&destination, 0, sizeof(rimeaddr_t));
+					destination.u8[sizeof(rimeaddr_t) - 2] = 1;
 				else
 					leds_off(LEDS_BLUE);
 					
@@ -318,7 +323,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			// Record the node the message came from, if it is closer to the sink.
 			// A CH should simply look for the best path to the sink, other nodes
 			// should look for the closest CH.
-			if (msg->hop_count < collecting_best_hop && (msg->from_CH || is_CH))
+			if (msg->hop_count < collecting_best_hop && msg->from_CH)
 			{
 				printf("Updating to a better clusterhead (%d.%d H:%d) was:(%d.%d H:%d)\n",
 					originator->u8[0], originator->u8[1], msg->hop_count,

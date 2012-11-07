@@ -1,5 +1,5 @@
 CONTIKI_PROJECT = cluster
-PROJECT_SOURCEFILES = $(CS407DIR)/Samples/Common/sensor-converter.c
+PROJECT_SOURCEFILES = ./sensor-converter.c
 all: $(CONTIKI_PROJECT)
 
 CONTIKI = $(HOME)/contiki-2.6

@@ -11,8 +11,10 @@
 
 #include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
+#include "debug-helper.h"
 
 static struct mesh_conn mesh;
+static rimeaddr_t dest;
 
 /** The function that will be executed when a message is received */
 static void recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
@@ -48,7 +50,6 @@ PROCESS_THREAD(messageSenderProcess, ev, data)
 
 	etimer_set(&et, 10 * CLOCK_SECOND);
 
-	rimeaddr_t dest;
 	memset(&dest, 0, sizeof(rimeaddr_t));
 	dest.u8[sizeof(rimeaddr_t) - 2] = 1;
 
@@ -63,7 +64,9 @@ PROCESS_THREAD(messageSenderProcess, ev, data)
 
 			if (rimeaddr_cmp(&rimeaddr_node_addr,&dest) == 0) 
 			{
-		    	printf("Sending a message: %d to: %d.%d\n",mesh_send(&mesh, &dest),dest.u8[0],dest.u8[1]);
+				int result = mesh_send(&mesh, &dest);
+
+		    	printf("Sending a message: %d to: %s\n", result, addr2str(&dest));
 			}
 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

@@ -15,7 +15,7 @@
 #include "net/rime/broadcast.h"
 #include "contiki-net.h"
 
-#include "sensor-converter.h"
+#include "../Common/sensor-converter.h"
 
 
 static bool is_sink()

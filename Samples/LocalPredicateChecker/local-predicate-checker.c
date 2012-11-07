@@ -13,7 +13,7 @@
 #include "net/rime/broadcast.h"
 #include "contiki-net.h"
 
-#include "../Common/sensor-converter.h"
+#include "../Common/sensor-converter-broken.h"
 #include "../Common/debug-helper.h"
 #include "predicate-checker.h"
 

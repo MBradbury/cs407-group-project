@@ -15,11 +15,14 @@
 #include "net/rime.h"
 #include "net/rime/broadcast.h"
 #include "contiki-net.h"
+#include "net/rime/runicast.h"
 
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
 static struct mesh_conn mc;
+
+static struct runicast_conn rc;
 
 static rimeaddr_t destination;
 
@@ -65,8 +68,6 @@ typedef struct
 
 	rimeaddr_t head;
 	uint32_t hop_count;
-	uint32_t round;
-	bool from_CH;
 
 } setup_tree_msg_t;
 
@@ -77,34 +78,12 @@ static bool has_seen_setup = false;
 static rimeaddr_t collecting_best_CH;
 static uint32_t best_hop = UINT32_MAX, collecting_best_hop = UINT32_MAX;
 
-static double p = 0.5;				// Percentage of clusterheads
-static unsigned round = 0;			// Round of CH selection
-static int lastR = -50;				// Last round selected
 static bool is_CH = false;
 
 
 PROCESS(startup, "Startup");
 PROCESS(ch_election_process, "Cluster Setup");
 PROCESS(send_data_process, "Data Sender");
-
-
-static bool elect_clusterhead(void)
-{
-	if ((round - lastR) > (1.0f / p))
-	{
-		// TODO: Find a good seed
-		double randno = abs(rand()) % 100;
-		double threshold = 100.0 * p;
-
-		printf("Eligible for CH, electing... %d < %d?\n", (int)randno, (int)threshold);
-
-		return randno < threshold;
-	}
-	else
-	{
-		return false;
-	}
-}
 
 
 static void CH_detect_finished(void * ptr)
@@ -121,7 +100,7 @@ static void CH_detect_finished(void * ptr)
 	// Set the best values
 	if (!is_CH)
 	{
-		destination = collecting_best_CH;
+		rimeaddr_copy(&destination, &collecting_best_CH);
 	}
 
 	best_hop = collecting_best_hop;
@@ -135,81 +114,35 @@ static void CH_detect_finished(void * ptr)
 	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
 	setup_tree_msg_t * nextmsg = (setup_tree_msg_t *)packetbuf_dataptr();
 
-	// We set the parent of this node to be the best
-	// parent we heard
+	// We set the head of this node to be the best
+	// clusterhead we heard
 	nextmsg->base.type = setup_message_type;
-	rimeaddr_copy(&nextmsg->head, &destination);
+	if (is_CH)
+	{
+		rimeaddr_copy(&nextmsg->head, &rimeaddr_node_addr);
+	}else
+	{
+		rimeaddr_copy(&nextmsg->head, &destination);
+	}
 	nextmsg->hop_count = best_hop + 1;
-	nextmsg->from_CH = is_CH;
 	
 	broadcast_send(conn);
-
-	// Prepare for next round
-	has_seen_setup = false;
 
 	// We are done with setting up the tree
 	// so stop listening for setup messages
 	//broadcast_close(conn);
 
-	// Start the data generation process
-	process_start(&send_data_process, NULL);
+	// Start the data generation process for non-CHs
+	if (!is_CH)
+	{
+		process_start(&send_data_process, NULL);
+	}
 }
 
-static bool is_collecting = false;
-static double aggregate_temperature = 0;
-static double aggregate_humidity = 0;
-static uint32_t collected = 1;
-
-
-static void finish_aggregate_collect(void * ptr)
-{
-	SENSORS_ACTIVATE(sht11_sensor);
-	unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-	unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
-	SENSORS_DEACTIVATE(sht11_sensor);
-
-	double temp = sht11_temperature(raw_temperature);
-	aggregate_temperature += temp;
-	aggregate_humidity += sht11_relative_humidity_compensated(raw_humidity, temp);
-
-	aggregate_temperature /= (double)collected;
-	aggregate_humidity /= (double)collected;
-	collected = 1;
-
-
-	packetbuf_clear();
-	packetbuf_set_datalen(sizeof(collect_msg_t));
-	collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
-
-	msg->base.type = collect_message_type;
-	rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
-	msg->temperature = aggregate_temperature;
-	msg->humidity = aggregate_humidity;
-
-	mesh_send(&mc, &destination);
-
-	printf("Send Agg: Addr:%s Dest:%s Temp:%d Hudmid:%d%%\n",
-		addr2str(&rimeaddr_node_addr),
-		addr2str(&destination),
-		(int)aggregate_temperature, (int)aggregate_humidity
-	);
-
-	is_collecting = false;
-	aggregate_temperature = 0;
-	aggregate_humidity = 0;
-}
-
-static void new_round()
-{
-	printf("New round: %u!\n", round + 1);
-	process_start(&ch_election_process, NULL);
-}
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct mesh_conn * ptr, rimeaddr_t const * originator, uint8_t hops)
+static void recv_aggregate(struct runicast_conn * ptr, rimeaddr_t const * originator)
 {
-	static struct ctimer aggregate_ct;
-
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
 	switch (bmsg->type)
@@ -218,46 +151,11 @@ static void recv_aggregate(struct mesh_conn * ptr, rimeaddr_t const * originator
 		{
 			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
-			if (is_sink())
-			{
-				printf("Sink rcv: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
-					addr2str(originator),
-					addr2str(&msg->base.source),
-					(int)msg->temperature, (int)msg->humidity
-				);
-			}
-			else
-			{
-				// Apply some aggregation function
-				if (is_collecting)
-				{
-					printf("Cont Agg: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
-						addr2str(originator),
-						addr2str(&msg->base.source),
-						(int)msg->temperature, (int)msg->humidity
-					);
-
-					aggregate_temperature += msg->temperature;
-					aggregate_humidity += msg->humidity;
-					collected++;
-				}
-				else
-				{
-					printf("Star Agg: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
-						addr2str(originator),
-						addr2str(&msg->base.source),
-						(int)msg->temperature, (int)msg->humidity
-					);
-
-					aggregate_temperature = msg->temperature;
-					aggregate_humidity = msg->humidity;
-
-					is_collecting = true;
-
-					ctimer_set(&aggregate_ct, 20 * CLOCK_SECOND, &finish_aggregate_collect, ptr);
-				}
-			}
-	
+			printf("Sink rcv: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
+				addr2str(originator),
+				addr2str(&msg->base.source),
+				(int)msg->temperature, (int)msg->humidity
+			);
 		} break;
 
 		default:
@@ -266,6 +164,35 @@ static void recv_aggregate(struct mesh_conn * ptr, rimeaddr_t const * originator
 		} break;
 	}
 }
+
+
+/** The function that will be executed when a message is received */
+static void recv_data(struct mesh_conn * ptr, rimeaddr_t const * originator, uint8_t hops)
+{
+	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
+	switch (bmsg->type)
+	{
+		case collect_message_type:
+		{
+			runicast_send(&rc, &destination, 3);
+
+			leds_on(LEDS_GREEN);
+			printf("Forwarding: from:%s via:%s to:%s",
+				addr2str(originator),
+				addr2str(&rimeaddr_node_addr),
+				addr2str(&destination)
+			);
+	
+		} break;
+
+		default:
+		{
+			printf("Unknown message type\n");
+		} break;
+	}
+}
+
+static const struct runicast_callbacks callbacks_aggregate = { &recv_aggregate };
 
 /** The function that will be executed when a message is received */
 static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originator)
@@ -288,29 +215,13 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 				break;
 			}
 
-			// Record the node the message came from, if it is closer to the sink.
-			// A CH should simply look for the best path to the sink, other nodes
-			// should look for the closest CH.
-			if (msg->hop_count < collecting_best_hop && msg->from_CH)
-			{
-				printf("Updating to a better clusterhead (%s H:%u) was:(%s H:%u)\n",
-					addr2str(originator), msg->hop_count,
-					addr2str(&collecting_best_CH), collecting_best_hop
-				);
-
-				// Set the best parent, and the hop count of that node
-				rimeaddr_copy(&collecting_best_CH, originator);
-				collecting_best_hop = msg->hop_count;
-			}
-
-			// If this is the first setup message that we have seen this round
+			// If this is the first setup message that we have seen
 			// Then we need to start the collect timeout
-			if (!has_seen_setup && msg->round > round)
+			if (!has_seen_setup)
 			{
 				has_seen_setup = true;
-				round = msg->round;
 				
-				is_CH = elect_clusterhead();
+				is_CH = msg->hop_count==0;
 
 				if (is_CH)
 				{
@@ -320,8 +231,10 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 					// Destination becomes the sink node
 					memset(&destination, 0, sizeof(rimeaddr_t));
 					destination.u8[sizeof(rimeaddr_t) - 2] = 1;
+					
+					runicast_open(&rc, 128, &callbacks_aggregate);
 
-					printf("I'm a CH for round %u\n", round);
+					printf("I'm a CH, come to me my children!\n");
 
 					// We are the CH, so just call that the CH has
 					// been detected
@@ -342,7 +255,21 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 					ctimer_set(&detect_ct, 20 * CLOCK_SECOND, &CH_detect_finished, ptr);
 				}
 
-				printf("Not seen round %u setup message before, so setting timer...\n",round);
+				printf("Not seen setup message before, so setting timer...\n");
+			}
+			
+			// Record the node the message came from, if it is closer to the sink.
+			// Non-CH nodes should look for the closest CH.
+			if (msg->hop_count < collecting_best_hop && !is_CH)
+			{
+				printf("Updating to a better clusterhead (%s H:%u) was:(%s H:%u)\n",
+					addr2str(originator), msg->hop_count,
+					addr2str(&collecting_best_CH), collecting_best_hop
+				);
+
+				// Set the best parent, and the hop count of that node
+				rimeaddr_copy(&collecting_best_CH, originator);
+				collecting_best_hop = msg->hop_count;
 			}
 		} break;
 
@@ -355,7 +282,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 
 /** List of all functions to execute when a message is received */
 static const struct broadcast_callbacks callbacks_setup = { &recv_setup };
-static const struct mesh_callbacks callbacks_aggregate = { &recv_aggregate };
+static const struct mesh_callbacks callbacks_data = { &recv_data };
 
 AUTOSTART_PROCESSES(&startup);
 
@@ -380,13 +307,11 @@ PROCESS_THREAD(startup, ev, data)
 
 PROCESS_THREAD(ch_election_process, ev, data)
 {
-	static struct ctimer ct;
 	static struct etimer et;
 	static int i;
 
 	PROCESS_BEGIN();
 
-	round++;
 	leds_on(LEDS_YELLOW);
 
 	etimer_set(&et, 4 * CLOCK_SECOND);
@@ -409,8 +334,6 @@ PROCESS_THREAD(ch_election_process, ev, data)
 		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
 		rimeaddr_copy(&msg->head, &rimeaddr_null);
 		msg->hop_count = 0;
-		msg->round = round;
-		msg->from_CH = true;
 
 		broadcast_send(&bc);
 
@@ -423,9 +346,6 @@ PROCESS_THREAD(ch_election_process, ev, data)
 	//broadcast_close(&bc);
 
 	printf("End of setup process\n");
-
-	printf("I'm waiting...\n");
-	ctimer_set(&ct, 300 * CLOCK_SECOND, &new_round, NULL);
 
 	PROCESS_END();
 }
@@ -442,7 +362,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	leds_on(LEDS_GREEN);
 
-	mesh_open(&mc, 114, &callbacks_aggregate);
+	mesh_open(&mc, 114, &callbacks_data);
 
 	// By this point the clusterheads should be set up,
 	// so now we should move to aggregating data

@@ -98,7 +98,9 @@ static void parent_detect_finished(void * ptr)
 	// of this node.
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
+	debug_packet_size(sizeof(setup_tree_msg_t));
 	setup_tree_msg_t * nextmsg = (setup_tree_msg_t *)packetbuf_dataptr();
+	memset(nextmsg, 0, sizeof(setup_tree_msg_t));
 
 	// We set the parent of this node to be the best
 	// parent we heard
@@ -141,7 +143,9 @@ static void finish_aggregate_collect(void * ptr)
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(collect_msg_t));
+	debug_packet_size(sizeof(collect_msg_t));
 	collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(collect_msg_t));
 
 	msg->base.type = collect_message_type;
 	rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
@@ -199,7 +203,7 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 				}
 				else
 				{
-					printf("Star Agg: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
+					printf("Star Agg: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
 						addr2str(originator),
 						addr2str(&msg->base.source),
 						(int)msg->temperature, (int)msg->humidity
@@ -275,7 +279,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			// it came from, if it is closer to the sink.
 			if (msg->hop_count < collecting_best_hop)
 			{
-				printf("Updating to a better parent (%s H:%d) was:(%s H:%d)\n",
+				printf("Updating to a better parent (%s H:%u) was:(%s H:%u)\n",
 					addr2str(originator), msg->hop_count,
 					addr2str(&collecting_best_parent), collecting_best_hop
 				);
@@ -340,7 +344,9 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 			// aggregation tree
 			packetbuf_clear();
 			packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-			setup_tree_msg_t *msg = (setup_tree_msg_t *)packetbuf_dataptr();
+			debug_packet_size(sizeof(setup_tree_msg_t));
+			setup_tree_msg_t * msg = (setup_tree_msg_t *)packetbuf_dataptr();
+			memset(msg, 0, sizeof(setup_tree_msg_t));
 
 			msg->base.type = setup_message_type;
 			rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
@@ -398,14 +404,16 @@ PROCESS_THREAD(send_data_process, ev, data)
 		// Create the data message that we are going to send
 		packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
+		debug_packet_size(sizeof(collect_msg_t));
 		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
+		memset(msg, 0, sizeof(collect_msg_t));
 
 		msg->base.type = collect_message_type;
 		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
 
-		printf("Generated new message to:(%d.%d).\n",
+		printf("Generated new message to:(%s).\n",
 			addr2str(&best_parent)
 		);
 		

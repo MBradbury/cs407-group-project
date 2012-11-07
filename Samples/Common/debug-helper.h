@@ -11,6 +11,7 @@
 // warning message if they aren't!
 bool debug_packet_size(size_t expected);
 
+// Convert a rime address to a string.
 // NOT THREAD SAFE!
 char const * addr2str(rimeaddr_t const * addr);
 

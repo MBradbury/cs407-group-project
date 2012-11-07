@@ -12,8 +12,8 @@
 #include "net/rime/ipolite.h"
 #include "contiki-net.h"
 
-#include "sensor-converter.h"
-#include "debug-helper.h"
+#include "../Common/sensor-converter-broken.h"
+#include "../Common/debug-helper.h"
 
 
 bool check_predicate(
@@ -257,11 +257,14 @@ exit:
 
 void multi_hop_check_start(void)
 {
+	// Open the connection that listens for data
+	// requests
 	ipolite_open(&pc, 132, MAXDUPS, &pc_callbacks);
 }
 
 void multi_hop_check_end(void)
 {
+	// Stop listening for data requests
 	ipolite_close(&pc);
 }
 

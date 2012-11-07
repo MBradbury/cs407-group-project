@@ -62,3 +62,4 @@ double battery_voltage(unsigned raw)
 {
 	return (raw * 2.500 * 2.0) / 4096;
 }
+

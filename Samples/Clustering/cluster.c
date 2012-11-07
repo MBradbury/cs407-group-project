@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "lib/sensors.h"
 #include "dev/sht11.h"
@@ -70,12 +71,12 @@ static struct ctimer ct;
 static struct ctimer aggregate_ct;
 
 static bool has_seen_setup = false;
-static rimeaddr_t best_CH = {}, collecting_best_CH = {}, sink = {1,0};
+static rimeaddr_t best_CH, collecting_best_CH, sink;
 static uint32_t best_hop = UINT32_MAX, collecting_best_hop = UINT32_MAX;
 
-static float p = 0.5;						// Percentage of clusterheads
-static uint32_t round = 0;					// Round of CH selection
-static uint32_t lastR = -50;				// Last round selected
+static float p = 0.5f;				// Percentage of clusterheads
+static unsigned round = 0;			// Round of CH selection
+static int lastR = -50;				// Last round selected
 static bool is_CH = false;
 
 
@@ -86,12 +87,15 @@ PROCESS(sink_wait_process, "Sink Wait");
 
 static bool elect_clusterhead()
 {
-	if ((round - lastR) > (int) 1/p)
+	if ((round - lastR) > (1.0f / p))
 	{
-		uint32_t randno = abs(rand())%100;
-		uint32_t threshold = (int)100*p;
-		printf("Eligible for CH, electing... %d < %d?\n",randno,threshold);
-		return randno<threshold;			// TODO: Find a good seed
+		// TODO: Find a good seed
+		int randno = rand() % 100;
+		int threshold = (int)(100 * p);
+
+		printf("Eligible for CH, electing... %d < %d?\n", randno, threshold);
+
+		return randno < threshold;
 	}
 	return false;
 }
@@ -112,7 +116,7 @@ static void CH_detect_finished(void * ptr)
 	best_CH = collecting_best_CH;
 	best_hop = collecting_best_hop;
 
-	printf("Found: Parent:%d.%d Hop:%u\n",
+	printf("Found: Parent:%u.%u Hop:%u\n",
 		best_CH.u8[0], best_CH.u8[1], best_hop);
 
 	// Send a message that is to be received by the children
@@ -144,11 +148,11 @@ static void CH_detect_finished(void * ptr)
 }
 
 static bool is_collecting = false;
-static double aggregate_temperature;
-static double aggregate_humidity;
+static double aggregate_temperature = 0;
+static double aggregate_humidity = 0;
 static uint32_t collected = 1;
 
-static bool is_leaf_node = true;
+//static bool is_leaf_node = true;
 
 static void finish_aggregate_collect(void * ptr)
 {
@@ -192,8 +196,8 @@ static void finish_aggregate_collect(void * ptr)
 
 static void new_round()
 {
-	printf("New round: %d!\n",round+1);
-	process_start(&ch_election_process,NULL);
+	printf("New round: %u!\n", round + 1);
+	process_start(&ch_election_process, NULL);
 }
 
 /** The function that will be executed when a message is received */
@@ -350,6 +354,15 @@ PROCESS_THREAD(ch_election_process, ev, data)
 	PROCESS_BEGIN();
 
 	printf("Setting up...\n");
+
+	rimeaddr_copy(&best_CH, &rimeaddr_null);
+	rimeaddr_copy(&collecting_best_CH, &rimeaddr_null);
+
+	// Set sink
+	memset(&sink, 0, sizeof(rimeaddr_t));
+	sink.u8[sizeof(rimeaddr_t) - 2] = 1;
+
+
 	broadcast_open(&bc, 128, &callbacks_setup);
 
 	if (is_sink())

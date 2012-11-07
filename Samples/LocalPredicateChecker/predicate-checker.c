@@ -12,8 +12,8 @@
 #include "net/rime/ipolite.h"
 #include "contiki-net.h"
 
-#include "sensor-converter.h"
-#include "debug-helper.h"
+#include "../Common/sensor-converter-broken.h"
+#include "../Common/debug-helper.h"
 
 
 bool check_predicate(

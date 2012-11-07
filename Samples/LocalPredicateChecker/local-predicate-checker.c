@@ -13,10 +13,9 @@
 #include "net/rime/broadcast.h"
 #include "contiki-net.h"
 
-#include "sensor-converter.h"
+#include "../Common/sensor-converter.h"
+#include "../Common/debug-helper.h"
 #include "predicate-checker.h"
-#include "debug-helper.h"
-
 
 
 static double abs(double d)

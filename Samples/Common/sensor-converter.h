@@ -8,3 +8,4 @@ double sht11_temperature(unsigned raw);
 double battery_voltage(unsigned raw);
 
 #endif
+

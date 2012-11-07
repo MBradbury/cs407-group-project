@@ -39,27 +39,39 @@ AUTOSTART_PROCESSES(&messageSenderProcess);
 
 PROCESS_THREAD(messageSenderProcess, ev, data)
 {
+	static struct etimer et;
+
 	//PROCESS_EXITHANDLER(mesh_close(&mesh);)
 	PROCESS_BEGIN();
 
-	mesh_open(&mesh, 132, &callbacks);
+	etimer_set(&et, 60 * CLOCK_SECOND);
+
+	mesh_open(&mesh, 147, &callbacks);
+
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	etimer_set(&et, 10 * CLOCK_SECOND);
+
 
 	rimeaddr_t dest;
-	dest.u8[0] = 1;
-    dest.u8[1] = 0;
 
-	//while(1) {
+	memset(&dest, 0, sizeof(rimeaddr_t));
+	dest.u8[sizeof(rimeaddr_t) - 2] = 1;
 
+	while(1) 
+	{
+	    char * msg = "This is a message";
 
-    char * msg = "This is a message";
+		packetbuf_clear();
+		packetbuf_set_datalen(strlen(msg));
+		packetbuf_copyfrom(msg, strlen(msg)); 	
+		//memset(msg, 0, strlen(msg));
 
-	packetbuf_clear();
-	packetbuf_set_datalen(strlen(msg));
-	packetbuf_copyfrom(msg, strlen(msg)); 	
-	//memset(msg, 0, strlen(msg));
+			if (rimeaddr_cmp(&rimeaddr_node_addr,&dest) == 0) 
+			{
+		    	printf("Sending a message: %d to: %d.%d\n",mesh_send(&mesh, &dest),dest.u8[0],dest.u8[1]);
+			}
 
-		if (rimeaddr_cmp(&rimeaddr_node_addr,&dest) == 0) {
-	    printf("Sending a message: %d to: %d.%d\n",mesh_send(&mesh, &dest),dest.u8[0],dest.u8[1]);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 	}
 
  //}

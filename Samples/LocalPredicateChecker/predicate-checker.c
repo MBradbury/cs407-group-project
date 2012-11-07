@@ -142,7 +142,8 @@ static void recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t hops
 		{
 			local_data_resp_msg_t * msg = (local_data_resp_msg_t *)bmsg;
 
-			printf("Got response, checking predicate against it\n");
+			printf("Got response (T:%d H:%d%%), checking predicate against it\n",
+				(int)msg->data.temperature, (int)msg->data.humidity);
 
 			// Evaulate received data in the predicate
 			if (!(*current_pred_check)(&msg->data, from))
@@ -197,6 +198,12 @@ bool check_1_hop_information(
 	}
 	else
 	{
+		// Set the predicate and the message that should
+		// be called to check a predicate and then send information
+		// about it should the predicate fail.
+		//
+		// As we do it this way, then it is not possible to have
+		// multiple 1-hop checks running at once.
 		current_pred_check = predicate;
 		current_pred_msg = message;
 

@@ -62,11 +62,11 @@ typedef struct
 {
 	base_msg_t base;
 
-	double temperature;
-	double humidity;
-
 	// True if a predicate was violated
 	bool pred_violated;
+
+	double temperature;
+	double humidity;
 
 } collect_msg_t;
 
@@ -74,12 +74,12 @@ typedef struct
 {
 	base_msg_t base;
 
-	// The length of the string in contents
-	size_t length;
-
 	// The error message containing predicate
 	// failure details
 	char contents[ERROR_MESSAGE_MAX_LENGTH];
+
+	// The length of the string in contents
+	size_t length;
 
 } error_msg_t;
 
@@ -326,6 +326,8 @@ PROCESS_THREAD(predicate_checker_process, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
+	multi_hop_check_start();
+
 	// Generate data every 60 seconds
 	etimer_set(&et, 80 * CLOCK_SECOND);
  
@@ -344,6 +346,7 @@ PROCESS_THREAD(predicate_checker_process, ev, data)
  
 exit:
 	printf("Exiting predicate checker process...\n");
+	multi_hop_check_end();
 	PROCESS_END();
 }
 

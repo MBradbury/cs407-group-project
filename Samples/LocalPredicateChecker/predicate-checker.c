@@ -72,16 +72,6 @@ typedef struct
 } local_data_resp_msg_t;
 
 
-
-typedef struct
-{
-	neighbour_predicate_checker_t check;
-	neighbour_predicate_failure_message_t msg;
-
-} predicate_fns_t;
-
-
-
 static const int RETRANSMISSIONS = 25;
 static const int MAXDUPS = 6;
 static const clock_time_t POLITE_INTERVAL = 5 * CLOCK_SECOND;
@@ -90,7 +80,8 @@ static const clock_time_t POLITE_INTERVAL = 5 * CLOCK_SECOND;
 static struct ipolite_conn pc;
 static struct runicast_conn rc;
 
-static predicate_fns_t current_pred = { NULL, NULL };
+static neighbour_predicate_checker_t current_pred_check;
+static neighbour_predicate_failure_message_t current_pred_msg;
 
 static void pc_recv(struct ipolite_conn * ptr, rimeaddr_t const * sender)
 {
@@ -154,9 +145,9 @@ static void recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t hops
 			printf("Got response, checking predicate against it\n");
 
 			// Evaulate received data in the predicate
-			if (!(*current_pred.check)(&msg->data, from))
+			if (!(*current_pred_check)(&msg->data, from))
 			{
-				(*current_pred.msg)(&msg->data, from);
+				(*current_pred_msg)(&msg->data, from);
 			}
 
 		} break;
@@ -206,8 +197,8 @@ bool check_1_hop_information(
 	}
 	else
 	{
-		current_pred.check = predicate;
-		current_pred.msg = message;
+		current_pred_check = predicate;
+		current_pred_msg = message;
 
 		printf("Starting 1-hop predicate checker process...\n");
 
@@ -226,7 +217,6 @@ PROCESS_THREAD(one_hop_predicate_checker_process, ev, data)
 	PROCESS_BEGIN();
 
 	runicast_open(&rc, 118, &rc_callbacks);
-	ipolite_open(&pc, 132, MAXDUPS, &pc_callbacks);
 
 	printf("Sending req bcast\n");
 
@@ -249,13 +239,26 @@ PROCESS_THREAD(one_hop_predicate_checker_process, ev, data)
 
 	// We have either received all we are going to
 	// and have evaluated the predicate against
-	// those responses, so close the connections.
+	// those responses, so cancel sending.
+	ipolite_cancel(&pc);
 
  
 exit:
 	printf("Exiting predicate checker process...\n");
-	ipolite_close(&pc);
 	runicast_close(&rc);
 	PROCESS_END();
 }
+
+
+void multi_hop_check_start(void)
+{
+	ipolite_open(&pc, 132, MAXDUPS, &pc_callbacks);
+}
+
+void multi_hop_check_end(void)
+{
+	ipolite_close(&pc);
+}
+
+
 

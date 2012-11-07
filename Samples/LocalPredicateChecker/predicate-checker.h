@@ -31,6 +31,9 @@ bool check_1_hop_information(
 	neighbour_predicate_checker_t predicate,
 	neighbour_predicate_failure_message_t message);
 
+void multi_hop_check_start(void);
+void multi_hop_check_end(void);
+
 
 #endif /*PREDICATE_CHECKER_H*/
 

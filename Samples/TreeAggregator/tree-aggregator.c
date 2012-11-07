@@ -338,7 +338,7 @@ PROCESS_THREAD(tree_setup_process, ev, data)
 		// that the surrounding nodes will get a message
 		for (i = 0; i != 2; ++i)
 		{
-			PROCESS_YIELD();
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 			// Send the first message that will be used to set up the
 			// aggregation tree
@@ -374,7 +374,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
 
-	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 	printf("Starting data generation process\n");
@@ -421,10 +420,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 		etimer_reset(&et);
 	}
- 
-exit:
-	//unicast_close(&uc);
-	(void)0;
+
 	PROCESS_END();
 }
 

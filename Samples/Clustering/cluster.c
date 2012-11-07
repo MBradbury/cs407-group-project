@@ -18,6 +18,11 @@
 
 #include "sensor-converter.h"
 
+static int abs(int d)
+{
+	return d < 0 ? -d : d;
+}
+
 static struct mesh_conn mc;
 
 static rimeaddr_t destination;
@@ -74,7 +79,7 @@ static struct ctimer ct;
 static struct ctimer aggregate_ct;
 
 static bool has_seen_setup = false;
-static rimeaddr_t best_CH, collecting_best_CH, sink;
+static rimeaddr_t collecting_best_CH, sink;
 static uint32_t best_hop = UINT32_MAX, collecting_best_hop = UINT32_MAX;
 
 static float p = 0.5f;				// Percentage of clusterheads
@@ -93,7 +98,7 @@ static bool elect_clusterhead()
 	if ((round - lastR) > (1.0f / p))
 	{
 		// TODO: Find a good seed
-		int randno = rand() % 100;
+		int randno = abs(rand() % 100);
 		int threshold = (int)(100 * p);
 
 		printf("Eligible for CH, electing... %d < %d?\n", randno, threshold);
@@ -116,11 +121,12 @@ static void CH_detect_finished(void * ptr)
 		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
 
 	// Set the best values
-	destination = collecting_best_CH;
+	if (!is_CH)
+		destination = collecting_best_CH;
 	best_hop = collecting_best_hop;
 
 	printf("Found: Head:%u.%u Hop:%u\n",
-		best_CH.u8[0], best_CH.u8[1], best_hop);
+		destination.u8[0], destination.u8[1], best_hop);
 
 	// Send a message that is to be received by the children
 	// of this node.
@@ -131,7 +137,7 @@ static void CH_detect_finished(void * ptr)
 	// We set the parent of this node to be the best
 	// parent we heard
 	nextmsg->base.type = setup_message_type;
-	rimeaddr_copy(&nextmsg->head, &best_CH);
+	rimeaddr_copy(&nextmsg->head, &destination);
 	nextmsg->hop_count = best_hop + 1;
 
 	if (is_CH)
@@ -155,10 +161,10 @@ static double aggregate_temperature = 0;
 static double aggregate_humidity = 0;
 static uint32_t collected = 1;
 
-//static bool is_leaf_node = true;
 
 static void finish_aggregate_collect(void * ptr)
 {
+
 	SENSORS_ACTIVATE(sht11_sensor);
 	unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
 	unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
@@ -173,8 +179,6 @@ static void finish_aggregate_collect(void * ptr)
 	collected = 1;
 
 
-	struct unicast_conn * conn = (struct unicast_conn *)ptr;
-
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(collect_msg_t));
 	collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
@@ -184,11 +188,11 @@ static void finish_aggregate_collect(void * ptr)
 	msg->temperature = aggregate_temperature;
 	msg->humidity = aggregate_humidity;
 
-	unicast_send(conn, &destination);
+	mesh_send(&mc, &destination);
 
 	printf("Send Agg: Addr:%d.%d Dest:%d.%d Temp:%d Hudmid:%d%%\n",
 		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1],
-		best_CH.u8[0], best_CH.u8[1],
+		destination.u8[0], destination.u8[1],
 		(int)aggregate_temperature, (int)aggregate_humidity
 	);
 
@@ -293,9 +297,12 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 				
 				is_CH = elect_clusterhead();
 				if (is_CH)
+				{
 					leds_on(LEDS_BLUE);
 					memset(&destination, 0, sizeof(rimeaddr_t));
 					destination.u8[sizeof(rimeaddr_t) - 2] = 1;
+					printf("I'm a CH for round %u\n",round);
+				}
 				else
 					leds_off(LEDS_BLUE);
 					
@@ -317,7 +324,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 				// done detecting parents.
 				ctimer_set(&ct, 15 * CLOCK_SECOND, &CH_detect_finished, ptr);
 
-				printf("Not seen round %d setup message before, so setting timer...\n",round);
+				printf("Not seen round %u setup message before, so setting timer...\n",round);
 			}
 
 			// Record the node the message came from, if it is closer to the sink.
@@ -325,7 +332,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			// should look for the closest CH.
 			if (msg->hop_count < collecting_best_hop && msg->from_CH)
 			{
-				printf("Updating to a better clusterhead (%d.%d H:%d) was:(%d.%d H:%d)\n",
+				printf("Updating to a better clusterhead (%d.%d H:%u) was:(%d.%d H:%u)\n",
 					originator->u8[0], originator->u8[1], msg->hop_count,
 					collecting_best_CH.u8[0], collecting_best_CH.u8[1], collecting_best_hop
 				);
@@ -353,14 +360,13 @@ PROCESS_THREAD(ch_election_process, ev, data)
 {
 	static struct etimer et;
 	static struct broadcast_conn bc;
-	static struct unicast_conn uc;
 	static int i;
 
 	PROCESS_BEGIN();
 
 	printf("Setting up...\n");
 
-	rimeaddr_copy(&best_CH, &rimeaddr_null);
+	rimeaddr_copy(&destination, &rimeaddr_null);
 	rimeaddr_copy(&collecting_best_CH, &rimeaddr_null);
 
 	// Set sink
@@ -372,7 +378,6 @@ PROCESS_THREAD(ch_election_process, ev, data)
 
 	if (is_sink())
 	{
-		unicast_open(&uc, 114, &callbacks_aggregate);
 		round++;
 		leds_on(LEDS_YELLOW);
 
@@ -417,7 +422,6 @@ PROCESS_THREAD(ch_election_process, ev, data)
 
 PROCESS_THREAD(send_data_process, ev, data)
 {
-	static struct unicast_conn uc;
 
 	static struct etimer et;
 	static unsigned raw_humidity, raw_temperature;
@@ -429,7 +433,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	leds_on(LEDS_GREEN);
 
-	unicast_open(&uc, 114, &callbacks_aggregate);
+	mesh_open(&mc, 114, &callbacks_aggregate);
 
 	// By this point the clusterheads should be set up,
 	// so now we should move to aggregating data
@@ -460,16 +464,16 @@ PROCESS_THREAD(send_data_process, ev, data)
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
 
 		printf("Generated new message to:(%d.%d).\n",
-			best_CH.u8[0], best_CH.u8[1]
+			destination.u8[0], destination.u8[1]
 		);
 		
-		unicast_send(&uc, &best_CH);
+		mesh_send(&mc, &destination);
 
 		etimer_reset(&et);
 	}
  
 exit:
-	//unicast_close(&uc);
+	mesh_close(&mc);
 	(void)0;
 	PROCESS_END();
 }

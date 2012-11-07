@@ -271,6 +271,7 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originator)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
+	unsigned secs = 20;
 
 	switch (bmsg->type)
 	{
@@ -302,6 +303,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 					memset(&destination, 0, sizeof(rimeaddr_t));
 					destination.u8[sizeof(rimeaddr_t) - 2] = 1;
 					printf("I'm a CH for round %u\n",round);
+					secs = 1;
 				}
 				else
 					leds_off(LEDS_BLUE);
@@ -322,7 +324,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 
 				// Start the timer that will call a function when we are
 				// done detecting parents.
-				ctimer_set(&ct, 15 * CLOCK_SECOND, &CH_detect_finished, ptr);
+				ctimer_set(&ct, secs * CLOCK_SECOND, &CH_detect_finished, ptr);
 
 				printf("Not seen round %u setup message before, so setting timer...\n",round);
 			}
@@ -387,7 +389,7 @@ PROCESS_THREAD(ch_election_process, ev, data)
 		// that the surrounding nodes will get a message
 		for (i = 0; i != 2; ++i)
 		{
-			PROCESS_YIELD();
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 			// Send the first message that will be used to set up the
 			// aggregation tree

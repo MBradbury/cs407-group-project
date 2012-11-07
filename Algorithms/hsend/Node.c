@@ -10,7 +10,7 @@
 
 static struct mesh_conn mesh;
 static rimeaddr_t dest;
-
+static int messageSent = 0;
 
 /** The function that will be executed when a message is received */
 static void 
@@ -23,6 +23,7 @@ recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 static void
 sent(struct mesh_conn *c)
 {
+	messageSent = 1;
   printf("packet sent\n");
 }
 static void
@@ -36,13 +37,11 @@ const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 static void 
 sendToBaseStation(char * message)
 {
-	
-
 	packetbuf_clear();
 	packetbuf_set_datalen(strlen(message));
 	packetbuf_copyfrom(message, strlen(message));
 
-	mesh_send(&mesh, &dest);
+	mesh_send(&mesh, &dest); //send the message
 }
 
 PROCESS(messageSenderProcess, "Message Sender");
@@ -67,15 +66,10 @@ PROCESS_THREAD(messageSenderProcess, ev, data)
 
 	while(1)
 	{
-
+		if (messageSent == 0) {
 		char *message = "Hello World!!";
-		char output[21];
-		strcat(output,message);
-		strcat(output,addr2str(&rimeaddr_node_addr));
-
-		sendToBaseStation(output);
-
-
+		sendToBaseStation(message);
+		}
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
 

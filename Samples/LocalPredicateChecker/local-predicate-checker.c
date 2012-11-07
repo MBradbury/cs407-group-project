@@ -1,8 +1,3 @@
-/**
- * This file was mostly lifted from 
- * contiki-2.6/examples/sky/sky-collect.c
- */
-
 #include "contiki.h"
 
 #include <stdio.h>
@@ -14,196 +9,340 @@
 
 #include "net/netstack.h"
 #include "net/rime.h"
-#include "net/rime/collect.h"
-#include "net/rime/collect-neighbor.h"
-#include "net/rime/timesynch.h"
+#include "net/rime/mesh.h"
+#include "net/rime/broadcast.h"
 #include "contiki-net.h"
 
+#include "sensor-converter.h"
+#include "predicate-checker.h"
+#include "debug-helper.h"
 
-typedef bool (*predicate_checker_t)(void const *);
-typedef void (*predicate_failure_message_t)(void const *);
 
-void check_predicate(
-	predicate_checker_t predicate,
-	predicate_failure_message_t message,
-	void const * state)
+
+static double abs(double d)
 {
-	bool result;
+	return d < 0 ? -d : d;
+}
 
-	result = (*predicate)(state);
 
-	if (!result)
+
+#define ERROR_MESSAGE_MAX_LENGTH 96
+
+static struct mesh_conn mc;
+
+// This is the address of the node we are sending
+// the data and packets to.
+static rimeaddr_t destination;
+
+typedef enum
+{
+	collect_message_type,
+	error_message_type
+} message_type_t;
+
+static const char * message_type_to_string(message_type_t type)
+{
+	switch (type)
 	{
-		(*message)(state);
+		case collect_message_type: return "Collect Message";
+		case error_message_type: return "Error Message";
+		default: return "Unknown Message";
 	}
 }
 
-bool temperature_validator(void const * value)
+typedef struct
+{
+	// This is a message_type_t, but a uint8_t is
+	// used for message size optimisation
+	uint8_t type;
+} base_msg_t;
+
+/** The structure of the message we are sending */
+typedef struct
+{
+	base_msg_t base;
+
+	// True if a predicate was violated
+	bool pred_violated;
+
+	double temperature;
+	double humidity;
+
+} collect_msg_t;
+
+typedef struct
+{
+	base_msg_t base;
+
+	// The error message containing predicate
+	// failure details
+	char contents[ERROR_MESSAGE_MAX_LENGTH];
+
+	// The length of the string in contents
+	size_t length;
+
+} error_msg_t;
+
+
+static bool temperature_validator(void const * value)
 {
 	double temperature = *(double const *)value;
 
 	return temperature > 0 && temperature <= 40;
 }
 
-void temperature_message(void const * value)
+static void temperature_message(void const * value)
 {
 	double temperature = *(double const *)value;
 
-	printf("Temperature predicate check failed %d\n", (int)temperature);
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(error_msg_t));
+	debug_packet_size(sizeof(error_msg_t));
+	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(error_msg_t));
+
+	msg->base.type = error_message_type;
+
+	msg->length = snprintf(msg->contents,
+		ERROR_MESSAGE_MAX_LENGTH,
+		"P(T) : (0 < T <= 40) FAILED where T=%d",
+		(int)temperature);
+	
+	mesh_send(&mc, &destination);
 }
 
-bool humidity_validator(void const * value)
+static bool humidity_validator(void const * value)
 {
 	double humidity = *(double const *)value;
 
 	return humidity > 0 && humidity <= 100;
 }
 
-void humidity_message(void const * value)
+static void humidity_message(void const * value)
 {
 	double humidity = *(double const *)value;
 
-	printf("Humidity predicate check failed: %d%%\n", (int)humidity);
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(error_msg_t));
+	debug_packet_size(sizeof(error_msg_t));
+	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(error_msg_t));
+
+	msg->base.type = error_message_type;
+
+	msg->length = snprintf(msg->contents,
+		ERROR_MESSAGE_MAX_LENGTH,
+		"P(H) : (0 < H <= 100) FAILED where H=%d%%",
+		(int)humidity);
+
+	printf("Sending error message about humidity on %s: %s (%u)\n",
+		addr2str(&rimeaddr_node_addr),
+		msg->contents, msg->length);
+
+	mesh_send(&mc, &destination);
 }
 
 
-double sht11_relative_humidity(unsigned raw)
+static bool neighbour_humidity_validator(data_t const * value, rimeaddr_t const * sender)
 {
-	// FROM:
-	// http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/Humidity/Sensirion_Humidity_SHT1x_Datasheet_V5.pdf
-	// Page 8
+	// Read raw sensor data
+	SENSORS_ACTIVATE(sht11_sensor);
+	unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+	unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+	SENSORS_DEACTIVATE(sht11_sensor);
 
-	// 12-bit
-	static const double c1 = -2.0468;
-	static const double c2 = 0.0367;
-	static const double c3 = -1.5955E-6;
+	// Convert to human understandable values
+	double temperature = sht11_temperature(raw_temperature);
+	double humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
 
-	// 8-bit
-	/*static const double c1 = -2.0468;
-	static const double c2 = 0.5872;
-	static const double c3 = -4.0845E-4;*/
-
-	return c1 + c2 * raw + c3 * raw * raw;
+	// Neighbour's humidity is within 10 of ours
+	return abs(humidity - value->humidity) <= 10;
 }
 
-double sht11_relative_humidity_compensated(unsigned raw, double temperature)
+static void neighbour_humidity_message(data_t const * value, rimeaddr_t const * sender)
 {
-	// 12-bit
-	static const double t1 = 0.01;
-	static const double t2 = 0.00008;
+	// Read raw sensor data
+	SENSORS_ACTIVATE(sht11_sensor);
+	unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+	unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+	SENSORS_DEACTIVATE(sht11_sensor);
 
-	// 8-bit
-	/*static const double t1 = 0.01;
-	static const double t2 = 0.00128;*/
+	// Convert to human understandable values
+	double temperature = sht11_temperature(raw_temperature);
+	double humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
 
-	double humidity = sht11_relative_humidity(raw);
 
-	return (temperature - 25) * (t1 + t2 * raw) + humidity;
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(error_msg_t));
+	debug_packet_size(sizeof(error_msg_t));
+	error_msg_t * msg = (error_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(error_msg_t));
+
+	msg->base.type = error_message_type;
+
+	msg->length = snprintf(msg->contents,
+		ERROR_MESSAGE_MAX_LENGTH,
+		"P1(H) : (|Ho-H1| <= 10) FAILED where Ho=%d%% H1=%d%%",
+		(int)humidity, (int)value->humidity);
+
+	printf("Sending error message about 1-hop humidity on %s: %s (%u)\n",
+		addr2str(&rimeaddr_node_addr),
+		msg->contents, msg->length);
+
+	mesh_send(&mc, &destination);
 }
 
-/** Output temperature in degrees Celcius */
-double sht11_temperature(unsigned raw)
-{
-	//static const double d1 = -40.1; // 5V
-	//static const double d1 = -39.8; // 4V
-	//static const double d1 = -39.7; // 3.5V
-	static const double d1 = -39.6; // 3V
-	//static const double d1 = -39.4; // 2.5V
 
-	static const double d2 = 0.01; // 14-bit
-	//static const double d2 = 0.04; // 12-bit
-
-	return d1 + d2 * raw;
-}
-
-
-/** The structure of the message we are sending */
-typedef struct collect_msg
-{
-	double temperature;
-	double humidity;
-
-} collect_msg_t;
 
 /** The function that will be executed when a message is received */
-static void recv(rimeaddr_t const * originator, uint8_t seqno, uint8_t hops)
+static void recv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 {
-	collect_msg_t const * msg;
+	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
-	msg = (collect_msg_t const *)packetbuf_dataptr();
+	switch (bmsg->type)
+	{
+		case collect_message_type:
+		{
+			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
-	printf("Network Data: Addr:%d.%d Seqno:%u Hops:%u Temp:%d Hudmid:%d%%\n",
-		originator->u8[0], originator->u8[1],
-		seqno, hops,
-		(int)msg->temperature, (int)msg->humidity
-	);
+			printf("Network Data: Addr:%s Hops:%u Temp:%d Hudmid:%d%% Vio:%s\n",
+				addr2str(from),
+				hops,
+				(int)msg->temperature, (int)msg->humidity,
+				msg->pred_violated ? "True" : "False"
+			);
+		} break;
+
+		case error_message_type:
+		{
+			error_msg_t const * msg = (error_msg_t const *)bmsg;
+
+			printf("Error occured on %s Hops:%u: %s\n",
+				addr2str(from),
+				hops, msg->contents
+			);
+
+		} break;
+
+		default:
+		{
+			printf("Unknown message Addr:%s Hops:%u Type:%d (%s)\n",
+				addr2str(from),
+				hops,
+				bmsg->type, message_type_to_string(bmsg->type));
+		} break;
+	}
 }
 
-/** List of all functions to execute when a message is received */
-static const struct collect_callbacks callbacks = { recv };
+/** Called when a packet is sent */
+static void sent(struct mesh_conn * c)
+{
+	printf("Sent Packet on %s\n",
+		addr2str(&rimeaddr_node_addr));
+}
 
-static struct collect_conn tc;
+/** Called when a send times-out */
+static void timeout(struct mesh_conn * c)
+{
+	printf("Packet Timeout on %s\n",
+		addr2str(&rimeaddr_node_addr));
+}
 
-static const int REXMITS = 4;
-
+static const struct mesh_callbacks callbacks = { &recv, &sent, &timeout };
  
 PROCESS(data_collector_process, "Data Collector");
+PROCESS(predicate_checker_process, "Predicate Checker");
 
-AUTOSTART_PROCESSES(&data_collector_process);
+AUTOSTART_PROCESSES(&data_collector_process/*, &predicate_checker_process*/);
  
 PROCESS_THREAD(data_collector_process, ev, data)
 {
 	static struct etimer et;
-	static unsigned raw_humidity, raw_temperature;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	collect_open(&tc, 128, COLLECT_ROUTER, &callbacks);
+	mesh_open(&mc, 147, &callbacks);
 
 	// Set to be the sink if the address is 1.0
-	if (rimeaddr_node_addr.u8[0] == 1 &&
-		rimeaddr_node_addr.u8[1] == 0)
-	{
-		collect_set_sink(&tc, 1);
-	}
+	memset(&destination, 0, sizeof(rimeaddr_t));
+	destination.u8[sizeof(rimeaddr_t) - 2] = 1;
 
-	etimer_set(&et, CLOCK_SECOND);
+	// Generate data every 20 seconds
+	etimer_set(&et, 20 * CLOCK_SECOND);
  
-	while (1)
+	while (true)
 	{
-		collect_msg_t * msg;
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-		PROCESS_YIELD();
-
-		packetbuf_clear();
-		packetbuf_set_datalen(sizeof(collect_msg_t));
-		msg = (collect_msg_t *)packetbuf_dataptr();
-
+		// Read raw sensor data
 		SENSORS_ACTIVATE(sht11_sensor);
-
-		raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-		raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
-
+		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
-		/* http://arduino.cc/forum/index.php?topic=37752.5;wap2 */
+		// Convert to human understandable values
+		double temperature = sht11_temperature(raw_temperature);
+		double humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
 
-		msg->temperature = sht11_temperature(raw_temperature);
-		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
-		
-		collect_send(&tc, REXMITS);
+		bool violated = false;
 
+		// Check predicates
+		violated |= check_predicate(&temperature_validator, &temperature_message, &temperature);
+		violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
 
-		check_predicate(&temperature_validator, &temperature_message, &(msg->temperature));
-		check_predicate(&humidity_validator, &humidity_message, &(msg->humidity));
+		// Send data message
+		packetbuf_clear();
+		packetbuf_set_datalen(sizeof(collect_msg_t));
+		debug_packet_size(sizeof(collect_msg_t));
+		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
+		memset(msg, 0, sizeof(collect_msg_t));
 
+		msg->base.type = collect_message_type;
+		msg->temperature = temperature;
+		msg->humidity = humidity;
+		msg->pred_violated = violated;
+	
+		mesh_send(&mc, &destination);
 
 		etimer_reset(&et);
 	}
  
 exit:
-	collect_close(&tc);
+	printf("Exiting data collector process...\n");
+	mesh_close(&mc);
+	PROCESS_END();
+}
+
+
+PROCESS_THREAD(predicate_checker_process, ev, data)
+{
+	static struct etimer et;
+ 
+	PROCESS_EXITHANDLER(goto exit;)
+	PROCESS_BEGIN();
+
+	multi_hop_check_start();
+
+	// Generate data every 60 seconds
+	etimer_set(&et, 80 * CLOCK_SECOND);
+ 
+	while (true)
+	{
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+		printf("Checking 1-hop predicates...\n");
+
+		check_1_hop_information(
+			&neighbour_humidity_validator,
+			&neighbour_humidity_message);
+
+		etimer_reset(&et);
+	}
+ 
+exit:
+	printf("Exiting predicate checker process...\n");
+	multi_hop_check_end();
 	PROCESS_END();
 }
 

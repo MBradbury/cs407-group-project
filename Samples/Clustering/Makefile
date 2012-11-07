@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = tree-aggregator
+CONTIKI_PROJECT = cluster
 PROJECT_SOURCEFILES = sensor-converter.c
 all: $(CONTIKI_PROJECT)
 

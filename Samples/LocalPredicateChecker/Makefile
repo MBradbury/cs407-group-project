@@ -6,10 +6,10 @@ all: $(CONTIKI_PROJECT)
 
 TARGET = sky
 
-PROJECTDIRS = 
+PROJECTDIRS := $(CS407DIR)/Samples/Common
 PROJECT_SOURCEFILES = predicate-checker.c
 
-CONTIKIDIRS := $(CS407DIR)/Samples/Common
+CONTIKIDIRS :=
 CONTIKI_SOURCEFILES = sensor-converter-broken.c debug-helper.c
 
 CONTIKI = $(HOME)/contiki-2.6

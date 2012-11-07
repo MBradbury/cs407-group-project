@@ -6,11 +6,11 @@ all: $(CONTIKI_PROJECT)
 
 TARGET = sky
 
-PROJECTDIRS = 
+PROJECTDIRS := $(CS407DIR)/Samples/Common
 PROJECT_SOURCEFILES =
 
-CONTIKIDIRS := $(CS407DIR)/Samples/Common
-CONTIKI_SOURCEFILES = sensor-converter.c
+CONTIKIDIRS :=
+CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c
 
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include

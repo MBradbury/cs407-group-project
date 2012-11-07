@@ -257,11 +257,14 @@ exit:
 
 void multi_hop_check_start(void)
 {
+	// Open the connection that listens for data
+	// requests
 	ipolite_open(&pc, 132, MAXDUPS, &pc_callbacks);
 }
 
 void multi_hop_check_end(void)
 {
+	// Stop listening for data requests
 	ipolite_close(&pc);
 }
 

@@ -17,11 +17,7 @@
 #include "contiki-net.h"
 
 #include "sensor-converter.h"
-
-static int abs(int d)
-{
-	return d < 0 ? -d : d;
-}
+#include "debug-helper.h"
 
 static struct mesh_conn mc;
 
@@ -75,37 +71,39 @@ typedef struct
 } setup_tree_msg_t;
 
 
-static struct ctimer ct;
-static struct ctimer aggregate_ct;
+static struct broadcast_conn bc;
 
 static bool has_seen_setup = false;
-static rimeaddr_t collecting_best_CH, sink;
+static rimeaddr_t collecting_best_CH;
 static uint32_t best_hop = UINT32_MAX, collecting_best_hop = UINT32_MAX;
 
-static float p = 0.5f;				// Percentage of clusterheads
+static double p = 0.5;				// Percentage of clusterheads
 static unsigned round = 0;			// Round of CH selection
 static int lastR = -50;				// Last round selected
 static bool is_CH = false;
 
 
+PROCESS(startup, "Startup");
 PROCESS(ch_election_process, "Cluster Setup");
 PROCESS(send_data_process, "Data Sender");
-PROCESS(sink_wait_process, "Sink Wait");
 
 
-static bool elect_clusterhead()
+static bool elect_clusterhead(void)
 {
 	if ((round - lastR) > (1.0f / p))
 	{
 		// TODO: Find a good seed
-		int randno = abs(rand() % 100);
-		int threshold = (int)(100 * p);
+		double randno = abs(rand()) % 100;
+		double threshold = 100.0 * p;
 
-		printf("Eligible for CH, electing... %d < %d?\n", randno, threshold);
+		printf("Eligible for CH, electing... %d < %d?\n", (int)randno, (int)threshold);
 
 		return randno < threshold;
 	}
-	return false;
+	else
+	{
+		return false;
+	}
 }
 
 
@@ -117,16 +115,19 @@ static void CH_detect_finished(void * ptr)
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
 
-	printf("Timer on %d.%d expired\n",
-		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
+	printf("Timer on %s expired\n",
+		addr2str(&rimeaddr_node_addr));
 
 	// Set the best values
 	if (!is_CH)
+	{
 		destination = collecting_best_CH;
+	}
+
 	best_hop = collecting_best_hop;
 
-	printf("Found: Head:%u.%u Hop:%u\n",
-		destination.u8[0], destination.u8[1], best_hop);
+	printf("Found: Head:%s Hop:%u\n",
+		addr2str(&destination), best_hop);
 
 	// Send a message that is to be received by the children
 	// of this node.
@@ -139,14 +140,12 @@ static void CH_detect_finished(void * ptr)
 	nextmsg->base.type = setup_message_type;
 	rimeaddr_copy(&nextmsg->head, &destination);
 	nextmsg->hop_count = best_hop + 1;
-
-	if (is_CH)
-		nextmsg->from_CH = true;
-	else
-		nextmsg->from_CH = false;
+	nextmsg->from_CH = is_CH;
 	
 	broadcast_send(conn);
-	has_seen_setup = false;		// Prepare for next round
+
+	// Prepare for next round
+	has_seen_setup = false;
 
 	// We are done with setting up the tree
 	// so stop listening for setup messages
@@ -164,7 +163,6 @@ static uint32_t collected = 1;
 
 static void finish_aggregate_collect(void * ptr)
 {
-
 	SENSORS_ACTIVATE(sht11_sensor);
 	unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
 	unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
@@ -190,9 +188,9 @@ static void finish_aggregate_collect(void * ptr)
 
 	mesh_send(&mc, &destination);
 
-	printf("Send Agg: Addr:%d.%d Dest:%d.%d Temp:%d Hudmid:%d%%\n",
-		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1],
-		destination.u8[0], destination.u8[1],
+	printf("Send Agg: Addr:%s Dest:%s Temp:%d Hudmid:%d%%\n",
+		addr2str(&rimeaddr_node_addr),
+		addr2str(&destination),
 		(int)aggregate_temperature, (int)aggregate_humidity
 	);
 
@@ -208,8 +206,10 @@ static void new_round()
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * originator)
+static void recv_aggregate(struct mesh_conn * ptr, rimeaddr_t const * originator, uint8_t hops)
 {
+	static struct ctimer aggregate_ct;
+
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
 	switch (bmsg->type)
@@ -220,9 +220,9 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 
 			if (is_sink())
 			{
-				printf("Sink rcv: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-					originator->u8[0], originator->u8[1],
-					msg->base.source.u8[0], msg->base.source.u8[1],
+				printf("Sink rcv: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
+					addr2str(originator),
+					addr2str(&msg->base.source),
 					(int)msg->temperature, (int)msg->humidity
 				);
 			}
@@ -231,9 +231,9 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 				// Apply some aggregation function
 				if (is_collecting)
 				{
-					printf("Cont Agg: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-						originator->u8[0], originator->u8[1],
-						msg->base.source.u8[0], msg->base.source.u8[1],
+					printf("Cont Agg: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
+						addr2str(originator),
+						addr2str(&msg->base.source),
 						(int)msg->temperature, (int)msg->humidity
 					);
 
@@ -243,9 +243,9 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 				}
 				else
 				{
-					printf("Star Agg: Addr:%d.%d Src:%d.%d Temp:%d Hudmid:%d%%\n",
-						originator->u8[0], originator->u8[1],
-						msg->base.source.u8[0], msg->base.source.u8[1],
+					printf("Star Agg: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
+						addr2str(originator),
+						addr2str(&msg->base.source),
 						(int)msg->temperature, (int)msg->humidity
 					);
 
@@ -271,7 +271,6 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originator)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
-	unsigned secs = 20;
 
 	switch (bmsg->type)
 	{
@@ -279,7 +278,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 		{
 			setup_tree_msg_t const * msg = (setup_tree_msg_t const *)bmsg;
 
-			printf("Got setup message from %d.%d\n", originator->u8[0], originator->u8[1]);
+			printf("Got setup message from %s\n", addr2str(originator));
 
 			// If the sink received a setup message, then do nothing
 			// it doesn't need a parent as it is the root.
@@ -287,6 +286,21 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			{
 				printf("We are the sink node, so should not listen for parents.\n");
 				break;
+			}
+
+			// Record the node the message came from, if it is closer to the sink.
+			// A CH should simply look for the best path to the sink, other nodes
+			// should look for the closest CH.
+			if (msg->hop_count < collecting_best_hop && msg->from_CH)
+			{
+				printf("Updating to a better clusterhead (%s H:%u) was:(%s H:%u)\n",
+					addr2str(originator), msg->hop_count,
+					addr2str(&collecting_best_CH), collecting_best_hop
+				);
+
+				// Set the best parent, and the hop count of that node
+				rimeaddr_copy(&collecting_best_CH, originator);
+				collecting_best_hop = msg->hop_count;
 			}
 
 			// If this is the first setup message that we have seen this round
@@ -297,51 +311,38 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 				round = msg->round;
 				
 				is_CH = elect_clusterhead();
+
 				if (is_CH)
 				{
+					// Turn blue on to indicate cluster head
 					leds_on(LEDS_BLUE);
+
+					// Destination becomes the sink node
 					memset(&destination, 0, sizeof(rimeaddr_t));
 					destination.u8[sizeof(rimeaddr_t) - 2] = 1;
-					printf("I'm a CH for round %u\n",round);
-					secs = 1;
+
+					printf("I'm a CH for round %u\n", round);
+
+					// We are the CH, so just call that the CH has
+					// been detected
+					CH_detect_finished(ptr);
 				}
 				else
+				{
+					static struct ctimer detect_ct;
+
 					leds_off(LEDS_BLUE);
-					
-				// Indicate that we are looking for best parent
-				leds_on(LEDS_RED);
 
+					// Indicate that we are looking for best parent
+					leds_on(LEDS_RED);
 
-				// TODO: In the future the time to wait for
-				// parents should be related to the battery remaining.
-				// The more power remaining, the more time should be
-				// spent listening
-				/*SENSORS_ACTIVATE(battery_sensor);
-				unsigned battery_raw = battery_sensor.value(0);
-				SENSORS_DEACTIVATE(battery_sensor);
-
-				printf("Battery value Raw:%u Real:%dV\n", battery_raw, (int)battery_voltage(battery_raw));*/
-
-				// Start the timer that will call a function when we are
-				// done detecting parents.
-				ctimer_set(&ct, secs * CLOCK_SECOND, &CH_detect_finished, ptr);
+					// Start the timer that will call a function when we are
+					// done detecting parents.
+					// We only need to detect parents if we are not a cluster head
+					ctimer_set(&detect_ct, 20 * CLOCK_SECOND, &CH_detect_finished, ptr);
+				}
 
 				printf("Not seen round %u setup message before, so setting timer...\n",round);
-			}
-
-			// Record the node the message came from, if it is closer to the sink.
-			// A CH should simply look for the best path to the sink, other nodes
-			// should look for the closest CH.
-			if (msg->hop_count < collecting_best_hop && msg->from_CH)
-			{
-				printf("Updating to a better clusterhead (%d.%d H:%u) was:(%d.%d H:%u)\n",
-					originator->u8[0], originator->u8[1], msg->hop_count,
-					collecting_best_CH.u8[0], collecting_best_CH.u8[1], collecting_best_hop
-				);
-
-				// Set the best parent, and the hop count of that node
-				rimeaddr_copy(&collecting_best_CH, originator);
-				collecting_best_hop = msg->hop_count;
 			}
 		} break;
 
@@ -353,17 +354,13 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 }
 
 /** List of all functions to execute when a message is received */
-static const struct broadcast_callbacks callbacks_setup = { recv_setup };
-static const struct unicast_callbacks callbacks_aggregate = { recv_aggregate };
+static const struct broadcast_callbacks callbacks_setup = { &recv_setup };
+static const struct mesh_callbacks callbacks_aggregate = { &recv_aggregate };
 
-AUTOSTART_PROCESSES(&ch_election_process);
+AUTOSTART_PROCESSES(&startup);
 
-PROCESS_THREAD(ch_election_process, ev, data)
+PROCESS_THREAD(startup, ev, data)
 {
-	static struct etimer et;
-	static struct broadcast_conn bc;
-	static int i;
-
 	PROCESS_BEGIN();
 
 	printf("Setting up...\n");
@@ -371,62 +368,72 @@ PROCESS_THREAD(ch_election_process, ev, data)
 	rimeaddr_copy(&destination, &rimeaddr_null);
 	rimeaddr_copy(&collecting_best_CH, &rimeaddr_null);
 
-	// Set sink
-	memset(&sink, 0, sizeof(rimeaddr_t));
-	sink.u8[sizeof(rimeaddr_t) - 2] = 1;
-
-
 	broadcast_open(&bc, 128, &callbacks_setup);
 
 	if (is_sink())
 	{
-		round++;
-		leds_on(LEDS_YELLOW);
-
-		etimer_set(&et, 4 * CLOCK_SECOND);
-
-		// Retry initial send a few times to make sure
-		// that the surrounding nodes will get a message
-		for (i = 0; i != 2; ++i)
-		{
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-			// Send the first message that will be used to set up the
-			// aggregation tree
-			packetbuf_clear();
-			packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-			setup_tree_msg_t *msg = (setup_tree_msg_t *)packetbuf_dataptr();
-
-			msg->base.type = setup_message_type;
-			rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
-			rimeaddr_copy(&msg->head, &rimeaddr_null);
-			msg->hop_count = 0;
-			msg->round = round;
-			msg->from_CH = false;
-	
-			broadcast_send(&bc);
-
-			printf("IsSink, sending initial message (%d)...\n", i);
-
-			etimer_reset(&et);
-		}
-
-		broadcast_close(&bc);
+		process_start(&ch_election_process, NULL);
 	}
-	if(is_sink())
+
+	PROCESS_END();
+}
+
+PROCESS_THREAD(ch_election_process, ev, data)
+{
+	static struct ctimer ct;
+	static struct etimer et;
+	static int i;
+
+	PROCESS_BEGIN();
+
+	round++;
+	leds_on(LEDS_YELLOW);
+
+	etimer_set(&et, 4 * CLOCK_SECOND);
+
+	// Retry initial send a few times to make sure
+	// that the surrounding nodes will get a message
+	for (i = 0; i != 3; ++i)
 	{
-		printf("End of setup process\n");
-		process_start(&sink_wait_process,NULL);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+		// Send the first message that will be used to set up the
+		// aggregation tree
+		packetbuf_clear();
+		packetbuf_set_datalen(sizeof(setup_tree_msg_t));
+		debug_packet_size(sizeof(setup_tree_msg_t));
+		setup_tree_msg_t * msg = (setup_tree_msg_t *)packetbuf_dataptr();
+		memset(msg, 0, sizeof(setup_tree_msg_t));
+
+		msg->base.type = setup_message_type;
+		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
+		rimeaddr_copy(&msg->head, &rimeaddr_null);
+		msg->hop_count = 0;
+		msg->round = round;
+		msg->from_CH = true;
+
+		broadcast_send(&bc);
+
+		printf("IsSink, sending initial message (%d)...\n", i);
+
+		etimer_reset(&et);
 	}
+
+	// TODO: Work out where this can be closed
+	//broadcast_close(&bc);
+
+	printf("End of setup process\n");
+
+	printf("I'm waiting...\n");
+	ctimer_set(&ct, 300 * CLOCK_SECOND, &new_round, NULL);
+
 	PROCESS_END();
 }
 
 
 PROCESS_THREAD(send_data_process, ev, data)
 {
-
 	static struct etimer et;
-	static unsigned raw_humidity, raw_temperature;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -450,8 +457,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 		// Read the data from the temp and humidity sensors
 		SENSORS_ACTIVATE(sht11_sensor);
-		raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-		raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
 
@@ -465,8 +472,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
 
-		printf("Generated new message to:(%d.%d).\n",
-			destination.u8[0], destination.u8[1]
+		printf("Generated new message to:(%s).\n",
+			addr2str(&destination)
 		);
 		
 		mesh_send(&mc, &destination);
@@ -480,10 +487,4 @@ exit:
 	PROCESS_END();
 }
 
-PROCESS_THREAD(sink_wait_process, ev, data)
-{
-	PROCESS_BEGIN();
-	printf("I'm waiting\n");
-	ctimer_set(&ct, 300 * CLOCK_SECOND, &new_round,NULL);
-	PROCESS_END();
-}
+

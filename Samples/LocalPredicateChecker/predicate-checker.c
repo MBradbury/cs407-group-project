@@ -73,6 +73,13 @@ typedef struct
 
 
 
+typedef struct
+{
+	neighbour_predicate_checker_t check;
+	neighbour_predicate_failure_message_t msg;
+
+} predicate_fns_t;
+
 
 
 static const int RETRANSMISSIONS = 25;
@@ -186,17 +193,28 @@ static const struct runicast_callbacks rc_callbacks = { &recv, &sent, &timeout }
 
 PROCESS(one_hop_predicate_checker_process, "1-Hop Predicate Checker");
 
-void check_1_hop_information(
+bool check_1_hop_information(
 	neighbour_predicate_checker_t predicate,
 	neighbour_predicate_failure_message_t message
 	)
 {
-	current_pred.check = predicate;
-	current_pred.msg = message;
+	if (process_is_running(&one_hop_predicate_checker_process))
+	{
+		printf("1-hop check process is already running, not starting new process\n");
 
-	printf("Starting 1-hop predicate checker process...\n");
+		return false;
+	}
+	else
+	{
+		current_pred.check = predicate;
+		current_pred.msg = message;
 
-	process_start(&one_hop_predicate_checker_process, NULL);
+		printf("Starting 1-hop predicate checker process...\n");
+
+		process_start(&one_hop_predicate_checker_process, NULL);
+
+		return true;
+	}
 }
 
 
@@ -216,7 +234,7 @@ PROCESS_THREAD(one_hop_predicate_checker_process, ev, data)
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(local_data_req_msg_t));
 	debug_packet_size(sizeof(local_data_req_msg_t));
-	local_data_resp_msg_t * msg = (local_data_req_msg_t *)packetbuf_dataptr();
+	local_data_req_msg_t * msg = (local_data_req_msg_t *)packetbuf_dataptr();
 	memset(msg, 0, sizeof(local_data_req_msg_t));
 
 	msg->base.type = local_data_req_type;

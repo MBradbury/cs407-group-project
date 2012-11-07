@@ -25,16 +25,9 @@ typedef struct
 typedef bool (*neighbour_predicate_checker_t)(data_t const *, rimeaddr_t const *);
 typedef void (*neighbour_predicate_failure_message_t)(data_t const *, rimeaddr_t const *);
 
-typedef struct
-{
-	neighbour_predicate_checker_t check;
-	neighbour_predicate_failure_message_t msg;
-
-} predicate_fns_t;
-
 /** Start a process that begins checking a predicate
  *  with respect to the one hop neighbourhood. */
-void check_1_hop_information(
+bool check_1_hop_information(
 	neighbour_predicate_checker_t predicate,
 	neighbour_predicate_failure_message_t message);
 

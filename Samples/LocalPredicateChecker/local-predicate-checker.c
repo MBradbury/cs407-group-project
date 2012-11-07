@@ -135,9 +135,8 @@ static void humidity_message(void const * value)
 		"P(H) : (0 < H <= 100) FAILED where H=%d%%",
 		(int)humidity);
 
-	printf("Sending error message about humidity on %u.%u: %s (%u)\n",
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1],
+	printf("Sending error message about humidity on %s: %s (%u)\n",
+		addr2str(&rimeaddr_node_addr),
 		msg->contents, msg->length);
 
 	mesh_send(&mc, &destination);
@@ -186,9 +185,8 @@ static void neighbour_humidity_message(data_t const * value, rimeaddr_t const * 
 		"P1(H) : (|Ho-H1| <= 10) FAILED where Ho=%d%% H1=%d%%",
 		(int)humidity, (int)value->humidity);
 
-	printf("Sending error message about 1-hop humidity on %u.%u: %s (%u)\n",
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1],
+	printf("Sending error message about 1-hop humidity on %s: %s (%u)\n",
+		addr2str(&rimeaddr_node_addr),
 		msg->contents, msg->length);
 
 	mesh_send(&mc, &destination);
@@ -207,8 +205,8 @@ static void recv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 		{
 			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
-			printf("Network Data: Addr:%d.%d Hops:%u Temp:%d Hudmid:%d%% Vio:%s\n",
-				from->u8[sizeof(rimeaddr_t) - 2], from->u8[sizeof(rimeaddr_t) - 1],
+			printf("Network Data: Addr:%s Hops:%u Temp:%d Hudmid:%d%% Vio:%s\n",
+				addr2str(from),
 				hops,
 				(int)msg->temperature, (int)msg->humidity,
 				msg->pred_violated ? "True" : "False"
@@ -219,8 +217,8 @@ static void recv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 		{
 			error_msg_t const * msg = (error_msg_t const *)bmsg;
 
-			printf("Error occured on %d.%d Hops:%u: %s\n",
-				from->u8[sizeof(rimeaddr_t) - 2], from->u8[sizeof(rimeaddr_t) - 1],
+			printf("Error occured on %s Hops:%u: %s\n",
+				addr2str(from),
 				hops, msg->contents
 			);
 
@@ -228,8 +226,8 @@ static void recv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 
 		default:
 		{
-			printf("Unknown message Addr:%d.%d Hops:%u Type:%d (%s)\n",
-				from->u8[sizeof(rimeaddr_t) - 2], from->u8[sizeof(rimeaddr_t) - 1],
+			printf("Unknown message Addr:%s Hops:%u Type:%d (%s)\n",
+				addr2str(from),
 				hops,
 				bmsg->type, message_type_to_string(bmsg->type));
 		} break;
@@ -239,17 +237,15 @@ static void recv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 /** Called when a packet is sent */
 static void sent(struct mesh_conn * c)
 {
-	printf("Sent Packet on %u.%u\n",
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1]);
+	printf("Sent Packet on %s\n",
+		addr2str(&rimeaddr_node_addr));
 }
 
 /** Called when a send times-out */
 static void timeout(struct mesh_conn * c)
 {
-	printf("Packet Timeout on %u.%u\n",
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1]);
+	printf("Packet Timeout on %s\n",
+		addr2str(&rimeaddr_node_addr));
 }
 
 static const struct mesh_callbacks callbacks = { &recv, &sent, &timeout };
@@ -257,7 +253,7 @@ static const struct mesh_callbacks callbacks = { &recv, &sent, &timeout };
 PROCESS(data_collector_process, "Data Collector");
 PROCESS(predicate_checker_process, "Predicate Checker");
 
-AUTOSTART_PROCESSES(&data_collector_process, &predicate_checker_process);
+AUTOSTART_PROCESSES(&data_collector_process/*, &predicate_checker_process*/);
  
 PROCESS_THREAD(data_collector_process, ev, data)
 {
@@ -292,11 +288,11 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		bool violated = false;
 
 		// Check predicates
-		//violated |= check_predicate(&temperature_validator, &temperature_message, &temperature);
-		//violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
+		violated |= check_predicate(&temperature_validator, &temperature_message, &temperature);
+		violated |= check_predicate(&humidity_validator, &humidity_message, &humidity);
 
 		// Send data message
-		/*packetbuf_clear();
+		packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
 		debug_packet_size(sizeof(collect_msg_t));
 		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
@@ -307,7 +303,7 @@ PROCESS_THREAD(data_collector_process, ev, data)
 		msg->humidity = humidity;
 		msg->pred_violated = violated;
 	
-		mesh_send(&mc, &destination);*/
+		mesh_send(&mc, &destination);
 
 		etimer_reset(&et);
 	}

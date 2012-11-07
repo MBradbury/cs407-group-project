@@ -119,8 +119,8 @@ static void pc_recv(struct ipolite_conn * ptr, rimeaddr_t const * sender)
 
 		default:
 		{
-			printf("Unknown message Addr:%d.%d Type:%d (%s)\n",
-				sender->u8[sizeof(rimeaddr_t) - 2], sender->u8[sizeof(rimeaddr_t) - 1],
+			printf("Unknown message Addr:%s Type:%d (%s)\n",
+				addr2str(sender),
 				bmsg->type, message_type_to_string(bmsg->type));
 		} break;
 	}
@@ -155,8 +155,8 @@ static void recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t hops
 
 		default:
 		{
-			printf("Unknown message Addr:%d.%d Hops:%u Type:%d (%s)\n",
-				from->u8[sizeof(rimeaddr_t) - 2], from->u8[sizeof(rimeaddr_t) - 1],
+			printf("Unknown message Addr:%s Hops:%u Type:%d (%s)\n",
+				addr2str(from),
 				hops,
 				bmsg->type, message_type_to_string(bmsg->type));
 		} break;
@@ -166,17 +166,15 @@ static void recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t hops
 /** Called when a packet is sent */
 static void sent(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
-	printf("Sent Packet on %u.%u\n",
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1]);
+	printf("Sent Packet on %s\n",
+		addr2str(&rimeaddr_node_addr));
 }
 
 /** Called when a send times-out */
 static void timeout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
-	printf("Packet Timeout on %u.%u\n",
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 2],
-		rimeaddr_node_addr.u8[sizeof(rimeaddr_t) - 1]);
+	printf("Packet Timeout on %s\n",
+		addr2str(&rimeaddr_node_addr));
 }
 
 

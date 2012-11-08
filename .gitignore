@@ -32,3 +32,5 @@ symbols.h
 *.sublime-project
 *.sublime-workspace
 *-converted-to.pdf
+/Report/Diagrams/*.pdf
+.nfs*

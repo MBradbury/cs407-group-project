@@ -22,14 +22,20 @@
 		Unicast & unicast.h & \url{contiki.sourceforge.net/docs/2.6/a01738.html} \\
 		Stubborn Unicast & stunicast.h & \url{contiki.sourceforge.net/docs/2.6/a01740.html} \\
 		Reliable Unicast & runicast.h & \url{contiki.sourceforge.net/docs/2.6/a01738.html} \\
-		Network Flooding (unreliable) & netflood.h & \url{contiki.sourceforge.net/docs/2.6/a01728.html} \\
-		Network Flooding (reliable) & trickle.h & \url{contiki.sourceforge.net/docs/2.6/a01742.html} \\
-		Multi-hop Unicast & mesh.h & \url{contiki.sourceforge.net/docs/2.6/a01725.html} \\
+		Network Flooding & netflood.h & \url{contiki.sourceforge.net/docs/2.6/a01728.html} \\
+		Multi-hop Unicast & multihop.h & \url{contiki.sourceforge.net/docs/2.6/a01726.html} \\
 		Reliable Multi-hop Unicast & rmh.h & \url{contiki.sourceforge.net/docs/2.6/a01732.html} \\
+		\hline
+		\hline
+		Mesh & mesh.h & \url{contiki.sourceforge.net/docs/2.6/a01725.html} \\
+		Collect & collect.h & \url{contiki.sourceforge.net/docs/2.6/a01723.html} \\
 		\hline
 	\end{tabular}
 	\caption{Communication Primitives headers and documentation location}
 \end{table}
+
+
+%Network Flooding (reliable) & trickle.h & \url{contiki.sourceforge.net/docs/2.6/a01742.html} \\
 
 \begin{table}[H]
 	\centering
@@ -45,10 +51,13 @@
 		Unicast & No & destination & Yes\\
 		Stubborn Unicast & No & destination & Yes\\
 		Reliable Unicast & Yes & destination & Yes\\
-		Network Flooding (unreliable) & No & network & ?\\
-		Network Flooding (reliable) & Yes & network & ?\\
-		Multi-hop Unicast & No & destination & ?\\
-		Reliable Multi-hop Unicast & Yes & destination & ?\\
+		Network Flooding & No & network & Yes\\
+		Multi-hop Unicast & No & destination & Yes\\
+		Reliable Multi-hop Unicast & Yes & destination & Yes\\
+		\hline
+		\hline
+		Mesh & No & destination & Yes \\
+		Collect & Yes & destination & Yes \\
 		\hline
 	\end{tabular}
 	\caption{Communication Primitives behaviour}
@@ -56,27 +65,210 @@
 
 \subsubsection{Anonymous Broadcast}
 
+\begin{minted}[fontsize=\small]{c}
+void abc_open(struct abc_conn *c, uint16_t channel, const struct abc_callbacks *u);
+void abc_close(struct abc_conn *c);
+int abc_send(struct abc_conn *c);
+
+struct abc_callbacks
+{
+   void(* recv)(struct abc_conn *ptr);
+};
+\end{minted}
+
+
 \subsubsection{Broadcast}
+
+\begin{minted}[fontsize=\small]{c}
+void broadcast_open(struct broadcast_conn *c, uint16_t channel, const struct broadcast_callbacks *u);
+void broadcast_close(struct broadcast_conn *c);
+int broadcast_send(struct broadcast_conn *c);
+
+struct broadcast_callbacks
+{
+   void(* recv)(struct broadcast_conn *ptr, const rimeaddr_t *sender);
+};
+\end{minted}
+
 
 \subsubsection{Stubborn Broadcast}
 
+\begin{minted}[fontsize=\small]{c}
+void stbroadcast_open(struct stbroadcast_conn *c, uint16_t channel, const struct stbroadcast_callbacks *u);
+void stbroadcast_close(struct stbroadcast_conn *c);
+void stbroadcast_set_timer(struct stbroadcast_conn *c, clock_time_t t);
+int stbroadcast_send_stubborn(struct stbroadcast_conn *c, clock_time_t t);
+void stbroadcast_cancel(struct stbroadcast_conn *c);
+
+struct stbroadcast_callbacks {
+   void (* recv)(struct stbroadcast_conn *c);
+   void (* sent)(struct stbroadcast_conn *c);
+ };
+\end{minted}
+
 \subsubsection{Anonymous Polite Broadcast}
+
+\begin{minted}[fontsize=\small]{c}
+void polite_open(struct polite_conn *c, uint16_t channel, const struct polite_callbacks *cb);
+void polite_close(struct polite_conn *c);
+int polite_send(struct polite_conn *c, clock_time_t interval, uint8_t hdrsize);
+void polite_cancel(struct polite_conn *c);
+
+struct stbroadcast_callbacks {
+   void(* recv)(struct polite_conn *c);
+   void(* sent)(struct polite_conn *c);
+   void(* dropped)(struct polite_conn *c);
+ };
+\end{minted}
 
 \subsubsection{Polite Broadcast}
 
+\begin{minted}[fontsize=\small]{c}
+void ipolite_open(struct ipolite_conn *c, uint16_t channel, uint8_t maxdups, const struct ipolite_callbacks *cb);
+void ipolite_close(struct ipolite_conn *c);
+int ipolite_send(struct ipolite_conn *c, clock_time_t interval, uint8_t hdrsize);
+void ipolite_cancel(struct ipolite_conn *c);
+
+struct stbroadcast_callbacks {
+   void(* recv)(struct ipolite_conn *c, const rimeaddr_t *from)
+   void(* sent)(struct ipolite_conn *c);
+   void(* dropped)(struct ipolite_conn *c);
+ };
+\end{minted}
+
 \subsubsection{Unicast}
 
+\begin{minted}[fontsize=\small]{c}
+void unicast_open(struct unicast_conn *c, uint16_t channel, const struct unicast_callbacks *u);
+void unicast_close(struct unicast_conn *c);
+int unicast_send(struct unicast_conn *c, const rimeaddr_t *receiver);
+
+struct unicast_callbacks {
+   void (* recv)(struct unicast_conn *c, const rimeaddr_t *from);
+   void (* sent)(struct unicast_conn *ptr, int status, int num_tx);
+};
+\end{minted}
+
 \subsubsection{Stubborn Unicast}
+
+\begin{minted}[fontsize=\small]{c}
+void stunicast_open(struct stunicast_conn *c, uint16_t channel, const struct stunicast_callbacks *u);
+void stunicast_close(struct stunicast_conn *c);
+int stunicast_send_stubborn(struct stunicast_conn *c, const rimeaddr_t *receiver, clock_time_t rxmittime);
+void stunicast_cancel(struct stunicast_conn *c);
+int stunicast_send(struct stunicast_conn *c, const rimeaddr_t *receiver);
+void stunicast_set_timer(struct stunicast_conn *c, clock_time_t t);
+rimeaddr_t *stunicast_receiver(struct stunicast_conn *c);
+
+struct stunicast_callbacks {
+   void (* recv)(struct stunicast_conn *c, const rimeaddr_t *from);
+   void (* sent)(struct stunicast_conn *c, int status, int num_tx);
+};
+\end{minted}
 
 This is in fact anonymous, it will not send the address of the node that send the message in the header of the message. If a node needs to know who sent the message, then the sender's address should be included in the body.
 
 \subsubsection{Reliable Unicast}
 
+\begin{minted}[fontsize=\small]{c}
+void runicast_open(struct runicast_conn *c, uint16_t channel, const struct runicast_callbacks *u);
+int runicast_send(struct runicast_conn *c, const rimeaddr_t *receiver, uint8_t max_retransmissions);
+uint8_t runicast_is_transmitting(struct runicast_conn *c);
+
+struct runicast_callbacks {
+   void (* recv)(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno);
+   void (* sent)(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
+   void (* timedout)(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
+};
+\end{minted}
+
 \subsubsection{Network Flooding}
+
+\begin{minted}[fontsize=\small]{c}
+void netflood_open(struct netflood_conn *c, clock_time_t queue_time, uint16_t channel, const struct netflood_callbacks *u);
+void netflood_close(struct netflood_conn *c);
+int netflood_send(struct netflood_conn *c, uint8_t seqno);
+
+struct netflood_callbacks {
+   int (* recv)(struct netflood_conn *c, const rimeaddr_t *from, const rimeaddr_t *originator, uint8_t seqno, uint8_t hops);
+  void (* sent)(struct netflood_conn *c);
+  void (* dropped)(struct netflood_conn *c);
+};
+\end{minted}
 
 \subsubsection{Multi-hop Unicast}
 
+\begin{minted}[fontsize=\small]{c}
+void rmh_open(struct rmh_conn *c, uint16_t channel, const struct rmh_callbacks *u);
+void rmh_close(struct rmh_conn *c);
+int rmh_send(struct rmh_conn *c, rimeaddr_t *to, uint8_t num_rexmit, uint8_t max_hops);
+
+struct rmh_callbacks {
+   void (* recv)(struct rmh_conn *ptr, rimeaddr_t *sender, uint8_t hops);
+   rimeaddr_t *(* forward)(struct rmh_conn *ptr,
+                          const rimeaddr_t *originator,
+                          const rimeaddr_t *dest,
+                          const rimeaddr_t *prevhop,
+                          uint8_t hops);
+};
+\end{minted}
+
 \subsubsection{Reliable Multi-hop Unicast}
+
+\begin{minted}[fontsize=\small]{c}
+void multihop_open(struct multihop_conn *c, uint16_t channel, const struct multihop_callbacks *u);
+void multihop_close(struct multihop_conn *c);
+int multihop_send(struct multihop_conn *c, const rimeaddr_t *to);
+void multihop_resend(struct multihop_conn *c, const rimeaddr_t *nexthop);
+
+struct multihop_callbacks {
+   void (* recv)(struct multihop_conn *ptr,
+                 const rimeaddr_t *sender,
+                 const rimeaddr_t *prevhop,
+                 uint8_t hops);
+   rimeaddr_t *(* forward)(struct multihop_conn *ptr,
+                          const rimeaddr_t *originator,
+                          const rimeaddr_t *dest,
+                          const rimeaddr_t *prevhop,
+                          uint8_t hops);
+};
+\end{minted}
+
+
+\subsection{Mesh Network Protocol}
+
+\begin{minted}[fontsize=\small]{c}
+void mesh_open(struct mesh_conn *c, uint16_t channels, const struct mesh_callbacks *callbacks);
+void mesh_close(struct mesh_conn *c);
+int mesh_send(struct mesh_conn *c, const rimeaddr_t *dest);
+
+struct mesh_callbacks {
+   /** Called when a packet is received. */
+   void (* recv)(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops);
+   /** Called when a packet, sent with mesh_send(), is actually transmitted. */
+   void (* sent)(struct mesh_conn *c);
+   /** Called when a packet, sent with mesh_send(), times out and is dropped. */
+   void (* timedout)(struct mesh_conn *c);
+};
+\end{minted}
+
+\subsection{Collect Network Protocol}
+
+
+\begin{minted}[fontsize=\small]{c}
+void collect_open(struct collect_conn *c, uint16_t channels, uint8_t is_router, const struct collect_callbacks *callbacks);
+void collect_close(struct collect_conn *c);
+int collect_send(struct collect_conn *c, int rexmits);
+void collect_set_sink(struct collect_conn *c, int should_be_sink);
+int collect_depth(struct collect_conn *c);
+const rimeaddr_t *collect_parent(struct collect_conn *c);
+void collect_set_keepalive(struct collect_conn *c, clock_time_t period);
+
+struct collect_callbacks {
+   void (* recv)(const rimeaddr_t *originator, uint8_t seqno,
+                 uint8_t hops);
+};
+\end{minted}
 
 
 \subsection{Network Channels}

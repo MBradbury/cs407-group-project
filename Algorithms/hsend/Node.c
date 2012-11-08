@@ -2,7 +2,7 @@
 
 #include "net/rime.h"
 #include "net/rime/mesh.h"
-#include "net/rime/runicast.h"
+#include "net/rime/stbroadcast.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -10,11 +10,13 @@
 #include "debug-helper.h"
 
 static struct mesh_conn mesh;
-static struct runicast_conn runicast;
+static struct stbroadcast_conn stbroadcast;
 
 static rimeaddr_t dest;
 static int messageSent = 0;
 static bool predicate;
+
+static uint8_t messageid;
 
 typedef struct
 {
@@ -31,6 +33,12 @@ bool isBase()
 	base.u8[sizeof(rimeaddr_t) - 2] = 1;
 
 	return rimeaddr_cmp(&rimeaddr_node_addr, &base) != 0;
+}
+
+static uint8_t 
+get_message_id()
+{
+	return messageid++;
 }
 
 /** The function that will be executed when a message is received */
@@ -77,47 +85,28 @@ mesh_timedout(struct mesh_conn *c)
 }
 
 static void
-runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
+stbroadcast_recv(struct stbroadcast_conn *c)
 {
-	if(isBase())
-	{
+	predicate_check_msg_t const * msg = (predicate_check_msg_t const *)packetbuf_dataptr();
 
-	}
-	else
-	{
-
-	}
+	printf("%s\n", msg->predicate_to_check);
 }
 
 static void
-runicast_sent(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+stbroadcast_sent(struct stbroadcast_conn *c)
 {
-	if(isBase())
-	{
-
-	}
-	else
-	{
-
-	}
-}
-
-static void
-runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
-{
-	if(isBase())
-	{
-
-	}
-	else
-	{
-
-	}
+	printf("I've sent!\n");
 }
 
 const static struct mesh_callbacks meshCallbacks = {mesh_recv, mesh_sent, mesh_timedout};
-const static struct runicast_callbacks runicastCallbacks = {runicast_recv, runicast_sent, runicast_timedout};
+const static struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
 
+static void
+cancel_stbroadcast()
+{
+	printf("Canceling\n");
+	stbroadcast_cancel(&stbroadcast);
+}
 
 static void 
 sendToBaseStation(char* message)
@@ -130,7 +119,7 @@ sendToBaseStation(char* message)
 }
 
 static void
-sendNHopPredicateCheck()
+sendNHopPredicateCheck(uint8_t hop_limit, char* pred)
 {
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_check_msg_t));
@@ -138,12 +127,16 @@ sendNHopPredicateCheck()
 	predicate_check_msg_t * msg = (predicate_check_msg_t *)packetbuf_dataptr();
 	memset(msg, 0, sizeof(predicate_check_msg_t));
 
-	msg->originator = ;
-	msg->message_id = ;
-	msg->predicate_to_check = ;
-	msg->hop_limit = ;
-	
-	runicast_send(runicast)
+	msg->originator = rimeaddr_node_addr;
+	msg->message_id = get_message_id();
+	msg->predicate_to_check = pred;
+	msg->hop_limit = hop_limit;
+
+	stbroadcast_send_stubborn(&stbroadcast, 3 * CLOCK_SECOND);
+
+	static struct ctimer stbroadcast_stop_timer;
+
+	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
 
 }
 
@@ -158,6 +151,7 @@ PROCESS_THREAD(networkInit, ev, data)
 
 	PROCESS_BEGIN();
 
+	ctimer_init();
 	mesh_open(&mesh, 147, &meshCallbacks);
 
 	//set the base station
@@ -193,7 +187,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	}
 	else
 	{
-		runicast_open(&runicast, 2, &runicastCallbacks);
+		stbroadcast_open(&stbroadcast, 8, &stbroadcastCallbacks);
 
 		while(1)
 		{
@@ -202,16 +196,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 			rimeaddr_t test;
 			memset(&test, 0, sizeof(rimeaddr_t));
 			test.u8[sizeof(rimeaddr_t) - 2] = 2;
-
-			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) != 0)
+			static count = 0;
+			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
-
-			}
-
-			if (messageSent == 0) 
-			{
-				char *message = "Hello World!!";
-				sendToBaseStation(message);
+				sendNHopPredicateCheck(2, "Hello World!");
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

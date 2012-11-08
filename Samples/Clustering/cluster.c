@@ -21,7 +21,6 @@
 #include "debug-helper.h"
 
 static struct mesh_conn mc;
-
 static struct runicast_conn rc;
 
 static rimeaddr_t destination;
@@ -69,7 +68,7 @@ typedef struct
 	rimeaddr_t head;
 	uint32_t hop_count;
 
-} setup_tree_msg_t;
+} setup_msg_t;
 
 
 static struct broadcast_conn bc;
@@ -88,8 +87,6 @@ PROCESS(send_data_process, "Data Sender");
 
 static void CH_detect_finished(void * ptr)
 {
-	struct broadcast_conn * conn = (struct broadcast_conn *)ptr;
-
 	// As we are no longer listening for our parent node
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
@@ -111,11 +108,12 @@ static void CH_detect_finished(void * ptr)
 	// Send a message that is to be received by the children
 	// of this node.
 	packetbuf_clear();
-	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-	setup_tree_msg_t * nextmsg = (setup_tree_msg_t *)packetbuf_dataptr();
+	packetbuf_set_datalen(sizeof(setup_msg_t));
+	setup_msg_t * nextmsg = (setup_msg_t *)packetbuf_dataptr();
+	memset(nextmsg, 0, sizeof(setup_msg_t));
 
 	// We set the head of this node to be the best
-	// clusterhead we heard
+	// clusterhead we heard, or itself if is_CH
 	nextmsg->base.type = setup_message_type;
 	rimeaddr_copy(&nextmsg->base.source, &rimeaddr_node_addr);
 	if (is_CH)
@@ -127,7 +125,8 @@ static void CH_detect_finished(void * ptr)
 	}
 	nextmsg->hop_count = best_hop + 1;
 
-	broadcast_send(conn);
+	printf("Forwarding setup message...\n");
+	broadcast_send(&bc);
 
 	// We are done with setting up the tree
 	// so stop listening for setup messages
@@ -142,7 +141,7 @@ static void CH_detect_finished(void * ptr)
 
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct runicast_conn * ptr, rimeaddr_t const * originator)
+static void recv_aggregate(struct runicast_conn * ptr, rimeaddr_t const * originator, uint8_t seqno)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
@@ -166,6 +165,19 @@ static void recv_aggregate(struct runicast_conn * ptr, rimeaddr_t const * origin
 	}
 }
 
+/** The function that will be executed when a runicast is sent */
+static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+  printf("Runicast message sent to %s, retransmissions %d\n",
+         addr2str(to), retransmissions);
+}
+
+/** The function that will be executed when a runicast times out */
+static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+  printf("Runicast message timed out when sending to %s, retransmissions %d\n",
+         addr2str(to), retransmissions);
+}
 
 /** The function that will be executed when a message is received */
 static void recv_data(struct mesh_conn * ptr, rimeaddr_t const * originator, uint8_t hops)
@@ -193,7 +205,9 @@ static void recv_data(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 	}
 }
 
-static const struct runicast_callbacks callbacks_aggregate = { &recv_aggregate };
+static const struct runicast_callbacks callbacks_aggregate = { &recv_aggregate,
+																&sent_runicast,
+																&timedout_runicast };
 
 /** The function that will be executed when a message is received */
 static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originator)
@@ -204,9 +218,9 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 	{
 		case setup_message_type:
 		{
-			setup_tree_msg_t const * msg = (setup_tree_msg_t const *)bmsg;
+			setup_msg_t const * msg = (setup_msg_t const *)bmsg;
 
-			printf("Got setup message from %s\n", addr2str(originator));
+			printf("Got setup message from %s, %d hops away\n", addr2str(originator),msg->hop_count);
 
 			// If the sink received a setup message, then do nothing
 			// it doesn't need a parent as it is the root.
@@ -233,13 +247,14 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 					memset(&destination, 0, sizeof(rimeaddr_t));
 					destination.u8[sizeof(rimeaddr_t) - 2] = 1;
 					
-					runicast_open(&rc, 128, &callbacks_aggregate);
+					runicast_open(&rc, 147, &callbacks_aggregate);
 
 					printf("I'm a CH, come to me my children!\n");
 
 					// We are the CH, so just call that the CH has
 					// been detected
-					CH_detect_finished(ptr);
+					collecting_best_hop = 0;
+					CH_detect_finished(NULL);
 				}
 				else
 				{
@@ -253,7 +268,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 					// Start the timer that will call a function when we are
 					// done detecting parents.
 					// We only need to detect parents if we are not a cluster head
-					ctimer_set(&detect_ct, 20 * CLOCK_SECOND, &CH_detect_finished, ptr);
+					ctimer_set(&detect_ct, 20 * CLOCK_SECOND, &CH_detect_finished, NULL);
 				}
 
 				printf("Not seen setup message before, so setting timer...\n");
@@ -263,7 +278,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			// Non-CH nodes should look for the closest CH.
 			if (msg->hop_count < collecting_best_hop && !is_CH)
 			{
-				printf("Updating to a better clusterhead (%s H:%u) was:(%s H:%u)\n",
+				printf("Updating to a better clusterhead (%s H:%d) was:(%s H:%d)\n",
 					addr2str(originator), msg->hop_count,
 					addr2str(&collecting_best_CH), collecting_best_hop
 				);
@@ -300,6 +315,8 @@ PROCESS_THREAD(startup, ev, data)
 
 	if (is_sink())
 	{
+		runicast_open(&rc, 147, &callbacks_aggregate);
+		
 		process_start(&ch_election_process, NULL);
 	}
 
@@ -309,39 +326,31 @@ PROCESS_THREAD(startup, ev, data)
 PROCESS_THREAD(ch_election_process, ev, data)
 {
 	static struct etimer et;
-	static int i;
-
+	
 	PROCESS_BEGIN();
+	
+	etimer_set(&et, 4 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	leds_on(LEDS_YELLOW);
 
-	etimer_set(&et, 4 * CLOCK_SECOND);
+	// Send the first message that will be used to set up the
+	// aggregation tree
+	packetbuf_clear();
+	packetbuf_set_datalen(sizeof(setup_msg_t));
+	debug_packet_size(sizeof(setup_msg_t));
+	setup_msg_t * msg = (setup_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(setup_msg_t));
 
-	// Retry initial send a few times to make sure
-	// that the surrounding nodes will get a message
-	for (i = 0; i != 3; ++i)
-	{
-		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	msg->base.type = setup_message_type;
+	rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
+	rimeaddr_copy(&msg->head, &rimeaddr_null);
+	msg->hop_count = 0;
 
-		// Send the first message that will be used to set up the
-		// aggregation tree
-		packetbuf_clear();
-		packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-		debug_packet_size(sizeof(setup_tree_msg_t));
-		setup_tree_msg_t * msg = (setup_tree_msg_t *)packetbuf_dataptr();
-		memset(msg, 0, sizeof(setup_tree_msg_t));
+	broadcast_send(&bc);
 
-		msg->base.type = setup_message_type;
-		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
-		rimeaddr_copy(&msg->head, &rimeaddr_null);
-		msg->hop_count = 0;
+	printf("IsSink, sending initial message...\n");
 
-		broadcast_send(&bc);
-
-		printf("IsSink, sending initial message (%d)...\n", i);
-
-		etimer_reset(&et);
-	}
 
 	// TODO: Work out where this can be closed
 	//broadcast_close(&bc);
@@ -366,7 +375,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 	mesh_open(&mc, 114, &callbacks_data);
 
 	// By this point the clusterheads should be set up,
-	// so now we should move to aggregating data
+	// so now we should move to forwarding data
 	// through the clusters
 
 	etimer_set(&et, 20 * CLOCK_SECOND);
@@ -387,6 +396,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 		packetbuf_clear();
 		packetbuf_set_datalen(sizeof(collect_msg_t));
 		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
+		memset(msg, 0, sizeof(collect_msg_t));
 
 		msg->base.type = collect_message_type;
 		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);

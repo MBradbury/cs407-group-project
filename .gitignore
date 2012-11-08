@@ -31,3 +31,4 @@ symbols.h
 *.aux
 *.sublime-project
 *.sublime-workspace
+*-converted-to.pdf

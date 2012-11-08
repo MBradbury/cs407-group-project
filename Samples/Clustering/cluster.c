@@ -13,7 +13,7 @@
 
 #include "net/netstack.h"
 #include "net/rime.h"
-#include "net/rime/broadcast.h"
+#include "net/rime/stbroadcast.h"
 #include "contiki-net.h"
 #include "net/rime/runicast.h"
 
@@ -71,7 +71,7 @@ typedef struct
 } setup_msg_t;
 
 
-static struct broadcast_conn bc;
+static struct stbroadcast_conn bc;
 
 static bool has_seen_setup = false;
 static rimeaddr_t collecting_best_CH;
@@ -87,6 +87,8 @@ PROCESS(send_data_process, "Data Sender");
 
 static void CH_detect_finished(void * ptr)
 {
+	static struct ctimer forward_stop;
+	
 	// As we are no longer listening for our parent node
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
@@ -126,7 +128,9 @@ static void CH_detect_finished(void * ptr)
 	nextmsg->hop_count = best_hop + 1;
 
 	printf("Forwarding setup message...\n");
-	broadcast_send(&bc);
+	stbroadcast_send_stubborn(&bc, 4 * CLOCK_SECOND);
+	
+	ctimer_set(&forward_stop, 60 * CLOCK_SECOND, stbroadcast_cancel, &bc);
 
 	// We are done with setting up the tree
 	// so stop listening for setup messages
@@ -210,7 +214,7 @@ static const struct runicast_callbacks callbacks_aggregate = { &recv_aggregate,
 																&timedout_runicast };
 
 /** The function that will be executed when a message is received */
-static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originator)
+static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * originator)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
@@ -220,7 +224,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 		{
 			setup_msg_t const * msg = (setup_msg_t const *)bmsg;
 
-			printf("Got setup message from %s, %d hops away\n", addr2str(originator),msg->hop_count);
+			printf("Got setup message from %s, %d hops away\n", addr2str(&bmsg->source),msg->hop_count);
 
 			// If the sink received a setup message, then do nothing
 			// it doesn't need a parent as it is the root.
@@ -279,12 +283,12 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 			if (msg->hop_count < collecting_best_hop && !is_CH)
 			{
 				printf("Updating to a better clusterhead (%s H:%d) was:(%s H:%d)\n",
-					addr2str(originator), msg->hop_count,
+					addr2str(&bmsg->source), msg->hop_count,
 					addr2str(&collecting_best_CH), collecting_best_hop
 				);
 
 				// Set the best parent, and the hop count of that node
-				rimeaddr_copy(&collecting_best_CH, originator);
+				rimeaddr_copy(&collecting_best_CH, &bmsg->source);
 				collecting_best_hop = msg->hop_count;
 			}
 		} break;
@@ -297,7 +301,7 @@ static void recv_setup(struct broadcast_conn * ptr, rimeaddr_t const * originato
 }
 
 /** List of all functions to execute when a message is received */
-static const struct broadcast_callbacks callbacks_setup = { &recv_setup };
+static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup };
 static const struct mesh_callbacks callbacks_data = { &recv_data };
 
 AUTOSTART_PROCESSES(&startup);
@@ -311,8 +315,7 @@ PROCESS_THREAD(startup, ev, data)
 	rimeaddr_copy(&destination, &rimeaddr_null);
 	rimeaddr_copy(&collecting_best_CH, &rimeaddr_null);
 
-	broadcast_open(&bc, 128, &callbacks_setup);
-
+	stbroadcast_open(&bc, 128, &callbacks_setup);
 	if (is_sink())
 	{
 		runicast_open(&rc, 147, &callbacks_aggregate);
@@ -326,10 +329,12 @@ PROCESS_THREAD(startup, ev, data)
 PROCESS_THREAD(ch_election_process, ev, data)
 {
 	static struct etimer et;
+	static struct etimer bc_stop;
 	
 	PROCESS_BEGIN();
 	
 	etimer_set(&et, 4 * CLOCK_SECOND);
+	//etimer_set(&et, 60 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	leds_on(LEDS_YELLOW);
@@ -347,14 +352,15 @@ PROCESS_THREAD(ch_election_process, ev, data)
 	rimeaddr_copy(&msg->head, &rimeaddr_null);
 	msg->hop_count = 0;
 
-	broadcast_send(&bc);
+	stbroadcast_send_stubborn(&bc, 4 * CLOCK_SECOND);
 
 	printf("IsSink, sending initial message...\n");
 
 
 	// TODO: Work out where this can be closed
 	//broadcast_close(&bc);
-
+	//PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&bc_stop));
+	stbroadcast_cancel(&bc);
 	printf("End of setup process\n");
 
 	PROCESS_END();

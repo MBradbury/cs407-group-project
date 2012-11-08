@@ -134,6 +134,7 @@ sendNHopPredicateCheck(uint8_t hop_limit, char* pred)
 
 	stbroadcast_send_stubborn(&stbroadcast, 3 * CLOCK_SECOND);
 
+	
 	static struct ctimer stbroadcast_stop_timer;
 
 	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
@@ -188,7 +189,9 @@ PROCESS_THREAD(mainProcess, ev, data)
 	else
 	{
 		stbroadcast_open(&stbroadcast, 8, &stbroadcastCallbacks);
-
+		etimer_set(&et, 20 * CLOCK_SECOND); //10 second timer
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+		
 		while(1)
 		{
 			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
@@ -199,7 +202,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 			static int count = 0;
 			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
-				sendNHopPredicateCheck(2, "Hello World!");
+				sendNHopPredicateCheck(2, "Hello World!!!");
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

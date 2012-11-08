@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "lib/sensors.h"
 #include "dev/sht11.h"
@@ -13,15 +14,9 @@
 #include "net/rime/broadcast.h"
 #include "contiki-net.h"
 
-#include "../Common/sensor-converter.h"
+#include "../Common/sensor-converter-broken.h"
 #include "../Common/debug-helper.h"
 #include "predicate-checker.h"
-
-
-static double abs(double d)
-{
-	return d < 0 ? -d : d;
-}
 
 
 

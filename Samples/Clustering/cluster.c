@@ -20,11 +20,6 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
-static struct mesh_conn mc;
-static struct runicast_conn rc;
-
-static rimeaddr_t destination;
-
 static bool is_sink()
 {
 	return rimeaddr_node_addr.u8[0] == 1 &&
@@ -71,7 +66,12 @@ typedef struct
 } setup_msg_t;
 
 
+static struct mesh_conn mc;
+static struct runicast_conn rc;
 static struct stbroadcast_conn bc;
+
+static rimeaddr_t our_cluster_head;
+
 
 static bool has_seen_setup = false;
 static rimeaddr_t collecting_best_CH;
@@ -79,10 +79,24 @@ static uint32_t best_hop = UINT32_MAX, collecting_best_hop = UINT32_MAX;
 
 static bool is_CH = false;
 
+// The maximum number of times the reliable unicast
+// will attempt to resend a message.
+static const int MAX_RUNICAST_RETX = 4;
+
+// The times stubborn broadcasting will use
+// to intersperse message resends
+static const clock_time_t STUBBORN_INTERVAL = 5 * CLOCK_SECOND;
+static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
 PROCESS(startup, "Startup");
 PROCESS(ch_election_process, "Cluster Setup");
 PROCESS(send_data_process, "Data Sender");
+
+
+static void stbroadcast_cancel_void(void * ptr)
+{
+	stbroadcast_cancel((struct stbroadcast_conn *)ptr);
+}
 
 
 static void CH_detect_finished(void * ptr)
@@ -93,19 +107,19 @@ static void CH_detect_finished(void * ptr)
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
 
-
 	// Set the best values
 	if (!is_CH)
 	{
-		rimeaddr_copy(&destination, &collecting_best_CH);
 		printf("Timer on %s expired\n",
 			addr2str(&rimeaddr_node_addr));
 	}
 
+	rimeaddr_copy(&our_cluster_head, &collecting_best_CH);
+
 	best_hop = collecting_best_hop;
 
 	printf("Found: Head:%s Hop:%u\n",
-		addr2str(&destination), best_hop);
+		addr2str(&our_cluster_head), best_hop);
 
 	// Send a message that is to be received by the children
 	// of this node.
@@ -118,23 +132,15 @@ static void CH_detect_finished(void * ptr)
 	// clusterhead we heard, or itself if is_CH
 	nextmsg->base.type = setup_message_type;
 	rimeaddr_copy(&nextmsg->base.source, &rimeaddr_node_addr);
-	if (is_CH)
-	{
-		rimeaddr_copy(&nextmsg->head, &rimeaddr_node_addr);
-	}else
-	{
-		rimeaddr_copy(&nextmsg->head, &destination);
-	}
+	rimeaddr_copy(&nextmsg->head, is_CH
+		? &rimeaddr_node_addr
+		: &our_cluster_head);
 	nextmsg->hop_count = best_hop + 1;
 
 	printf("Forwarding setup message...\n");
-	stbroadcast_send_stubborn(&bc, 4 * CLOCK_SECOND);
+	stbroadcast_send_stubborn(&bc, STUBBORN_INTERVAL);
 	
-	ctimer_set(&forward_stop, 60 * CLOCK_SECOND, stbroadcast_cancel, &bc);
-
-	// We are done with setting up the tree
-	// so stop listening for setup messages
-	//broadcast_close(conn);
+	ctimer_set(&forward_stop, STUBBORN_WAIT, &stbroadcast_cancel_void, &bc);
 
 	// Start the data generation process for non-CHs
 	if (!is_CH)
@@ -172,15 +178,15 @@ static void recv_aggregate(struct runicast_conn * ptr, rimeaddr_t const * origin
 /** The function that will be executed when a runicast is sent */
 static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-  printf("Runicast message sent to %s, retransmissions %d\n",
-         addr2str(to), retransmissions);
+	/*printf("Runicast message sent to %s, retransmissions %u\n",
+         addr2str(to), retransmissions);*/
 }
 
 /** The function that will be executed when a runicast times out */
 static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-  printf("Runicast message timed out when sending to %s, retransmissions %d\n",
-         addr2str(to), retransmissions);
+	/*printf("Runicast message timed out when sending to %s, retransmissions %u\n",
+         addr2str(to), retransmissions);*/
 }
 
 /** The function that will be executed when a message is received */
@@ -191,14 +197,17 @@ static void recv_data(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 	{
 		case collect_message_type:
 		{
-			runicast_send(&rc, &destination, 3);
+			// A cluster head has received a data message from
+			// a member of its cluster.
+			// We now need to forward it onto the sink.
 
-			leds_on(LEDS_GREEN);
-			printf("Forwarding: from:%s via:%s to:%s",
+			printf("Forwarding: from:%s via:%s to:%s\n",
 				addr2str(originator),
 				addr2str(&rimeaddr_node_addr),
-				addr2str(&destination)
+				addr2str(&our_cluster_head)
 			);
+
+			runicast_send(&rc, &our_cluster_head, MAX_RUNICAST_RETX);
 	
 		} break;
 
@@ -209,18 +218,18 @@ static void recv_data(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 	}
 }
 
-static const struct runicast_callbacks callbacks_aggregate = { &recv_aggregate,
-																&sent_runicast,
-																&timedout_runicast };
+static void mesh_sent(struct mesh_conn * c) {}
+static void mesh_timedout(struct mesh_conn * c) {}
+
 
 /** The function that will be executed when a stbroadcast is sent */
-static void sent_stbroadcast(struct stbroadcast_conn *c)
+static void sent_stbroadcast(struct stbroadcast_conn * c)
 {
-  printf("stBroadcast message sent\n");
+	//printf("stBroadcast message sent\n");
 }
 
 /** The function that will be executed when a message is received */
-static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * originator)
+static void recv_setup(struct stbroadcast_conn * ptr)
 {
 	base_msg_t const * bmsg = (base_msg_t const *)packetbuf_dataptr();
 
@@ -230,13 +239,13 @@ static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * origina
 		{
 			setup_msg_t const * msg = (setup_msg_t const *)bmsg;
 
-			printf("Got setup message from %s, %d hops away\n", addr2str(&bmsg->source),msg->hop_count);
+			printf("Got setup message from %s, %u hops away\n",
+				addr2str(&bmsg->source), msg->hop_count);
 
 			// If the sink received a setup message, then do nothing
 			// it doesn't need a parent as it is the root.
 			if (is_sink())
 			{
-				printf("We are the sink node, so should not listen for parents.\n");
 				break;
 			}
 
@@ -246,24 +255,28 @@ static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * origina
 			{
 				has_seen_setup = true;
 				
-				is_CH = msg->hop_count==0;
+				// We are the CH if the set up message
+				// was sent by the sink
+				is_CH = msg->hop_count == 0;
 
 				if (is_CH)
 				{
 					// Turn blue on to indicate cluster head
 					leds_on(LEDS_BLUE);
 
-					// Destination becomes the sink node
-					memset(&destination, 0, sizeof(rimeaddr_t));
-					destination.u8[sizeof(rimeaddr_t) - 2] = 1;
-					
-					runicast_open(&rc, 147, &callbacks_aggregate);
+					// Cluster heads need runicast to forward
+					// messages to the sink
+					runicast_open(&rc, 147, NULL);
 
 					printf("I'm a CH, come to me my children!\n");
 
 					// We are the CH, so just call that the CH has
 					// been detected
 					collecting_best_hop = 0;
+
+					memset(&collecting_best_CH, 0, sizeof(rimeaddr_t));
+					collecting_best_CH.u8[sizeof(rimeaddr_t) - 2] = 1;
+
 					CH_detect_finished(NULL);
 				}
 				else
@@ -307,9 +320,9 @@ static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * origina
 }
 
 /** List of all functions to execute when a message is received */
-static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup,
-																&sent_stbroadcast };
-static const struct mesh_callbacks callbacks_data = { &recv_data };
+static const struct runicast_callbacks callbacks_forward = { &recv_aggregate, &sent_runicast, &timedout_runicast };
+static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup, &sent_stbroadcast };
+static const struct mesh_callbacks callbacks_data = { &recv_data, &mesh_sent, &mesh_timedout };
 
 AUTOSTART_PROCESSES(&startup);
 
@@ -319,13 +332,16 @@ PROCESS_THREAD(startup, ev, data)
 
 	printf("Setting up...\n");
 
-	rimeaddr_copy(&destination, &rimeaddr_null);
+	rimeaddr_copy(&our_cluster_head, &rimeaddr_null);
 	rimeaddr_copy(&collecting_best_CH, &rimeaddr_null);
 
 	stbroadcast_open(&bc, 128, &callbacks_setup);
+	mesh_open(&mc, 114, &callbacks_data);
+
 	if (is_sink())
 	{
-		runicast_open(&rc, 147, &callbacks_aggregate);
+		// Open runicast connection to listen for CH traffic
+		runicast_open(&rc, 147, &callbacks_forward);
 		
 		process_start(&ch_election_process, NULL);
 	}
@@ -336,11 +352,11 @@ PROCESS_THREAD(startup, ev, data)
 PROCESS_THREAD(ch_election_process, ev, data)
 {
 	static struct etimer et;
-	//static struct etimer bc_stop;
 	
 	PROCESS_BEGIN();
 	
-	etimer_set(&et, 4 * CLOCK_SECOND);
+	// Wait a bit to allow processes to start up
+	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	leds_on(LEDS_YELLOW);
@@ -358,16 +374,17 @@ PROCESS_THREAD(ch_election_process, ev, data)
 	rimeaddr_copy(&msg->head, &rimeaddr_null);
 	msg->hop_count = 0;
 
-	stbroadcast_send_stubborn(&bc, 4 * CLOCK_SECOND);
+	stbroadcast_send_stubborn(&bc, STUBBORN_INTERVAL);
 
 	printf("IsSink, sending initial message...\n");
 
+	// Wait for a bit to allow a few messages to be sent
+	etimer_set(&et, STUBBORN_WAIT);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-	/* TODO: Work out where this can be closed
-	//broadcast_close(&bc);
-	etimer_set(&et, 60 * CLOCK_SECOND);
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&bc_stop));
-	stbroadcast_cancel(&bc);*/
+	// Cancel the stubborn send
+	stbroadcast_cancel(&bc);
+
 	printf("End of setup process\n");
 
 	PROCESS_END();
@@ -378,23 +395,19 @@ PROCESS_THREAD(send_data_process, ev, data)
 {
 	static struct etimer et;
 
-	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 	printf("Starting data generation process\n");
 
 	leds_on(LEDS_GREEN);
 
-	mesh_open(&mc, 114, &callbacks_data);
-
 	// By this point the clusterheads should be set up,
 	// so now we should move to forwarding data
 	// through the clusters
 
-	etimer_set(&et, 20 * CLOCK_SECOND);
+	etimer_set(&et, 60 * CLOCK_SECOND);
  
-	// Only non-clusterhead nodes send these messages
-	while (!is_CH)
+	while (true)
 	{
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
@@ -403,6 +416,9 @@ PROCESS_THREAD(send_data_process, ev, data)
 		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
 		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
+
+		double temperature = sht11_temperature(raw_temperature);
+		double humidity = sht11_relative_humidity_compensated(raw_humidity, temperature);
 
 
 		// Create the data message that we are going to send
@@ -413,21 +429,17 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 		msg->base.type = collect_message_type;
 		rimeaddr_copy(&msg->base.source, &rimeaddr_node_addr);
-		msg->temperature = sht11_temperature(raw_temperature);
-		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
+		msg->temperature = temperature;
+		msg->humidity = humidity;
 
 		printf("Generated new message to:(%s).\n",
-			addr2str(&destination)
-		);
+			addr2str(&our_cluster_head));
 		
-		mesh_send(&mc, &destination);
+		mesh_send(&mc, &our_cluster_head);
 
 		etimer_reset(&et);
 	}
  
-exit:
-	mesh_close(&mc);
-	(void)0;
 	PROCESS_END();
 }
 

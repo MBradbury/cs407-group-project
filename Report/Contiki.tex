@@ -29,13 +29,12 @@
 		\hline
 		Mesh & mesh.h & \url{contiki.sourceforge.net/docs/2.6/a01725.html} \\
 		Collect & collect.h & \url{contiki.sourceforge.net/docs/2.6/a01723.html} \\
+		Trickle & trickle.h & \url{contiki.sourceforge.net/docs/2.6/a01742.htmll} \\
 		\hline
 	\end{tabular}
 	\caption{Communication Primitives headers and documentation location}
 \end{table}
 
-
-%Network Flooding (reliable) & trickle.h & \url{contiki.sourceforge.net/docs/2.6/a01742.html} \\
 
 \begin{table}[H]
 	\centering
@@ -58,6 +57,7 @@
 		\hline
 		Mesh & No & destination & Yes \\
 		Collect & Yes & destination & Yes \\
+		Trickle & Yes & network & No \\
 		\hline
 	\end{tabular}
 	\caption{Communication Primitives behaviour}
@@ -252,8 +252,8 @@ struct mesh_callbacks {
 };
 \end{minted}
 
-\subsection{Collect Network Protocol}
 
+\subsection{Collect Network Protocol}
 
 \begin{minted}[fontsize=\small]{c}
 void collect_open(struct collect_conn *c, uint16_t channels, uint8_t is_router, const struct collect_callbacks *callbacks);
@@ -267,6 +267,19 @@ void collect_set_keepalive(struct collect_conn *c, clock_time_t period);
 struct collect_callbacks {
    void (* recv)(const rimeaddr_t *originator, uint8_t seqno,
                  uint8_t hops);
+};
+\end{minted}
+
+
+\subsection{Trickle Network Protocol}
+
+\begin{minted}[fontsize=\small]{c}
+void trickle_open(struct trickle_conn *c, clock_time_t interval, uint16_t channel, const struct trickle_callbacks *cb);
+void trickle_close(struct trickle_conn *c);
+void trickle_send(struct trickle_conn *c);
+
+struct trickle_callbacks {
+   void (* recv)(struct trickle_conn *c);
 };
 \end{minted}
 

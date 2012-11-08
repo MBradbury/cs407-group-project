@@ -283,12 +283,12 @@ static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * origina
 			if (msg->hop_count < collecting_best_hop && !is_CH)
 			{
 				printf("Updating to a better clusterhead (%s H:%d) was:(%s H:%d)\n",
-					addr2str(&bmsg->source), msg->hop_count,
+					addr2str(&msg->head), msg->hop_count,
 					addr2str(&collecting_best_CH), collecting_best_hop
 				);
 
 				// Set the best parent, and the hop count of that node
-				rimeaddr_copy(&collecting_best_CH, &bmsg->source);
+				rimeaddr_copy(&collecting_best_CH, &msg->head);
 				collecting_best_hop = msg->hop_count;
 			}
 		} break;

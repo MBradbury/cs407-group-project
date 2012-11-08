@@ -32,18 +32,23 @@ bool debug_packet_size(size_t expected)
 
 char const * addr2str(rimeaddr_t const * addr)
 {
-	static char str[sizeof(rimeaddr_t) * 4];
+	static char str[RIMEADDR_STRING_LENGTH];
 
+	return addr2str_r(addr, str, RIMEADDR_STRING_LENGTH);
+}
+
+char const * addr2str_r(rimeaddr_t const * addr, char * str, size_t length)
+{
 	if (sizeof(rimeaddr_t) == 2)
 	{
-		snprintf(str, sizeof(str),
+		snprintf(str, length,
 			"%u.%u",
 			addr->u8[0], addr->u8[1]
 			);
 	}
 	else
 	{
-		snprintf(str, sizeof(str),
+		snprintf(str, length,
 			"%u.%u.%u.%u.%u.%u.%u.%u",
 			addr->u8[0], addr->u8[1],
 			addr->u8[2], addr->u8[3],

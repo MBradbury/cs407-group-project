@@ -12,13 +12,13 @@ static struct mesh_conn mesh;
 static rimeaddr_t dest;
 static int messageSent = 0;
 
-static bool isBase()
+bool isBase()
 {
 	rimeaddr_t base;
 	memset(&base, 0, sizeof(rimeaddr_t));
 	base.u8[sizeof(rimeaddr_t) - 2] = 1;
 
-	return rimeaddr_cmp(&rimeaddr_node_addr, &base) == 1;
+	return rimeaddr_cmp(&rimeaddr_node_addr, &base) != 0;
 }
 
 /** The function that will be executed when a message is received */
@@ -77,10 +77,9 @@ sendToBaseStation(char * message)
 }
 
 PROCESS(networkInit, "Network Init");
-PROCESS(nodeProcess, "Node Process");
-PROCESS(baseStation, "Sink Process");
+PROCESS(mainProcess, "Main Predicate Checker Process");
 
-AUTOSTART_PROCESSES(&networkInit);
+AUTOSTART_PROCESSES(&networkInit, &mainProcess);
 
 PROCESS_THREAD(networkInit, ev, data)
 {
@@ -98,56 +97,44 @@ PROCESS_THREAD(networkInit, ev, data)
 	etimer_set(&et, 5 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-	if (isBase())
-	{
-		process_start(&baseStation, NULL);
-	}
-	else
-	{
-		process_start(&nodeProcess, NULL);
-	}
-
 	PROCESS_END();
 }
 
-PROCESS_THREAD(nodeProcess, ev, data)
+PROCESS_THREAD(mainProcess, ev, data)
 {
+	//TODO: allocated instead of static
 	static struct etimer et;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	while(1)
+	if (isBase())
 	{
-		etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
-
-		if (messageSent == 0) 
+		while(1)
 		{
-			char *message = "Hello World!!";
-			sendToBaseStation(message);
+			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
+
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
-
-		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 	}
-
-	exit:
-		printf("Exiting Node Process...\n");
-		mesh_close(&mesh);
-		PROCESS_END();
-}
-
-PROCESS_THREAD(baseStation, ev, data)
-{
-	PROCESS_EXITHANDLER(goto exit;)
-	PROCESS_BEGIN();
-
-	while(1)
+	else
 	{
+		while(1)
+		{
+			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
 
+			if (messageSent == 0) 
+			{
+				char *message = "Hello World!!";
+				sendToBaseStation(message);
+			}
+
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+		}
 	}
 
 	exit:
 		printf("Exiting Base Process...\n");
 		mesh_close(&mesh);
 		PROCESS_END();
-}	
+}

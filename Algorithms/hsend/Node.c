@@ -196,7 +196,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 			rimeaddr_t test;
 			memset(&test, 0, sizeof(rimeaddr_t));
 			test.u8[sizeof(rimeaddr_t) - 2] = 2;
-			static count = 0;
+			static int count = 0;
 			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
 				sendNHopPredicateCheck(2, "Hello World!");

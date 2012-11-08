@@ -213,6 +213,12 @@ static const struct runicast_callbacks callbacks_aggregate = { &recv_aggregate,
 																&sent_runicast,
 																&timedout_runicast };
 
+/** The function that will be executed when a stbroadcast is sent */
+static void sent_stbroadcast(struct stbroadcast_conn *c)
+{
+  printf("stBroadcast message sent\n");
+}
+
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * originator)
 {
@@ -301,7 +307,8 @@ static void recv_setup(struct stbroadcast_conn * ptr, rimeaddr_t const * origina
 }
 
 /** List of all functions to execute when a message is received */
-static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup };
+static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup,
+																&sent_stbroadcast };
 static const struct mesh_callbacks callbacks_data = { &recv_data };
 
 AUTOSTART_PROCESSES(&startup);
@@ -329,12 +336,11 @@ PROCESS_THREAD(startup, ev, data)
 PROCESS_THREAD(ch_election_process, ev, data)
 {
 	static struct etimer et;
-	static struct etimer bc_stop;
+	//static struct etimer bc_stop;
 	
 	PROCESS_BEGIN();
 	
 	etimer_set(&et, 4 * CLOCK_SECOND);
-	//etimer_set(&et, 60 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	leds_on(LEDS_YELLOW);
@@ -357,10 +363,11 @@ PROCESS_THREAD(ch_election_process, ev, data)
 	printf("IsSink, sending initial message...\n");
 
 
-	// TODO: Work out where this can be closed
+	/* TODO: Work out where this can be closed
 	//broadcast_close(&bc);
-	//PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&bc_stop));
-	stbroadcast_cancel(&bc);
+	etimer_set(&et, 60 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&bc_stop));
+	stbroadcast_cancel(&bc);*/
 	printf("End of setup process\n");
 
 	PROCESS_END();

@@ -201,10 +201,14 @@ static void recv_data(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 			// a member of its cluster.
 			// We now need to forward it onto the sink.
 
+			char originator_str[RIMEADDR_STRING_LENGTH];
+			char current_str[RIMEADDR_STRING_LENGTH];
+			char ch_str[RIMEADDR_STRING_LENGTH];
+
 			printf("Forwarding: from:%s via:%s to:%s\n",
-				addr2str(originator),
-				addr2str(&rimeaddr_node_addr),
-				addr2str(&our_cluster_head)
+				addr2str_r(originator, originator_str, RIMEADDR_STRING_LENGTH),
+				addr2str_r(&rimeaddr_node_addr, current_str, RIMEADDR_STRING_LENGTH),
+				addr2str_r(&our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH)
 			);
 
 			runicast_send(&rc, &our_cluster_head, MAX_RUNICAST_RETX);
@@ -301,9 +305,12 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 			// Non-CH nodes should look for the closest CH.
 			if (msg->hop_count < collecting_best_hop && !is_CH)
 			{
+				char head_str[RIMEADDR_STRING_LENGTH];
+				char ch_str[RIMEADDR_STRING_LENGTH];
+
 				printf("Updating to a better clusterhead (%s H:%d) was:(%s H:%d)\n",
-					addr2str(&msg->head), msg->hop_count,
-					addr2str(&collecting_best_CH), collecting_best_hop
+					addr2str_r(&msg->head, head_str, RIMEADDR_STRING_LENGTH), msg->hop_count,
+					addr2str_r(&collecting_best_CH, ch_str, RIMEADDR_STRING_LENGTH), collecting_best_hop
 				);
 
 				// Set the best parent, and the hop count of that node

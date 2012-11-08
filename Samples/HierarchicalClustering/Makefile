@@ -1,0 +1,16 @@
+CONTIKI_PROJECT = hcluster
+all: $(CONTIKI_PROJECT)
+
+# Target references:
+# http://www.sics.se/contiki/wiki/index.php/Contiki_make_targets
+
+TARGET = sky
+
+PROJECTDIRS := $(CS407DIR)/Samples/Common
+PROJECT_SOURCEFILES = 
+
+CONTIKIDIRS :=
+CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c
+
+CONTIKI = $(HOME)/contiki-2.6
+include $(CONTIKI)/Makefile.include

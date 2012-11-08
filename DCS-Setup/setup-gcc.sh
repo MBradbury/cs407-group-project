@@ -14,7 +14,12 @@ cd /var/tmp/mspgcc/MSP-GCC/binutils-2.18
 make -j 5
 make install
 
-export PATH=/var/tmp/mspgcc/bin:$PATH
+# Only add to the path variable if we haven't done so before
+if [[ "$PATH" != */var/tmp/mspgcc/bin* ]]
+then
+	echo "export PATH=/var/tmp/mspgcc/bin:\$PATH" >> ~/.bashrc
+	export PATH=/var/tmp/mspgcc/bin:$PATH
+fi
 
 cd /var/tmp/mspgcc/MSP-GCC/gcc-3.2.3
 ./configure --target=msp430 --prefix=/var/tmp/mspgcc \
@@ -29,8 +34,6 @@ make install
 cd /var/tmp/mspgcc/MSP-GCC/msp430-libc/src
 make prefix=/var/tmp/mspgcc -j 5
 make install prefix=/var/tmp/mspgcc
-
-echo "export PATH=/var/tmp/mspgcc/bin:\$PATH" >> ~/.bashrc
 
 echo ''
 echo 'Cleanup'

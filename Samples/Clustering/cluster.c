@@ -226,6 +226,9 @@ static void mesh_sent(struct mesh_conn * c) {}
 static void mesh_timedout(struct mesh_conn * c) {}
 
 
+static const struct runicast_callbacks callbacks_forward = { &recv_aggregate, &sent_runicast, &timedout_runicast };
+
+
 /** The function that will be executed when a stbroadcast is sent */
 static void sent_stbroadcast(struct stbroadcast_conn * c)
 {
@@ -270,7 +273,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 
 					// Cluster heads need runicast to forward
 					// messages to the sink
-					runicast_open(&rc, 147, NULL);
+					runicast_open(&rc, 147, &callbacks_forward);
 
 					printf("I'm a CH, come to me my children!\n");
 
@@ -327,7 +330,6 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 }
 
 /** List of all functions to execute when a message is received */
-static const struct runicast_callbacks callbacks_forward = { &recv_aggregate, &sent_runicast, &timedout_runicast };
 static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup, &sent_stbroadcast };
 static const struct mesh_callbacks callbacks_data = { &recv_data, &mesh_sent, &mesh_timedout };
 

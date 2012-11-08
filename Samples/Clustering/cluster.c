@@ -94,13 +94,13 @@ static void CH_detect_finished(void * ptr)
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
 
-	printf("Timer on %s expired\n",
-		addr2str(&rimeaddr_node_addr));
 
 	// Set the best values
 	if (!is_CH)
 	{
 		rimeaddr_copy(&destination, &collecting_best_CH);
+		printf("Timer on %s expired\n",
+			addr2str(&rimeaddr_node_addr));
 	}
 
 	best_hop = collecting_best_hop;
@@ -117,6 +117,7 @@ static void CH_detect_finished(void * ptr)
 	// We set the head of this node to be the best
 	// clusterhead we heard
 	nextmsg->base.type = setup_message_type;
+	rimeaddr_copy(&nextmsg->base.source, &rimeaddr_node_addr);
 	if (is_CH)
 	{
 		rimeaddr_copy(&nextmsg->head, &rimeaddr_node_addr);
@@ -125,7 +126,7 @@ static void CH_detect_finished(void * ptr)
 		rimeaddr_copy(&nextmsg->head, &destination);
 	}
 	nextmsg->hop_count = best_hop + 1;
-	
+
 	broadcast_send(conn);
 
 	// We are done with setting up the tree

@@ -6,6 +6,9 @@
 
 #include "net/rime.h"
 
+#define true 1
+#define false 0
+
 // I was finding that sometimes packets were not
 // being set to the correct length. Lets show a
 // warning message if they aren't!

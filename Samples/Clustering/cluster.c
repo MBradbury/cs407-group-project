@@ -161,9 +161,12 @@ static void recv_aggregate(struct runicast_conn * ptr, rimeaddr_t const * origin
 		{
 			collect_msg_t const * msg = (collect_msg_t const *)bmsg;
 
+			char originator_str[RIMEADDR_STRING_LENGTH];
+			char source_str[RIMEADDR_STRING_LENGTH];
+
 			printf("Sink rcv: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
-				addr2str(originator),
-				addr2str(&msg->base.source),
+				addr2str_r(originator, originator_str, RIMEADDR_STRING_LENGTH),
+				addr2str_r(&msg->base.source, source_str, RIMEADDR_STRING_LENGTH),
 				(int)msg->temperature, (int)msg->humidity
 			);
 		} break;

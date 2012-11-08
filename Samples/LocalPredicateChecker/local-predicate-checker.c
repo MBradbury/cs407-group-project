@@ -252,7 +252,7 @@ AUTOSTART_PROCESSES(&data_collector_process/*, &predicate_checker_process*/);
 PROCESS_THREAD(data_collector_process, ev, data)
 {
 	static struct etimer et;
- 
+
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 

@@ -136,9 +136,9 @@ sendNHopPredicateCheck(uint8_t hop_limit, char* pred)
 	stbroadcast_send_stubborn(&stbroadcast, CLOCK_SECOND);
 
 	
-	//static struct ctimer stbroadcast_stop_timer;
+	static struct ctimer stbroadcast_stop_timer;
 
-	//ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
+	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
 
 }
 
@@ -153,7 +153,6 @@ PROCESS_THREAD(networkInit, ev, data)
 
 	PROCESS_BEGIN();
 
-	ctimer_init();
 	mesh_open(&mesh, 147, &meshCallbacks);
 
 	//set the base station

@@ -13,7 +13,6 @@ static struct mesh_conn mesh;
 static struct stbroadcast_conn stbroadcast;
 
 static rimeaddr_t dest;
-static int messageSent = 0;
 static bool predicate;
 
 static uint8_t messageid;
@@ -64,7 +63,6 @@ mesh_sent(struct mesh_conn *c)
 	}
 	else
 	{
-		messageSent = 1;
   		printf("packet sent\n");
 	}
 }
@@ -111,6 +109,9 @@ cancel_stbroadcast()
 static void 
 sendToBaseStation(char* message)
 {
+	memset(&dest, 0, sizeof(rimeaddr_t));
+	dest.u8[sizeof(rimeaddr_t) - 2] = 1;
+
 	packetbuf_clear();
 	packetbuf_set_datalen(strlen(message));
 	packetbuf_copyfrom(message, strlen(message));
@@ -132,12 +133,12 @@ sendNHopPredicateCheck(uint8_t hop_limit, char* pred)
 	msg->predicate_to_check = pred;
 	msg->hop_limit = hop_limit;
 
-	stbroadcast_send_stubborn(&stbroadcast, 3 * CLOCK_SECOND);
+	stbroadcast_send_stubborn(&stbroadcast, CLOCK_SECOND);
 
 	
-	static struct ctimer stbroadcast_stop_timer;
+	//static struct ctimer stbroadcast_stop_timer;
 
-	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
+	//ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
 
 }
 
@@ -210,7 +211,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 	}
 
 	exit:
-		printf("Exiting Base Process...\n");
+		printf("Exiting Process...\n");
 		mesh_close(&mesh);
+		stbroadcast_close(&stbroadcast);
 		PROCESS_END();
 }

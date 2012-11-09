@@ -13,9 +13,13 @@ static struct mesh_conn mesh;
 static struct stbroadcast_conn stbroadcast;
 
 static rimeaddr_t dest;
-static bool predicate;
 
-static uint8_t messageid;
+static uint8_t message_id = 10;
+
+static uint8_t message_id_received;
+
+static void
+sendNHopPredicateCheck(rimeaddr_t originator, uint8_t message_id, char* pred, uint8_t hop_limit);
 
 typedef struct
 {
@@ -37,7 +41,7 @@ bool isBase()
 static uint8_t 
 get_message_id()
 {
-	return messageid++;
+	return message_id++;
 }
 
 /** The function that will be executed when a message is received */
@@ -50,7 +54,7 @@ mesh_recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 	}
 	else
 	{
-
+		printf("Predicate received: %s from:%s \n",(char *)packetbuf_dataptr(),addr2str(from) );
 	}
 }	
 
@@ -81,19 +85,38 @@ mesh_timedout(struct mesh_conn *c)
 
 	}
 }
+	static uint8_t highest_hops_seen = 0;
 
 static void
 stbroadcast_recv(struct stbroadcast_conn *c)
 {
 	predicate_check_msg_t const * msg = (predicate_check_msg_t const *)packetbuf_dataptr();
+	uint8_t hop_limit = msg->hop_limit;
+	if (message_id_received != msg->message_id && hop_limit > highest_hops_seen) 
+	{
+		message_id_received = msg->message_id;
+		highest_hops_seen = hop_limit;
+		//send via mesh to originator
+		printf("predicate: %s\n", msg->predicate_to_check);
 
-	printf("%s\n", msg->predicate_to_check);
+
+
+		if (hop_limit > 1) //last node 
+		{
+			printf("Node resending: %s\n",addr2str(&rimeaddr_node_addr) );
+			//send message on with one less hop limit
+			sendNHopPredicateCheck(msg->originator,msg->message_id, msg->predicate_to_check,hop_limit - 1);
+		}
+	
+		
+
+	}
 }
 
 static void
 stbroadcast_sent(struct stbroadcast_conn *c)
 {
-	printf("I've sent!\n");
+	//printf("I've sent!\n");
 }
 
 const static struct mesh_callbacks meshCallbacks = {mesh_recv, mesh_sent, mesh_timedout};
@@ -104,6 +127,18 @@ cancel_stbroadcast()
 {
 	printf("Canceling\n");
 	stbroadcast_cancel(&stbroadcast);
+}
+
+static void
+sendPredicateToNode(rimeaddr_t dest, char * pred)
+{
+	packetbuf_clear();
+	packetbuf_set_datalen(strlen(pred));
+	debug_packet_size(strlen(pred));
+	packetbuf_copyfrom(pred, strlen(pred));
+
+	mesh_send(&mesh, &dest); //send the message
+
 }
 
 static void 
@@ -120,7 +155,7 @@ sendToBaseStation(char* message)
 }
 
 static void
-sendNHopPredicateCheck(uint8_t hop_limit, char* pred)
+sendNHopPredicateCheck(rimeaddr_t originator, uint8_t message_id_to_send, char* pred, uint8_t hop_limit)
 {
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_check_msg_t));
@@ -129,7 +164,7 @@ sendNHopPredicateCheck(uint8_t hop_limit, char* pred)
 	memset(msg, 0, sizeof(predicate_check_msg_t));
 
 	msg->originator = rimeaddr_node_addr;
-	msg->message_id = get_message_id();
+	msg->message_id = message_id_to_send;
 	msg->predicate_to_check = pred;
 	msg->hop_limit = hop_limit;
 
@@ -139,7 +174,6 @@ sendNHopPredicateCheck(uint8_t hop_limit, char* pred)
 	static struct ctimer stbroadcast_stop_timer;
 
 	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
-
 }
 
 PROCESS(networkInit, "Network Init");
@@ -159,8 +193,6 @@ PROCESS_THREAD(networkInit, ev, data)
 	memset(&dest, 0, sizeof(rimeaddr_t));
 	dest.u8[sizeof(rimeaddr_t) - 2] = 1;
 
-	//Set the predicate value
-	predicate = true;
 
 	//5 second timer
 	etimer_set(&et, 5 * CLOCK_SECOND);
@@ -202,7 +234,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 			static int count = 0;
 			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
-				sendNHopPredicateCheck(2, "Hello World!!!");
+				message_id_received = get_message_id();
+				sendNHopPredicateCheck(rimeaddr_node_addr,message_id_received, "Hello World!!!", 2);
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

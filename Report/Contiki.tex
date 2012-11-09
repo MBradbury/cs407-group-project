@@ -1,5 +1,11 @@
 \section{Contiki Overview}
 
+Contiki \cite{?} is on open source operating system for the internet of things, that we are using to power our WSN applications.
+
+\subsection{Cooja}
+
+Cooja \cite{?} is the simulator that we are using to test out algorithms on. One of the major benefits of using it is that the code written for the simulator is the same code that will be compiled for the wireless sensor nodes.
+
 \subsection{Network Overview}
 
 \begin{figure}[H]
@@ -63,38 +69,44 @@
 	\caption{Communication Primitives behaviour}
 \end{table}
 
-\subsubsection{Anonymous Broadcast}
+\subsubsection{Anonymous Best-effort Broadcast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
 void abc_open(struct abc_conn *c, uint16_t channel, const struct abc_callbacks *u);
 void abc_close(struct abc_conn *c);
 int abc_send(struct abc_conn *c);
 
-struct abc_callbacks
-{
+struct abc_callbacks {
    void(* recv)(struct abc_conn *ptr);
 };
 \end{minted}
+\caption{Contiki Anonymous Broadcast APIs}
+\end{listing}
 
+\subsubsection{Identified Best-effort Broadcast}
 
-\subsubsection{Broadcast}
-
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void broadcast_open(struct broadcast_conn *c, uint16_t channel, const struct broadcast_callbacks *u);
+void broadcast_open(struct broadcast_conn *c, uint16_t channel,
+                    const struct broadcast_callbacks *u);
 void broadcast_close(struct broadcast_conn *c);
 int broadcast_send(struct broadcast_conn *c);
 
-struct broadcast_callbacks
-{
+struct broadcast_callbacks {
    void(* recv)(struct broadcast_conn *ptr, const rimeaddr_t *sender);
 };
 \end{minted}
+\caption{Contiki Broadcast APIs}
+\end{listing}
 
 
 \subsubsection{Stubborn Broadcast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void stbroadcast_open(struct stbroadcast_conn *c, uint16_t channel, const struct stbroadcast_callbacks *u);
+void stbroadcast_open(struct stbroadcast_conn *c, uint16_t channel,
+                      const struct stbroadcast_callbacks *u);
 void stbroadcast_close(struct stbroadcast_conn *c);
 void stbroadcast_set_timer(struct stbroadcast_conn *c, clock_time_t t);
 int stbroadcast_send_stubborn(struct stbroadcast_conn *c, clock_time_t t);
@@ -103,13 +115,17 @@ void stbroadcast_cancel(struct stbroadcast_conn *c);
 struct stbroadcast_callbacks {
    void (* recv)(struct stbroadcast_conn *c);
    void (* sent)(struct stbroadcast_conn *c);
- };
+};
 \end{minted}
+\caption{Contiki Stubborn Broadcast APIs}
+\end{listing}
 
 \subsubsection{Anonymous Polite Broadcast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void polite_open(struct polite_conn *c, uint16_t channel, const struct polite_callbacks *cb);
+void polite_open(struct polite_conn *c, uint16_t channel,
+                 const struct polite_callbacks *cb);
 void polite_close(struct polite_conn *c);
 int polite_send(struct polite_conn *c, clock_time_t interval, uint8_t hdrsize);
 void polite_cancel(struct polite_conn *c);
@@ -118,13 +134,17 @@ struct stbroadcast_callbacks {
    void(* recv)(struct polite_conn *c);
    void(* sent)(struct polite_conn *c);
    void(* dropped)(struct polite_conn *c);
- };
+};
 \end{minted}
+\caption{Contiki Anonymous Polite Broadcast APIs}
+\end{listing}
 
-\subsubsection{Polite Broadcast}
+\subsubsection{Identified Polite Broadcast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void ipolite_open(struct ipolite_conn *c, uint16_t channel, uint8_t maxdups, const struct ipolite_callbacks *cb);
+void ipolite_open(struct ipolite_conn *c, uint16_t channel,
+                  uint8_t maxdups, const struct ipolite_callbacks *cb);
 void ipolite_close(struct ipolite_conn *c);
 int ipolite_send(struct ipolite_conn *c, clock_time_t interval, uint8_t hdrsize);
 void ipolite_cancel(struct ipolite_conn *c);
@@ -133,11 +153,14 @@ struct stbroadcast_callbacks {
    void(* recv)(struct ipolite_conn *c, const rimeaddr_t *from)
    void(* sent)(struct ipolite_conn *c);
    void(* dropped)(struct ipolite_conn *c);
- };
+};
 \end{minted}
+\caption{Contiki Polite Broadcast APIs}
+\end{listing}
 
-\subsubsection{Unicast}
+\subsubsection{Best-effort Unicast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
 void unicast_open(struct unicast_conn *c, uint16_t channel, const struct unicast_callbacks *u);
 void unicast_close(struct unicast_conn *c);
@@ -148,13 +171,18 @@ struct unicast_callbacks {
    void (* sent)(struct unicast_conn *ptr, int status, int num_tx);
 };
 \end{minted}
+\caption{Contiki Unicast APIs}
+\end{listing}
 
 \subsubsection{Stubborn Unicast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void stunicast_open(struct stunicast_conn *c, uint16_t channel, const struct stunicast_callbacks *u);
+void stunicast_open(struct stunicast_conn *c, uint16_t channel,
+                    const struct stunicast_callbacks *u);
 void stunicast_close(struct stunicast_conn *c);
-int stunicast_send_stubborn(struct stunicast_conn *c, const rimeaddr_t *receiver, clock_time_t rxmittime);
+int stunicast_send_stubborn(struct stunicast_conn *c,
+                            const rimeaddr_t *receiver, clock_time_t rxmittime);
 void stunicast_cancel(struct stunicast_conn *c);
 int stunicast_send(struct stunicast_conn *c, const rimeaddr_t *receiver);
 void stunicast_set_timer(struct stunicast_conn *c, clock_time_t t);
@@ -165,14 +193,19 @@ struct stunicast_callbacks {
    void (* sent)(struct stunicast_conn *c, int status, int num_tx);
 };
 \end{minted}
+\caption{Contiki Stubborn Unicast APIs}
+\end{listing}
 
 This is in fact anonymous, it will not send the address of the node that send the message in the header of the message. If a node needs to know who sent the message, then the sender's address should be included in the body.
 
 \subsubsection{Reliable Unicast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void runicast_open(struct runicast_conn *c, uint16_t channel, const struct runicast_callbacks *u);
-int runicast_send(struct runicast_conn *c, const rimeaddr_t *receiver, uint8_t max_retransmissions);
+void runicast_open(struct runicast_conn *c, uint16_t channel,
+                   const struct runicast_callbacks *u);
+int runicast_send(struct runicast_conn *c, const rimeaddr_t *receiver,
+                  uint8_t max_retransmissions);
 uint8_t runicast_is_transmitting(struct runicast_conn *c);
 
 struct runicast_callbacks {
@@ -181,23 +214,31 @@ struct runicast_callbacks {
    void (* timedout)(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
 };
 \end{minted}
+\caption{Contiki Reliable Unicast APIs}
+\end{listing}
 
-\subsubsection{Network Flooding}
+\subsubsection{Best-effort Network Flooding}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void netflood_open(struct netflood_conn *c, clock_time_t queue_time, uint16_t channel, const struct netflood_callbacks *u);
+void netflood_open(struct netflood_conn *c, clock_time_t queue_time,
+                   uint16_t channel, const struct netflood_callbacks *u);
 void netflood_close(struct netflood_conn *c);
 int netflood_send(struct netflood_conn *c, uint8_t seqno);
 
 struct netflood_callbacks {
-   int (* recv)(struct netflood_conn *c, const rimeaddr_t *from, const rimeaddr_t *originator, uint8_t seqno, uint8_t hops);
-  void (* sent)(struct netflood_conn *c);
-  void (* dropped)(struct netflood_conn *c);
+   int (* recv)(struct netflood_conn *c, const rimeaddr_t *from,
+                const rimeaddr_t *originator, uint8_t seqno, uint8_t hops);
+   void (* sent)(struct netflood_conn *c);
+   void (* dropped)(struct netflood_conn *c);
 };
 \end{minted}
+\caption{Contiki Network Flooding APIs}
+\end{listing}
 
-\subsubsection{Multi-hop Unicast}
+\subsubsection{Best-effort Multi-hop Unicast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
 void rmh_open(struct rmh_conn *c, uint16_t channel, const struct rmh_callbacks *u);
 void rmh_close(struct rmh_conn *c);
@@ -212,11 +253,15 @@ struct rmh_callbacks {
                           uint8_t hops);
 };
 \end{minted}
+\caption{Contiki Multi-hop Unicast APIs}
+\end{listing}
 
-\subsubsection{Reliable Multi-hop Unicast}
+\subsubsection{Hop-by-hop Reliable Multi-hop Unicast}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void multihop_open(struct multihop_conn *c, uint16_t channel, const struct multihop_callbacks *u);
+void multihop_open(struct multihop_conn *c, uint16_t channel,
+                   const struct multihop_callbacks *u);
 void multihop_close(struct multihop_conn *c);
 int multihop_send(struct multihop_conn *c, const rimeaddr_t *to);
 void multihop_resend(struct multihop_conn *c, const rimeaddr_t *nexthop);
@@ -227,16 +272,19 @@ struct multihop_callbacks {
                  const rimeaddr_t *prevhop,
                  uint8_t hops);
    rimeaddr_t *(* forward)(struct multihop_conn *ptr,
-                          const rimeaddr_t *originator,
-                          const rimeaddr_t *dest,
-                          const rimeaddr_t *prevhop,
-                          uint8_t hops);
+                           const rimeaddr_t *originator,
+                           const rimeaddr_t *dest,
+                           const rimeaddr_t *prevhop,
+                           uint8_t hops);
 };
 \end{minted}
+\caption{Contiki Reliable Multi-hop Unicast APIs}
+\end{listing}
 
 
 \subsection{Mesh Network Protocol}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
 void mesh_open(struct mesh_conn *c, uint16_t channels, const struct mesh_callbacks *callbacks);
 void mesh_close(struct mesh_conn *c);
@@ -251,12 +299,17 @@ struct mesh_callbacks {
    void (* timedout)(struct mesh_conn *c);
 };
 \end{minted}
+\caption{Contiki Mesh Network APIs}
+\end{listing}
 
 
 \subsection{Collect Network Protocol}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void collect_open(struct collect_conn *c, uint16_t channels, uint8_t is_router, const struct collect_callbacks *callbacks);
+void collect_open(struct collect_conn *c,
+                  uint16_t channels, uint8_t is_router,
+                  const struct collect_callbacks *callbacks);
 void collect_close(struct collect_conn *c);
 int collect_send(struct collect_conn *c, int rexmits);
 void collect_set_sink(struct collect_conn *c, int should_be_sink);
@@ -269,12 +322,17 @@ struct collect_callbacks {
                  uint8_t hops);
 };
 \end{minted}
+\caption{Contiki Collect Network APIs}
+\end{listing}
 
 
 \subsection{Trickle Network Protocol}
 
+\begin{listing}[H]
 \begin{minted}[fontsize=\small]{c}
-void trickle_open(struct trickle_conn *c, clock_time_t interval, uint16_t channel, const struct trickle_callbacks *cb);
+void trickle_open(struct trickle_conn *c, clock_time_t interval,
+                  uint16_t channel,
+                  const struct trickle_callbacks *cb);
 void trickle_close(struct trickle_conn *c);
 void trickle_send(struct trickle_conn *c);
 
@@ -282,6 +340,8 @@ struct trickle_callbacks {
    void (* recv)(struct trickle_conn *c);
 };
 \end{minted}
+\caption{Contiki Trickle Network APIs}
+\end{listing}
 
 
 \subsection{Network Channels}

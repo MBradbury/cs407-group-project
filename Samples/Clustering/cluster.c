@@ -66,25 +66,10 @@ static const int MAX_RUNICAST_RETX = 5;
 static const clock_time_t STUBBORN_INTERVAL = 5 * CLOCK_SECOND;
 static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
-#if 0
-static clock_time_t id_clock_wait(clock_time_t mod)
-{
-	size_t i = 0;
-	clock_time_t time = 0;
-
-	for (i = 0; i != RIMEADDR_SIZE; ++i)
-	{
-		time += rimeaddr_node_addr.u8[i];
-		time %= mod;
-	}
-
-	return time;
-}
-#endif
 
 static void stbroadcast_cancel_void(void * ptr)
 {
-	stbroadcast_cancel(&((cluster_conn_t *)ptr)->bc);
+	stbroadcast_cancel(&conncvt_stbcast((struct stbroadcast_conn *)ptr)->bc);
 
 	printf("Stubborn bcast canceled\n");
 }
@@ -143,27 +128,12 @@ static void runicast_recv(struct runicast_conn * ptr,
 {
 	cluster_conn_t * conn = conncvt_runicast(ptr);
 
-	/*collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
-
-	char originator_str[RIMEADDR_STRING_LENGTH];
-	char source_str[RIMEADDR_STRING_LENGTH];
-
-	printf("Sink rcv: Addr:%s Src:%s Temp:%d Hudmid:%d%%\n",
-		addr2str_r(originator, originator_str, RIMEADDR_STRING_LENGTH),
-		addr2str_r(&msg->source, source_str, RIMEADDR_STRING_LENGTH),
-		(int)msg->temperature, (int)msg->humidity
-	);*/
-
 	// Extract the source we included at the end of the packet
-	rimeaddr_t * source = (rimeaddr_t *)
+	rimeaddr_t const * source = (rimeaddr_t const *)
 		(((char *)packetbuf_dataptr()) + packetbuf_datalen() - sizeof(rimeaddr_t));
 
-	// Change the packet length
+	// Change the packet length to the expected length
 	packetbuf_set_datalen(packetbuf_datalen() - sizeof(rimeaddr_t));
-
-	//printf("ru recv %d\n", packetbuf_datalen());
-
-	//rimeaddr_t source;
 
 	(*conn->callbacks.recv)(conn, source);
 }
@@ -429,10 +399,11 @@ static void cluster_setup_finished(cluster_conn_t * conn)
 
 static cluster_conn_t conn;
 static cluster_callbacks_t callbacks = { &cluster_recv, &cluster_setup_finished };
-static rimeaddr_t sink;
 
 PROCESS_THREAD(startup_process, ev, data)
 {
+	static rimeaddr_t sink;
+
 	PROCESS_BEGIN();
 
 	sink.u8[0] = 1;

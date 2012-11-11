@@ -64,7 +64,7 @@ static const int MAX_RUNICAST_RETX = 5;
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
-static const clock_time_t STUBBORN_INTERVAL = 5 * CLOCK_SECOND;
+static const clock_time_t STUBBORN_INTERVAL = 4 * CLOCK_SECOND;
 static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
 
@@ -87,8 +87,7 @@ static void CH_detect_finished(void * ptr)
 	leds_off(LEDS_RED);
 
 	// Set the best values
-	printf("Timer on %s expired\n",
-		addr2str(&rimeaddr_node_addr));
+	printf("Timer on %s expired\n", addr2str(&rimeaddr_node_addr));
 
 	rimeaddr_copy(&conn->our_cluster_head, &conn->collecting_best_CH);
 
@@ -142,12 +141,12 @@ static void runicast_recv(struct runicast_conn * ptr,
 static void runicast_sent(struct runicast_conn *c,
 							rimeaddr_t const * to, uint8_t retransmissions)
 {
-	printf("runicast sent\n");
+	printf("runicast sent to:%s rtx:%u\n", addr2str(to), retransmissions);
 }
 static void runicast_timedout(struct runicast_conn *c,
 								rimeaddr_t const * to, uint8_t retransmissions)
 {
-	printf("runicast timedout\n");
+	printf("runicast timedout to:%s rtx:%u\n", addr2str(to), retransmissions);
 }
 
 static const struct runicast_callbacks callbacks_forward =
@@ -166,10 +165,11 @@ static void mesh_recv(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 	char current_str[RIMEADDR_STRING_LENGTH];
 	char ch_str[RIMEADDR_STRING_LENGTH];
 
-	printf("Forwarding: from:%s via:%s to:%s\n",
+	printf("Forwarding: from:%s via:%s to:%s hops:%u\n",
 		addr2str_r(originator, originator_str, RIMEADDR_STRING_LENGTH),
 		addr2str_r(&rimeaddr_node_addr, current_str, RIMEADDR_STRING_LENGTH),
-		addr2str_r(&conn->our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH)
+		addr2str_r(&conn->our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH),
+		hops
 	);
 
 	// Include the originator in the header
@@ -255,7 +255,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 		char head_str[RIMEADDR_STRING_LENGTH];
 		char ch_str[RIMEADDR_STRING_LENGTH];
 
-		printf("Updating to a better clusterhead (%s H:%d) was:(%s H:%d)\n",
+		printf("Updating to a better clusterhead (%s H:%u) was:(%s H:%u)\n",
 			addr2str_r(&msg->head, head_str, RIMEADDR_STRING_LENGTH), msg->hop_count,
 			addr2str_r(&conn->collecting_best_CH, ch_str, RIMEADDR_STRING_LENGTH), conn->collecting_best_hop
 		);
@@ -266,7 +266,10 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	}
 }
 
-static void sent_stbroadcast(struct stbroadcast_conn * c) { }
+static void sent_stbroadcast(struct stbroadcast_conn * c)
+{
+	printf("sbcast sent\n");
+}
 
 static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup, &sent_stbroadcast };
 
@@ -274,6 +277,8 @@ static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup, &sent
 static void CH_setup_wait_finished(void * ptr)
 {
 	cluster_conn_t * conn = (cluster_conn_t *)ptr;
+
+	printf("Starting cluster setup...\n");
 
 	leds_on(LEDS_YELLOW);
 
@@ -327,8 +332,6 @@ bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
 
 		if (is_sink(conn))
 		{
-			printf("Starting cluster setup...\n");
-
 			// Wait a bit to allow processes to start up
 			static struct ctimer ct;
 			ctimer_set(&ct, 10 * CLOCK_SECOND, &CH_setup_wait_finished, conn);
@@ -356,12 +359,33 @@ void cluster_close(cluster_conn_t * conn)
 void cluster_send(cluster_conn_t * conn)
 {
 	// Prevent sink from sending any messages
-	if (conn != NULL && !is_sink(conn))
+	if (conn != NULL)
 	{
 		printf("Generated new message to:(%s).\n",
 			addr2str(&conn->our_cluster_head));
 		
-		mesh_send(&conn->mc, &conn->our_cluster_head);
+		if (is_sink(conn))
+		{
+			// We are the sink, so just call the receive function
+			(*conn->callbacks.recv)(conn, &rimeaddr_node_addr);
+		}
+		else if (conn->is_CH)
+		{
+			// The cluster head needs to use runicast to send
+			// messages to the sink, so do so.
+
+			// Include the originator in the header
+			rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen());
+			packetbuf_set_datalen(packetbuf_datalen() + sizeof(rimeaddr_t));
+			rimeaddr_copy(source, &rimeaddr_node_addr);
+
+			runicast_send(&conn->rc, &conn->sink, MAX_RUNICAST_RETX);
+		}
+		else
+		{
+			// Otherwise just use mesh to send the message to the CH
+			mesh_send(&conn->mc, &conn->our_cluster_head);
+		}
 	}
 }
 

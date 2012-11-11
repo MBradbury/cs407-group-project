@@ -8,7 +8,10 @@ typedef struct
 	/** The function called when a message is received at the sink.
 		The arguments are: the connection and the message source. */
 	void (* recv)(struct cluster_conn * conn, rimeaddr_t const * source);
-} cluster_callbacks;
+
+	/** This function is called when a node has finished setting up */
+	void (* setup_complete)(struct cluster_conn * conn);
+} cluster_callbacks_t;
 
 typedef struct cluster_conn
 {
@@ -28,7 +31,7 @@ typedef struct cluster_conn
 	unsigned int best_hop;
 	unsigned int collecting_best_hop;
 
-	cluster_callbacks callbacks;
+	cluster_callbacks_t callbacks;
 
 } cluster_conn_t;
 
@@ -36,7 +39,7 @@ typedef struct cluster_conn
 
 bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
                   uint16_t ch1, uint16_t ch2, uint16_t ch3,
-                  cluster_callbacks const * callbacks);
+                  cluster_callbacks_t const * callbacks);
 
 void cluster_close(cluster_conn_t * conn);
 

@@ -44,7 +44,8 @@ static cluster_conn_t * conncvt_mesh(struct mesh_conn * conn)
 
 static cluster_conn_t * conncvt_runicast(struct runicast_conn * conn)
 {
-	return (cluster_conn_t *)(((char *)conn) - sizeof(struct stbroadcast_conn) - sizeof(struct mesh_conn));
+	return (cluster_conn_t *)
+		(((char *)conn) - sizeof(struct stbroadcast_conn) - sizeof(struct mesh_conn));
 }
 
 
@@ -58,7 +59,7 @@ static bool is_sink(cluster_conn_t const * conn)
 
 // The maximum number of times the reliable unicast
 // will attempt to resend a message.
-static const int MAX_RUNICAST_RETX = 4;
+static const int MAX_RUNICAST_RETX = 5;
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
@@ -130,11 +131,15 @@ static void CH_detect_finished(void * ptr)
 	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
 	
 	ctimer_set(&forward_stop, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
+
+	// The setup of this node is complete, so inform the user
+	(*conn->callbacks.setup_complete)(conn);
 }
 
 
 /** The function that will be executed when a message is received */
-static void runicast_recv(struct runicast_conn * ptr, rimeaddr_t const * originator, uint8_t seqno)
+static void runicast_recv(struct runicast_conn * ptr,
+							rimeaddr_t const * originator, uint8_t seqno)
 {
 	cluster_conn_t * conn = conncvt_runicast(ptr);
 
@@ -150,24 +155,32 @@ static void runicast_recv(struct runicast_conn * ptr, rimeaddr_t const * origina
 	);*/
 
 	// Extract the source we included at the end of the packet
-	//rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen() - sizeof(rimeaddr_t));
+	rimeaddr_t * source = (rimeaddr_t *)
+		(((char *)packetbuf_dataptr()) + packetbuf_datalen() - sizeof(rimeaddr_t));
 
 	// Change the packet length
-	//packetbuf_set_datalen(packetbuf_datalen() - sizeof(rimeaddr_t));
-
-	printf("ru\n");
+	packetbuf_set_datalen(packetbuf_datalen() - sizeof(rimeaddr_t));
 
 	//printf("ru recv %d\n", packetbuf_datalen());
 
-	rimeaddr_t source;
+	//rimeaddr_t source;
 
-	(*conn->callbacks.recv)(conn, &source);
+	(*conn->callbacks.recv)(conn, source);
 }
 
-static void runicast_sent(struct runicast_conn *c, rimeaddr_t const * to, uint8_t retransmissions) { printf("runicast sent\n"); }
-static void runicast_timedout(struct runicast_conn *c, rimeaddr_t const * to, uint8_t retransmissions) { printf("runicast timedout\n"); }
+static void runicast_sent(struct runicast_conn *c,
+							rimeaddr_t const * to, uint8_t retransmissions)
+{
+	printf("runicast sent\n");
+}
+static void runicast_timedout(struct runicast_conn *c,
+								rimeaddr_t const * to, uint8_t retransmissions)
+{
+	printf("runicast timedout\n");
+}
 
-static const struct runicast_callbacks callbacks_forward = { &runicast_recv, &runicast_sent, &runicast_timedout };
+static const struct runicast_callbacks callbacks_forward =
+	{ &runicast_recv, &runicast_sent, &runicast_timedout };
 
 /** The function that will be executed when a message is received */
 static void mesh_recv(struct mesh_conn * ptr, rimeaddr_t const * originator, uint8_t hops)
@@ -188,23 +201,12 @@ static void mesh_recv(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 		addr2str_r(&conn->our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH)
 	);
 
-	char data[PACKETBUF_SIZE];
-	size_t length = packetbuf_datalen();
-	memcpy(data, packetbuf_dataptr(), length);
-
-
-	packetbuf_clear();
-	packetbuf_set_datalen(length);
-	memcpy(packetbuf_dataptr(), data, length);
-
 	// Include the originator in the header
-	//rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen());
-	//packetbuf_set_datalen(packetbuf_datalen() + sizeof(rimeaddr_t));
-	//rimeaddr_copy(source, originator);
+	rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen());
+	packetbuf_set_datalen(packetbuf_datalen() + sizeof(rimeaddr_t));
+	rimeaddr_copy(source, originator);
 
 	runicast_send(&conn->rc, &conn->our_cluster_head, MAX_RUNICAST_RETX);
-
-	printf("mesh recv %u\n", packetbuf_datalen());
 }
 
 static void mesh_sent(struct mesh_conn * c) { }
@@ -329,9 +331,10 @@ static void CH_setup_wait_finished(void * ptr)
 
 bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
                   uint16_t ch1, uint16_t ch2, uint16_t ch3,
-                  cluster_callbacks const * callbacks)
+                  cluster_callbacks_t const * callbacks)
 {
-	if (conn != NULL && sink != NULL && callbacks != NULL && callbacks->recv != NULL)
+	if (conn != NULL && sink != NULL &&
+		callbacks != NULL && callbacks->recv != NULL && callbacks->setup_complete != NULL)
 	{
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
 		mesh_open(&conn->mc, ch2, &callbacks_data);
@@ -348,6 +351,8 @@ bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
 		conn->collecting_best_hop = UINT_MAX;
 
 		conn->is_CH = false;
+
+		memcpy(&conn->callbacks, callbacks, sizeof(cluster_callbacks_t));
 
 		if (is_sink(conn))
 		{
@@ -391,10 +396,10 @@ void cluster_send(cluster_conn_t * conn)
 
 
 
-
+PROCESS(startup_process, "Startup");
 PROCESS(send_data_process, "Data Sender");
 
-AUTOSTART_PROCESSES(&send_data_process);
+AUTOSTART_PROCESSES(&startup_process);
 
 
 typedef struct
@@ -414,13 +419,20 @@ static void cluster_recv(cluster_conn_t * conn, rimeaddr_t const * source)
 	);
 }
 
-PROCESS_THREAD(send_data_process, ev, data)
+static void cluster_setup_finished(cluster_conn_t * conn)
 {
-	static struct etimer et;
-	static cluster_conn_t conn;
-	static cluster_callbacks callbacks = { &cluster_recv };
-	static rimeaddr_t sink;
+	if (!is_sink(conn))
+	{
+		process_start(&send_data_process, (char *)conn);
+	}
+}
 
+static cluster_conn_t conn;
+static cluster_callbacks_t callbacks = { &cluster_recv, &cluster_setup_finished };
+static rimeaddr_t sink;
+
+PROCESS_THREAD(startup_process, ev, data)
+{
 	PROCESS_BEGIN();
 
 	sink.u8[0] = 1;
@@ -428,15 +440,20 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	cluster_open(&conn, &sink, 118, 132, 147, &callbacks);
 
+	PROCESS_END();
+}
+
+PROCESS_THREAD(send_data_process, ev, data)
+{
+	static struct etimer et;
+	
+	PROCESS_BEGIN();
+
 	if (!is_sink(&conn))
 	{
 		printf("Starting data generation process\n");
 
 		leds_on(LEDS_GREEN);
-
-		// Important to wait for some time to allow network to fully setup.
-		etimer_set(&et, 120 * CLOCK_SECOND);
-		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		// Send every second.
 		etimer_set(&et, 60 * CLOCK_SECOND);

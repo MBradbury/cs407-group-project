@@ -12,7 +12,8 @@ PROJECT_SOURCEFILES =
 CONTIKIDIRS :=
 CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c
 
-CFLAGS = -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
+CFLAGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wfloat-equal
 
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include
+

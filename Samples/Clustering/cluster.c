@@ -78,19 +78,16 @@ static void stbroadcast_cancel_void(void * ptr)
 
 static void CH_detect_finished(void * ptr)
 {
-	static struct ctimer forward_stop;
-
 	cluster_conn_t * conn = (cluster_conn_t *)ptr;
 
 	// As we are no longer listening for our parent node
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
 
-	// Set the best values
 	printf("Timer on %s expired\n", addr2str(&rimeaddr_node_addr));
 
+	// Set the best values
 	rimeaddr_copy(&conn->our_cluster_head, &conn->collecting_best_CH);
-
 	conn->best_hop = conn->collecting_best_hop;
 
 	printf("Found: Head:%s Hop:%u\n",
@@ -100,21 +97,22 @@ static void CH_detect_finished(void * ptr)
 	// of this node.
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(setup_msg_t));
-	setup_msg_t * nextmsg = (setup_msg_t *)packetbuf_dataptr();
-	memset(nextmsg, 0, sizeof(setup_msg_t));
+	setup_msg_t * msg = (setup_msg_t *)packetbuf_dataptr();
+	memset(msg, 0, sizeof(setup_msg_t));
 
 	// We set the head of this node to be the best
 	// clusterhead we heard, or itself if is_CH
 	//nextmsg->base.type = setup_message_type;
-	rimeaddr_copy(&nextmsg->source, &rimeaddr_node_addr);
-	rimeaddr_copy(&nextmsg->head, conn->is_CH
+	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
+	rimeaddr_copy(&msg->head, conn->is_CH
 		? &rimeaddr_node_addr
 		: &conn->our_cluster_head);
-	nextmsg->hop_count = conn->best_hop + 1;
+	msg->hop_count = conn->best_hop + 1;
 
 	printf("Forwarding setup message...\n");
 	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
 	
+	static struct ctimer forward_stop;
 	ctimer_set(&forward_stop, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
 
 	// The setup of this node is complete, so inform the user
@@ -232,8 +230,6 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 		}
 		else
 		{
-			static struct ctimer detect_ct;
-
 			leds_off(LEDS_BLUE);
 
 			// Indicate that we are looking for best parent
@@ -242,6 +238,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 			// Start the timer that will call a function when we are
 			// done detecting parents.
 			// We only need to detect parents if we are not a cluster head
+			static struct ctimer detect_ct;
 			ctimer_set(&detect_ct, 20 * CLOCK_SECOND, &CH_detect_finished, conn);
 		}
 

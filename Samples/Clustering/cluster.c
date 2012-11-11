@@ -15,8 +15,9 @@
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
-#include "contiki-net.h"
 #include "net/rime/runicast.h"
+#include "net/rime/mesh.h"
+#include "contiki-net.h"
 
 #include "cluster.h"
 
@@ -364,6 +365,10 @@ void cluster_send(cluster_conn_t * conn)
 	}
 }
 
+
+/********************************************
+ ********* APPLICATION BEGINS HERE **********
+ *******************************************/
 
 
 PROCESS(startup_process, "Startup");

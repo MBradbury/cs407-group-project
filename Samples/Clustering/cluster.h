@@ -1,6 +1,10 @@
 #ifndef CS407_CLUSTER_H
 #define CS407_CLUSTER_H
 
+#include "net/rime/stbroadcast.h"
+#include "net/rime/runicast.h"
+#include "net/rime/mesh.h"
+
 struct cluster_conn;
 
 typedef struct
@@ -46,3 +50,4 @@ void cluster_close(cluster_conn_t * conn);
 void cluster_send(cluster_conn_t * conn);
 
 #endif /*CS407_CLUSTER_H*/
+

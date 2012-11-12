@@ -2,6 +2,8 @@
 
 \usepackage[top=2cm, bottom=2cm, left=3cm, right=3cm]{geometry}
 
+\usepackage{amssymb, amsmath}
+
 % This needs to occur before hyperref and minted
 \usepackage{float}
 
@@ -19,6 +21,7 @@
 \usepackage{tabularx}
 \usepackage{longtable}
 
+
 % Use minted and set the visual style to be the
 % same as the one used by visual studio
 \usepackage{minted}
@@ -28,8 +31,6 @@
 \providecommand*{\listingautorefname}{Listing}
 
 \usepackage{caption}
-
-\usepackage{rotating}
 
 \newcommand{\mysideways}[1]{\begin{sideways}#1\end{sideways}}
 
@@ -138,7 +139,7 @@ Debugging tools are vital for developers to produce reliable software, however t
 
 %No numbering on first and second pages
 \pagestyle{empty}
-\thispagestyle{empty}
+\thispagestyle{empty}\clearpage
 
 \newpage
 
@@ -212,6 +213,56 @@ We have chosen to use Contiki and COOJA for this project because it provides the
 	\item Keep a short message send/received history. This could be combined with other node's knowledge as log is forwarded)
 	\item Make logging reliable (TCP/IP?) even at the expense of energy
 \end{enumerate}
+
+
+\clearpage
+
+\section{Where to Evaluate Predicates}
+
+Given the problem of assigning slots in a TDMA MAC protocol, one would wish to ensure that no node within two hops of any given node has the same slot. This raises a question of where this predicate should be evaluated to ensure minimum energy usage in its evaluation.
+
+The first predicate we might consider is the one where for ever node, we get the 2-hop neighbourhood and check that none of those nodes have the same slot as the initial node. This means that we would need to send:
+\begin{enumerate}
+	\item A message from the base station to the node asking it to evaluate the predicate
+	\item A message from the node to each of its 2-hop neighbours
+	\item Each 2-hop neighbour needs to send a message back to the node
+	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
+	\item The node would need to report to the base station the result of the predicate
+\end{enumerate}
+
+So we would need at best $2\Delta_{sink} + 2|Neighbours(2, n)|$ messages to evaluate this predicate for one node.
+
+\begin{align}
+\label{eq:2-hop-slot-pred}
+& \hspace{3em}	\forall n \in Nodes \cdot \\
+& \hspace{6em}		\forall n' \in Neighbours(2, n) \cdot \\
+& \hspace{9em}			(n.slot \neq n'.slot)
+\end{align}
+
+
+The second predicate we could consider is the one where every node checks their 1-hop neighbourhood for slot collisions. Here we model the 2-hop nature of the predicate differently, because instead of checking on the node that we want to check for slot collisions, we check on the node between two nodes that might have slot collisions.
+
+\begin{enumerate}
+	\item A message from the base station to the node adjacent to that we asking to check slot collisions
+	\item A message from the node to each of its 1-hop neighbours
+	\item Each 1-hop neighbour needs to send a message back to the node
+	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
+	\item The node would need to report to the base station the result of the predicate
+\end{enumerate}
+
+So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(1, n)|$ messages to evaluate this predicate for one node.
+
+\begin{align}
+\label{eq:1-hop-slot-pred}
+&				\forall n \in Nodes \cdot \\
+& \hspace{3em}		\forall n' \in Neighbours(1, n) \cup \{n\} \cdot \\
+& \hspace{6em}			\forall n'' \in Neighbours(1, n) \cup \{n\} \cdot \\
+& \hspace{9em}				(n' \not= n'' \land n'.slot \neq n''.slot)
+\end{align}
+
+Overall we can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer message. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
+
+However, if we were not asking the entire network to check for this property, then the first predicate would behave better. This is because the second predicate would have to be called for every 1-hop neighbour of the intended node. However, as it is assumed that the entire network would be asked if this predicate holds, then the second predicate is better.
 
 
 \clearpage

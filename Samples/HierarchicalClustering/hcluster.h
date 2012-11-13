@@ -1,5 +1,5 @@
-#ifndef CS407_HCLUSTER_VAR_D_H
-#define CS407_HCLUSTER_VAR_D_H
+#ifndef CS407_HCLUSTER_H
+#define CS407_HCLUSTER_H
 
 #include "net/rime/stbroadcast.h"
 #include "net/rime/runicast.h"
@@ -53,5 +53,5 @@ void cluster_close(cluster_conn_t * conn);
 
 void cluster_send(cluster_conn_t * conn);
 
-#endif /*CS407_HCLUSTER_VAR_D_H*/
+#endif /*CS407_HCLUSTER_H*/
 

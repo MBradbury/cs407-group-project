@@ -35,3 +35,4 @@ symbols.h
 /Report/Diagrams/*.pdf
 .nfs*
 *.~vsd
+VarDepthClustering

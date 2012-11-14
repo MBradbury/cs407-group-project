@@ -2,6 +2,9 @@
 
 \usepackage[top=2cm, bottom=2cm, left=3cm, right=3cm]{geometry}
 
+\usepackage{amssymb, amsmath}
+
+% This needs to occur before hyperref and minted
 \usepackage{float}
 
 \usepackage{multirow}
@@ -16,13 +19,18 @@
 \usepackage{epstopdf}
 
 \usepackage{tabularx}
+\usepackage{longtable}
+
 
 % Use minted and set the visual style to be the
 % same as the one used by visual studio
 \usepackage{minted}
 \usemintedstyle{vs}
 
-\usepackage{rotating}
+% Allows use of autoref with lables in listings
+\providecommand*{\listingautorefname}{Listing}
+
+\usepackage{caption}
 
 \newcommand{\mysideways}[1]{\begin{sideways}#1\end{sideways}}
 
@@ -112,10 +120,10 @@ Dr.~Arshad Jhumka
 \vfill
 
 \begin{abstract}
-Abstract
+Debugging tools are vital for developers to produce reliable software, however traditional tools are less useful when developing software for new system paradigms such as wireless sensor networks. As wireless sensor networks become increasing prevalent in our lives it will become ever more important that the software they are running works reliably and to do this debugging tools will be required. This project investigates how predicates can be specified and checked on wireless sensor node and how errors can be reported to a base station.
 \newline
 \newline
-\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Global Predicate Detection;
+\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Reliability;
 \end{abstract}
 
 \vfill
@@ -131,7 +139,7 @@ Abstract
 
 %No numbering on first and second pages
 \pagestyle{empty}
-\thispagestyle{empty}
+\thispagestyle{empty}\clearpage
 
 \newpage
 
@@ -206,6 +214,10 @@ We have chosen to use Contiki and COOJA for this project because it provides the
 	\item Make logging reliable (TCP/IP?) even at the expense of energy
 \end{enumerate}
 
+
+\clearpage
+
+\input{Predicates}
 
 \clearpage
 

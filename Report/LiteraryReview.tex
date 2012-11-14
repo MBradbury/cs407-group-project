@@ -1,3 +1,4 @@
+% !TeX root = Report.tex
 \section{Literary Review}
 
 \subsection{Quality of Service}
@@ -13,7 +14,7 @@ Akyildiz et. al. further went on to describe the challenges specific to WSN;
 			\item Unbalanced traffic - Traffic flows from large set of sensors into a small set of sink nodes
 			\item Data redundancy - The re-transmission of data could result in wasted energy usage
 			\item Network Dynamics - Failing nodes/wireless links, energy conservation, mobility etc
-			\item Scaleability 
+			\item Scalability 
 			\item Multiple sink nodes - Each node could have a different set of requirements
 			\item Packet Critically - Some data may need to flow through the network quicker than other pieces
 			\item Multiple traffic types - Different pieces of data flowing through the network at the same time
@@ -23,17 +24,17 @@ QoS is a difficult term to define, mainly due to its various meanings and perspe
 
 \subsection{MAC Protocols}
 
-\subsubsection*{Energy-efficient MAC Protocol Designed for WSN for IoT (The submarine paper)\cite{6128220}}
+\subsubsection*{Energy-efficient MAC Protocol Designed for WSN for IoT (The submarine paper)}
 
-Discusses the energy efficiency of existing protocols, including the original adaptation of MAC for WSNs - Sensor MAC (SMAC). Describes the operation of SMAC, which uses a fixed listen/sleep cycle to reduce idle listening time and thus save energy. Goes on to mention two improvements on SMAC: first Timeout MAC (TMAC), in which the listen/sleep cycle is adapted according to network traffic, by means of a simple timeout mechanism; then $\mu$-MAC, which alters between contention and contention-free periods. The former is used to establish network topology and initialise sub-channels (collections of time slots), which are used in the contention-free period to transmit without collisions.
+\cite{6128220} discusses the energy efficiency of existing protocols, including the original adaptation of MAC for WSNs - Sensor MAC (SMAC). Describes the operation of SMAC, which uses a fixed listen/sleep cycle to reduce idle listening time and thus save energy. Goes on to mention two improvements on SMAC: first Timeout MAC (TMAC), in which the listen/sleep cycle is adapted according to network traffic, by means of a simple timeout mechanism; then $\mu$-MAC, which alters between contention and contention-free periods. The former is used to establish network topology and initialise sub-channels (collections of time slots), which are used in the contention-free period to transmit without collisions.
 
 The authors then propose a power-controlled MAC protocol (PC-MAC), which determines the required transmission power level for a packet, thus aiming to save unnecessary energy usage when sending over short distances. This calculation assumes the physical layer of the nodes can transmit frames at one of a discrete set of power levels notified by the MAC layer. Once calculated, the minimum required power for each of a node's neighbours is stored in that node's Schedule and Power Level Table, an extension of the Schedule Table used for synchronising sleep cycles in SMAC. The protocol preserves the collision- and overhearing-avoidance properties of SMAC.
 Authors report energy savings of between 50\% and 96\% for average node distances ranging from 10m down to 1m. These findings were generated solely using simulations, but assuming they hold for a hardware WSN the benefits for energy efficiency are significant enough to warrant serious consideration.
 
 
-\subsubsection*{Energy Analysis of Four WSN MAC Protocols\cite{5751321}}
+\subsubsection*{Energy Analysis of Four WSN MAC Protocols}
 
-Four power-aware protocols based on the MAC framework implemented in TinyOS on TelosB motes and were tested using broadcast, convergecast and local gossip traffic patterns. Motivation: testing of the protocols side-by-side under controlled parameters, to rule out the innumerable extraneous factors that make direct comparison of separately-published protocols difficult.
+Four power-aware protocols based on the MAC framework implemented in TinyOS on TelosB motes and were tested using broadcast, convergecast and local gossip traffic patterns \cite{5751321}. Motivation: testing of the protocols side-by-side under controlled parameters, to rule out the innumerable extraneous factors that make direct comparison of separately-published protocols difficult.
 
 Outlines history of power-saving MAC strategies, beginning with the duty cycles as described above in the operation of SMAC. Then describes the next development --- low-power listening (LPL), using transmission preambles and channel polling to reduce idle listening times. More advanced protocols use a hybrid of these two techniques.
 
@@ -81,9 +82,9 @@ The authors conclude that no single protocol excels in all circumstances; AS-MAC
 
 This last point may well prove to be beyond the scope of our project, however the results for individual protocols may prove useful. It is unfortunate that a fair comparison between these protocols and PC-MAC could not be made.
 
-\subsubsection*{A Traffic Queue-aware MAC Protocol for WSNs\cite{4469515}}
+\subsubsection*{A Traffic Queue-aware MAC Protocol for WSNs}
 
-This paper introduces the traffic Queue-aware Sensor MAC protocol (QSMAC), based on SMAC to predict amount of data traffic in a network.
+This paper \cite{4469515} introduces the traffic Queue-aware Sensor MAC protocol (QSMAC), based on SMAC to predict amount of data traffic in a network.
 
 After describing the operation of SMAC (as above), the authors highlights the problem of a fixed cycle duration in networks where traffic loads can fluctuate; an overflowing node buffer queue may cause packets to be discarded, causing additional energy expenditure in resending lost packets and debasing the network QoS.
 
@@ -99,7 +100,7 @@ One of the projects that is summarised by \cite{herbert2007adaptive} is a method
 
 It does, however, have some downsides. The first is that there is assumed to be no traffic and thus no application traffic or network congestion. These are real issues especially when applying this kind of debugging to a high throughput sensor network. There are also a number of spurious failure notification, which the authors are working on reducing, by applying a Bayes engine.
 
-\subsection {DICAS: Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks\cite{dicaspaper}}
+\subsection {DICAS: Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks}%\cite{dicaspaper}}
 
 Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks (DICAS) is a lightweight distributed protocol for Wireless Sensor Networks that mitigates the effects of a wide-range of control traffic attacks. DICAS does this by utilizing a unique property of a wireless sensor network, this is that each node is able to monitor a part of their neighbours network traffic. Using DICAS the authors were able to create LSR a lightweight secure routing algorithm for Wireless Sensor Networks.
 
@@ -130,23 +131,23 @@ The memory overhead is the most pressing of the overheads created by the DICAS a
 
 \item Computation Overhead:
 
-With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbor list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbor list structure are relatively small, the computation time required for these operations is negligible.
+With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbour list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbour list structure are relatively small, the computation time required for these operations is negligible.
 
 \item Bandwith Overhead:
 
-When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases makeup a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
+When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases make up a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
 \end{itemize}
 
-\subsection{H-SEND: Hierachichal SEnsor Network Debugging\cite{}}
+\subsection{H-SEND: Hierachichal SEnsor Network Debugging}
 
-H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs.
+H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{?}
 
 There are 4 main steps involved in H-SEND:
 
 \begin{enumerate}
 	\item Developer specifies invariants when writing the software
 	\item Invariant checking code is (semi--)automatically inserted during compilation
-	\item If an invariant is violated at runtime, actions are taken (such as increased logging frequency, or an error message to the base station)
+	\item If an invaamssymbriant is violated at runtime, actions are taken (such as increased logging frequency, or an error message to the base station)
 	\item Developer can use the information to fix the software, and then upload the patched version
 \end{enumerate}
 
@@ -168,8 +169,8 @@ There are a variety of different types of invariants that can be specified, typi
 
 A grammar is specified which can be used to insert invariants into source code. Existential and universal quantifiers are supported.
 
-H-SEND is optimised for WSNs in a variety of ways. For example, it minimises overhead by buffering messages it needs to send, and piggybacking them on the existing network traffic. Due to the hierachical nature of the protocol, multinode-invariants can be checked efficiently at the closest parent node with all the required information.
+H-SEND is optimised for WSNs in a variety of ways. For example, it minimises overhead by buffering messages it needs to send, and piggybacking them on the existing network traffic. Due to the hierarchical nature of the protocol, multinode-invariants can be checked efficiently at the closest parent node with all the required information.
 
-\subsubsection*{Dynamic Invariant Detection $\cup$ Checking Engine (DIDUCE)\cite{diduce}}
+\subsubsection*{Dynamic Invariant Detection $\cup$ Checking Engine (DIDUCE)}
 
-DIDUCE is a tool which employs machine learning to dynamically generate hypotheses of invariants for a system at run-time; the invariants begin extremely strict, and are relaxed over time to allow for new correct behaviour. The machine learning aspect means that developers do not have to specify invariants themselves, which proves beneficial as accurately pinpointing the values necessary for fault-free operation is nontrivial. DIDUCE checks against the invariants continually during a program's operation and reports all violations detected at the end of the run, whereas Daicon merely presents the user with invariants found. For all its apparent usefulness, unfortunately DIDUCE was designed for large, complex systems rather than lightweight distributed systems with constrained resources (i.e. WSNs), so it is likely to prove infeasible to use this tool for GPD.
+DIDUCE is a tool which employs machine learning to dynamically generate hypotheses of invariants for a system at run-time; the invariants begin extremely strict, and are relaxed over time to allow for new correct behaviour. The machine learning aspect means that developers do not have to specify invariants themselves, which proves beneficial as accurately pinpointing the values necessary for fault-free operation is nontrivial. DIDUCE checks against the invariants continually during a program's operation and reports all violations detected at the end of the run, whereas Daicon merely presents the user with invariants found. For all its apparent usefulness, unfortunately DIDUCE was designed for large, complex systems rather than lightweight distributed systems with constrained resources (i.e. WSNs), so it is likely to prove infeasible to use this tool for GPD. \cite{diduce}

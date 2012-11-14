@@ -1,5 +1,7 @@
 #include "contiki.h"
 
+#include "core/lib/list.h"
+
 #include "net/rime.h"
 #include "net/rime/mesh.h"
 #include "net/rime/stbroadcast.h"
@@ -18,9 +20,18 @@ static rimeaddr_t baseStationAddr;
 static uint8_t message_id = 10;
 static uint8_t message_id_received;
 
+
 //Methods
 static void 
 send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id, char* pred, uint8_t hop_limit);
+
+static list_t message_list;
+
+typedef struct 
+{
+	uint8_t message_id;
+	uint8_t hops;
+} message_elem_t;
 
 typedef struct
 {
@@ -38,6 +49,15 @@ bool is_base()
 
 	return rimeaddr_cmp(&rimeaddr_node_addr, &base) != 0;
 }
+
+/*static bool 
+list_is_elem(list_t * list)
+{
+	while (list->next) 
+	{
+		
+	}
+}*/
 
 static uint8_t 
 get_message_id()

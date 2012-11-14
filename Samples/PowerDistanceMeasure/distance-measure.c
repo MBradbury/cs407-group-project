@@ -39,7 +39,13 @@
  */
 
 #include "contiki.h"
+
+#include "dev/leds.h"
+
+#include "net/netstack.h"
+#include "net/rime.h"
 #include "net/rime/trickle.h"
+#include "contiki-net.h"
 
 #include "dev/button-sensor.h"
 
@@ -48,10 +54,14 @@
 #include "dev/cc2420.h"
 
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <limits.h>
 
 /*---------------------------------------------------------------------------*/
 PROCESS(example_trickle_process, "Trickle example");
-AUTOSTART_PROCESSES(&example_trickle_process);
+PROCESS(button_press_process, "Button Press");
+AUTOSTART_PROCESSES(&example_trickle_process, &button_press_process);
 /*---------------------------------------------------------------------------*/
 static void
 trickle_recv(struct trickle_conn *c)
@@ -67,30 +77,65 @@ trickle_recv(struct trickle_conn *c)
 const static struct trickle_callbacks trickle_call = {trickle_recv};
 static struct trickle_conn trickle;
 /*---------------------------------------------------------------------------*/
+
+static uint8_t power_level = 1;
+
 PROCESS_THREAD(example_trickle_process, ev, data)
 {
-	PROCESS_EXITHANDLER(trickle_close(&trickle);)
+	static struct etimer et;
+
 	PROCESS_BEGIN();
 
-	cc2420_set_txpower(1);
+	cc2420_set_txpower(power_level);
 
-	trickle_open(&trickle, CLOCK_SECOND, 145, &trickle_call);
-	SENSORS_ACTIVATE(button_sensor);
+	trickle_open(&trickle, 1 * CLOCK_SECOND, 145, &trickle_call);
+
+	etimer_set(&et, 1 * CLOCK_SECOND);
 
 	while (1)
 	{
 		leds_off(LEDS_GREEN);
 
-		PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event &&
-			data == &button_sensor);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		leds_on(LEDS_GREEN);
 
 		packetbuf_copyfrom("Hello, world", 13);
 		trickle_send(&trickle);
+
+		etimer_reset(&et);
 	}
+
+	trickle_close(&trickle);
 
 	PROCESS_END();
 }
+
+PROCESS_THREAD(button_press_process, ev, data)
+{
+	PROCESS_BEGIN();
+
+	SENSORS_ACTIVATE(button_sensor);
+
+	while (1)
+	{
+		PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event &&
+			data == &button_sensor);
+
+		++power_level;
+
+		if (power_level > 31)
+			power_level = 1;
+
+		printf("New power level %d", power_level);
+
+		cc2420_set_txpower(power_level);
+	}
+
+	SENSORS_DEACTIVATE(button_sensor);
+
+	PROCESS_END();
+}
+
 /*---------------------------------------------------------------------------*/
 

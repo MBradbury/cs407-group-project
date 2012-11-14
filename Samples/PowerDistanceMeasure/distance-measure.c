@@ -72,6 +72,8 @@ trickle_recv(struct trickle_conn *c)
 		rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1],
 		(char *)packetbuf_dataptr());
 
+	clock_wait(CLOCK_SECOND);
+
 	leds_off(LEDS_RED);
 }
 const static struct trickle_callbacks trickle_call = {trickle_recv};
@@ -88,9 +90,9 @@ PROCESS_THREAD(example_trickle_process, ev, data)
 
 	cc2420_set_txpower(power_level);
 
-	trickle_open(&trickle, 1 * CLOCK_SECOND, 145, &trickle_call);
+	trickle_open(&trickle, CLOCK_SECOND, 145, &trickle_call);
 
-	etimer_set(&et, 1 * CLOCK_SECOND);
+	etimer_set(&et, 4 * CLOCK_SECOND);
 
 	while (1)
 	{

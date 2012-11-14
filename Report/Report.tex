@@ -174,7 +174,11 @@ Contiki was developed by Adam Dunkels and is an open source operating system des
 
 Both systems are event driven, however Contiki also offers native multi-threading support through proto-threads where as TinyOS does not and requires a library to gain access to threading through TinyThreads \cite{?}. TinyOS programs are implemented in nesC a variation of C designed for the TinyOS platform. The simulator COOJA can run both C and Java code but the Contiki OS can only run C code. Both systems use custom wireless networking stacks that are optimised for low power consumption. In a comparison of energy and time efficiency between Contiki and TinyOS \cite{?} it is shown that the differences between the two operating systems is negligible. The study found that Contiki is quicker at sensing, TinyOS is faster at communication between nodes and they are both equally efficient at processing tasks such as executing security algorithms.
 
-We have chosen to use Contiki and COOJA for this project because it provides the most flexible system for developing applications that can quickly and easily be distributed to the network. Contiki also offers an easy to use fully functioning development environment and simulator tool all in one package. Finally, Contiki is almost as efficient as TinyOS in nearly every respect but provides all the additional features of a modular dynamic operating system and for these reasons this is why we have chosen it as the system we will develop for.  
+We have chosen to use Contiki and COOJA for this project because it provides the most flexible system for developing applications that can quickly and easily be distributed to the network. Contiki also offers an easy to use fully functioning development environment and simulator tool all in one package. Finally, Contiki is almost as efficient as TinyOS in nearly every respect but provides all the additional features of a modular dynamic operating system and for these reasons this is why we have chosen it as the system we will develop for. 
+
+\subsection{Risks with Hardware}
+
+With the sensor nodes, we as a group have been given responsibility over them. This means we need to be very careful when transferring then between home and university. We must make sure that they are carried safely, packed away properly and protected from the environment when transferring (for example from rain).
 
 \clearpage
 
@@ -238,41 +242,40 @@ We have chosen to use Contiki and COOJA for this project because it provides the
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{ | l | l | l | l | }
+	\begin{tabular}{ | l | l | }
 		\hline
-		Power level & Ave. Minimum Distance & Ave. Distance & Ave. Maximum Distance \\
+		Power level & Ave. Maximum Distance \\
 		\hline
-		1 & ~ & ~ & ~ \\
-		2 & ~ & ~ & ~ \\
-		3 & ~ & ~ & ~ \\
-		4 & ~ & ~ & ~ \\
-		5 & ~ & ~ & ~ \\
-		6 & ~ & ~ & ~ \\
-		7 & ~ & ~ & ~ \\
-		8 & ~ & ~ & ~ \\
-		9 & ~ & ~ & ~ \\
-		10 & ~ & ~ & ~ \\
-		11 & ~ & ~ & ~ \\
-		12 & ~ & ~ & ~ \\
-		13 & ~ & ~ & ~ \\
-		14 & ~ & ~ & ~ \\
-		15 & ~ & ~ & ~ \\
-		16 & ~ & ~ & ~ \\
-		17 & ~ & ~ & ~ \\
-		18 & ~ & ~ & ~ \\
-		19 & ~ & ~ & ~ \\
-		20 & ~ & ~ & ~ \\
-		21 & ~ & ~ & ~ \\
-		22 & ~ & ~ & ~ \\
-		23 & ~ & ~ & ~ \\
-		24 & ~ & ~ & ~ \\
-		25 & ~ & ~ & ~ \\
-		26 & ~ & ~ & ~ \\
-		27 & ~ & ~ & ~ \\
-		28 & ~ & ~ & ~ \\
-		29 & ~ & ~ & ~ \\
-		30 & ~ & ~ & ~ \\
-		31 & ~ & ~ & ~ \\
+		1 & 10cm \\
+		2 & 21cm \\
+		3 & 85cm \\
+		4 & ~ \\
+		5 & ~ \\
+		6 & ~ \\
+		7 & ~ \\
+		8 & ~ \\
+		9 & ~ \\
+		10 & ~ \\
+		11 & ~ \\
+		12 & ~ \\
+		13 & ~ \\
+		14 & ~ \\
+		15 & ~ \\
+		16 & ~ \\
+		17 & ~ \\
+		18 & ~ \\
+		19 & ~ \\
+		20 & ~ \\
+		21 & ~ \\
+		22 & ~ \\
+		23 & ~ \\
+		25 & ~ \\
+		26 & ~ \\
+		27 & ~ \\
+		28 & ~ \\
+		29 & ~ \\
+		30 & ~ \\
+		31 & ~ \\
 		\hline
 	\end{tabular}
 	\caption{The distance nodes could communicate at different power levels set by $cc2420\_set\_txpower$}

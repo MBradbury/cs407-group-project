@@ -19,7 +19,7 @@
 #include "net/rime/mesh.h"
 #include "contiki-net.h"
 
-#include "hcluster-var-depth.h"
+#include "hcluster.h"
 
 #include "sensor-converter.h"
 #include "debug-helper.h"
@@ -29,8 +29,8 @@ typedef struct
 	rimeaddr_t source;
 
 	rimeaddr_t head;
-	uint32_t head_level;
-	uint32_t hop_count;
+	unsigned int head_level;
+	unsigned int hop_count;
 
 } setup_msg_t;
 
@@ -57,7 +57,7 @@ static bool is_sink(cluster_conn_t const * conn)
 	return rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr) != 0;
 }
 
-static int delay()
+static clock_time_t delay(void)
 {
 	return ((int)rimeaddr_node_addr.u8[0]) % 5;
 }
@@ -67,10 +67,6 @@ static int delay()
 // will attempt to resend a message.
 static const int MAX_RUNICAST_RETX = 4;
 
-// The number of non-CH nodes between CHs at
-// consecutive levels
-static const int CLUSTER_DEPTH = 2;
-
 // The times stubborn broadcasting will use
 // to intersperse message resends
 static const clock_time_t STUBBORN_INTERVAL = 5 * CLOCK_SECOND;
@@ -79,10 +75,13 @@ static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
 static void stbroadcast_cancel_void(void * ptr)
 {
-	stbroadcast_cancel(&conncvt_stbcast((struct stbroadcast_conn *)ptr)->bc);
+	cluster_conn_t * conn = conncvt_stbcast((struct stbroadcast_conn *)ptr);
+
+	stbroadcast_cancel(&conn->bc);
+
 	printf("Stubborn bcast cancelled\n");
 
-	if (CLUSTER_DEPTH == 0)
+	if (conn->cluster_depth == 0)
 	{
 		leds_off(LEDS_BLUE);
 	}
@@ -113,7 +112,7 @@ static void forward_setup(void * ptr)
 	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
 	
 	ctimer_set(&forward_stop, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
-
+static struct ctimer message_offset;
 	//Inform user that this node is set up
 	(*conn->callbacks.setup_complete)(conn);
 }
@@ -121,8 +120,8 @@ static void forward_setup(void * ptr)
 static void CH_detect_finished(void * ptr)
 {
 	cluster_conn_t * conn = (cluster_conn_t *)ptr;
-	static struct ctimer message_offset;
-	int offset = (delay()) * CLOCK_SECOND;
+
+	clock_time_t offset = delay() * CLOCK_SECOND;
 
 	// As we are no longer listening for our parent node
 	// indicate so through the LEDs
@@ -134,11 +133,14 @@ static void CH_detect_finished(void * ptr)
 	rimeaddr_copy(&conn->our_cluster_head, &conn->collecting_best_CH);	
 	conn->best_hop = conn->collecting_best_hop;
 
-	conn->is_CH = conn->best_hop == CLUSTER_DEPTH;
+	conn->is_CH = conn->best_hop == conn->cluster_depth;
 
-	conn->our_level = conn->is_CH ? conn->collecting_best_level+1 : conn->collecting_best_level;
+	conn->our_level = conn->is_CH
+		? conn->collecting_best_level + 1
+		: conn->collecting_best_level;
 	
-	// Special case for first layer of CHs - always 1 hop from sink. This is definitely not a hack.
+	// Special case for first layer of CHs - always 1 hop from sink.
+	// This is definitely not a hack.
 	if (conn->is_CH && conn->our_level == 1)
 	{
 		conn->best_hop = 0;
@@ -152,6 +154,7 @@ static void CH_detect_finished(void * ptr)
 		leds_on(LEDS_BLUE);
 	}
 
+	static struct ctimer message_offset;
 	ctimer_set(&message_offset, offset, &forward_setup, conn);
 }
 
@@ -191,7 +194,7 @@ static void recv_runicast(struct runicast_conn * ptr, rimeaddr_t const * origina
 		char current_str[RIMEADDR_STRING_LENGTH];
 		char ch_str[RIMEADDR_STRING_LENGTH];
 
-		if (CLUSTER_DEPTH == 0)
+		if (conn->cluster_depth == 0)
 		{
 			leds_on(LEDS_BLUE);
 		}
@@ -201,14 +204,16 @@ static void recv_runicast(struct runicast_conn * ptr, rimeaddr_t const * origina
 			addr2str_r(&rimeaddr_node_addr, current_str, RIMEADDR_STRING_LENGTH),
 			addr2str_r(&conn->our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH)
 		);
-		if (conn->best_hop==0)
+
+		if (conn->best_hop == 0)
 		{
 			// Include the originator in the header
 			rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen());
 			packetbuf_set_datalen(packetbuf_datalen() + sizeof(rimeaddr_t));
 			rimeaddr_copy(source, originator);
 			runicast_send(&conn->rc, &conn->our_cluster_head, MAX_RUNICAST_RETX);
-		}else
+		}
+		else
 		{
 			mesh_send(&conn->mc, &conn->our_cluster_head);
 		}
@@ -226,7 +231,7 @@ static void recv_mesh(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 	// a member of its cluster.
 	// We now need to forward it onto the sink.
 	
-	if (CLUSTER_DEPTH == 0)
+	if (conn->cluster_depth == 0)
 	{
 		leds_on(LEDS_BLUE);
 	}
@@ -240,7 +245,8 @@ static void recv_mesh(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 		addr2str_r(&rimeaddr_node_addr, current_str, RIMEADDR_STRING_LENGTH),
 		addr2str_r(&conn->our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH)
 	);
-	if (conn->best_hop==0)
+
+	if (conn->best_hop == 0)
 	{
 		// Include the originator in the header
 		rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen());
@@ -248,7 +254,8 @@ static void recv_mesh(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 		rimeaddr_copy(source, originator);
 
 		runicast_send(&conn->rc, &conn->our_cluster_head, MAX_RUNICAST_RETX);
-	}else
+	}
+	else
 	{
 		mesh_send(&conn->mc, &conn->our_cluster_head);
 	}
@@ -345,7 +352,7 @@ static void CH_setup_wait_finished(void * ptr)
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->head, &rimeaddr_node_addr);
 	msg->head_level = conn->our_level;
-	msg->hop_count = CLUSTER_DEPTH;
+	msg->hop_count = conn->cluster_depth;
 
 	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
 
@@ -359,7 +366,7 @@ static void CH_setup_wait_finished(void * ptr)
 
 bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
                   uint16_t ch1, uint16_t ch2, uint16_t ch3,
-                  cluster_callbacks_t const * callbacks)
+                  unsigned int cluster_depth, cluster_callbacks_t const * callbacks)
 {
 	if (conn != NULL && sink != NULL &&
 		callbacks != NULL && callbacks->recv != NULL && callbacks->setup_complete != NULL)
@@ -380,6 +387,8 @@ bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
 		conn->collecting_best_level = UINT_MAX;
 
 		conn->is_CH = false;
+
+		conn->cluster_depth = cluster_depth;
 
 		memcpy(&conn->callbacks, callbacks, sizeof(cluster_callbacks_t));
 
@@ -489,7 +498,7 @@ PROCESS_THREAD(startup_process, ev, data)
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 
-	cluster_open(&conn, &sink, 118, 132, 147, &callbacks);
+	cluster_open(&conn, &sink, 118, 132, 147, 2, &callbacks);
 
 	PROCESS_END();
 }

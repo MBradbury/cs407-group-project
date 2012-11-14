@@ -39,6 +39,8 @@ typedef struct cluster_conn
 	unsigned int our_level;
 	unsigned int collecting_best_level;
 
+	unsigned int cluster_depth;
+
 	cluster_callbacks_t callbacks;
 
 } cluster_conn_t;
@@ -47,7 +49,7 @@ typedef struct cluster_conn
 
 bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
                   uint16_t ch1, uint16_t ch2, uint16_t ch3,
-                  cluster_callbacks_t const * callbacks);
+                  unsigned int cluster_depth, cluster_callbacks_t const * callbacks);
 
 void cluster_close(cluster_conn_t * conn);
 

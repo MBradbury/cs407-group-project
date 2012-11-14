@@ -44,7 +44,8 @@ typedef struct
 	uint8_t hop_limit;
 } predicate_check_msg_t;
 
-bool is_base()
+static bool 
+is_base()
 {
 	static rimeaddr_t base;
 	memset(&base, 0, sizeof(rimeaddr_t));
@@ -114,15 +115,13 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	list_elem_t * delivered_msg;
 		delivered_msg->message_id = msg->message_id;
 		delivered_msg->hops = msg->hop_limit;
-
 	do
 	{
 		if (list_iterator == NULL) //End of List and the Message has NOT been delivered before
 		{
-			printf("Node: %s List is NULL\n",addr2str(&rimeaddr_node_addr) );
 			deliver_msg = true;
 
-			list_push(message_list,&delivered_msg);
+			list_push(message_list,delivered_msg);
 			break;
 		}
 		else if(list_iterator->message_id == delivered_msg->message_id) //Message has been delivered before
@@ -143,14 +142,12 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 
 	if (deliver_msg) 
 	{
-		printf("predicate: %s\n", msg->predicate_to_check);
 
 		if (msg->hop_limit > 1) //last node 
 		{
 			printf("Node %s is resending\n",addr2str(&rimeaddr_node_addr) );
 			//send message on with one less hop limit
 			send_n_hop_predicate_check(msg->originator,msg->message_id, msg->predicate_to_check,msg->hop_limit - 1);
-			printf("message sent\n");
 		}
 	
 		//send predicate value back to originator		
@@ -161,7 +158,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 static void
 stbroadcast_sent(struct stbroadcast_conn *c)
 {
-	printf("I've sent!\n");
+	//printf("I've sent!\n");
 }
 
 const static struct mesh_callbacks meshCallbacks = {mesh_recv, mesh_sent, mesh_timedout};
@@ -178,7 +175,6 @@ static void
 send_predicate_to_node(rimeaddr_t dest, char * pred)
 {
 
-	printf("Sending predicate to node: %s\n",addr2str(&dest));
 	packetbuf_clear();
 	packetbuf_set_datalen(strlen(pred));
 	debug_packet_size(strlen(pred));
@@ -206,31 +202,22 @@ send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id_to_send, ch
 {
 
 	packetbuf_clear();
-	printf("1\n");
 	packetbuf_set_datalen(sizeof(predicate_check_msg_t));
-	printf("2\n");
 	debug_packet_size(sizeof(predicate_check_msg_t));
-	printf("3\n");
 	predicate_check_msg_t * msg = (predicate_check_msg_t *)packetbuf_dataptr();
-	printf("4\n");
 	memset(msg, 0, sizeof(predicate_check_msg_t));
-	printf("5\n");
-
+	
 	msg->originator = rimeaddr_node_addr;
 	msg->message_id = message_id_to_send;
 	msg->predicate_to_check = pred;
 	msg->hop_limit = hop_limit;
-	printf("6\n");
-
+	
 	stbroadcast_send_stubborn(&stbroadcast, CLOCK_SECOND);
-	printf("7\n");
-
+	
 	
 	static struct ctimer stbroadcast_stop_timer;
 
 	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
-		printf("8\n");
-
 }
 
 PROCESS(networkInit, "Network Init");

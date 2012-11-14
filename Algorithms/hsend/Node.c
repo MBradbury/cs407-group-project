@@ -110,6 +110,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	//check message has not been recieved before
 	bool loop = true;
 	bool deliver_msg = false;
+	
 	list_elem_t const * list_iterator = list_head(&message_list);
 
 	list_elem_t const * delivered_msg;

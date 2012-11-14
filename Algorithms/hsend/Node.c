@@ -109,21 +109,38 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	
 	//check message has not been recieved before
 	bool loop = true;
-	list_elem_t list_head = list_head(&message_list);
+	bool deliver_msg = false;
+	list_elem_t const * list_iterator = list_head(&message_list);
+
+	list_elem_t const * delivered_msg;
+		delivered_msg->message_id = msg->message_id;
+		delivered_msg->hops = msg->hops;
 
 	do
 	{
-		if()
+		if (list_iterator == NULL) //End of List and the Message has NOT been delivered before
+		{
+			deliver_msg = true;
+			loop = false;
 
-		if()
+			list_push(&message_list, );
+		}
+		else if(list_iterator->message_id == delivered_msg->message_id) //Message has been delivered before
+		{
+			if(list_iterator->)
+			loop = false;
+		} 
+		else //Haven't found message yet and not at the end of the list
+		{
+			list_iterator = list_item_next(&message_list);
+			loop = true;
+		}
 	}
 	while(loop);
 
-	if (message_id_received != msg->message_id && hop_limit > highest_hops_seen) 
+	if (deliver_msg) 
 	{
-		list_elem_t const * list_msg;
-		list_msg->message_id = msg->message_id;
-		list_msg->hops = msg->hops;
+		
 
 		list_push(&message_list, list_msg); 
 		

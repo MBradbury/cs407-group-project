@@ -2,6 +2,9 @@
 
 \usepackage[top=2cm, bottom=2cm, left=3cm, right=3cm]{geometry}
 
+\usepackage{amssymb, amsmath}
+
+% This needs to occur before hyperref and minted
 \usepackage{float}
 
 \usepackage{multirow}
@@ -16,6 +19,22 @@
 \usepackage{epstopdf}
 
 \usepackage{tabularx}
+\usepackage{longtable}
+
+
+% Use minted and set the visual style to be the
+% same as the one used by visual studio
+\usepackage{minted}
+\usemintedstyle{vs}
+
+% Allows use of autoref with lables in listings
+\providecommand*{\listingautorefname}{Listing}
+
+\usepackage{caption}
+
+\newcommand{\mysideways}[1]{\begin{sideways}#1\end{sideways}}
+
+
 
 \usepackage[parfill]{parskip}
 \setlength{\parindent}{0pt}
@@ -101,10 +120,10 @@ Dr.~Arshad Jhumka
 \vfill
 
 \begin{abstract}
-Abstract
+Debugging tools are vital for developers to produce reliable software, however traditional tools are less useful when developing software for new system paradigms such as wireless sensor networks. As wireless sensor networks become increasing prevalent in our lives it will become ever more important that the software they are running works reliably and to do this debugging tools will be required. This project investigates how predicates can be specified and checked on wireless sensor node and how errors can be reported to a base station.
 \newline
 \newline
-\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Global Predicate Detection;
+\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Reliability;
 \end{abstract}
 
 \vfill
@@ -120,7 +139,7 @@ Abstract
 
 %No numbering on first and second pages
 \pagestyle{empty}
-\thispagestyle{empty}
+\thispagestyle{empty}\clearpage
 
 \newpage
 
@@ -141,6 +160,10 @@ Acknowledgements
 
 \clearpage
 
+\input{LiteraryReview}
+
+\clearpage
+
 \section{Required Tools}
 
 A simulator and operating system needs to be chosen that will allow us to test our code locally, then provide functionality to deploy that code to the network easily. We will now provide a comparison between the two primary operating systems, Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}, and their respective simulators with a view to deciding which system best suits this projects goals and motivations.
@@ -156,6 +179,10 @@ We have chosen to use Contiki and COOJA for this project because it provides the
 \clearpage
 
 \input{Contiki}
+
+\clearpage
+
+\input{ImplementedAlgorithms}
 
 \clearpage
 
@@ -190,11 +217,11 @@ We have chosen to use Contiki and COOJA for this project because it provides the
 
 \clearpage
 
-\input{ProjectManagement}
+\input{Predicates}
 
 \clearpage
 
-\input{LiteraryReview}
+\input{ProjectManagement}
 
 \clearpage
 
@@ -205,6 +232,20 @@ We have chosen to use Contiki and COOJA for this project because it provides the
 \input{DeviceSpecifications}
 
 \newpage
+
+\section{Algorithm Implementation}
+
+\subsection{Tree Aggregation}
+
+\inputminted[linenos=true,tabsize=3,fontsize=\small]{c}{../Samples/TreeAggregator/tree-aggregator.c}
+
+\subsection{Clustering}
+
+\inputminted[linenos=true,tabsize=3,fontsize=\small]{c}{../Samples/Clustering/cluster.c}
+
+\newpage
+
+
 
 \section{References}
 \renewcommand{\refname}{\vspace{-1cm}}

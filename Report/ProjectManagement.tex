@@ -1,11 +1,10 @@
+% !TeX root = Report.tex
 \section{Project Management}
 
 \subsection{Work Overview}
 
-% TODO: Convert this to a table that can flow over multiple pages
-\begin{table}[H]
-	\centering
-	\begin{tabular}{| l | p{7.5cm} | p{5cm} |}
+\begin{center}
+	\begin{longtable}{| l | p{7.5cm} | p{5cm} |}
 	Week & Activities & Task Allocation\\
 	\hline
 	1 & \begin{enumerate}
@@ -80,22 +79,25 @@
 	
 	
 	5 & \begin{enumerate}
-			\item 
+			\item Get used to developing in C and learn how to use the Contiki libraries
+			\item Finish developing aggregation tree
+			\item Start implementing clustering algorithms
+			\item Start implementing H-SEND
 		\end{enumerate} &
 	\begin{enumerate}
-		\item[] Amit: ~
-		\item[] Dan: ~
-		\item[] Ivan: ~
-		\item[] Joe: ~
-		\item[] Matt: ~
-		\item[] Tim: ~
+		\item[] Amit: 1, 4
+		\item[] Dan: 1, 3
+		\item[] Ivan: 1, 3
+		\item[] Joe: 1, 4
+		\item[] Matt: 1, 2
+		\item[] Tim: 1
 	\end{enumerate}
 	\\ \hline
 	
 	
 	6 & \begin{enumerate}
 			\item Start Implementing GUI
-			\item Implementing LEACH clustering algorithm
+			\item Implementing clustering algorithms (Regular and Hierarchical)
 			\item Implement H-SEND
 			\item Implement a local predicate checker and reporter
 		\end{enumerate} &
@@ -104,13 +106,34 @@
 		\item[] Dan: 2
 		\item[] Ivan: 2
 		\item[] Joe: 3
-		\item[] Matt: 4
+		\item[] Matt: 4, 2
 		\item[] Tim: 1
 	\end{enumerate}
 	\\ \hline
+	
+	7 & \begin{enumerate}
+			\item Library-ify Cluster implementations
+			\item Implement LEACH  using existing implementations as a base
+			\item Work out how to interface the GUI and the base station
+			\item Continue developing GUI
+			\item Get in contact with Sain Saginbekov and sort out when we can use sensor nodes
+			\item Contact Victor Sanchez and inform him when we are using sensor nodes
+			\item Implement multi-hop predicate checking
+			\item Slim down eLua enough for us to run it on the sensor nodes, to allow for dynamic predicate specification
+			\item Research and start implementing network traffic logging and reporting
+		\end{enumerate} &
+	\begin{enumerate}
+		\item[] Amit: 7
+		\item[] Dan: 1, 2
+		\item[] Ivan: 9
+		\item[] Joe: 5, 6, 7
+		\item[] Matt: 8
+		\item[] Tim: 3, 4
+	\end{enumerate}
+	\\ \hline
 
-	\end{tabular}
-\end{table}
+	\end{longtable}
+\end{center}
 
 \subsection{Role Allocation}
 
@@ -222,7 +245,7 @@ We decided to allocate roles in the second week after we had the first week to p
 
 \subsection{Working Concurrently}
 
-We signed up for a Git repository on BitBucket \cite{?} where we plan to commit all the work we produce. We initially had an issue that free private repositories hosted on BitBucket have a maximum of 5 participants, whereas we had 6 group members. Fortunately when new users sign up to the services from an invite, the person that sends the invite gets additional capacity. This meant that the person who created the repository ended up with enough capacity for all members to access the account.
+We signed up for a Git repository on BitBucket \cite{bitbucket} where we plan to commit all the work we produce. We initially had an issue that free private repositories hosted on BitBucket have a maximum of 5 participants, whereas we had 6 group members. Fortunately when new users sign up to the services from an invite, the person that sends the invite gets additional capacity. This meant that the person who created the repository ended up with enough capacity for all members to access the account.
 
 \subsection{Group Members Without Internet}
 Unfortunately two of our group members were without internet for the first 3 weeks of term. This was an issue because they were unable to just work in the DCS labs because the computers there didn't have the software required (such as VirtualBox or the WSN simulators). To work around this, those two members were given tasks that could be accomplished with their own machines and without internet. Once they obtained internet they were given tasks, that access allowed them to accomplish.

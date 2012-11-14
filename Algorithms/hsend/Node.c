@@ -1,14 +1,15 @@
 #include "contiki.h"
 
-#include "core/lib/list.h"
+#include "dev/leds.h"
+#include "lib/list.h"
 
 #include "net/rime.h"
 #include "net/rime/mesh.h"
 #include "net/rime/stbroadcast.h"
-#include ""
 
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "debug-helper.h"
 
@@ -20,18 +21,19 @@ static rimeaddr_t baseStationAddr;
 static uint8_t message_id = 10;
 static uint8_t message_id_received;
 
+//static uint8_t highest_hops_seen = 0;
+
+static list_t message_list;
 
 //Methods
 static void 
 send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id, char* pred, uint8_t hop_limit);
 
-static list_t message_list;
-
 typedef struct 
 {
 	uint8_t message_id;
 	uint8_t hops;
-} message_elem_t;
+} list_elem_t;
 
 typedef struct
 {
@@ -49,15 +51,6 @@ bool is_base()
 
 	return rimeaddr_cmp(&rimeaddr_node_addr, &base) != 0;
 }
-
-/*static bool 
-list_is_elem(list_t * list)
-{
-	while (list->next) 
-	{
-		
-	}
-}*/
 
 static uint8_t 
 get_message_id()
@@ -106,18 +99,35 @@ mesh_timedout(struct mesh_conn *c)
 
 	}
 }
-	static uint8_t highest_hops_seen = 0;
 
 static void
 stbroadcast_recv(struct stbroadcast_conn *c)
 {
 	predicate_check_msg_t const * msg = (predicate_check_msg_t const *)packetbuf_dataptr();
+
 	uint8_t hop_limit = msg->hop_limit;
+	
+	//check message has not been recieved before
+	bool loop = true;
+	list_elem_t list_head = list_head(&message_list);
+
+	do
+	{
+		if()
+
+		if()
+	}
+	while(loop);
+
 	if (message_id_received != msg->message_id && hop_limit > highest_hops_seen) 
 	{
-		message_id_received = msg->message_id;
-		highest_hops_seen = hop_limit;
-		//send via mesh to originator
+		list_elem_t const * list_msg;
+		list_msg->message_id = msg->message_id;
+		list_msg->hops = msg->hops;
+
+		list_push(&message_list, list_msg); 
+		
+
 		printf("predicate: %s\n", msg->predicate_to_check);
 
 
@@ -151,7 +161,7 @@ cancel_stbroadcast()
 }
 
 static void
-sendPredicateToNode(rimeaddr_t dest, char * pred)
+send_predicate_to_node(rimeaddr_t dest, char * pred)
 {
 	packetbuf_clear();
 	packetbuf_set_datalen(strlen(pred));
@@ -163,7 +173,7 @@ sendPredicateToNode(rimeaddr_t dest, char * pred)
 }
 
 static void 
-sendToBaseStation(char* message)
+send_to_base_station(char* message)
 {
 	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));
 	baseStationAddr.u8[sizeof(rimeaddr_t) - 2] = 1;
@@ -230,8 +240,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	if (is_base())
+	if (is_base()) //SINK
 	{
+		leds_on(LEDS_BLUE);
+
 		while(1)
 		{
 			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
@@ -239,11 +251,13 @@ PROCESS_THREAD(mainProcess, ev, data)
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
 	}
-	else
+	else //NODE
 	{
 		stbroadcast_open(&stbroadcast, 8, &stbroadcastCallbacks);
 		etimer_set(&et, 20 * CLOCK_SECOND); //10 second timer
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+		list_init(message_list);
 		
 		while(1)
 		{
@@ -256,7 +270,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
 				message_id_received = get_message_id();
-				send_n_hop_predicate_check(rimeaddr_node_addr,message_id_received, "Hello World!!!", 2);
+				send_n_hop_predicate_check(rimeaddr_node_addr, message_id_received, "Hello World!!!", 2);
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

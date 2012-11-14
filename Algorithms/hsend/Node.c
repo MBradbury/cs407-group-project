@@ -1,5 +1,7 @@
 #include "contiki.h"
 
+#include "core/lib/list.h"
+
 #include "net/rime.h"
 #include "net/rime/mesh.h"
 #include "net/rime/stbroadcast.h"
@@ -17,6 +19,22 @@ static rimeaddr_t dest;
 static uint8_t message_id = 10;
 
 static uint8_t message_id_received;
+
+static list_t message_list;
+
+typedef struct 
+{
+	uint8_t message_id;
+	uint8_t hops;
+} message_elem_t;
+
+static bool list_isElem(list_t * list)
+{
+	while (list->next) 
+	{
+		
+	}
+}
 
 static void
 sendNHopPredicateCheck(rimeaddr_t originator, uint8_t message_id, char* pred, uint8_t hop_limit);
@@ -209,6 +227,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
+	list_init(message_list);
 	if (isBase())
 	{
 		while(1)

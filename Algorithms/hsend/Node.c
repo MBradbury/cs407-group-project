@@ -3,6 +3,7 @@
 #include "net/rime.h"
 #include "net/rime/mesh.h"
 #include "net/rime/stbroadcast.h"
+#include ""
 
 #include <stdio.h>
 #include <string.h>
@@ -12,14 +13,14 @@
 static struct mesh_conn mesh;
 static struct stbroadcast_conn stbroadcast;
 
-static rimeaddr_t dest;
+static rimeaddr_t baseStationAddr;
 
 static uint8_t message_id = 10;
-
 static uint8_t message_id_received;
 
-static void
-sendNHopPredicateCheck(rimeaddr_t originator, uint8_t message_id, char* pred, uint8_t hop_limit);
+//Methods
+static void 
+send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id, char* pred, uint8_t hop_limit);
 
 typedef struct
 {
@@ -29,9 +30,9 @@ typedef struct
 	uint8_t hop_limit;
 } predicate_check_msg_t;
 
-bool isBase()
+bool is_base()
 {
-	rimeaddr_t base;
+	static rimeaddr_t base;
 	memset(&base, 0, sizeof(rimeaddr_t));
 	base.u8[sizeof(rimeaddr_t) - 2] = 1;
 
@@ -48,7 +49,7 @@ get_message_id()
 static void 
 mesh_recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 {
-	if(isBase())
+	if(is_base())
 	{
 		printf("Message received from: %s message: %s\n",addr2str(from),(char *)packetbuf_dataptr());
 	}
@@ -61,7 +62,7 @@ mesh_recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 static void
 mesh_sent(struct mesh_conn *c)
 {
-	if(isBase())
+	if(is_base())
 	{
 
 	}
@@ -76,7 +77,7 @@ mesh_timedout(struct mesh_conn *c)
 {
   	printf("packet timedout\n");
 
-	if(isBase())
+	if(is_base())
 	{
 
 	}
@@ -105,7 +106,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 		{
 			printf("Node resending: %s\n",addr2str(&rimeaddr_node_addr) );
 			//send message on with one less hop limit
-			sendNHopPredicateCheck(msg->originator,msg->message_id, msg->predicate_to_check,hop_limit - 1);
+			send_n_hop_predicate_check(msg->originator,msg->message_id, msg->predicate_to_check,hop_limit - 1);
 		}
 	
 		
@@ -144,18 +145,18 @@ sendPredicateToNode(rimeaddr_t dest, char * pred)
 static void 
 sendToBaseStation(char* message)
 {
-	memset(&dest, 0, sizeof(rimeaddr_t));
-	dest.u8[sizeof(rimeaddr_t) - 2] = 1;
+	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));
+	baseStationAddr.u8[sizeof(rimeaddr_t) - 2] = 1;
 
 	packetbuf_clear();
 	packetbuf_set_datalen(strlen(message));
 	packetbuf_copyfrom(message, strlen(message));
 
-	mesh_send(&mesh, &dest); //send the message
+	mesh_send(&mesh, &baseStationAddr); //send the message
 }
 
 static void
-sendNHopPredicateCheck(rimeaddr_t originator, uint8_t message_id_to_send, char* pred, uint8_t hop_limit)
+send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id_to_send, char* pred, uint8_t hop_limit)
 {
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_check_msg_t));
@@ -190,8 +191,8 @@ PROCESS_THREAD(networkInit, ev, data)
 	mesh_open(&mesh, 147, &meshCallbacks);
 
 	//set the base station
-	memset(&dest, 0, sizeof(rimeaddr_t));
-	dest.u8[sizeof(rimeaddr_t) - 2] = 1;
+	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));
+	baseStationAddr.u8[sizeof(rimeaddr_t) - 2] = 1;
 
 
 	//5 second timer
@@ -209,7 +210,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	if (isBase())
+	if (is_base())
 	{
 		while(1)
 		{
@@ -235,7 +236,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
 				message_id_received = get_message_id();
-				sendNHopPredicateCheck(rimeaddr_node_addr,message_id_received, "Hello World!!!", 2);
+				send_n_hop_predicate_check(rimeaddr_node_addr,message_id_received, "Hello World!!!", 2);
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

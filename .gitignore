@@ -36,3 +36,6 @@ symbols.h
 .nfs*
 *.~vsd
 VarDepthClustering
+/PredicateLanguage/obj/*
+/PredicateLanguage/lib/*
+/PredicateLanguage/predlang

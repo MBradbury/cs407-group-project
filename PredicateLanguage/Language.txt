@@ -5,11 +5,32 @@ ADDR ::= NN.NN
 
 N = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
-PREDICATE ::= @(VAR : SET ~ PREDICATE)
-            | #(VAR : SET ~ PREDICATE)
-			| PREDICATE & PREDICATE
-			| PREDICATE | PREDICATE
+PREDICATE ::= using FUNC as SET in PREDICATE
+            | @(VAR : SET ~ PREDICATE)			FORALL
+            | #(VAR : SET ~ PREDICATE)			EXISTS
+			| PREDICATE POP PREDICATE
 			| ! PREDICATE
-			| VAR OP VAR
+			| VAREXPR VPOP VAREXPR
 			
-OP ::= = | < | <= | > | >= | !=
+VPOP ::= = | < | <= | > | >= | !=
+POP  ::= | | &
+
+
+VAREXPR ::= VAR
+          | NAME(VAR)
+          | NAME(this)
+          | VAR VOP VAR
+          | NUMBER
+          | SETFN(SET)
+
+SETFN ::= sum | mean | mode | median | max | min | product
+
+VOP ::= + | - | * | /
+
+FUNC ::= FNNAME(ARGS)
+ARGS ::=
+       | ARG
+       | ARGS, ARGS
+
+NUMBER ::= 0 | [1-9][0-9]*
+

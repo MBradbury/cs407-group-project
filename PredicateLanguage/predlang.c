@@ -1,5 +1,8 @@
 #include "predlang.h"
 
+#include <stdio.h>
+#include <stdbool.h>
+
 
 #define MAXIMUM_FUNCTIONS 5
 #define MAXIMUM_VARIABLES 2
@@ -42,7 +45,7 @@ void reset_error(void)
 /****************************************************
  ** MEMORY MANAGEMENT
  ***************************************************/
-void * stack_alloc(size_t size)
+static void * heap_alloc(size_t size)
 {
 	if (heap_ptr - size < stack_ptr)
 	{
@@ -67,7 +70,10 @@ typedef struct
 {
 	char * name;
 	void * location;
-	uint8_t type; // TODO: as this is a bit flag, can it be moved into one of the pointers?
+
+	unsigned int type : 2;
+	unsigned int is_array : 1;
+	unsigned int length : 13;
 
 } variable_reg_t;
 
@@ -78,6 +84,7 @@ static size_t variable_type_size(variable_type_t type)
 	{
 	case TYPE_INTEGER: return sizeof(int);
 	case TYPE_FLOATING: return sizeof(float);
+	case TYPE_USER: return data_size;
 	default: return 0;
 	}
 }
@@ -96,11 +103,11 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 
 	variable_reg_t * variable = &variable_regs[variable_regs_count];
 
-	variable->name = (char *)stack_alloc(name_length + 1);
+	variable->name = (char *)heap_alloc(name_length + 1);
 	strncpy(variable->name, name, name_length);
 
 	// Lets create some space in the heap to store the variable
-	variable->location = stack_alloc(variable_type_size(type));
+	variable->location = heap_alloc(variable_type_size(type));
 	memset(variable->location, 0, variable_type_size(type));
 
 	variable->type = type;
@@ -108,7 +115,32 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 	return variable;
 }
 
-variable_reg_t * get_variable(char const * name)
+static variable_reg_t * create_array(char const * name, size_t name_length, variable_type_t type, size_t length)
+{
+	if (variable_regs_count == MAXIMUM_VARIABLES)
+	{
+		error = "Created maximum number of variables";
+		return NULL;
+	}
+
+	variable_reg_t * variable = &variable_regs[variable_regs_count];
+
+	variable->name = (char *)heap_alloc(name_length + 1);
+	strncpy(variable->name, name, name_length);
+
+	// Lets create some space in the heap to store the variable
+	// We allocate enough space of `length' `data_size'ed items
+	// So we can store `length' user data items
+	variable->location = heap_alloc(variable_type_size(type) * length);
+	memset(variable->location, 0, variable_type_size(type) * length);
+
+	variable->type = type;
+	variable->is_array = true;
+
+	return variable;
+}
+
+static variable_reg_t * get_variable(char const * name)
 {
 	int i;
 	for (i = 0; i != MAXIMUM_VARIABLES; ++i)
@@ -124,12 +156,12 @@ variable_reg_t * get_variable(char const * name)
 	return NULL;
 }
 
-int * get_variable_as_int(char const * name)
+static int * get_variable_as_int(char const * name)
 {
 	return (int *)get_variable(name)->location;
 }
 
-float * get_variable_as_float(char const * name)
+static float * get_variable_as_float(char const * name)
 {
 	return (float *)get_variable(name)->location;
 }
@@ -173,9 +205,9 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	return 0;
 }
 
-void * call_function(char const * name, void * data)
+static void const * call_function(char const * name, void * data)
 {
-	int i = 0;
+	size_t i = 0;
 	for (; i != function_regs_count; ++i)
 	{
 		if (strcmp(functions_regs[i].name, name) == 0)
@@ -222,7 +254,7 @@ typedef enum {
 
 static const char * opcode_names[] = {
 	"HALT", // Stop evaluation
-	"PUSH", "POP", // Put variables onto the stack
+	"PUSH", "POP", // Put variables onto the staccall_functionk
 	"FETCH", "STORE", // Read / Write variables
 	"NEXT", // List Iteration
 	"ADD", "SUB", "MUL", "DIV", "MOD", // Aritmetic operations
@@ -245,8 +277,8 @@ static const char * opcode_names[] = {
 void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size)
 {
 	// Record the user's data access function
-	data_fn = data_fn;
-	data_size = data_size;
+	data_fn = given_data_fn;
+	data_size = given_data_size;
 
 	// Reset the stack and heap positions
 	stack_ptr = stack;
@@ -254,10 +286,10 @@ void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size)
 
 
 	// Allocate some space for function registrations
-	functions_regs = (function_reg_t *)stack_alloc(sizeof(function_reg_t) * MAXIMUM_FUNCTIONS);
+	functions_regs = (function_reg_t *)heap_alloc(sizeof(function_reg_t) * MAXIMUM_FUNCTIONS);
 
 	// Allocate space for variable registrations
-	variable_regs = (variable_reg_t *)stack_alloc(sizeof(variable_reg_t) * MAXIMUM_VARIABLES);
+	variable_regs = (variable_reg_t *)heap_alloc(sizeof(variable_reg_t) * MAXIMUM_VARIABLES);
 }
 
 
@@ -280,10 +312,12 @@ typedef struct
 	double temp;
 } user_data_t;
 
-static user_data_t node_data = {0, 0, 0};
+
 
 static void * local_node_data_fn(void)
 {
+	static user_data_t node_data;
+
 	node_data.id = 1;
 	node_data.slot = 2;
 	node_data.temp = 20.0;
@@ -292,19 +326,19 @@ static void * local_node_data_fn(void)
 }
 
 
-static void * get_id_fn(void * ptr)
+static void const * get_id_fn(void const * ptr)
 {
-	return &((user_data_t *)ptr)->id;
+	return &((user_data_t const *)ptr)->id;
 }
 
-static void * get_slot_fn(void * ptr)
+static void const * get_slot_fn(void const * ptr)
 {
-	return &((user_data_t *)ptr)->slot;
+	return &((user_data_t const *)ptr)->slot;
 }
 
-static void * get_temp_fn(void * ptr)
+static void const * get_temp_fn(void const * ptr)
 {
-	return &((user_data_t *)ptr)->temp;
+	return &((user_data_t const *)ptr)->temp;
 }
 
 
@@ -318,6 +352,20 @@ int main(int argc, char ** argv)
 	register_function("temp", &get_temp_fn, TYPE_FLOATING);
 
 	variable_reg_t * result = create_variable("result", strlen("result"), TYPE_INTEGER);
+
+	*((int *)result->location) = *(int const *)call_function("slot", (*data_fn)());
+
+	printf("sizeof(void *): %u\n", sizeof(void *));
+	printf("sizeof(int): %u\n", sizeof(int));
+	printf("sizeof(float): %u\n", sizeof(float));
+	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
+	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
+
+	printf("Data %d should equal %d\n",
+		*get_variable_as_int("result"),
+		((user_data_t const *) (*data_fn)())->slot
+	);
+
 
 	return 0;
 }

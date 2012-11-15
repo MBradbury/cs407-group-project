@@ -9,12 +9,14 @@
 typedef enum
 {
 	TYPE_INTEGER = 0,
-	TYPE_FLOATING = 1
+	TYPE_FLOATING = 1,
+	TYPE_USER = 2
+	
 } variable_type_t;
 
 
 
-typedef void * (*data_access_fn)(void * ptr);
+typedef void const * (*data_access_fn)(void const * ptr);
 
 int register_function(char const * name, data_access_fn fn, variable_type_t type);
 

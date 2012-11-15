@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I. -Os
+CFLAGS=-I. -Os -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wfloat-equal
 
 ODIR=obj
 LDIR=lib
@@ -22,4 +22,5 @@ predlang: $(OBJ)
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ 
+	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~
+

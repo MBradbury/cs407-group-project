@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
+
 #include "lib/random.h"
 #include "debug-helper.h"
 
@@ -18,22 +20,19 @@ static struct stbroadcast_conn stbroadcast;
 
 static rimeaddr_t baseStationAddr;
 
-static uint8_t message_id = 1;
-static uint8_t message_id_received;
-
-
+static unsigned int message_id = 1;
 
 //Methods
 static void 
-send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id, char* pred, uint8_t hop_limit);
+send_n_hop_predicate_check(rimeaddr_t const * originator, unsigned int message_id, char const * pred, unsigned int hop_limit);
 static void
-send_predicate_to_node(rimeaddr_t dest, char * pred);
+send_predicate_to_node(rimeaddr_t const * dest, char const * pred);
 
 struct list_elem_struct
 {
 	struct list_elem_struct *next;
-	uint8_t message_id;
-	uint8_t hops;
+	unsigned int message_id;
+	unsigned int hops;
 };
 
 LIST(message_list);
@@ -41,13 +40,13 @@ LIST(message_list);
 typedef struct
 {
 	rimeaddr_t originator;
-	uint8_t message_id;
-	char* predicate_to_check;
-	uint8_t hop_limit;
+	unsigned int message_id;
+	unsigned int hop_limit;
+	char * predicate_to_check;
 } predicate_check_msg_t;
 
 static bool 
-is_base()
+is_base(void)
 {
 	static rimeaddr_t base;
 	memset(&base, 0, sizeof(rimeaddr_t));
@@ -57,7 +56,7 @@ is_base()
 }
 
 static uint8_t 
-get_message_id()
+get_message_id(void)
 {
 	uint8_t returnvalue;
 
@@ -78,11 +77,15 @@ mesh_recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 {
 	if(is_base())
 	{
-		printf("Mesh Message received from: %s message: %s\n",addr2str(&from),(char *)packetbuf_dataptr());
+		printf("Mesh Message received from: %s message: %s\n",
+			addr2str(from),
+			(char const *)packetbuf_dataptr());
 	}
 	else
 	{
-		printf("Mesh Predicate received: %s from:%s \n",(char *)packetbuf_dataptr(),addr2str(&from) );
+		printf("Mesh Predicate received: %s from: %s\n",
+			(char const *)packetbuf_dataptr(),
+			addr2str(from));
 	}
 }	
 
@@ -123,53 +126,61 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	printf("%d\n", msg->hop_limit);
 	printf("%s\n", msg->predicate_to_check);
 
-	//check message has not been recieved before
+	// Check message has not been recieved before
 	bool deliver_msg = false;
-	
-	struct list_elem_struct * list_iterator = (struct list_elem_struct *)list_head(message_list);
 
-	struct list_elem_struct * delivered_msg = (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
-		delivered_msg->message_id = msg->message_id;
-		delivered_msg->hops = msg->hop_limit;
-	do
+	struct list_elem_struct * list_iterator = NULL;
+	for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
+		  list_iterator != NULL;
+		  list_iterator = (struct list_elem_struct *)list_item_next(&list_iterator)
+		)
 	{
-
-		if (list_iterator == NULL) //End of List and the Message has NOT been delivered before
+		// Message has been delivered before
+		if (list_iterator->message_id == msg->message_id)
 		{
-			list_push(message_list, delivered_msg);
-
-			deliver_msg = true;
-			break;
-		}
-		else if(list_iterator->message_id == delivered_msg->message_id) //Message has been delivered before
-		{
-			if(delivered_msg->hops > list_iterator->hops) //if the new message has a higher hop count
+			// If the new message has a higher hop count
+			if (msg->hop_limit > list_iterator->hops)
 			{
 				printf("Message received before and hops is higher\n");
 
-				list_iterator->hops = delivered_msg->hops;
+				list_iterator->hops = msg->hop_limit;
 				deliver_msg = true;
 			}
+
 			break;
 		} 
-		else //Haven't found message yet and not at the end of the list
-		{
-			list_iterator = (struct list_elem_struct *)list_item_next(&list_iterator);
-		}
 	}
-	while(true);
+	
+	// End of List and the Message has NOT been delivered before
+	if (list_iterator == NULL)
+	{
+		struct list_elem_struct * delivered_msg = (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
+		delivered_msg->message_id = msg->message_id;
+		delivered_msg->hops = msg->hop_limit;
+
+		list_push(message_list, delivered_msg);
+
+		deliver_msg = true;
+	}
 
 	if (deliver_msg) 
 	{
+		// Send predicate value back to originator		
+		send_predicate_to_node(&msg->originator, "Value");
 
 		if (msg->hop_limit > 1) //last node 
 		{
-			printf("Node %s is resending message from: %s hop_limit:%d\n",addr2str(&rimeaddr_node_addr),addr2str(&msg->originator),msg->hop_limit);
-			//send message on with one less hop limit
-			send_n_hop_predicate_check(msg->originator,msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
+			static char addr_str[RIMEADDR_STRING_LENGTH];
+			static char addr_str2[RIMEADDR_STRING_LENGTH];
+
+			printf("Node %s is resending message from: %s hop_limit:%d\n",
+				addr2str_r(&rimeaddr_node_addr, addr_str, RIMEADDR_STRING_LENGTH),
+				addr2str_r(&msg->originator, addr_str2, RIMEADDR_STRING_LENGTH),
+				msg->hop_limit);
+
+			// Send message on with one less hop limit
+			send_n_hop_predicate_check(&msg->originator, msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
 		}
-		//send predicate value back to originator		
-		send_predicate_to_node(msg->originator,"Value");
 	}
 }
 
@@ -179,43 +190,44 @@ stbroadcast_sent(struct stbroadcast_conn *c)
 	//printf("I've sent!\n");
 }
 
-const static struct mesh_callbacks meshCallbacks = {mesh_recv, mesh_sent, mesh_timedout};
-const static struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
+static const struct mesh_callbacks meshCallbacks = {mesh_recv, mesh_sent, mesh_timedout};
+static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
 
 static void
-cancel_stbroadcast()
+cancel_stbroadcast(void * ptr)
 {
 	printf("Canceling\n");
 	stbroadcast_cancel(&stbroadcast);
 }
 
 static void
-send_predicate_to_node(rimeaddr_t dest, char * pred)
+send_predicate_to_node(rimeaddr_t const * dest, char const * pred)
 {
 	packetbuf_clear();
 	packetbuf_set_datalen(strlen(pred));
 	debug_packet_size(strlen(pred));
 	packetbuf_copyfrom(pred, strlen(pred));
 
-	mesh_send(&mesh, &dest); //send the message
+	mesh_send(&mesh, dest);
 
 }
 
 static void 
-send_to_base_station(char* message)
+send_to_base_station(char const * message)
 {
 	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));
 	baseStationAddr.u8[sizeof(rimeaddr_t) - 2] = 1;
 
 	packetbuf_clear();
 	packetbuf_set_datalen(strlen(message));
+	debug_packet_size(strlen(message));
 	packetbuf_copyfrom(message, strlen(message));
 
-	mesh_send(&mesh, &baseStationAddr); //send the message
+	mesh_send(&mesh, &baseStationAddr);
 }
 
 static void
-send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id_to_send, char* pred, uint8_t hop_limit)
+send_n_hop_predicate_check(rimeaddr_t const * originator, unsigned int message_id_to_send, char const * pred, unsigned int hop_limit)
 {
 	printf("%d\n", hop_limit);
 
@@ -225,7 +237,7 @@ send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id_to_send, ch
 	predicate_check_msg_t * msg = (predicate_check_msg_t *)packetbuf_dataptr();
 	memset(msg, 0, sizeof(predicate_check_msg_t));
 	
-	msg->originator = originator;
+	rimeaddr_copy(&msg->originator, originator);
 	msg->message_id = message_id_to_send;
 	msg->predicate_to_check = pred;
 	msg->hop_limit = hop_limit;
@@ -255,7 +267,7 @@ PROCESS_THREAD(networkInit, ev, data)
 
 	mesh_open(&mesh, 147, &meshCallbacks);
 
-	//set the base station
+	// Set the base station
 	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));
 	baseStationAddr.u8[sizeof(rimeaddr_t) - 2] = 1;
 
@@ -269,7 +281,6 @@ PROCESS_THREAD(networkInit, ev, data)
 
 PROCESS_THREAD(mainProcess, ev, data)
 {
-	//TODO: allocated instead of static
 	static struct etimer et;
 
 	PROCESS_EXITHANDLER(goto exit;)
@@ -279,7 +290,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	{
 		leds_on(LEDS_BLUE);
 
-		while(1)
+		while (true)
 		{
 			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
 
@@ -288,7 +299,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	}
 	else //NODE
 	{
-		stbroadcast_open(&stbroadcast, 8, &stbroadcastCallbacks);
+		stbroadcast_open(&stbroadcast, 132, &stbroadcastCallbacks);
 
 		list_init(message_list);
 
@@ -297,23 +308,27 @@ PROCESS_THREAD(mainProcess, ev, data)
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		
-		while(1)
+		while (true)
 		{
 			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
 
-			rimeaddr_t test;
+			static rimeaddr_t test;
 			memset(&test, 0, sizeof(rimeaddr_t));
 			test.u8[sizeof(rimeaddr_t) - 2] = 2;
+
 			static int count = 0;
-			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
+
+			if (rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
 				struct list_elem_struct * delivered_msg =  (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
-					delivered_msg->message_id = get_message_id();
-					delivered_msg->hops = 2;
-					printf("%d\n", delivered_msg->hops); //2
+				delivered_msg->message_id = get_message_id();
+				delivered_msg->hops = 2;
+
+				printf("%d\n", delivered_msg->hops); //2
 				list_push(message_list, delivered_msg);
 				printf("%d\n", delivered_msg->hops); //0
-				send_n_hop_predicate_check(rimeaddr_node_addr, delivered_msg->message_id, "Hello World!!!", delivered_msg->hops);
+
+				send_n_hop_predicate_check(&rimeaddr_node_addr, delivered_msg->message_id, "Hello World!!!", delivered_msg->hops);
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

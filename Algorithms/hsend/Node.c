@@ -110,7 +110,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	//check message has not been recieved before
 	bool deliver_msg = false;
 	
-	list_elem_t * list_iterator = (list_elem_t *)list_head(message_list);
+	list_elem_t * list_iterator = (list_elem_t *)list_head(&message_list);
 
 	list_elem_t * delivered_msg = (list_elem_t *)malloc(sizeof(list_elem_t));
 		delivered_msg->message_id = msg->message_id;
@@ -123,12 +123,11 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 			list_push(&message_list,&delivered_msg);
 
 			deliver_msg = true;
-
 			break;
 		}
 		else if(list_iterator->message_id == delivered_msg->message_id) //Message has been delivered before
 		{
-			if(list_iterator->hops < delivered_msg->hops) //if the new message has a higher hop cout
+			if(delivered_msg->hops > list_iterator->hops) //if the new message has a higher hop cout
 			{
 				printf("Message received before and hops is lower\n");
 
@@ -139,7 +138,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 		} 
 		else //Haven't found message yet and not at the end of the list
 		{
-			list_iterator = (list_elem_t *)list_item_next(message_list);
+			list_iterator = (list_elem_t *)list_item_next(&message_list);
 		}
 	}
 	while(true);
@@ -151,9 +150,8 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 		{
 			printf("Node %s is resending message from: %s hop_limit:%d\n",addr2str(&rimeaddr_node_addr),addr2str(&msg->originator),msg->hop_limit);
 			//send message on with one less hop limit
-			send_n_hop_predicate_check(msg->originator,msg->message_id, msg->predicate_to_check,msg->hop_limit - 1);
+			send_n_hop_predicate_check(msg->originator,msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
 		}
-	
 		//send predicate value back to originator		
 		send_predicate_to_node(msg->originator,"Value");
 	}
@@ -217,10 +215,10 @@ send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id_to_send, ch
 	random_init(rimeaddr_node_addr.u8[0]+2);
 	int random = (random_rand() % 5);
 	if (random <= 1) random++;
+
 	stbroadcast_send_stubborn(&stbroadcast, random*CLOCK_SECOND);	
 	
 	static struct ctimer stbroadcast_stop_timer;
-
 	ctimer_set(&stbroadcast_stop_timer, 30 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
 }
 

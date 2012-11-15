@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include "lib/random.h"
 #include "debug-helper.h"
 
 static struct mesh_conn mesh;
@@ -66,11 +66,11 @@ mesh_recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 {
 	if(is_base())
 	{
-		printf("Message received from: %s message: %s\n",addr2str(from),(char *)packetbuf_dataptr());
+		printf("Mesh Message received from: %s message: %s\n",addr2str(from),(char *)packetbuf_dataptr());
 	}
 	else
 	{
-		printf("Predicate received: %s from:%s \n",(char *)packetbuf_dataptr(),addr2str(from) );
+		printf("Mesh Predicate received: %s from:%s \n",(char *)packetbuf_dataptr(),addr2str(from) );
 	}
 }	
 
@@ -83,14 +83,14 @@ mesh_sent(struct mesh_conn *c)
 	}
 	else
 	{
-  		printf("packet sent\n");
+  	//	printf("mesh packet sent\n");
 	}
 }
 
 static void
 mesh_timedout(struct mesh_conn *c)
 {
-  	printf("packet timedout\n");
+  //	printf("mesh packet timedout\n");
 
 	if(is_base())
 	{
@@ -121,7 +121,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 		{
 			deliver_msg = true;
 
-			list_push(message_list,delivered_msg);
+			list_push(&message_list,&delivered_msg);
 			break;
 		}
 		else if(list_iterator->message_id == delivered_msg->message_id) //Message has been delivered before
@@ -211,13 +211,15 @@ send_n_hop_predicate_check(rimeaddr_t originator, uint8_t message_id_to_send, ch
 	msg->message_id = message_id_to_send;
 	msg->predicate_to_check = pred;
 	msg->hop_limit = hop_limit;
-	
-	stbroadcast_send_stubborn(&stbroadcast, CLOCK_SECOND);
+	random_init(rimeaddr_node_addr.u8[0]+2);
+	int random = (random_rand() % 5);
+	printf("random number = %d\n",random );
+	stbroadcast_send_stubborn(&stbroadcast, random*CLOCK_SECOND);
 	
 	
 	static struct ctimer stbroadcast_stop_timer;
 
-	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
+	ctimer_set(&stbroadcast_stop_timer, 30 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
 }
 
 PROCESS(networkInit, "Network Init");
@@ -286,7 +288,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 			if(rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
 				message_id_received = get_message_id();
-				send_n_hop_predicate_check(rimeaddr_node_addr, message_id_received, "Hello World!!!", 3);
+				send_n_hop_predicate_check(rimeaddr_node_addr, message_id_received, "Hello World!!!", 2);
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

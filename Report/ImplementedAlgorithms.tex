@@ -10,3 +10,17 @@
 
 \subsection{Hierarchical Clustering}
 
+\subsection{HSend}
+\begin{itemize}
+	\item[] Began with single hop predicates
+	\begin{itemize}
+		\item used Mesh to gather information from surrounding nodes, due to implementation, we could only send one message as a one time
+	\end{itemize}	
+	\item[] Started work on Multi-hop local based predicates
+	\begin{itemize}
+		\item stubborn broadcast to reliably broadcast to one hop neighbours, who would then rebroadcast the message to their neighbours until the hop limit was reached.
+		\item We tried using trickle to return the results back to the originating node. However, due to trickles implementation, only one message could be flooded through the network at one time. 
+		\item due to collisions, we used ctimers to delay the responses to messages sent back to the originator node.
+		\item next step is to re-implement the algorithm, so that nodes send messages directly back along the chain of nodes they recieved the predicated check message from. This way the messages will be more reliably returned to the orignator node. This also allows for multiple messages to be sent this way.
+	\end{itemize}	
+\end{itemize}

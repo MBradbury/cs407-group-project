@@ -504,7 +504,6 @@ static void evaluate(unsigned char * start, size_t program_length)
 			require_stack_size(sizeof(int));
 			*get_variable_as_int((char const *)(current + 1)) = *(int *)stack_ptr;
 			current += strlen((char const *)(current + 1)) + 1;
-			pop_stack(sizeof(int));
 			break;
 
 		case FFETCH:
@@ -516,7 +515,6 @@ static void evaluate(unsigned char * start, size_t program_length)
 			require_stack_size(sizeof(float));
 			*get_variable_as_float((char const *)(current + 1)) = *(float *)stack_ptr;
 			current += strlen((char const *)(current + 1)) + 1;
-			pop_stack(sizeof(float));
 			break;
 
 		case AFETCH:
@@ -678,7 +676,7 @@ void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size)
 
 	// Lets memset the stack to a certain pattern
 	// This makes if obvious if we have memory issues
-	memset(stack, 0xee, STACK_SIZE);
+	memset(stack, 0xEE, STACK_SIZE);
 
 
 	// Allocate some space for function registrations
@@ -705,18 +703,21 @@ typedef struct
 {
 	int id;
 	int slot;
-	double temp;
+	float temp;
 } user_data_t;
 
-
+static void set_user_data(user_data_t * data, int id, int slot, float temp)
+{
+	data->id = id;
+	data->slot = slot;
+	data->temp = temp;
+}
 
 static void * local_node_data_fn(void)
 {
 	static user_data_t node_data;
 
-	node_data.id = 1;
-	node_data.slot = 2;
-	node_data.temp = 20.0;
+	set_user_data(&node_data, 1, 2, 20.0);
 
 	return &node_data;
 }
@@ -753,19 +754,19 @@ int main(int argc, char * argv[])
 
 
 	create_variable("i", strlen("i"), TYPE_INTEGER);
-	variable_reg_t * var_array = create_array("1hopn", strlen("1hopn"), TYPE_INTEGER, 10);
+	variable_reg_t * var_array = create_array("1hopn", strlen("1hopn"), TYPE_USER, 10);
 
-	int * arr = (int *)var_array->location;
-	arr[0] = 1;
-	arr[1] = 3;
-	arr[2] = 5;
-	arr[3] = 9;
-	arr[4] = 11;
-	arr[5] = 13;
-	arr[6] = 15;
-	arr[7] = 17;
-	arr[8] = 19;
-	arr[9] = 21;
+	user_data_t * arr = (user_data_t *)var_array->location;
+	set_user_data(&arr[0], 0, 1, 25);
+	set_user_data(&arr[1], 1, 3, 26);
+	set_user_data(&arr[2], 2, 5, 27);
+	set_user_data(&arr[3], 3, 7, 26);
+	set_user_data(&arr[4], 4, 9, 25);
+	set_user_data(&arr[5], 5, 11, 26);
+	set_user_data(&arr[6], 6, 13, 27);
+	set_user_data(&arr[7], 7, 15, 26);
+	set_user_data(&arr[8], 8, 17, 25);
+	set_user_data(&arr[9], 9, 19, 26);
 
 	printf("Array length %d\n", var_array->length);
 
@@ -811,11 +812,13 @@ int main(int argc, char * argv[])
 	gen_op(ISTORE);
 	gen_string("i");
 
+	//gen_op(IPOP);
+
 
 	// Perform loop termination check
 	jmp_label_t label1 = 
-	gen_op(IFETCH);
-	gen_string("i");
+	//gen_op(IFETCH);
+	//gen_string("i");
 
 	gen_op(ALEN);
 	gen_string("1hopn");
@@ -834,6 +837,8 @@ int main(int argc, char * argv[])
 	gen_op(AFETCH);
 	gen_string("1hopn");
 
+	gen_op(CALL);
+	gen_string("slot");
 
 	// Increment loop counter
 	gen_op(IFETCH);
@@ -843,6 +848,8 @@ int main(int argc, char * argv[])
 
 	gen_op(ISTORE);
 	gen_string("i");
+
+	//gen_op(IPOP);
 
 
 	// Jump to start of loop
@@ -856,6 +863,10 @@ int main(int argc, char * argv[])
 
 
 	// Set jump locations
+	// We do this here because when we add
+	// the jump in the code we may not know whereresolve (jump);
+	// we are jumping to because the destination
+	// may be after the current jump is added.
 	alloc_jmp(jmp1, last);
 	alloc_jmp(jmp2, label1);
 
@@ -879,3 +890,4 @@ int main(int argc, char * argv[])
 
 	return 0;
 }
+

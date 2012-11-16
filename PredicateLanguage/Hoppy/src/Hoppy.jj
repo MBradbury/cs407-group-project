@@ -40,11 +40,11 @@ options {
   BUILD_TOKEN_MANAGER = true;
   SANITY_CHECK = true;
   FORCE_LA_CHECK = false;
-}Simple1
+}
 
 PARSER_BEGIN(Hoppy)
 
-public class Hoppy {newJJTemplate
+public class Hoppy {
 
   public static void main(String args[]) throws ParseException {
     Hoppy parser = new Hoppy(System.in);
@@ -57,7 +57,7 @@ PARSER_END(Hoppy)
 
 void Input() :
 {}
-{newJJTemplatenewJJTemplate
+{
   MatchedBraces() ("\n"|"\r")* <EOF>
 }
 

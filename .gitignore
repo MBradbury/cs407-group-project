@@ -40,3 +40,6 @@ VarDepthClustering
 /PredicateLanguage/lib/*
 /PredicateLanguage/predlang
 /PredicateLanguage/Hoppy/nbproject/private/
+/PredicateLanguage/Hoppy/build/
+/PredicateLanguage/Hoppy/dist/
+*.class

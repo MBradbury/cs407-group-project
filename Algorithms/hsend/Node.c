@@ -82,11 +82,6 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	if (deliver_msg) 
 	{
 		//Send predicate value back to originator
-		predicate_return_msg_t *runicast_msg = (predicate_return_msg_t*) malloc(sizeof(predicate_return_msg_t));
-		rimeaddr_copy(&runicast_msg->sender, &rimeaddr_node_addr);
-		rimeaddr_copy(&runicast_msg->target_reciever, &msg->originator);
-		runicast_msg->message_id = msg->message_id;
-		runicast_msg->evaluated_predicate = "Value";
 
 		static struct ctimer runicast_timer;
 		ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, msg->message_id);
@@ -121,7 +116,7 @@ stbroadcast_callback_cancel(void * ptr)
 static void
 runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
-	printf("runicast received from %s\n", addr2str(&from));
+	printf("runicast received from %s\n", addr2str(from));
 }
 
 static void
@@ -151,11 +146,15 @@ delayed_send_evaluated_predicate(uint8_t message_id)
 		if (list_iterator->message_id == message_id)
 		{
 			printf("Trying to send evaluated predicate to: %s\n", addr2str(&list_iterator->originator));
+			rimeaddr_t * dest = (rimeaddr_t *) malloc(sizeof(rimeaddr_t));
+			rimeaddr_copy(&dest,&list_iterator->originator);
+
 			send_evaluated_predicate(&rimeaddr_node_addr, 
-				&list_iterator->originator,  //TODO not being passed properly!!!!
+				dest,//&list_iterator->originator,  //TODO not being passed properly!!!!
 				list_iterator->message_id, 
 				evaluate_predicate(&list_iterator->predicate_to_check)
 			);
+			free(dest);
 			//TODO remove item from the list
 			break;
 		}
@@ -175,7 +174,7 @@ static char * evaluate_predicate(char const * predicate)
 static void
 send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate)
 {
-	printf("target receiver %s\n",addr2str(&target_reciever) );
+	printf("target receiver %s\n", addr2str(&target_reciever));
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_return_msg_t));
@@ -187,6 +186,7 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 	rimeaddr_copy(&msg->target_reciever, target_reciever);
 	msg->message_id = message_id;
 	msg->evaluated_predicate = evaluated_predicate;
+
 	runicast_send(&runicast, &target_reciever, 4);
 }
 

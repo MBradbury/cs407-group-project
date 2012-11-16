@@ -38,6 +38,16 @@ TOKEN : {
 	< USING : 	"using" >
 	| < AS :	"as" >
 	| < IN : 	"in" >
+	| < THIS : 	"this" >
+	| < ALL : 	"all" >
+	| < COLON :	":" >
+	| < TILDE :	"~" >
+	
+	//Operators
+	| < LOGICAL_MATH_OP : 	"==" | "!=" | "<" | "<=" | ">" | ">=" >
+	| < MATH_OP : 			"+" | "-" | "*" | "/" >
+	| < LOGICAL_OP :		"&" | "|" >
+	| < QUANTIFIER :		"@" | "#" >
 
 	//Regexes
 	| < ADDR : 	(<DIGIT>)+ "." (<DIGIT>)+ >
@@ -78,7 +88,7 @@ int[] Target() :
 	(
 		(
 			//Flood targeting.
-			"*"
+			<ALL>
 		)
 		|
 		(

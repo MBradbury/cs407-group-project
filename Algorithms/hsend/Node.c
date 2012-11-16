@@ -1,4 +1,4 @@
-#import "Node.h"
+#include "Node.h"
 
 //CREATE MESSAGE LIST DATA STRUCTURE
 LIST(message_list);
@@ -76,14 +76,14 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	if (deliver_msg) 
 	{
 		//Send predicate value back to originator
-		predicate_return_msg_t *trickle_msg = (predicate_return_msg_t*) malloc(sizeof(predicate_return_msg_t));
-		rimeaddr_copy(&trickle_msg->sender, &rimeaddr_node_addr);
-		rimeaddr_copy(&trickle_msg->target_reciever, &msg->originator);
-		trickle_msg->message_id = msg->message_id;
-		trickle_msg->evaluated_predicate = "Value";
+		predicate_return_msg_t *runicast_msg = (predicate_return_msg_t*) malloc(sizeof(predicate_return_msg_t));
+		rimeaddr_copy(&runicast_msg->sender, &rimeaddr_node_addr);
+		rimeaddr_copy(&runicast_msg->target_reciever, &msg->originator);
+		runicast_msg->message_id = msg->message_id;
+		runicast_msg->evaluated_predicate = "Value";
 
-		static struct ctimer trickle_timer;
-		ctimer_set(&trickle_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, trickle_msg);
+		static struct ctimer runicast_timer;
+		ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, runicast_msg);
 
 		//Rebroadcast Message If Hop Count Is Greater Than 1 
 		if (msg->hop_limit > 1) //last node 
@@ -104,13 +104,11 @@ stbroadcast_sent(struct stbroadcast_conn *c)
 }
 
 static void
-stbroadcast_cancel(void * ptr)
+stbroadcast_callback_cancel(void * ptr)
 {
 	printf("Canceling Stubborn Broadcast.\n");
 	stbroadcast_cancel(&stbroadcast);
 }
-
-static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
 
 
 //RELIABLE UNICAST
@@ -132,7 +130,6 @@ runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retrans
 
 }
 
-static const struct runicast_callbacks runicast_callbacks = {runicast_recv, runicast_sent, runicast_timedout}
 
 //METHODS
 static void
@@ -181,7 +178,7 @@ send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id_to_
 	stbroadcast_send_stubborn(&stbroadcast, random*CLOCK_SECOND);	
 	
 	static struct ctimer stbroadcast_stop_timer;
-	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &stbroadcast_cancel, NULL);
+	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &stbroadcast_callback_cancel, NULL);
 }
 
 PROCESS(networkInit, "Network Init");
@@ -198,7 +195,7 @@ PROCESS_THREAD(networkInit, ev, data)
 	random_init(rimeaddr_node_addr.u8[0]+7);
 	int random = (random_rand() % 10);
 	if (random <= 1) random++;
-	runicast_open(&trickle, 147, &trickleCallbacks);
+	runicast_open(&runicast, 147, &runicastCallbacks);
 
 	// Set the base station
 	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));

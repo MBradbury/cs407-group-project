@@ -17,7 +17,7 @@
 #include "debug-helper.h"
 
 
-static struct trickle_conn trickle; //connection for trickle
+static struct runicast_conn runicast; //connection for trickle
 static struct stbroadcast_conn stbroadcast; //connection for the stubborn broadcast
 
 static rimeaddr_t baseStationAddr; //address of the base station
@@ -53,24 +53,39 @@ typedef struct
 //Methods
 static bool 
 is_base(void);
+
+static uint8_t 
+get_message_id(void);
+
+static void
+delayed_send_evaluated_predicate(predicate_return_msg_t const* msg);
+
+static void
+send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate);
+
 static void 
 send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id, char const * pred, uint8_t hop_limit);
+
+//RELIABLE UNICAST
 static void
-send_predicate_to_node(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate);
+runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno);
+
 static void
-trickle_return_predicate_callback(predicate_return_msg_t const * msg);
-static void 
-trickle_recv(struct trickle_conn *c);
+runicast_sent(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
+
+static void
+runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
+
+//STBroadcast
 static void
 stbroadcast_recv(struct stbroadcast_conn *c);
+
 static void
 stbroadcast_sent(struct stbroadcast_conn *c);
-static void
-cancel_stbroadcast(void * ptr);
-static void
-trickle_return_predicate_callback(predicate_return_msg_t const* msg);
 
+static void
+stbroadcast_callback_cancel(void * ptr);
 
 //Callbacks
-static const struct trickle_callbacks trickleCallbacks = {trickle_recv};
+static const struct runicast_callbacks runicastCallbacks = {runicast_recv, runicast_sent, runicast_timedout};
 static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};

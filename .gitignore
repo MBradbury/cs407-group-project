@@ -43,3 +43,4 @@ VarDepthClustering
 /PredicateLanguage/Hoppy/build/
 /PredicateLanguage/Hoppy/dist/
 *.class
+*.swp

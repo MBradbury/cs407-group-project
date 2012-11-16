@@ -48,15 +48,25 @@ typedef struct
 } predicate_return_msg_t;
 
 //Methods
+static bool 
+is_base(void);
 static void 
 send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id, char const * pred, uint8_t hop_limit);
 static void
 send_predicate_to_node(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate);
 static void
 trickle_return_predicate_callback(predicate_return_msg_t const * msg);
+static void 
+trickle_recv(struct trickle_conn *c);
+static void
+stbroadcast_recv(struct stbroadcast_conn *c);
+static void
+stbroadcast_sent(struct stbroadcast_conn *c);
+static void
+cancel_stbroadcast(void * ptr);
+static void
+trickle_return_predicate_callback(predicate_return_msg_t const* msg);
 
-static bool 
-is_base(void);
 
 //Callbacks
 static const struct trickle_callbacks trickleCallbacks = {trickle_recv};

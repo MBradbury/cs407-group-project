@@ -54,6 +54,7 @@ static void * heap_alloc(size_t size)
 	if (heap_ptr + size > stack_ptr)
 	{
 		error = "Heap overwriting stack";
+		printf("========%s========\n", error);
 		return NULL;
 	}
 
@@ -65,7 +66,7 @@ static void * heap_alloc(size_t size)
 }
 
 
-static void push_stack(void * ptr, size_t size)
+static void push_stack(void const * ptr, size_t size)
 {
 	stack_ptr -= size;
 	memcpy(stack_ptr, ptr, size);
@@ -85,7 +86,35 @@ static void float_push_stack(float i)
 
 static void pop_stack(size_t size)
 {
+	if (stack_ptr + size > (stack + STACK_SIZE))
+	{
+		error = "STACK UNDERFLOW";
+		printf("========%s==== %p < %p ==\n", error, stack_ptr + size, stack + STACK_SIZE);
+	}
+
 	stack_ptr += size;
+}
+
+static void inspect_stack(void)
+{
+	printf("Stack values:\n");
+	for (unsigned char * ptr = stack_ptr; ptr < (stack + STACK_SIZE); ++ptr)
+	{
+		printf("\tStack %p %d\n", ptr, *ptr);
+	}
+}
+
+static size_t stack_size(void)
+{
+	return (stack + STACK_SIZE) - stack_ptr;
+}
+
+static void require_stack_size(size_t size)
+{
+	if (stack_size() < size)
+	{
+		printf("Stack too small is %d bytes needed %d bytes\n", (stack + STACK_SIZE) - stack_ptr, size);
+	}
 }
 
 /****************************************************
@@ -118,6 +147,7 @@ static size_t variable_type_size(unsigned int type)
 	case TYPE_USER: return data_size;
 	default: 
 		error = "Unknown variable type";
+		printf("========%s========\n", error);
 		return 0;
 	}
 }
@@ -131,6 +161,7 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
 		error = "Created maximum number of variables";
+		printf("========%s========\n", error);
 		return NULL;
 	}
 
@@ -155,6 +186,7 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
 		error = "Created maximum number of variables";
+		printf("========%s========\n", error);
 		return NULL;
 	}
 
@@ -193,6 +225,7 @@ static variable_reg_t * get_variable(char const * name)
 	}
 
 	error = "No variable with the given name exists";
+	printf("========%s========\n", error);
 
 	return NULL;
 }
@@ -237,6 +270,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	if (function_regs_count == MAXIMUM_FUNCTIONS)
 	{
 		error = "Already registered maximum number of functions";
+		printf("========%s========\n", error);
 		return 1;
 	}
 
@@ -250,18 +284,22 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	return 0;
 }
 
-static void const * call_function(char const * name, void * data)
+static void const * call_function(char const * name, void * data, variable_type_t * type)
 {
 	size_t i = 0;
 	for (; i != function_regs_count; ++i)
 	{
 		if (strcmp(functions_regs[i].name, name) == 0)
 		{
+			if (type != NULL)
+				*type = functions_regs[i].type;
+
 			return functions_regs[i].fn(data);
 		}
 	}
 
 	error = "Unknown function name";
+	printf("========%s========\n", error);
 
 	return NULL;
 }
@@ -367,6 +405,8 @@ typedef enum {
   
   AFETCH, ALEN,
 
+  CALL,
+
   ICASTF, FCASTI,
 
   JMP, JZ, JNZ,
@@ -388,6 +428,8 @@ static const char * opcode_names[] = {
 
 	"AFETCH", "ALEN", // Arrays Ops
 
+	"CALL",
+
 	"ICASTF", "FCASTI", // Casting operations
 
 	"JMP", "JZ", "JNZ", // Jump operations
@@ -405,9 +447,13 @@ static const char * opcode_names[] = {
 
 #define OPERATION_POP(code, op, type, store_type, format_type) \
 	case code: \
-		printf("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[0], ((type *)stack_ptr)[1]); \
-		((store_type *)stack_ptr)[1] = ((type *)stack_ptr)[0] op ((type *)stack_ptr)[1]; stack_ptr += sizeof(type); \
-		break
+		{ \
+			printf("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[0], ((type *)stack_ptr)[1]); \
+			require_stack_size(sizeof(type) * 2); \
+			store_type res = ((type *)stack_ptr)[0] op ((type *)stack_ptr)[1]; \
+			pop_stack(sizeof(type) * 2); \
+			push_stack(&res, sizeof(store_type)); \
+		} break
 
 static void evaluate(unsigned char * start, size_t program_length)
 {
@@ -451,6 +497,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		case ISTORE:
+			require_stack_size(sizeof(int));
 			*get_variable_as_int((char const *)(current + 1)) = *(int *)stack_ptr;
 			current += strlen((char const *)(current + 1)) + 1;
 			pop_stack(sizeof(int));
@@ -462,6 +509,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		case FSTORE:
+			require_stack_size(sizeof(float));
 			*get_variable_as_float((char const *)(current + 1)) = *(float *)stack_ptr;
 			current += strlen((char const *)(current + 1)) + 1;
 			pop_stack(sizeof(float));
@@ -469,6 +517,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 
 		case AFETCH:
 			{
+				require_stack_size(sizeof(int));
 				variable_reg_t * var = get_variable((char const *)(current + 1));
 				int index = ((int *)stack_ptr)[0];
 				pop_stack(sizeof(int));
@@ -484,19 +533,41 @@ static void evaluate(unsigned char * start, size_t program_length)
 				current += strlen((char const *)(current + 1)) + 1;
 			} break;
 
+		case CALL:
+			{
+				variable_type_t type;
+
+				void const * data = call_function((char const *)(current + 1), stack_ptr, &type);
+
+				pop_stack(data_size);
+
+				push_stack(data, variable_type_size(type));
+
+				current += strlen((char const *)(current + 1)) + 1;
+			} break;
+
 		case ICASTF:
-			((float *)stack_ptr)[0] = (float)((int *)stack_ptr)[0];
-			break;
+			{
+				require_stack_size(sizeof(int));
+				float val = (float)((int *)stack_ptr)[0];
+				pop_stack(sizeof(int));
+				push_stack(&val, sizeof(float));
+			} break;
 
 		case FCASTI:
-			((int *)stack_ptr)[0] = (int)((float *)stack_ptr)[0];
-			break;
+			{
+				require_stack_size(sizeof(float));
+				int val = (int)((float *)stack_ptr)[0];
+				pop_stack(sizeof(float));
+				push_stack(&val, sizeof(int));
+			} break;
 
 		case JMP:
 			current = start + *(int *)(current + 1) - 1;
 			break;
 
 		case JZ:
+			require_stack_size(sizeof(int));
 			if (((int *)stack_ptr)[0] == 0)
 			{
 				current = start + *(int *)(current + 1) - 1;
@@ -512,6 +583,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		case JNZ:
+			require_stack_size(sizeof(int));
 			if (((int *)stack_ptr)[0] != 0)
 			{
 				current = start + *(int *)(current + 1) - 1;
@@ -533,6 +605,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 		OPERATION_POP(IDIV, /, int, int, "%d");
 
 		case IINC:
+			require_stack_size(sizeof(int));
 			printf("Incrementing %d\n", ((int *)stack_ptr)[0]);
 			((int *)stack_ptr)[0] += 1;
 			break;
@@ -562,6 +635,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 		OPERATION_POP(XOR, ^, int, int, "%d");
 
 		case NOT:
+			require_stack_size(sizeof(int));
 			((int *)stack_ptr)[0] = ! ((int *)stack_ptr)[0];
 			break;
 
@@ -569,6 +643,8 @@ static void evaluate(unsigned char * start, size_t program_length)
 			printf("Unknown OP CODE %d\n", *current);
 			break;
 		}
+
+		//inspect_stack();
 
 		++current;
 	}
@@ -665,7 +741,7 @@ int main(int argc, char * argv[])
 
 	variable_reg_t * result = create_variable("result", strlen("result"), TYPE_INTEGER);
 
-	*((int *)result->location) = *(int const *)call_function("slot", (*data_fn)());
+	*((int *)result->location) = *(int const *)call_function("slot", (*data_fn)(), NULL);
 
 
 	create_variable("i", strlen("i"), TYPE_INTEGER);
@@ -744,6 +820,9 @@ int main(int argc, char * argv[])
 
 
 	// Perform body operations
+	gen_op(IFETCH);
+	gen_string("i");
+
 	gen_op(AFETCH);
 	gen_string("1hopn");
 
@@ -786,6 +865,8 @@ int main(int argc, char * argv[])
 	printf("Stack ptr value %d\n",
 		*((int *)stack_ptr)
 	);
+
+	inspect_stack();
 
 
 	return 0;

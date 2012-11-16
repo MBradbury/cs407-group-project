@@ -54,7 +54,12 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 			{
 				printf("Message received before and hops is higher\n");
 
+				//clear the memory, and update the new originator and hop count
+				memset(&list_iterator->originator, 0, sizeof(rimeaddr_t));
+				rimeaddr_copy(&list_iterator->originator, &msg->originator);
+
 				list_iterator->hops = msg->hop_limit;
+
 				deliver_msg = true;
 			}
 			break;
@@ -64,9 +69,10 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	if (list_iterator == NULL)
 	{
 		struct list_elem_struct * delivered_msg = (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
+		rimeaddr_copy(&delivered_msg->originator,&msg->originator);
 		delivered_msg->message_id = msg->message_id;
 		delivered_msg->hops = msg->hop_limit;
-
+		delivered_msg->predicate_to_check = msg->predicate_to_check;
 		list_push(message_list, delivered_msg);
 
 		deliver_msg = true;
@@ -83,7 +89,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 		runicast_msg->evaluated_predicate = "Value";
 
 		static struct ctimer runicast_timer;
-		ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, runicast_msg);
+		ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, msg->message_id);
 
 		//Rebroadcast Message If Hop Count Is Greater Than 1 
 		if (msg->hop_limit > 1) //last node 
@@ -92,7 +98,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 			static char addr_str2[RIMEADDR_STRING_LENGTH];
 
 			//Broadcast Message On
-			send_n_hop_predicate_check(&msg->originator, msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
+			send_n_hop_predicate_check(&rimeaddr_node_addr, msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
 		}
 	}
 }
@@ -115,34 +121,62 @@ stbroadcast_callback_cancel(void * ptr)
 static void
 runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
-
+	printf("runicast received from %s\n", addr2str(&from));
 }
 
 static void
 runicast_sent(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-
+	printf("runicast sent\n");
 }
 
 static void
 runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-
+	printf("Runicast timed out to:%s retransmissions:%d\n", addr2str(&to), retransmissions);
 }
 
 
 //METHODS
 static void
-delayed_send_evaluated_predicate(predicate_return_msg_t const* msg)
+delayed_send_evaluated_predicate(uint8_t message_id)
 {
-	send_evaluated_predicate(&msg->sender, &msg->target_reciever, msg->message_id, msg->evaluated_predicate);
+	int calls = 0;
+	struct list_elem_struct * list_iterator = NULL;
+	for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
+		  list_iterator != NULL;
+		  list_iterator = (struct list_elem_struct *)list_item_next(&list_iterator)
+		)
+	{
+		if (list_iterator->message_id == message_id)
+		{
+			printf("Trying to send evaluated predicate to: %s\n", addr2str(&list_iterator->originator));
+			send_evaluated_predicate(&rimeaddr_node_addr, 
+				&list_iterator->originator,  //TODO not being passed properly!!!!
+				list_iterator->message_id, 
+				evaluate_predicate(&list_iterator->predicate_to_check)
+			);
+			//TODO remove item from the list
+			break;
+		}
+	}
 
-	free(msg);
+	if (list_iterator == NULL)
+	{
+		printf("DEBUG: ERROR - LIST IS NULL, THIS IS VERY BAD\n");
+	}
+}
+
+static char * evaluate_predicate(char const * predicate)
+{
+	return "Value";
 }
 
 static void
 send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate)
 {
+	printf("target receiver %s\n",addr2str(&target_reciever) );
+
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_return_msg_t));
 	debug_packet_size(sizeof(predicate_return_msg_t));
@@ -153,8 +187,7 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 	rimeaddr_copy(&msg->target_reciever, target_reciever);
 	msg->message_id = message_id;
 	msg->evaluated_predicate = evaluated_predicate;
-
-	runicast_send(&runicast, /*TODO: Reciever Address*/, 10);
+	runicast_send(&runicast, &target_reciever, 4);
 }
 
 static void
@@ -195,7 +228,7 @@ PROCESS_THREAD(networkInit, ev, data)
 	random_init(rimeaddr_node_addr.u8[0]+7);
 	int random = (random_rand() % 10);
 	if (random <= 1) random++;
-	runicast_open(&runicast, 147, &runicastCallbacks);
+	runicast_open(&runicast, 144, &runicastCallbacks);
 
 	// Set the base station
 	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));

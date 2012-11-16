@@ -28,8 +28,10 @@ static uint8_t message_id = 1; //initial message ID
 struct list_elem_struct
 {
 	struct list_elem_struct *next;
+	rimeaddr_t originator;
 	uint8_t message_id;
 	uint8_t hops;
+	char * predicate_to_check;
 };
 
 //struct used to ask other nodes for predicate values
@@ -57,8 +59,11 @@ is_base(void);
 static uint8_t 
 get_message_id(void);
 
+static char * 
+evaluate_predicate(char const * predicate);
+
 static void
-delayed_send_evaluated_predicate(predicate_return_msg_t const* msg);
+delayed_send_evaluated_predicate(uint8_t message_id);
 
 static void
 send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate);

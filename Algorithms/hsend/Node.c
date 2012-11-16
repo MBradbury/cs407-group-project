@@ -20,19 +20,19 @@ static struct stbroadcast_conn stbroadcast;
 
 static rimeaddr_t baseStationAddr;
 
-static unsigned int message_id = 1;
+static uint8_t message_id = 1;
 
 //Methods
 static void 
-send_n_hop_predicate_check(rimeaddr_t const * originator, unsigned int message_id, char const * pred, unsigned int hop_limit);
+send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id, char const * pred, uint8_t hop_limit);
 static void
 send_predicate_to_node(rimeaddr_t const * dest, char const * pred);
 
 struct list_elem_struct
 {
 	struct list_elem_struct *next;
-	unsigned int message_id;
-	unsigned int hops;
+	uint8_t message_id;
+	uint8_t hops;
 };
 
 LIST(message_list);
@@ -40,8 +40,8 @@ LIST(message_list);
 typedef struct
 {
 	rimeaddr_t originator;
-	unsigned int message_id;
-	unsigned int hop_limit;
+	uint8_t message_id;
+	uint8_t hop_limit;
 	char * predicate_to_check;
 } predicate_check_msg_t;
 
@@ -119,11 +119,14 @@ mesh_timedout(struct mesh_conn *c)
 
 static void
 stbroadcast_recv(struct stbroadcast_conn *c)
-{
-	predicate_check_msg_t const * msg = (predicate_check_msg_t const *)packetbuf_dataptr();
-	
+{	
+    char tmpBuffer[PACKETBUF_SIZE];
+    packetbuf_copyto(tmpBuffer);
+
+    predicate_check_msg_t *msg = (predicate_check_msg_t *)tmpBuffer;
+
 	printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n", 
-		addr2str(msg->originator), 
+		addr2str(&msg->originator), 
 		msg->predicate_to_check,
 		msg->hop_limit,
 		msg->message_id);
@@ -152,7 +155,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 			break;
 		} 
 	}
-	
+
 	// End of List and the Message has NOT been delivered before
 	if (list_iterator == NULL)
 	{
@@ -167,21 +170,24 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 
 	if (deliver_msg) 
 	{
-		// Send predicate value back to originator		
-		//send_predicate_to_node(&msg->originator, "Value");
+		//Send predicate value back to originator		
+		send_predicate_to_node(&msg->originator, "Value");
+
+		printf("DEBUG: Originator: %s Message: %s Hop: %d Message ID: %d\n", 
+			addr2str(&msg->originator), 
+			msg->predicate_to_check,
+			msg->hop_limit,
+			msg->message_id);
 
 		if (msg->hop_limit > 1) //last node 
 		{
 			static char addr_str[RIMEADDR_STRING_LENGTH];
 			static char addr_str2[RIMEADDR_STRING_LENGTH];
 
-			printf("Node %s is resending message from: %s hop_limit:%d\n",
-				addr2str_r(&rimeaddr_node_addr, addr_str, RIMEADDR_STRING_LENGTH),
-				addr2str_r(&msg->originator, addr_str2, RIMEADDR_STRING_LENGTH),
-				msg->hop_limit);
-
 			// Send message on with one less hop limit
 			send_n_hop_predicate_check(&msg->originator, msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
+
+
 		}
 	}
 }
@@ -229,7 +235,7 @@ send_to_base_station(char const * message)
 }
 
 static void
-send_n_hop_predicate_check(rimeaddr_t const * originator, unsigned int message_id_to_send, char const * pred, unsigned int hop_limit)
+send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id_to_send, char const * pred, uint8_t hop_limit)
 {
 	printf("%d\n", hop_limit);
 

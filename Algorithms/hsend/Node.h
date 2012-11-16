@@ -17,13 +17,14 @@
 #include "debug-helper.h"
 
 
-static struct trickle_conn trickle;
-static struct stbroadcast_conn stbroadcast;
+static struct trickle_conn trickle; //connection for trickle
+static struct stbroadcast_conn stbroadcast; //connection for the stubborn broadcast
 
-static rimeaddr_t baseStationAddr;
+static rimeaddr_t baseStationAddr; //address of the base station
 
-static uint8_t message_id = 1;
+static uint8_t message_id = 1; //initial message ID
 
+//struct for the list elements, used to see if messages have already been sent
 struct list_elem_struct
 {
 	struct list_elem_struct *next;
@@ -31,6 +32,7 @@ struct list_elem_struct
 	uint8_t hops;
 };
 
+//struct used to ask other nodes for predicate values
 typedef struct
 {
 	rimeaddr_t originator;
@@ -39,6 +41,7 @@ typedef struct
 	char * predicate_to_check;
 } predicate_check_msg_t;
 
+//struct to send back to the originator with the value of a predicate
 typedef struct
 {
 	rimeaddr_t sender;

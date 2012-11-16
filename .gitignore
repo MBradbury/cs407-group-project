@@ -39,3 +39,4 @@ VarDepthClustering
 /PredicateLanguage/obj/*
 /PredicateLanguage/lib/*
 /PredicateLanguage/predlang
+/PredicateLanguage/Hoppy/nbproject/private/

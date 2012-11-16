@@ -450,9 +450,9 @@ static const char * opcode_names[] = {
 	"JMP", "JZ", "JNZ", // Jump operations
 
 	"IADD", "ISUB", "IMUL", "IDIV", "IINC", // Aritmetic operations
-	"IEQ", "INEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
+	"IEQ", "INEQ", "ILT", "ILEQ", "IGT", "IGEQ", // Comparison Operations
 
-	"FADD", "FSUB", "IMUL", "IDIV", // Aritmetic operations
+	"FADD", "FSUB", "FMUL", "FDIV", // Aritmetic operations
 	"FEQ", "FNEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
 
 	"AND", "OR", "XOR", "NOT", // Logic operations

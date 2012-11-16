@@ -63,6 +63,31 @@ static void * heap_alloc(size_t size)
 
 	return ptr;
 }
+
+
+static void push_stack(void * ptr, size_t size)
+{
+	stack_ptr -= size;
+	memcpy(stack_ptr, ptr, size);
+}
+
+static void int_push_stack(int i)
+{
+	stack_ptr -= sizeof(int);
+	*((int *)stack_ptr) = i;
+}
+
+static void float_push_stack(float i)
+{
+	stack_ptr -= sizeof(float);
+	*((float *)stack_ptr) = i;
+}
+
+static void pop_stack(size_t size)
+{
+	stack_ptr += size;
+}
+
 /****************************************************
  ** MEMORY MANAGEMENT
  ***************************************************/
@@ -252,14 +277,64 @@ static void const * call_function(char const * name, void * data)
  ***************************************************/
 
 
+/****************************************************
+ ** CODE GEN
+ ***************************************************/
+
+static unsigned char * program_start;
+static unsigned char * program_end;
+
+static unsigned char * start_gen(void)
+{
+	return program_start = heap_ptr;
+}
+
+static void gen_op(unsigned char op)
+{
+	*heap_ptr = op;
+	++heap_ptr;
+}
+
+static void gen_int(int i)
+{
+	*(int *)heap_ptr = i;
+	heap_ptr += sizeof(int);
+}
+
+static void gen_float(float f)
+{
+	*(float *)heap_ptr = f;
+	heap_ptr += sizeof(float);
+}
+
+static void gen_string(char const * str)
+{
+	size_t len = strlen(str) + 1;
+
+	memcpy(heap_ptr, str, len);
+	heap_ptr += len;
+}
+
+static unsigned char * stop_gen(void)
+{
+	return program_end = heap_ptr;
+}
+
+/****************************************************
+ ** CODE GEN
+ ***************************************************/
+
+
 
 /****************************************************
  ** VM START
  ***************************************************/
 typedef enum {
   HALT,
-  IPUSH, IPOP,
-  FETCH, STORE,
+
+  IPUSH, IPOP, FPUSH, FPOP,
+  IFETCH, ISTORE, FFETCH, FSTORE,
+
   NEXT,
 
   IADD, ISUB, IMUL, IDIV,
@@ -273,8 +348,10 @@ typedef enum {
 
 static const char * opcode_names[] = {
 	"HALT", // Stop evaluation
-	"IPUSH", "IPOP", // Put variables onto the stack
-	"FETCH", "STORE", // Read / Write variables
+
+	"IPUSH", "IPOP", "FPUSH", "FPOP", // Put variables onto the stack
+	"IFETCH", "ISTORE", "FFETCH", "FSTORE", // Read / Write variables
+
 	"NEXT", // List Iteration
 
 	"IADD", "ISUB", "IMUL", "IDIV", // Aritmetic operations
@@ -288,10 +365,10 @@ static const char * opcode_names[] = {
 
 
 
-#define OPERATION_POP(code, op, type) \
+#define OPERATION_POP(code, op, type, store_type) \
 	case code: \
 		printf("Calling %s on %d and %d\n", opcode_names[*current], ((type *)stack_ptr)[0], ((type *)stack_ptr)[1]); \
-		((type *)stack_ptr)[1] = ((type *)stack_ptr)[0] op ((type *)stack_ptr)[1]; stack_ptr += sizeof(type); \
+		((store_type *)stack_ptr)[1] = ((type *)stack_ptr)[0] op ((type *)stack_ptr)[1]; stack_ptr += sizeof(type); \
 		break
 
 static void evaluate(unsigned char * start, size_t program_length)
@@ -309,41 +386,73 @@ static void evaluate(unsigned char * start, size_t program_length)
 			return;
 
 		case IPUSH:
-			printf("Pushing %d onto the stack\n", *(int*)current);
-			stack_ptr -= sizeof(int); *((int *)stack_ptr) = *(int*)current;
+			printf("Pushing %d onto the stack\n", *(int*)(current + 1));
+			int_push_stack(*(int*)(current + 1));
 			current += sizeof(int);
 			break;
 
 		case IPOP:
-			stack_ptr += sizeof(int);
+			pop_stack(sizeof(int));
+			break;
+
+		case FPUSH:
+			printf("Pushing %f onto the stack\n", *(float*)(current + 1));
+			float_push_stack(*(float*)(current + 1));
+			current += sizeof(float);
+			break;
+
+		case FPOP:
+			pop_stack(sizeof(float));
+			break;
+
+		case IFETCH:
+			int_push_stack(*get_variable_as_int((char const *)(current + 1)));
+			current += strlen((char const *)(current + 1)) + 1;
+			break;
+
+		case ISTORE:
+			*get_variable_as_int((char const *)(current + 1)) = *(int *)stack_ptr;
+			current += strlen((char const *)(current + 1)) + 1;
+			break;
+
+		case FFETCH:
+			float_push_stack(*get_variable_as_float((char const *)(current + 1)));
+			current += strlen((char const *)(current + 1)) + 1;
+			break;
+
+		case FSTORE:
+			*get_variable_as_float((char const *)(current + 1)) = *(float *)stack_ptr;
+			current += strlen((char const *)(current + 1)) + 1;
 			break;
 
 		// Integer operations
-		OPERATION_POP(IADD, +, int);
-		OPERATION_POP(IMUL, *, int);
-		OPERATION_POP(IDIV, /, int);
-		OPERATION_POP(IEQ, ==, int);
-		OPERATION_POP(INEQ, !=, int);
-		OPERATION_POP(ILT, <, int);
-		OPERATION_POP(ILEQ, <=, int);
-		OPERATION_POP(IGT, >, int);
-		OPERATION_POP(IGEQ, >=, int);
+		OPERATION_POP(IADD, +, int, int);
+		OPERATION_POP(ISUB, -, int, int);
+		OPERATION_POP(IMUL, *, int, int);
+		OPERATION_POP(IDIV, /, int, int);
+		OPERATION_POP(IEQ, ==, int, int);
+		OPERATION_POP(INEQ, !=, int, int);
+		OPERATION_POP(ILT, <, int, int);
+		OPERATION_POP(ILEQ, <=, int, int);
+		OPERATION_POP(IGT, >, int, int);
+		OPERATION_POP(IGEQ, >=, int, int);
 
 		// Floating point operations
-		OPERATION_POP(FADD, +, float);
-		OPERATION_POP(FMUL, *, float);
-		OPERATION_POP(FDIV, /, float);
-		OPERATION_POP(FEQ, ==, float);
-		OPERATION_POP(FNEQ, !=, float);
-		OPERATION_POP(FLT, <, float);
-		OPERATION_POP(FLEQ, <=, float);
-		OPERATION_POP(FGT, >, float);
-		OPERATION_POP(FGEQ, >=, float);
+		OPERATION_POP(FADD, +, float, float);
+		OPERATION_POP(FSUB, -, float, float);
+		OPERATION_POP(FMUL, *, float, float);
+		OPERATION_POP(FDIV, /, float, float);
+		OPERATION_POP(FEQ, ==, float, int);
+		OPERATION_POP(FNEQ, !=, float, int);
+		OPERATION_POP(FLT, <, float, int);
+		OPERATION_POP(FLEQ, <=, float, int);
+		OPERATION_POP(FGT, >, float, int);
+		OPERATION_POP(FGEQ, >=, float, int);
 
 		// Logical operations
-		OPERATION_POP(AND, &&, int);
-		OPERATION_POP(OR, ||, int);
-		OPERATION_POP(XOR, ^, int);
+		OPERATION_POP(AND, &&, int, int);
+		OPERATION_POP(OR, ||, int, int);
+		OPERATION_POP(XOR, ^, int, int);
 
 		case NOT:
 			((int *)stack_ptr)[0] = ((int *)stack_ptr)[0] ? 0 : 1;
@@ -467,17 +576,25 @@ int main(int argc, char ** argv)
 	);
 
 	// Load a small program into memory
-	unsigned char * program_end = stack_ptr;
+	unsigned char * program_start = start_gen();
 
-	stack_ptr -= 1; *stack_ptr = HALT;
-	stack_ptr -= 1; *stack_ptr = IADD;
-	stack_ptr -= sizeof(int); *((int *)stack_ptr) = 3;
-	stack_ptr -= 1; *stack_ptr = IPUSH;
-	stack_ptr -= sizeof(int); *((int *)stack_ptr) = 2;
-	stack_ptr -= 1; *stack_ptr = IPUSH;
+	gen_op(IPUSH);
+	gen_int(2);
+	gen_op(IPUSH);
+	gen_int(3);
+	gen_op(IADD);
+	gen_op(IFETCH);
+	gen_string("result");
+	gen_op(IADD);
+	gen_op(IPUSH);
+	gen_int(8);
+	gen_op(IGT);
+	gen_op(HALT);
+
+	unsigned char * program_end = stop_gen();
 
 	// Evaluate the program
-	evaluate(stack_ptr, program_end - stack_ptr);
+	evaluate(program_start, program_end - program_start);
 
 	// Print the results
 	printf("Stack ptr value %d\n",

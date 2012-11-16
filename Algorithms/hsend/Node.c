@@ -1,61 +1,4 @@
-#include "contiki.h"
-#include "debug-helper.h"
-
-#include "dev/leds.h"
-
-#include "lib/list.h"
-#include "lib/random.h"
-
-#include "net/rime.h"
-#include "net/rime/trickle.h"
-#include "net/rime/stbroadcast.h"
-#include "net/rime/runicast.h"
-#include "net/rime/trickle.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-
-//CONNECTIONS
-static struct stbroadcast_conn stbroadcast;
-static struct runicast_conn runicast;
-
-//STATIC VARIABLES
-static uint8_t message_id = 1;
-static rimeaddr_t baseStationAddr;
-
-//STRUCT TYPEDEF
-struct list_elem_struct
-{
-	struct list_elem_struct *next;
-	uint8_t message_id;
-	uint8_t hops;
-};
-
-typedef struct
-{
-	rimeaddr_t originator;
-	uint8_t message_id;
-	uint8_t hop_limit;
-	char * predicate_to_check;
-} predicate_check_msg_t;
-
-typedef struct
-{
-	rimeaddr_t sender;
-	rimeaddr_t target_reciever;
-	uint8_t message_id;
-	char * evaluated_predicate;
-} predicate_return_msg_t;
-
-//METHOD DEFS
-static void 
-send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id, char const * pred, uint8_t hop_limit);
-static void
-send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate);
-static void
-delayed_send_evaluated_predicate(predicate_return_msg_t const * msg);
+#import "Node.h"
 
 //CREATE MESSAGE LIST DATA STRUCTURE
 LIST(message_list);
@@ -168,6 +111,7 @@ stbroadcast_cancel(void * ptr)
 }
 
 static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
+
 
 //RELIABLE UNICAST
 static void

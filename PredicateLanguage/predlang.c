@@ -98,7 +98,8 @@ static void pop_stack(size_t size)
 static void inspect_stack(void)
 {
 	printf("Stack values:\n");
-	for (unsigned char * ptr = stack_ptr; ptr < (stack + STACK_SIZE); ++ptr)
+	unsigned char * ptr;
+	for (ptr = stack_ptr; ptr < (stack + STACK_SIZE); ++ptr)
 	{
 		printf("\tStack %p %d\n", ptr, *ptr);
 	}
@@ -168,7 +169,7 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 	variable_reg_t * variable = &variable_regs[variable_regs_count++];
 
 	variable->name = (char *)heap_alloc(name_length + 1);
-	strncpy(variable->name, name, name_length);
+	snprintf(variable->name, name_length + 1, "%s", name);
 
 	printf("Registered variable with name '%s'\n", variable->name);
 
@@ -193,7 +194,7 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 	variable_reg_t * variable = &variable_regs[variable_regs_count++];
 
 	variable->name = (char *)heap_alloc(name_length + 1);
-	strncpy(variable->name, name, name_length);
+	snprintf(variable->name, name_length + 1, "%s", name);
 
 	// Lets create some space in the heap to store the variable
 	// We allocate enough space of `length' `data_size'ed items
@@ -284,6 +285,8 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	return 0;
 }
 
+// Type is an optional output variable
+// pass NULL to it if you don't wait to know the type
 static void const * call_function(char const * name, void * data, variable_type_t * type)
 {
 	size_t i = 0;
@@ -342,7 +345,7 @@ static jmp_label_t gen_op(unsigned char op)
 	unsigned char * pos = heap_ptr;
 
 	*heap_ptr = op;
-	++heap_ptr;
+	heap_ptr += sizeof(unsigned char);
 
 	return pos;
 }
@@ -393,7 +396,6 @@ static unsigned char * stop_gen(void)
  ***************************************************/
 
 
-
 /****************************************************
  ** VM START
  ***************************************************/
@@ -420,6 +422,7 @@ typedef enum {
   AND, OR, XOR, NOT,
 } opcode;
 
+#ifndef NDEBUG
 static const char * opcode_names[] = {
 	"HALT", // Stop evaluation
 
@@ -442,6 +445,7 @@ static const char * opcode_names[] = {
 
 	"AND", "OR", "XOR", "NOT", // Logic operations
 };
+#endif
 
 
 
@@ -519,9 +523,9 @@ static void evaluate(unsigned char * start, size_t program_length)
 			{
 				require_stack_size(sizeof(int));
 				variable_reg_t * var = get_variable((char const *)(current + 1));
-				int index = ((int *)stack_ptr)[0];
+				int i = ((int *)stack_ptr)[0];
 				pop_stack(sizeof(int));
-				push_stack((char *)var->location + (index * variable_type_size(var->type)), variable_type_size(var->type));
+				push_stack((char *)var->location + (i * variable_type_size(var->type)), variable_type_size(var->type));
 				current += strlen((char const *)(current + 1)) + 1;
 			} break;
 
@@ -669,8 +673,12 @@ void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size)
 	data_size = given_data_size;
 
 	// Reset the stack and heap positions
-	stack_ptr = &stack[sizeof(stack)];
+	stack_ptr = &stack[STACK_SIZE];
 	heap_ptr = stack;
+
+	// Lets memset the stack to a certain pattern
+	// This makes if obvious if we have memory issues
+	memset(stack, 0xee, STACK_SIZE);
 
 
 	// Allocate some space for function registrations
@@ -777,7 +785,7 @@ int main(int argc, char * argv[])
 	);
 
 	// Load a small program into memory
-	unsigned char * const program_start = start_gen();
+	unsigned char * const start = start_gen();
 
 	/*gen_op(IPUSH);
 	gen_int(2);
@@ -844,22 +852,22 @@ int main(int argc, char * argv[])
 
 
 	// Program termination
-	unsigned char * end = gen_op(HALT);
+	unsigned char * last = gen_op(HALT);
 
 
 	// Set jump locations
-	alloc_jmp(jmp1, end);
+	alloc_jmp(jmp1, last);
 	alloc_jmp(jmp2, label1);
 
 
-	unsigned char * const program_end = stop_gen();
+	unsigned char * const end = stop_gen();
 
 
-	printf("Program length %d\n", program_end - program_start);
+	printf("Program length %d\n", end - start);
 
 
 	// Evaluate the program
-	evaluate(program_start, program_end - program_start);
+	evaluate(start, end - start);
 
 	// Print the results
 	printf("Stack ptr value %d\n",

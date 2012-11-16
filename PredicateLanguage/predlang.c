@@ -296,7 +296,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 
 	return 0;
 }
-Neighbours
+
 // Type is an optional output variable
 // pass NULL to it if you don't wait to know the type
 static void const * call_function(char const * name, void * data, variable_type_t * type)

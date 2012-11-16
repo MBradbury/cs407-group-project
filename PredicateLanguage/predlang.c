@@ -1,15 +1,19 @@
 #include "predlang.h"
 
 #include <stdio.h>
-#include <stdbool.h>
 
+#ifndef _MSC_VER
+#	include <stdbool.h>
+#endif
+
+#define STACK_SIZE (3 * 1024)
 
 #define MAXIMUM_FUNCTIONS 5
 #define MAXIMUM_VARIABLES 2
 
 
 
-static unsigned char stack[3 * 1024];
+static unsigned char stack[STACK_SIZE];
 
 static unsigned char * stack_ptr = NULL;
 static unsigned char * heap_ptr = NULL;
@@ -47,15 +51,17 @@ void reset_error(void)
  ***************************************************/
 static void * heap_alloc(size_t size)
 {
-	if (heap_ptr - size < stack_ptr)
+	if (heap_ptr + size > stack_ptr)
 	{
 		error = "Heap overwriting stack";
 		return NULL;
 	}
 
-	heap_ptr -= size;
+	void * ptr = heap_ptr;
 
-	return heap_ptr;
+	heap_ptr += size;
+
+	return ptr;
 }
 /****************************************************
  ** MEMORY MANAGEMENT
@@ -101,10 +107,12 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 		return NULL;
 	}
 
-	variable_reg_t * variable = &variable_regs[variable_regs_count];
+	variable_reg_t * variable = &variable_regs[variable_regs_count++];
 
 	variable->name = (char *)heap_alloc(name_length + 1);
 	strncpy(variable->name, name, name_length);
+
+	printf("Registered variable with name '%s'\n", variable->name);
 
 	// Lets create some space in the heap to store the variable
 	variable->location = heap_alloc(variable_type_size(type));
@@ -123,7 +131,7 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 		return NULL;
 	}
 
-	variable_reg_t * variable = &variable_regs[variable_regs_count];
+	variable_reg_t * variable = &variable_regs[variable_regs_count++];
 
 	variable->name = (char *)heap_alloc(name_length + 1);
 	strncpy(variable->name, name, name_length);
@@ -143,7 +151,7 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 static variable_reg_t * get_variable(char const * name)
 {
 	int i;
-	for (i = 0; i != MAXIMUM_VARIABLES; ++i)
+	for (i = 0; i != variable_regs_count; ++i)
 	{
 		variable_reg_t * variable = &variable_regs[i];
 
@@ -153,17 +161,23 @@ static variable_reg_t * get_variable(char const * name)
 		}
 	}
 
+	error = "No variable with the given name exists";
+
 	return NULL;
 }
 
 static int * get_variable_as_int(char const * name)
 {
-	return (int *)get_variable(name)->location;
+	variable_reg_t * var = get_variable(name);
+
+	return (var != NULL) ? (int *)var->location : NULL;
 }
 
 static float * get_variable_as_float(char const * name)
 {
-	return (float *)get_variable(name)->location;
+	variable_reg_t * var = get_variable(name);
+
+	return (var != NULL) ? (float *)var->location : NULL;
 }
 
 /****************************************************
@@ -181,7 +195,7 @@ typedef struct
 {
 	char const * name;
 	data_access_fn fn;
-	uint8_t type;
+	variable_type_t type;
 } function_reg_t;
 
 static function_reg_t * functions_regs = NULL;
@@ -244,23 +258,105 @@ static void const * call_function(char const * name, void * data)
  ***************************************************/
 typedef enum {
   HALT,
-  PUSH, POP,
+  IPUSH, IPOP,
   FETCH, STORE,
   NEXT,
-  ADD, SUB, MUL, DIV, MOD,
-  EQ, NEQ, LT, LEQ, GT, GEQ,
+
+  IADD, ISUB, IMUL, IDIV,
+  IEQ, INEQ, ILT, ILEQ, IGT, IGEQ,
+
+  FADD, FSUB, FMUL, FDIV,
+  FEQ, FNEQ, FLT, FLEQ, FGT, FGEQ,
+
   AND, OR, XOR, NOT,
 } opcode;
 
 static const char * opcode_names[] = {
 	"HALT", // Stop evaluation
-	"PUSH", "POP", // Put variables onto the staccall_functionk
+	"IPUSH", "IPOP", // Put variables onto the stack
 	"FETCH", "STORE", // Read / Write variables
 	"NEXT", // List Iteration
-	"ADD", "SUB", "MUL", "DIV", "MOD", // Aritmetic operations
-	"EQ", "NEQ", "LT", "LEQ", "GT", "GEQ", // Comparison Operations
-	"AND", "OR", "XOR", "NOT" // Logic operations
+
+	"IADD", "ISUB", "IMUL", "IDIV", // Aritmetic operations
+	"IEQ", "INEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
+
+	"FADD", "FSUB", "IMUL", "IDIV", // Aritmetic operations
+	"FEQ", "FNEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
+
+	"AND", "OR", "XOR", "NOT", // Logic operations
 };
+
+
+
+#define OPERATION_POP(code, op, type) \
+	case code: \
+		printf("Calling %s on %d and %d\n", opcode_names[*current], ((type *)stack_ptr)[0], ((type *)stack_ptr)[1]); \
+		((type *)stack_ptr)[1] = ((type *)stack_ptr)[0] op ((type *)stack_ptr)[1]; stack_ptr += sizeof(type); \
+		break
+
+static void evaluate(unsigned char * start, size_t program_length)
+{
+	unsigned char * current = start;
+
+	while (current - start < program_length)
+	{
+		printf("Executing (%d) %s\n", *current, opcode_names[*current]);
+
+		switch (*current)
+		{
+		case HALT:
+			printf("Halting\n");
+			return;
+
+		case IPUSH:
+			printf("Pushing %d onto the stack\n", *(int*)current);
+			stack_ptr -= sizeof(int); *((int *)stack_ptr) = *(int*)current;
+			current += sizeof(int);
+			break;
+
+		case IPOP:
+			stack_ptr += sizeof(int);
+			break;
+
+		// Integer operations
+		OPERATION_POP(IADD, +, int);
+		OPERATION_POP(IMUL, *, int);
+		OPERATION_POP(IDIV, /, int);
+		OPERATION_POP(IEQ, ==, int);
+		OPERATION_POP(INEQ, !=, int);
+		OPERATION_POP(ILT, <, int);
+		OPERATION_POP(ILEQ, <=, int);
+		OPERATION_POP(IGT, >, int);
+		OPERATION_POP(IGEQ, >=, int);
+
+		// Floating point operations
+		OPERATION_POP(FADD, +, float);
+		OPERATION_POP(FMUL, *, float);
+		OPERATION_POP(FDIV, /, float);
+		OPERATION_POP(FEQ, ==, float);
+		OPERATION_POP(FNEQ, !=, float);
+		OPERATION_POP(FLT, <, float);
+		OPERATION_POP(FLEQ, <=, float);
+		OPERATION_POP(FGT, >, float);
+		OPERATION_POP(FGEQ, >=, float);
+
+		// Logical operations
+		OPERATION_POP(AND, &&, int);
+		OPERATION_POP(OR, ||, int);
+		OPERATION_POP(XOR, ^, int);
+
+		case NOT:
+			((int *)stack_ptr)[0] = ((int *)stack_ptr)[0] ? 0 : 1;
+			break;
+
+		default:
+			printf("Unknown OP CODE %d\n", *current);
+			break;
+		}
+
+		++current;
+	}
+}
 
 
 /****************************************************
@@ -281,8 +377,8 @@ void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size)
 	data_size = given_data_size;
 
 	// Reset the stack and heap positions
-	stack_ptr = stack;
-	heap_ptr = &stack[sizeof(stack)];
+	stack_ptr = &stack[sizeof(stack)];
+	heap_ptr = stack;
 
 
 	// Allocate some space for function registrations
@@ -361,12 +457,33 @@ int main(int argc, char ** argv)
 	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
+	int * data = get_variable_as_int("result");
+
+	user_data_t const * user_data = (user_data_t const *) (*data_fn)();
+
 	printf("Data %d should equal %d\n",
-		*get_variable_as_int("result"),
-		((user_data_t const *) (*data_fn)())->slot
+		*data,
+		user_data->slot
+	);
+
+	// Load a small program into memory
+	unsigned char * program_end = stack_ptr;
+
+	stack_ptr -= 1; *stack_ptr = HALT;
+	stack_ptr -= 1; *stack_ptr = IADD;
+	stack_ptr -= sizeof(int); *((int *)stack_ptr) = 3;
+	stack_ptr -= 1; *stack_ptr = IPUSH;
+	stack_ptr -= sizeof(int); *((int *)stack_ptr) = 2;
+	stack_ptr -= 1; *stack_ptr = IPUSH;
+
+	// Evaluate the program
+	evaluate(stack_ptr, program_end - stack_ptr);
+
+	// Print the results
+	printf("Stack ptr value %d\n",
+		*((int *)stack_ptr)
 	);
 
 
 	return 0;
 }
-

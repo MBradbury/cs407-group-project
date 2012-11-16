@@ -296,7 +296,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 
 	return 0;
 }
-Neighbours
+
 // Type is an optional output variable
 // pass NULL to it if you don't wait to know the type
 static void const * call_function(char const * name, void * data, variable_type_t * type)
@@ -450,9 +450,9 @@ static const char * opcode_names[] = {
 	"JMP", "JZ", "JNZ", // Jump operations
 
 	"IADD", "ISUB", "IMUL", "IDIV", "IINC", // Aritmetic operations
-	"IEQ", "INEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
+	"IEQ", "INEQ", "ILT", "ILEQ", "IGT", "IGEQ", // Comparison Operations
 
-	"FADD", "FSUB", "IMUL", "IDIV", // Aritmetic operations
+	"FADD", "FSUB", "FMUL", "FDIV", // Aritmetic operations
 	"FEQ", "FNEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
 
 	"AND", "OR", "XOR", "NOT", // Logic operations

@@ -431,10 +431,10 @@ typedef enum {
 
   JMP, JZ, JNZ,
 
-  IADD, ISUB, IMUL, IDIV, IINC,
+  IADD, ISUB, IMUL, IDIV1, IDIV2, IINC,
   IEQ, INEQ, ILT, ILEQ, IGT, IGEQ,
 
-  FADD, FSUB, FMUL, FDIV,
+  FADD, FSUB, FMUL, FDIV1, FDIV2,
   FEQ, FNEQ, FLT, FLEQ, FGT, FGEQ,
 
   AND, OR, XOR, NOT,
@@ -455,10 +455,10 @@ static const char * opcode_names[] = {
 
 	"JMP", "JZ", "JNZ", // Jump operations
 
-	"IADD", "ISUB", "IMUL", "IDIV", "IINC", // Aritmetic operations
+	"IADD", "ISUB", "IMUL", "IDIV1", "IDIV2", "IINC", // Aritmetic operations
 	"IEQ", "INEQ", "ILT", "ILEQ", "IGT", "IGEQ", // Comparison Operations
 
-	"FADD", "FSUB", "FMUL", "FDIV", // Aritmetic operations
+	"FADD", "FSUB", "FMUL", "FDIV1", "FDIV2", // Aritmetic operations
 	"FEQ", "FNEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
 
 	"AND", "OR", "XOR", "NOT", // Logic operations
@@ -467,12 +467,12 @@ static const char * opcode_names[] = {
 
 
 
-#define OPERATION_POP(code, op, type, store_type, format_type) \
+#define OPERATION_POP(code, op, type, store_type, format_type, idx1, idx2) \
 	case code: \
 		{ \
-			DEBUG_PRINT("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[0], ((type *)stack_ptr)[1]); \
+			DEBUG_PRINT("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[idx1], ((type *)stack_ptr)[idx2]); \
 			require_stack_size(sizeof(type) * 2); \
-			store_type res = ((type *)stack_ptr)[0] op ((type *)stack_ptr)[1]; \
+			store_type res = ((type *)stack_ptr)[idx1] op ((type *)stack_ptr)[idx2]; \
 			pop_stack(sizeof(type) * 2); \
 			push_stack(&res, sizeof(store_type)); \
 		} break
@@ -619,10 +619,11 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		// Integer operations
-		OPERATION_POP(IADD, +, int, int, "%d");
-		OPERATION_POP(ISUB, -, int, int, "%d");
-		OPERATION_POP(IMUL, *, int, int, "%d");
-		OPERATION_POP(IDIV, /, int, int, "%d");
+		OPERATION_POP(IADD, +, int, int, "%d", 0, 1);
+		OPERATION_POP(ISUB, -, int, int, "%d", 0, 1);
+		OPERATION_POP(IMUL, *, int, int, "%d", 0, 1);
+		OPERATION_POP(IDIV1, /, int, int, "%d", 0, 1);
+		OPERATION_POP(IDIV2, /, int, int, "%d", 1, 0);
 
 		case IINC:
 			require_stack_size(sizeof(int));
@@ -630,29 +631,30 @@ static void evaluate(unsigned char * start, size_t program_length)
 			((int *)stack_ptr)[0] += 1;
 			break;
 
-		OPERATION_POP(IEQ, ==, int, int, "%d");
-		OPERATION_POP(INEQ, !=, int, int, "%d");
-		OPERATION_POP(ILT, <, int, int, "%d");
-		OPERATION_POP(ILEQ, <=, int, int, "%d");
-		OPERATION_POP(IGT, >, int, int, "%d");
-		OPERATION_POP(IGEQ, >=, int, int, "%d");
+		OPERATION_POP(IEQ, ==, int, int, "%d", 0, 1);
+		OPERATION_POP(INEQ, !=, int, int, "%d", 0, 1);
+		OPERATION_POP(ILT, <, int, int, "%d", 0, 1);
+		OPERATION_POP(ILEQ, <=, int, int, "%d", 0, 1);
+		OPERATION_POP(IGT, >, int, int, "%d", 0, 1);
+		OPERATION_POP(IGEQ, >=, int, int, "%d", 0, 1);
 
 		// Floating point operations
-		OPERATION_POP(FADD, +, float, float, "%f");
-		OPERATION_POP(FSUB, -, float, float, "%f");
-		OPERATION_POP(FMUL, *, float, float, "%f");
-		OPERATION_POP(FDIV, /, float, float, "%f");
-		OPERATION_POP(FEQ, ==, float, int, "%f");
-		OPERATION_POP(FNEQ, !=, float, int, "%f");
-		OPERATION_POP(FLT, <, float, int, "%f");
-		OPERATION_POP(FLEQ, <=, float, int, "%f");
-		OPERATION_POP(FGT, >, float, int, "%f");
-		OPERATION_POP(FGEQ, >=, float, int, "%f");
+		OPERATION_POP(FADD, +, float, float, "%f", 0, 1);
+		OPERATION_POP(FSUB, -, float, float, "%f", 0, 1);
+		OPERATION_POP(FMUL, *, float, float, "%f", 0, 1);
+		OPERATION_POP(FDIV1, /, float, float, "%f", 0, 1);
+		OPERATION_POP(FDIV2, /, float, float, "%f", 1, 0);
+		OPERATION_POP(FEQ, ==, float, int, "%f", 0, 1);
+		OPERATION_POP(FNEQ, !=, float, int, "%f", 0, 1);
+		OPERATION_POP(FLT, <, float, int, "%f", 0, 1);
+		OPERATION_POP(FLEQ, <=, float, int, "%f", 0, 1);
+		OPERATION_POP(FGT, >, float, int, "%f", 0, 1);
+		OPERATION_POP(FGEQ, >=, float, int, "%f", 0, 1);
 
 		// Logical operations
-		OPERATION_POP(AND, &&, int, int, "%d");
-		OPERATION_POP(OR, ||, int, int, "%d");
-		OPERATION_POP(XOR, ^, int, int, "%d");
+		OPERATION_POP(AND, &&, int, int, "%d", 0, 1);
+		OPERATION_POP(OR, ||, int, int, "%d", 0, 1);
+		OPERATION_POP(XOR, ^, int, int, "%d", 0, 1);
 
 		case NOT:
 			require_stack_size(sizeof(int));
@@ -829,6 +831,10 @@ int main(int argc, char * argv[])
 	gen_op(HALT);*/
 
 
+	// Initial Code
+	gen_op(FPUSH);
+	gen_float(0);
+
 
 	// Initalise loop counter
 	gen_op(IPUSH);
@@ -864,6 +870,15 @@ int main(int argc, char * argv[])
 
 	gen_op(CALL);
 	gen_string("slot");
+
+	gen_op(ICASTF);
+
+	gen_op(FADD);
+
+	gen_op(FPUSH);
+	gen_float(2);
+
+	gen_op(FDIV2);
 
 	// Increment loop counter
 	gen_op(IFETCH);
@@ -906,8 +921,8 @@ int main(int argc, char * argv[])
 	evaluate(start, end - start);
 
 	// Print the results
-	printf("Stack ptr value %d\n",
-		*((int *)stack_ptr)
+	printf("Stack ptr value %f\n",
+		*((float *)stack_ptr)
 	);
 
 	inspect_stack();

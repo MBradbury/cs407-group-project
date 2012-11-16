@@ -1,11 +1,15 @@
 #include "contiki.h"
+#include "debug-helper.h"
 
 #include "dev/leds.h"
+
 #include "lib/list.h"
+#include "lib/random.h"
 
 #include "net/rime.h"
 #include "net/rime/trickle.h"
 #include "net/rime/stbroadcast.h"
+#include "net/rime/runicast.h"
 #include "net/rime/trickle.h"
 
 #include <stdio.h>
@@ -13,16 +17,15 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "lib/random.h"
-#include "debug-helper.h"
-
-static struct trickle_conn trickle;
+//CONNECTIONS
 static struct stbroadcast_conn stbroadcast;
+static struct runicast_conn runicast;
 
+//STATIC VARIABLES
+static uint8_t message_id = 1;
 static rimeaddr_t baseStationAddr;
 
-static uint8_t message_id = 1;
-
+//STRUCT TYPEDEF
 struct list_elem_struct
 {
 	struct list_elem_struct *next;
@@ -46,14 +49,15 @@ typedef struct
 	char * evaluated_predicate;
 } predicate_return_msg_t;
 
-//Methods
+//METHOD DEFS
 static void 
 send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id, char const * pred, uint8_t hop_limit);
 static void
-send_predicate_to_node(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate);
+send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate);
 static void
-trickle_return_predicate_callback(predicate_return_msg_t const * msg);
+delayed_send_evaluated_predicate(predicate_return_msg_t const * msg);
 
+//CREATE MESSAGE LIST DATA STRUCTURE
 LIST(message_list);
 
 static bool 
@@ -70,30 +74,13 @@ static uint8_t
 get_message_id(void)
 {
 	uint8_t returnvalue;
-
 	returnvalue = message_id++;
-
 	returnvalue *= 100; 
-
 	returnvalue += rimeaddr_node_addr.u8[0];
-
 	return returnvalue;
 }
 
-/** The function that will be executed when a trickle message is received */
-static void 
-trickle_recv(struct trickle_conn *c)
-{
-
-	predicate_return_msg_t *msg = (predicate_return_msg_t *)packetbuf_dataptr();
-
-	//if (rimeaddr_cmp(&rimeaddr_node_addr,&msg->target_reciever))
-	//{
-			printf("Trickle Message Recieved from: %s!\n",addr2str(&msg->sender));
-
-//	}
-}
-
+//STUBBORN BROADCAST
 static void
 stbroadcast_recv(struct stbroadcast_conn *c)
 {	
@@ -146,22 +133,16 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	if (deliver_msg) 
 	{
 		//Send predicate value back to originator
-		static struct ctimer trickle_timer;
 		predicate_return_msg_t *trickle_msg = (predicate_return_msg_t*) malloc(sizeof(predicate_return_msg_t));
-
 		rimeaddr_copy(&trickle_msg->sender, &rimeaddr_node_addr);
 		rimeaddr_copy(&trickle_msg->target_reciever, &msg->originator);
 		trickle_msg->message_id = msg->message_id;
 		trickle_msg->evaluated_predicate = "Value";
 
-		//printf("DEBUG: Sender: %s Message: %s Message ID: %d\n", 
-		//	addr2str(&trickle_msg->sender), 
-		//	trickle_msg->evaluated_predicate,
-		//	trickle_msg->message_id);
+		static struct ctimer trickle_timer;
+		ctimer_set(&trickle_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, trickle_msg);
 
-		ctimer_set(&trickle_timer, 21 * CLOCK_SECOND, &trickle_return_predicate_callback, trickle_msg);
-
-		//ReBroadcast Message If Hop Count Is Greater Than 1 
+		//Rebroadcast Message If Hop Count Is Greater Than 1 
 		if (msg->hop_limit > 1) //last node 
 		{
 			static char addr_str[RIMEADDR_STRING_LENGTH];
@@ -179,29 +160,47 @@ stbroadcast_sent(struct stbroadcast_conn *c)
 	//printf("I've sent!\n");
 }
 
-static const struct trickle_callbacks trickleCallbacks = {trickle_recv};
-static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
-
 static void
-cancel_stbroadcast(void * ptr)
+stbroadcast_cancel(void * ptr)
 {
-	printf("Canceling\n");
+	printf("Canceling Stubborn Broadcast.\n");
 	stbroadcast_cancel(&stbroadcast);
 }
 
+static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
+
+//RELIABLE UNICAST
 static void
-trickle_return_predicate_callback(predicate_return_msg_t const* msg)
+runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
 
+}
 
-	send_predicate_to_node(&msg->sender, &msg->target_reciever, msg->message_id, msg->evaluated_predicate);
+static void
+runicast_sent(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
 
+}
+
+static void
+runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+
+}
+
+static const struct runicast_callbacks runicast_callbacks = {runicast_recv, runicast_sent, runicast_timedout}
+
+//METHODS
+static void
+delayed_send_evaluated_predicate(predicate_return_msg_t const* msg)
+{
+	send_evaluated_predicate(&msg->sender, &msg->target_reciever, msg->message_id, msg->evaluated_predicate);
 
 	free(msg);
 }
 
 static void
-send_predicate_to_node(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate)
+send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate)
 {
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_return_msg_t));
@@ -214,7 +213,7 @@ send_predicate_to_node(rimeaddr_t const * sender, rimeaddr_t const * target_reci
 	msg->message_id = message_id;
 	msg->evaluated_predicate = evaluated_predicate;
 
-	trickle_send(&trickle);
+	runicast_send(&runicast, /*TODO: Reciever Address*/, 10);
 }
 
 static void
@@ -238,7 +237,7 @@ send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id_to_
 	stbroadcast_send_stubborn(&stbroadcast, random*CLOCK_SECOND);	
 	
 	static struct ctimer stbroadcast_stop_timer;
-	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &cancel_stbroadcast, NULL);
+	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &stbroadcast_cancel, NULL);
 }
 
 PROCESS(networkInit, "Network Init");
@@ -255,7 +254,7 @@ PROCESS_THREAD(networkInit, ev, data)
 	random_init(rimeaddr_node_addr.u8[0]+7);
 	int random = (random_rand() % 10);
 	if (random <= 1) random++;
-	trickle_open(&trickle, random*CLOCK_SECOND, 147, &trickleCallbacks);
+	runicast_open(&trickle, 147, &trickleCallbacks);
 
 	// Set the base station
 	memset(&baseStationAddr, 0, sizeof(rimeaddr_t));
@@ -289,25 +288,20 @@ PROCESS_THREAD(mainProcess, ev, data)
 	}
 	else //NODE
 	{
-		stbroadcast_open(&stbroadcast, 132, &stbroadcastCallbacks);
-
+		stbroadcast_open(&stbroadcast, 259, &stbroadcastCallbacks);
 		list_init(message_list);
 
 		etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-		
+		static rimeaddr_t test;
+		memset(&test, 0, sizeof(rimeaddr_t));
+		test.u8[sizeof(rimeaddr_t) - 2] = 2;
+		static int count = 0;
+
 		while (true)
 		{
-			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
-
-			static rimeaddr_t test;
-			memset(&test, 0, sizeof(rimeaddr_t));
-			test.u8[sizeof(rimeaddr_t) - 2] = 2;
-
-			static int count = 0;
-
 			if (rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
 			{
 				struct list_elem_struct * delivered_msg =  (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
@@ -319,13 +313,14 @@ PROCESS_THREAD(mainProcess, ev, data)
 				send_n_hop_predicate_check(&rimeaddr_node_addr, delivered_msg->message_id, "Hello World!!!", delivered_msg->hops);
 			}
 
+			etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
 	}
 
 	exit:
 		printf("Exiting Process...\n");
-		trickle_close(&trickle);
+		runicast_close(&runicast);
 		stbroadcast_close(&stbroadcast);
 		PROCESS_END();
 }

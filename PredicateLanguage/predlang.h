@@ -1,11 +1,6 @@
 #ifndef CS407_PRED_LANG_H
 #define CS407_PRED_LANG_H
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-
-
 typedef enum
 {
 	TYPE_INTEGER = 0,

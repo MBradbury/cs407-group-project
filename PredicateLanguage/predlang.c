@@ -1,9 +1,15 @@
 #include "predlang.h"
 
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 
 #ifndef _MSC_VER
 #	include <stdbool.h>
+#else
+#	define snprintf _snprintf
 #endif
 
 #ifndef NDEBUG

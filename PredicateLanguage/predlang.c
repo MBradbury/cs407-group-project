@@ -6,6 +6,16 @@
 #	include <stdbool.h>
 #endif
 
+#ifndef NDEBUG
+#	define DEBUG_PRINT(...) do{ printf(__VA_ARGS__ ); } while(false)
+#else
+#	define DEBUG_PRINT(...) (void)0
+#endif
+
+
+
+
+
 #define STACK_SIZE (3 * 1024)
 
 #define MAXIMUM_FUNCTIONS 5
@@ -54,7 +64,7 @@ static void * heap_alloc(size_t size)
 	if (heap_ptr + size > stack_ptr)
 	{
 		error = "Heap overwriting stack";
-		printf("========%s========\n", error);
+		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
 
@@ -89,7 +99,7 @@ static void pop_stack(size_t size)
 	if (stack_ptr + size > (stack + STACK_SIZE))
 	{
 		error = "STACK UNDERFLOW";
-		printf("========%s==== %p < %p ==\n", error, stack_ptr + size, stack + STACK_SIZE);
+		DEBUG_PRINT("========%s==== %p < %p ==\n", error, stack_ptr + size, stack + STACK_SIZE);
 	}
 
 	stack_ptr += size;
@@ -97,12 +107,14 @@ static void pop_stack(size_t size)
 
 static void inspect_stack(void)
 {
+#ifndef NDEGBUG
 	printf("Stack values:\n");
 	unsigned char * ptr;
 	for (ptr = stack_ptr; ptr < (stack + STACK_SIZE); ++ptr)
 	{
 		printf("\tStack %p %d\n", ptr, *ptr);
 	}
+#endif
 }
 
 static size_t stack_size(void)
@@ -114,7 +126,7 @@ static void require_stack_size(size_t size)
 {
 	if (stack_size() < size)
 	{
-		printf("Stack too small is %d bytes needed %d bytes\n", (stack + STACK_SIZE) - stack_ptr, size);
+		DEBUG_PRINT("Stack too small is %d bytes needed %d bytes\n", (stack + STACK_SIZE) - stack_ptr, size);
 	}
 }
 
@@ -148,7 +160,7 @@ static size_t variable_type_size(unsigned int type)
 	case TYPE_USER: return data_size;
 	default: 
 		error = "Unknown variable type";
-		printf("========%s========\n", error);
+		DEBUG_PRINT("========%s=======Neighbours=\n", error);
 		return 0;
 	}
 }
@@ -162,7 +174,7 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
 		error = "Created maximum number of variables";
-		printf("========%s========\n", error);
+		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
 
@@ -171,7 +183,7 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 	variable->name = (char *)heap_alloc(name_length + 1);
 	snprintf(variable->name, name_length + 1, "%s", name);
 
-	printf("Registered variable with name '%s'\n", variable->name);
+	DEBUG_PRINT("Registered variable with name '%s'\n", variable->name);
 
 	// Lets create some space in the heap to store the variable
 	variable->location = heap_alloc(variable_type_size(type));
@@ -187,7 +199,7 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
 		error = "Created maximum number of variables";
-		printf("========%s========\n", error);
+		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
 
@@ -206,7 +218,7 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 	variable->is_array = true;
 	variable->length = length;
 
-	printf("Registered array with name '%s' and length %d and elem size %d\n",
+	DEBUG_PRINT("Registered array with name '%s' and length %d and elem size %d\n",
 		variable->name, variable->length, variable_type_size(type));
 
 	return variable;
@@ -226,7 +238,7 @@ static variable_reg_t * get_variable(char const * name)
 	}
 
 	error = "No variable with the given name exists";
-	printf("========%s========\n", error);
+	DEBUG_PRINT("========%s========\n", error);
 
 	return NULL;
 }
@@ -271,7 +283,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	if (function_regs_count == MAXIMUM_FUNCTIONS)
 	{
 		error = "Already registered maximum number of functions";
-		printf("========%s========\n", error);
+		DEBUG_PRINT("========%s========\n", error);
 		return 1;
 	}
 
@@ -284,7 +296,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 
 	return 0;
 }
-
+Neighbours
 // Type is an optional output variable
 // pass NULL to it if you don't wait to know the type
 static void const * call_function(char const * name, void * data, variable_type_t * type)
@@ -302,7 +314,7 @@ static void const * call_function(char const * name, void * data, variable_type_
 	}
 
 	error = "Unknown function name";
-	printf("========%s========\n", error);
+	DEBUG_PRINT("========%s========\n", error);
 
 	return NULL;
 }
@@ -452,7 +464,7 @@ static const char * opcode_names[] = {
 #define OPERATION_POP(code, op, type, store_type, format_type) \
 	case code: \
 		{ \
-			printf("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[0], ((type *)stack_ptr)[1]); \
+			DEBUG_PRINT("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[0], ((type *)stack_ptr)[1]); \
 			require_stack_size(sizeof(type) * 2); \
 			store_type res = ((type *)stack_ptr)[0] op ((type *)stack_ptr)[1]; \
 			pop_stack(sizeof(type) * 2); \
@@ -465,18 +477,18 @@ static void evaluate(unsigned char * start, size_t program_length)
 
 	while (current - start < program_length)
 	{
-		printf("Executing (%d) %s\n", *current, opcode_names[*current]);
+		DEBUG_PRINT("Executing %s\n", opcode_names[*current]);
 
 		// Ideally want this op codes in numerical order
 		// so the compiler can generate a jump table
 		switch (*current)
 		{
 		case HALT:
-			printf("Halting\n");
+			DEBUG_PRINT("Halting\n");
 			return;
 
 		case IPUSH:
-			printf("Pushing int %d onto the stack\n", *(int*)(current + 1));
+			DEBUG_PRINT("Pushing int %d onto the stack\n", *(int*)(current + 1));
 			int_push_stack(*(int*)(current + 1));
 			current += sizeof(int);
 			break;
@@ -486,7 +498,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		case FPUSH:
-			printf("Pushing float %f onto the stack\n", *(float*)(current + 1));
+			DEBUG_PRINT("Pushing float %f onto the stack\n", *(float*)(current + 1));
 			float_push_stack(*(float*)(current + 1));
 			current += sizeof(float);
 			break;
@@ -573,7 +585,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 			if (((int *)stack_ptr)[0] == 0)
 			{
 				current = start + *(int *)(current + 1) - 1;
-				printf("Jumping to %p\n", current + 1);
+				DEBUG_PRINT("Jumping to %p\n", current + 1);
 			}
 			else
 			{
@@ -589,7 +601,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 			if (((int *)stack_ptr)[0] != 0)
 			{
 				current = start + *(int *)(current + 1) - 1;
-				printf("Jumping to %p\n", current + 1);
+				DEBUG_PRINT("Jumping to %p\n", current + 1);
 			}
 			else
 			{
@@ -608,7 +620,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 
 		case IINC:
 			require_stack_size(sizeof(int));
-			printf("Incrementing %d\n", ((int *)stack_ptr)[0]);
+			DEBUG_PRINT("Incrementing %d\n", ((int *)stack_ptr)[0]);
 			((int *)stack_ptr)[0] += 1;
 			break;
 
@@ -642,7 +654,7 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		default:
-			printf("Unknown OP CODE %d\n", *current);
+			DEBUG_PRINT("Unknown OP CODE %d\n", *current);
 			break;
 		}
 
@@ -704,6 +716,7 @@ typedef struct
 	int id;
 	int slot;
 	float temp;
+	float humidity;
 } user_data_t;
 
 static void set_user_data(user_data_t * data, int id, int slot, float temp)
@@ -738,6 +751,11 @@ static void const * get_temp_fn(void const * ptr)
 	return &((user_data_t const *)ptr)->temp;
 }
 
+static void const * get_humidity_fn(void const * ptr)
+{
+	return &((user_data_t const *)ptr)->humidity;
+}
+
 
 int main(int argc, char * argv[])
 {
@@ -747,6 +765,7 @@ int main(int argc, char * argv[])
 	register_function("id", &get_id_fn, TYPE_INTEGER);
 	register_function("slot", &get_slot_fn, TYPE_INTEGER);
 	register_function("temp", &get_temp_fn, TYPE_FLOATING);
+	register_function("humidity", &get_humidity_fn, TYPE_FLOATING);
 
 	variable_reg_t * result = create_variable("result", strlen("result"), TYPE_INTEGER);
 

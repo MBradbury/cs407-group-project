@@ -71,7 +71,7 @@ get_message_id(void)
 	return returnvalue;
 }
 
-/** The function that will be executed when a message is received */
+/** The function that will be executed when a Mesh message is received */
 static void 
 mesh_recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 {
@@ -122,9 +122,11 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 {
 	predicate_check_msg_t const * msg = (predicate_check_msg_t const *)packetbuf_dataptr();
 	
-	printf("I just recieved a Stubborn Broadcast Message!\n");
-	printf("%d\n", msg->hop_limit);
-	printf("%s\n", msg->predicate_to_check);
+	printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n", 
+		addr2str(msg->originator), 
+		msg->predicate_to_check,
+		msg->hop_limit,
+		msg->message_id);
 
 	// Check message has not been recieved before
 	bool deliver_msg = false;
@@ -166,7 +168,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 	if (deliver_msg) 
 	{
 		// Send predicate value back to originator		
-		send_predicate_to_node(&msg->originator, "Value");
+		//send_predicate_to_node(&msg->originator, "Value");
 
 		if (msg->hop_limit > 1) //last node 
 		{

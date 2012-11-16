@@ -20,26 +20,122 @@ options {
 
 PARSER_BEGIN(Hoppy)
 
+import java.io.PrintStream;
+
 public class Hoppy
 {
 	public static void main(String args[]) throws ParseException
 	{
 		Hoppy parser = new Hoppy(System.in);
-		parser.Input();
+		parser.Input(System.out);
 	}
 }
 
 PARSER_END(Hoppy)
 
-void Input() :
-{}
-{
-	MatchedBraces() ("\n"|"\r")* <EOF>
+TOKEN : {
+	//Keywords
+	< USING : 	"using" >
+	| < AS :	"as" >
+	| < IN : 	"in" >
+
+	//Regexes
+	| < ADDR : 	(<DIGIT>)+ "." (<DIGIT>)+ >
+	| < NAME :	<LETTER> (<ALPHANUM>)* >
+	| < ALPHANUM : 	<LETTER> | <DIGIT> >
+	| < LETTER :	["a"-"z"] >
+	| < DIGIT :	["0"-"9"] >
+	| < NEWLINE : 	"\n" | "\r" | "\r\n" >
 }
 
-void MatchedBraces() :
-{}
+SKIP : { " " | "\t" }
+
+void Input(PrintStream out) :
 {
-	"{" [ MatchedBraces() ] "}"
+	int[] target;
+	String using;
+}
+{
+	"[" 
+	(
+		target = Target()
+		{ out.println(target == null ? "*" : target.toString()); }
+	)
+	"]"
+	(
+		using = Using()
+		{ out.println(using); }
+	)
+	<EOF>
 }
 
+int[] Target() :
+{
+	Token t;
+	int[] addr = null;
+}
+{
+	(
+		(
+			//Flood targeting.
+			"*"
+		)
+		|
+		(
+			//Specific node targeting.
+			t = <ADDR>
+		)
+		{
+			//Build array of address components.
+			String[] comps = t.image.split("\\.");
+			addr = new int[2];
+			addr[0] = Integer.parseInt(comps[0]);
+			addr[1] = Integer.parseInt(comps[1]);
+		}
+	)
+	{
+		return addr;
+	}
+}
+
+String Using() :
+{
+	String func = "null";
+	Token nameToken;
+	String nt = "null";
+	String pred = "null";
+}
+{
+	(
+		<USING> 
+		(
+			func = Function()
+		)
+		<AS>
+		(
+			nameToken = <NAME>
+			{ nt = nameToken.image; }
+		) 
+		<IN>
+	)* 
+	pred = Predicate()
+	{
+		return func + nt + pred;
+	}
+} 
+
+String Function() :
+{
+}
+{
+	<NAME>
+	{ return "function"; }
+}
+
+String Predicate() :
+{
+}
+{
+	<NAME>
+	{ return "predicate"; }
+}

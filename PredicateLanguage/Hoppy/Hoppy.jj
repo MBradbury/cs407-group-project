@@ -78,7 +78,8 @@ TOKEN : {
 	// Operators
 	| < LOGICAL_MATH_OP : 	"==" | "!=" | "<" | "<=" | ">" | ">=" >
 	| < MATH_OP : 			"+" | "-" | "*" | "/" >
-	| < LOGICAL_OP :		"&" | "|" >
+	| < LOGICAL_BIN_OP :	"&" | "|" >
+	| < LOGICAL_UN_OP :		"!" >
 	| < QUANTIFIER :		"@" | "#" >
 
 	// Regexes
@@ -205,7 +206,38 @@ String Predicate() :
 {
 }
 {
-	<NAME>
+	(
+		(<QUANTIFIER> "(" <NAME> <COLON> <NAME> <TILDE> Predicate() ")")
+		|
+		(<LOGICAL_UN_OP> Predicate())
+		|
+		LogicalBinaryExpr()
+		|
+		MathBinaryExpr()
+	)
 	{ return "predicate"; }
 }
+
+void MathBinaryExpr() :
+{}
+{
+	(<LOGICAL_MATH_OP> VariableExpr() VariableExpr())
+}
+
+void VariableExpr() :
+{}
+{
+	<NAME> ("(" (<NAME> | <THIS>) ")")?
+	|
+	<NUMBER>
+	|
+	(<MATH_OP> VariableExpr() VariableExpr())
+}
+
+void LogicalBinaryExpr() :
+{}
+{
+	(<LOGICAL_BIN_OP> Predicate() Predicate())
+}
+
 

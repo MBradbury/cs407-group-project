@@ -1,6 +1,8 @@
 #ifndef CS407_PRED_LANG_H
 #define CS407_PRED_LANG_H
 
+#include <stdint.h>
+
 typedef enum
 {
 	TYPE_INTEGER = 0,
@@ -8,6 +10,12 @@ typedef enum
 	TYPE_USER = 2
 	
 } variable_type_t;
+
+
+typedef unsigned char ubyte;
+typedef int16_t nint;
+typedef uint16_t nuint;
+typedef float nfloat;
 
 
 
@@ -19,7 +27,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 
 typedef void * (*node_data_fn)(void);
 
-void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size);
+void init_pred_lang(node_data_fn given_data_fn, nuint given_data_size);
 
 
 

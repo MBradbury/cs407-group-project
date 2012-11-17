@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 #ifndef _MSC_VER
 #	include <stdbool.h>
@@ -19,7 +18,6 @@
 #endif
 
 
-
 #define STACK_SIZE (3 * 1024)
 
 #define MAXIMUM_FUNCTIONS 5
@@ -27,15 +25,15 @@
 
 
 
-static unsigned char stack[STACK_SIZE];
+static ubyte stack[STACK_SIZE];
 
-static unsigned char * stack_ptr = NULL;
-static unsigned char * heap_ptr = NULL;
+static ubyte * stack_ptr = NULL;
+static ubyte * heap_ptr = NULL;
 
 
 // Function that gets data on this node
 static node_data_fn data_fn = NULL;
-static size_t data_size = 0;
+static nuint data_size = 0;
 
 
 /****************************************************
@@ -63,7 +61,7 @@ void reset_error(void)
 /****************************************************
  ** MEMORY MANAGEMENT
  ***************************************************/
-static void * heap_alloc(size_t size)
+static void * heap_alloc(nuint size)
 {
 	if (heap_ptr + size > stack_ptr)
 	{
@@ -80,25 +78,25 @@ static void * heap_alloc(size_t size)
 }
 
 
-static void push_stack(void const * ptr, size_t size)
+static void push_stack(void const * ptr, nuint size)
 {
 	stack_ptr -= size;
 	memcpy(stack_ptr, ptr, size);
 }
 
-static void int_push_stack(int i)
+static void int_push_stack(nint i)
 {
-	stack_ptr -= sizeof(int);
-	*((int *)stack_ptr) = i;
+	stack_ptr -= sizeof(nint);
+	*((nint *)stack_ptr) = i;
 }
 
-static void float_push_stack(float i)
+static void float_push_stack(nfloat f)
 {
-	stack_ptr -= sizeof(float);
-	*((float *)stack_ptr) = i;
+	stack_ptr -= sizeof(nfloat);
+	*((nfloat *)stack_ptr) = f;
 }
 
-static void pop_stack(size_t size)
+static void pop_stack(nuint size)
 {
 	if (stack_ptr + size > (stack + STACK_SIZE))
 	{
@@ -113,7 +111,7 @@ static void inspect_stack(void)
 {
 #ifndef NDEGBUG
 	printf("Stack values:\n");
-	unsigned char * ptr;
+	ubyte * ptr;
 	for (ptr = stack_ptr; ptr < (stack + STACK_SIZE); ++ptr)
 	{
 		printf("\tStack %p %d\n", ptr, *ptr);
@@ -121,12 +119,12 @@ static void inspect_stack(void)
 #endif
 }
 
-static size_t stack_size(void)
+static nuint stack_size(void)
 {
 	return (stack + STACK_SIZE) - stack_ptr;
 }
 
-static void require_stack_size(size_t size)
+static void require_stack_size(nuint size)
 {
 	if (stack_size() < size)
 	{
@@ -148,19 +146,19 @@ typedef struct
 	char * name;
 	void * location;
 
-	unsigned int type : 2;
-	unsigned int is_array : 1;
-	unsigned int length : 13;
+	nuint type : 2;
+	nuint is_array : 1;
+	nuint length : 13;
 
 } variable_reg_t;
 
 
-static size_t variable_type_size(unsigned int type)
+static nuint variable_type_size(nuint type)
 {
 	switch (type)
 	{
-	case TYPE_INTEGER: return sizeof(int);
-	case TYPE_FLOATING: return sizeof(float);
+	case TYPE_INTEGER: return sizeof(nint);
+	case TYPE_FLOATING: return sizeof(nfloat);
 	case TYPE_USER: return data_size;
 	default: 
 		error = "Unknown variable type";
@@ -171,9 +169,9 @@ static size_t variable_type_size(unsigned int type)
 
 
 static variable_reg_t * variable_regs = NULL;
-static size_t variable_regs_count = 0;
+static nuint variable_regs_count = 0;
 
-static variable_reg_t * create_variable(char const * name, size_t name_length, variable_type_t type)
+static variable_reg_t * create_variable(char const * name, nuint name_length, variable_type_t type)
 {
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
@@ -205,7 +203,7 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 	return variable;
 }
 
-static variable_reg_t * create_array(char const * name, size_t name_length, variable_type_t type, size_t length)
+static variable_reg_t * create_array(char const * name, nuint name_length, variable_type_t type, nuint length)
 {
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
@@ -245,7 +243,7 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 
 static variable_reg_t * get_variable(char const * name)
 {
-	size_t i = 0;
+	nuint i = 0;
 	for (; i != variable_regs_count; ++i)
 	{
 		variable_reg_t * variable = &variable_regs[i];
@@ -262,18 +260,18 @@ static variable_reg_t * get_variable(char const * name)
 	return NULL;
 }
 
-static int * get_variable_as_int(char const * name)
+static nint * get_variable_as_int(char const * name)
 {
 	variable_reg_t * var = get_variable(name);
 
-	return (var != NULL) ? (int *)var->location : NULL;
+	return (var != NULL) ? (nint *)var->location : NULL;
 }
 
-static float * get_variable_as_float(char const * name)
+static nfloat * get_variable_as_float(char const * name)
 {
 	variable_reg_t * var = get_variable(name);
 
-	return (var != NULL) ? (float *)var->location : NULL;
+	return (var != NULL) ? (nfloat *)var->location : NULL;
 }
 
 /****************************************************
@@ -295,7 +293,7 @@ typedef struct
 } function_reg_t;
 
 static function_reg_t * functions_regs = NULL;
-static size_t function_regs_count = 0;
+static nuint function_regs_count = 0;
 
 int register_function(char const * name, data_access_fn fn, variable_type_t type)
 {
@@ -320,7 +318,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 // pass NULL to it if you don't wait to know the type
 static void const * call_function(char const * name, void * data, variable_type_t * type)
 {
-	size_t i = 0;
+	nuint i = 0;
 	for (; i != function_regs_count; ++i)
 	{
 		if (strcmp(functions_regs[i].name, name) == 0)
@@ -359,43 +357,43 @@ static void const * call_function(char const * name, void * data, variable_type_
  ** CODE GEN
  ***************************************************/
 
-typedef int jmp_loc_t;
+typedef nint jmp_loc_t;
 typedef jmp_loc_t * jmp_loc_ptr_t;
-typedef unsigned char * jmp_label_t;
+typedef ubyte * jmp_label_t;
 
-static unsigned char * program_start;
-static unsigned char * program_end;
+static ubyte * program_start;
+static ubyte * program_end;
 
-static unsigned char * start_gen(void)
+static ubyte * start_gen(void)
 {
 	return program_start = heap_ptr;
 }
 
-static jmp_label_t gen_op(unsigned char op)
+static jmp_label_t gen_op(ubyte op)
 {
-	unsigned char * pos = heap_ptr;
+	ubyte * pos = heap_ptr;
 
 	*heap_ptr = op;
-	heap_ptr += sizeof(unsigned char);
+	heap_ptr += sizeof(ubyte);
 
 	return pos;
 }
 
-static void gen_int(int i)
+static void gen_int(nint i)
 {
-	*(int *)heap_ptr = i;
-	heap_ptr += sizeof(int);
+	*(nint *)heap_ptr = i;
+	heap_ptr += sizeof(nint);
 }
 
-static void gen_float(float f)
+static void gen_float(nfloat f)
 {
-	*(float *)heap_ptr = f;
-	heap_ptr += sizeof(float);
+	*(nfloat *)heap_ptr = f;
+	heap_ptr += sizeof(nfloat);
 }
 
 static void gen_string(char const * str)
 {
-	size_t len = strlen(str) + 1;
+	nuint len = strlen(str) + 1;
 
 	memcpy(heap_ptr, str, len);
 	heap_ptr += len;
@@ -417,7 +415,7 @@ static void alloc_jmp(jmp_loc_ptr_t jmp, jmp_label_t label)
 	*jmp = label - program_start;
 }
 
-static unsigned char * stop_gen(void)
+static ubyte * stop_gen(void)
 {
 	return program_end = heap_ptr;
 }
@@ -490,7 +488,7 @@ static const char * opcode_names[] = {
 			push_stack(&res, sizeof(store_type)); \
 		} break
 
-static void evaluate(unsigned char * start, size_t program_length)
+static void evaluate(unsigned char * start, nuint program_length)
 {
 	unsigned char * current = start;
 
@@ -507,9 +505,9 @@ static void evaluate(unsigned char * start, size_t program_length)
 			return;
 
 		case IPUSH:
-			DEBUG_PRINT("Pushing int %d onto the stack\n", *(int*)(current + 1));
-			int_push_stack(*(int*)(current + 1));
-			current += sizeof(int);
+			DEBUG_PRINT("Pushing int %d onto the stack\n", *(nint*)(current + 1));
+			int_push_stack(*(nint*)(current + 1));
+			current += sizeof(nint);
 			break;
 
 		case IPOP:
@@ -517,13 +515,13 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		case FPUSH:
-			DEBUG_PRINT("Pushing float %f onto the stack\n", *(float*)(current + 1));
-			float_push_stack(*(float*)(current + 1));
-			current += sizeof(float);
+			DEBUG_PRINT("Pushing float %f onto the stack\n", *(nfloat*)(current + 1));
+			float_push_stack(*(nfloat*)(current + 1));
+			current += sizeof(nfloat);
 			break;
 
 		case FPOP:
-			pop_stack(sizeof(float));
+			pop_stack(sizeof(nfloat));
 			break;
 
 		case IFETCH:
@@ -532,8 +530,8 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		case ISTORE:
-			require_stack_size(sizeof(int));
-			*get_variable_as_int((char const *)(current + 1)) = *(int *)stack_ptr;
+			require_stack_size(sizeof(nint));
+			*get_variable_as_int((char const *)(current + 1)) = *(nint *)stack_ptr;
 			current += strlen((char const *)(current + 1)) + 1;
 			break;
 
@@ -543,17 +541,17 @@ static void evaluate(unsigned char * start, size_t program_length)
 			break;
 
 		case FSTORE:
-			require_stack_size(sizeof(float));
-			*get_variable_as_float((char const *)(current + 1)) = *(float *)stack_ptr;
+			require_stack_size(sizeof(nfloat));
+			*get_variable_as_float((char const *)(current + 1)) = *(nfloat *)stack_ptr;
 			current += strlen((char const *)(current + 1)) + 1;
 			break;
 
 		case AFETCH:
 			{
-				require_stack_size(sizeof(int));
+				require_stack_size(sizeof(nint));
 				variable_reg_t * var = get_variable((char const *)(current + 1));
-				int i = ((int *)stack_ptr)[0];
-				pop_stack(sizeof(int));
+				nint i = ((nint *)stack_ptr)[0];
+				pop_stack(sizeof(nint));
 				push_stack((char *)var->location + (i * variable_type_size(var->type)), variable_type_size(var->type));
 				current += strlen((char const *)(current + 1)) + 1;
 			} break;
@@ -561,8 +559,8 @@ static void evaluate(unsigned char * start, size_t program_length)
 		case ALEN:
 			{
 				variable_reg_t * var = get_variable((char const *)(current + 1));
-				int length = var->length;
-				push_stack(&length, sizeof(int));
+				nint length = var->length;
+				push_stack(&length, sizeof(nint));
 				current += strlen((char const *)(current + 1)) + 1;
 			} break;
 
@@ -581,97 +579,97 @@ static void evaluate(unsigned char * start, size_t program_length)
 
 		case ICASTF:
 			{
-				require_stack_size(sizeof(int));
-				float val = (float)((int *)stack_ptr)[0];
-				pop_stack(sizeof(int));
-				push_stack(&val, sizeof(float));
+				require_stack_size(sizeof(nint));
+				nfloat val = (nfloat)((nint *)stack_ptr)[0];
+				pop_stack(sizeof(nint));
+				push_stack(&val, sizeof(nfloat));
 			} break;
 
 		case FCASTI:
 			{
-				require_stack_size(sizeof(float));
-				int val = (int)((float *)stack_ptr)[0];
-				pop_stack(sizeof(float));
-				push_stack(&val, sizeof(int));
+				require_stack_size(sizeof(nfloat));
+				nint val = (nint)((nfloat *)stack_ptr)[0];
+				pop_stack(sizeof(nfloat));
+				push_stack(&val, sizeof(nint));
 			} break;
 
 		case JMP:
-			current = start + *(int *)(current + 1) - 1;
+			current = start + *(nint *)(current + 1) - 1;
 			break;
 
 		case JZ:
-			require_stack_size(sizeof(int));
-			if (((int *)stack_ptr)[0] == 0)
+			require_stack_size(sizeof(nint));
+			if (((nint *)stack_ptr)[0] == 0)
 			{
-				current = start + *(int *)(current + 1) - 1;
+				current = start + *(nint *)(current + 1) - 1;
 				DEBUG_PRINT("Jumping to %p\n", current + 1);
 			}
 			else
 			{
-				current += sizeof(int);
+				current += sizeof(nint);
 			}
 
-			pop_stack(sizeof(int));
+			pop_stack(sizeof(nint));
 
 			break;
 
 		case JNZ:
-			require_stack_size(sizeof(int));
-			if (((int *)stack_ptr)[0] != 0)
+			require_stack_size(sizeof(nint));
+			if (((nint *)stack_ptr)[0] != 0)
 			{
-				current = start + *(int *)(current + 1) - 1;
+				current = start + *(nint *)(current + 1) - 1;
 				DEBUG_PRINT("Jumping to %p\n", current + 1);
 			}
 			else
 			{
-				current += sizeof(int);
+				current += sizeof(nint);
 			}
 
-			pop_stack(sizeof(int));
+			pop_stack(sizeof(nint));
 
 			break;
 
 		// Integer operations
-		OPERATION_POP(IADD, +, int, int, "%d", 0, 1);
-		OPERATION_POP(ISUB, -, int, int, "%d", 0, 1);
-		OPERATION_POP(IMUL, *, int, int, "%d", 0, 1);
-		OPERATION_POP(IDIV1, /, int, int, "%d", 0, 1);
-		OPERATION_POP(IDIV2, /, int, int, "%d", 1, 0);
+		OPERATION_POP(IADD, +, nint, nint, "%d", 0, 1);
+		OPERATION_POP(ISUB, -, nint, nint, "%d", 0, 1);
+		OPERATION_POP(IMUL, *, nint, nint, "%d", 0, 1);
+		OPERATION_POP(IDIV1, /, nint, nint, "%d", 0, 1);
+		OPERATION_POP(IDIV2, /, nint, nint, "%d", 1, 0);
 
 		case IINC:
-			require_stack_size(sizeof(int));
-			DEBUG_PRINT("Incrementing %d\n", ((int *)stack_ptr)[0]);
-			((int *)stack_ptr)[0] += 1;
+			require_stack_size(sizeof(nint));
+			DEBUG_PRINT("Incrementing %d\n", ((nint *)stack_ptr)[0]);
+			((nint *)stack_ptr)[0] += 1;
 			break;
 
-		OPERATION_POP(IEQ, ==, int, int, "%d", 0, 1);
-		OPERATION_POP(INEQ, !=, int, int, "%d", 0, 1);
-		OPERATION_POP(ILT, <, int, int, "%d", 0, 1);
-		OPERATION_POP(ILEQ, <=, int, int, "%d", 0, 1);
-		OPERATION_POP(IGT, >, int, int, "%d", 0, 1);
-		OPERATION_POP(IGEQ, >=, int, int, "%d", 0, 1);
+		OPERATION_POP(IEQ, ==, nint, nint, "%d", 0, 1);
+		OPERATION_POP(INEQ, !=, nint, nint, "%d", 0, 1);
+		OPERATION_POP(ILT, <, nint, nint, "%d", 0, 1);
+		OPERATION_POP(ILEQ, <=, nint, nint, "%d", 0, 1);
+		OPERATION_POP(IGT, >, nint, nint, "%d", 0, 1);
+		OPERATION_POP(IGEQ, >=, nint, nint, "%d", 0, 1);
 
 		// Floating point operations
-		OPERATION_POP(FADD, +, float, float, "%f", 0, 1);
-		OPERATION_POP(FSUB, -, float, float, "%f", 0, 1);
-		OPERATION_POP(FMUL, *, float, float, "%f", 0, 1);
-		OPERATION_POP(FDIV1, /, float, float, "%f", 0, 1);
-		OPERATION_POP(FDIV2, /, float, float, "%f", 1, 0);
-		OPERATION_POP(FEQ, ==, float, int, "%f", 0, 1);
-		OPERATION_POP(FNEQ, !=, float, int, "%f", 0, 1);
-		OPERATION_POP(FLT, <, float, int, "%f", 0, 1);
-		OPERATION_POP(FLEQ, <=, float, int, "%f", 0, 1);
-		OPERATION_POP(FGT, >, float, int, "%f", 0, 1);
-		OPERATION_POP(FGEQ, >=, float, int, "%f", 0, 1);
+		OPERATION_POP(FADD, +, nfloat, nfloat, "%f", 0, 1);
+		OPERATION_POP(FSUB, -, nfloat, nfloat, "%f", 0, 1);
+		OPERATION_POP(FMUL, *, nfloat, nfloat, "%f", 0, 1);
+		OPERATION_POP(FDIV1, /, nfloat, nfloat, "%f", 0, 1);
+		OPERATION_POP(FDIV2, /, nfloat, nfloat, "%f", 1, 0);
+		OPERATION_POP(FEQ, ==, nfloat, nint, "%f", 0, 1);
+		OPERATION_POP(FNEQ, !=, nfloat, nint, "%f", 0, 1);
+		OPERATION_POP(FLT, <, nfloat, nint, "%f", 0, 1);
+		OPERATION_POP(FLEQ, <=, nfloat, nint, "%f", 0, 1);
+		OPERATION_POP(FGT, >, nfloat, nint, "%f", 0, 1);
+		OPERATION_POP(FGEQ, >=, nfloat, nint, "%f", 0, 1);
 
 		// Logical operations
-		OPERATION_POP(AND, &&, int, int, "%d", 0, 1);
-		OPERATION_POP(OR, ||, int, int, "%d", 0, 1);
-		OPERATION_POP(XOR, ^, int, int, "%d", 0, 1);
+		OPERATION_POP(AND, &&, nint, nint, "%d", 0, 1);
+		OPERATION_POP(OR, ||, nint, nint, "%d", 0, 1);
+		OPERATION_POP(XOR, ^, nint, nint, "%d", 0, 1);
 
 		case NOT:
-			require_stack_size(sizeof(int));
-			((int *)stack_ptr)[0] = ! ((int *)stack_ptr)[0];
+			require_stack_size(sizeof(nint));
+			((nint *)stack_ptr)[0] = ! ((nint *)stack_ptr)[0];
 			break;
 
 		default:
@@ -697,7 +695,7 @@ static void evaluate(unsigned char * start, size_t program_length)
  ** INIT MANAGEMENT END
  ***************************************************/
 
-void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size)
+void init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 {
 	// Record the user's data access function
 	data_fn = given_data_fn;
@@ -734,19 +732,20 @@ void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size)
 
 typedef struct
 {
-	int id;
-	int slot;
-	float temp;
-	float humidity;
+	nint id;
+	nint slot;
+	nfloat temp;
+	nfloat humidity;
 } user_data_t;
 
-static void set_user_data(user_data_t * data, int id, int slot, float temp)
+static void set_user_data(user_data_t * data, nint id, nint slot, nfloat temp, nfloat humidity)
 {
 	if (data != NULL)
 	{
 		data->id = id;
 		data->slot = slot;
 		data->temp = temp;
+		data->humidity = humidity;
 	}
 }
 
@@ -754,7 +753,7 @@ static void * local_node_data_fn(void)
 {
 	static user_data_t node_data;
 
-	set_user_data(&node_data, 1, 2, 20.0);
+	set_user_data(&node_data, 1, 2, 20.0, 122);
 
 	return &node_data;
 }
@@ -793,33 +792,33 @@ int main(int argc, char * argv[])
 
 	variable_reg_t * result = create_variable("result", strlen("result"), TYPE_INTEGER);
 
-	*((int *)result->location) = *(int const *)call_function("slot", (*data_fn)(), NULL);
+	*((nint *)result->location) = *(nint const *)call_function("slot", (*data_fn)(), NULL);
 
 
 	create_variable("i", strlen("i"), TYPE_INTEGER);
 	variable_reg_t * var_array = create_array("n1", strlen("n1"), TYPE_USER, 10);
 
 	user_data_t * arr = (user_data_t *)var_array->location;
-	set_user_data(&arr[0], 0, 1, 25);
-	set_user_data(&arr[1], 1, 3, 26);
-	set_user_data(&arr[2], 2, 5, 27);
-	set_user_data(&arr[3], 3, 7, 26);
-	set_user_data(&arr[4], 4, 9, 25);
-	set_user_data(&arr[5], 5, 11, 26);
-	set_user_data(&arr[6], 6, 13, 27);
-	set_user_data(&arr[7], 7, 15, 26);
-	set_user_data(&arr[8], 8, 17, 25);
-	set_user_data(&arr[9], 9, 19, 26);
+	set_user_data(&arr[0], 0, 1, 25, 122);
+	set_user_data(&arr[1], 1, 3, 26, 122);
+	set_user_data(&arr[2], 2, 5, 27, 122);
+	set_user_data(&arr[3], 3, 7, 26, 122);
+	set_user_data(&arr[4], 4, 9, 25, 122);
+	set_user_data(&arr[5], 5, 11, 26, 122);
+	set_user_data(&arr[6], 6, 13, 27, 122);
+	set_user_data(&arr[7], 7, 15, 26, 122);
+	set_user_data(&arr[8], 8, 17, 25, 122);
+	set_user_data(&arr[9], 9, 19, 26, 122);
 
 	printf("Array length %d\n", var_array->length);
 
 	printf("sizeof(void *): %u\n", sizeof(void *));
-	printf("sizeof(int): %u\n", sizeof(int));
-	printf("sizeof(float): %u\n", sizeof(float));
+	printf("sizeof(int): %u\n", sizeof(nint));
+	printf("sizeof(float): %u\n", sizeof(nfloat));
 	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
-	int * data = get_variable_as_int("result");
+	nint * data = get_variable_as_int("result");
 
 	user_data_t const * user_data = (user_data_t const *) (*data_fn)();
 
@@ -829,7 +828,7 @@ int main(int argc, char * argv[])
 	);
 
 	// Load a small program into memory
-	unsigned char * const start = start_gen();
+	ubyte * const start = start_gen();
 
 	/*gen_op(IPUSH);
 	gen_int(2);
@@ -915,7 +914,7 @@ int main(int argc, char * argv[])
 
 
 	// Program termination
-	unsigned char * last = gen_op(HALT);
+	ubyte * last = gen_op(HALT);
 
 
 	// Set jump locations
@@ -927,7 +926,7 @@ int main(int argc, char * argv[])
 	alloc_jmp(jmp2, label1);
 
 
-	unsigned char * const end = stop_gen();
+	ubyte * const end = stop_gen();
 
 
 	printf("Program length %d\n", end - start);
@@ -938,7 +937,7 @@ int main(int argc, char * argv[])
 
 	// Print the results
 	printf("Stack ptr value %f\n",
-		*((float *)stack_ptr)
+		*((nfloat *)stack_ptr)
 	);
 
 	inspect_stack();

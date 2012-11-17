@@ -43,6 +43,23 @@ final class FuncDecl
 	public void setArgs(String[] args) { this.args = args; }
 }
 
+final class PredicateTarget
+{
+	private boolean all = false;
+	private int[] addr = null;
+
+	public void setToAll() { all = true; addr = null; }
+	public boolean isToAll() { return all; }
+
+	public void setAddr(int[] addr) { this.addr = addr; all = false; }
+	public int[] getAddr() { return addr; }
+
+	public String toString()
+	{
+		return all ? "all" : addr[0] + "." + addr[1];
+	}
+}
+
 PARSER_END(Hoppy)
 
 TOKEN : {
@@ -65,25 +82,25 @@ TOKEN : {
 	| < QUANTIFIER :		"@" | "#" >
 
 	// Regexes
+	| < NUMBER :	(<DIGIT>)+ >
 	| < NAME :		<LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
-	| < LETTER :	["a"-"z"] >
-	| < DIGIT :		["0"-"9"] >
-	| < NUMBER :	(<DIGIT>)+ >
+	| < #LETTER :	["a"-"z"] >
+	| < #DIGIT :	["0"-"9"] >
 }
 
 SKIP : { " " | "\t" | "\n" | "\r" }
 
 void Input(PrintStream out) :
 {
-	int[] target;
+	PredicateTarget target;
 	String using;
 }
 {
 	"[" 
 	(
 		target = Target()
-		{ out.println(target == null ? "*" : target.toString()); }
+		{ out.println(target.toString()); }
 	)
 	"]"
 	(
@@ -93,7 +110,7 @@ void Input(PrintStream out) :
 	<EOF>
 }
 
-int[] Target() :
+PredicateTarget Target() :
 {
 	int a, b;
 	int[] addr = null;
@@ -114,7 +131,14 @@ int[] Target() :
 		}
 	)
 	{
-		return addr;
+		PredicateTarget target = new PredicateTarget();
+
+		if (addr == null)
+			target.setToAll();
+		else
+			target.setAddr(addr);
+
+		return target;
 	}
 }
 

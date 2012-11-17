@@ -20,8 +20,6 @@
 
 
 
-
-
 #define STACK_SIZE (3 * 1024)
 
 #define MAXIMUM_FUNCTIONS 5
@@ -184,6 +182,13 @@ static variable_reg_t * create_variable(char const * name, size_t name_length, v
 		return NULL;
 	}
 
+	if (name_length == 0)
+	{
+		error = "Need to provide a name for variable";
+		DEBUG_PRINT("========%s========\n", error);
+		return NULL;
+	}
+
 	variable_reg_t * variable = &variable_regs[variable_regs_count++];
 
 	variable->name = (char *)heap_alloc(name_length + 1);
@@ -208,6 +213,14 @@ static variable_reg_t * create_array(char const * name, size_t name_length, vari
 		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
+
+	if (name_length == 0)
+	{
+		error = "Need to provide a name for variable";
+		DEBUG_PRINT("========%s========\n", error);
+		return NULL;
+	}
+
 
 	variable_reg_t * variable = &variable_regs[variable_regs_count++];
 
@@ -729,9 +742,12 @@ typedef struct
 
 static void set_user_data(user_data_t * data, int id, int slot, float temp)
 {
-	data->id = id;
-	data->slot = slot;
-	data->temp = temp;
+	if (data != NULL)
+	{
+		data->id = id;
+		data->slot = slot;
+		data->temp = temp;
+	}
 }
 
 static void * local_node_data_fn(void)
@@ -781,7 +797,7 @@ int main(int argc, char * argv[])
 
 
 	create_variable("i", strlen("i"), TYPE_INTEGER);
-	variable_reg_t * var_array = create_array("1hopn", strlen("1hopn"), TYPE_USER, 10);
+	variable_reg_t * var_array = create_array("n1", strlen("n1"), TYPE_USER, 10);
 
 	user_data_t * arr = (user_data_t *)var_array->location;
 	set_user_data(&arr[0], 0, 1, 25);
@@ -852,7 +868,7 @@ int main(int argc, char * argv[])
 	//gen_string("i");
 
 	gen_op(ALEN);
-	gen_string("1hopn");
+	gen_string("n1");
 
 	gen_op(INEQ);
 
@@ -866,7 +882,7 @@ int main(int argc, char * argv[])
 	gen_string("i");
 
 	gen_op(AFETCH);
-	gen_string("1hopn");
+	gen_string("n1");
 
 	gen_op(CALL);
 	gen_string("slot");

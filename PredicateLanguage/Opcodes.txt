@@ -1,0 +1,89 @@
+_ is either I for int or F for float
+
+HALT
+	Halts execution
+
+_PUSH (_)
+	Pushes an _ onto the stack
+
+_POP
+	Pops the stack by sizeof(_) bytes
+
+_FETCH (string)
+	Fetches the value of the given variable and pushes the
+	first sizeof(_) bytes of it onto the stack
+
+_STORE (string)
+	Stores the first sizeof(_) bytes in the variable
+	of the given name
+
+AFETCH (string)
+	Fetches the value of the array named in the parameter
+	at the integer index at the top of the stack
+
+ALEN (string)
+	Pushes an integer onto the stack containing the length
+	of the named array
+
+CALL (string)
+	Calls the named function on the data on top of the stack.
+	The data this is called on is popped and the result
+	is pushed onto the stack.
+
+ICASTF
+	Pops an integer off the stack, casts it to a float
+	then stores it back on the stack
+
+FCASTI
+	Pops a float off the stack, casts it to a integer
+	then stores it back on the stack
+
+JMP (int)
+	Jumps to a position in the code relative to the start
+	of the program
+
+JZ
+	Reads the top of the stack as an integer, if it is 0
+	the program jumps to the location, otherwise evaluation
+	continues
+
+JNZ
+	Reads the top of the stack as an integer, if it is not 0
+	the program jumps to the location, otherwise evaluation
+	continues
+
+_ADD	1 = 0 op 1
+_SUB	1 = 0 op 1
+_MUL	1 = 0 op 1
+_DIV1	1 = 0 op 1
+_DIV2	1 = 1 op 0
+	Performs a mathematical operations on the first two sizeof(_)
+	values on the stack. Pops both values off the stack, stores
+	the result in the same type back on the stack.
+
+IINC
+	Pops the top of the stack by sizeof(int) bytes, increments
+	the value as an integer. Pushes the result back on the stack
+
+_EQ		1 = 0 op 1
+_NEQ	1 = 0 op 1
+_ILT	1 = 0 op 1
+_LEQ	1 = 0 op 1
+_GT		1 = 0 op 1
+_GEQ	1 = 0 op 1
+	Performs a mathematical operations on the first two sizeof(_)
+	values on the stack. Pops both values off the stack, stores
+	the result in an integer on the stack.
+
+AND		1 = 0 op 1
+OR		1 = 0 op 1
+XOR		1 = 0 op 1
+	Performs a logical operation on the first two values on the
+	stack. These are not bitwise operations and the expected
+	formats of the values are integers. 0 is false, 1 is true.
+	Pops both values off the stack,
+	stores the result in an integer back on the stack.
+
+NOT
+	Pops an integer off the stack, performs logical not on it.
+	Pushes the result back on the stack.

@@ -12,13 +12,13 @@
 #endif
 
 #ifndef NDEBUG
-#	define DEBUG_PRINT(...) do{ printf(__VA_ARGS__ ); } while(false)
+#	define DEBUG_PRINT(...) do { printf(__VA_ARGS__); } while(false)
 #else
 #	define DEBUG_PRINT(...) (void)0
 #endif
 
 
-#define STACK_SIZE (3 * 1024)
+#define STACK_SIZE (2 * 1024)
 
 #define MAXIMUM_FUNCTIONS 5
 #define MAXIMUM_VARIABLES 5
@@ -63,12 +63,14 @@ void reset_error(void)
  ***************************************************/
 static void * heap_alloc(nuint size)
 {
+#ifndef NDEBUG
 	if (heap_ptr + size > stack_ptr)
 	{
 		error = "Heap overwriting stack";
 		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
+#endif
 
 	void * ptr = heap_ptr;
 
@@ -80,6 +82,14 @@ static void * heap_alloc(nuint size)
 
 static void push_stack(void const * ptr, nuint size)
 {
+#ifndef NDEBUG
+	if (stack_ptr - size < heap_ptr)
+	{
+		error = "Stack overwriting heap";
+		DEBUG_PRINT("========%s========\n", error);
+	}
+#endif
+
 	stack_ptr -= size;
 	memcpy(stack_ptr, ptr, size);
 }
@@ -98,11 +108,13 @@ static void float_push_stack(nfloat f)
 
 static void pop_stack(nuint size)
 {
+#ifndef NDEBUG
 	if (stack_ptr + size > (stack + STACK_SIZE))
 	{
 		error = "STACK UNDERFLOW";
 		DEBUG_PRINT("========%s==== %p < %p ==\n", error, stack_ptr + size, stack + STACK_SIZE);
 	}
+#endif
 
 	stack_ptr += size;
 }
@@ -255,7 +267,7 @@ static variable_reg_t * get_variable(char const * name)
 	}
 
 	error = "No variable with the given name exists";
-	DEBUG_PRINT("========%s========\n", error);
+	DEBUG_PRINT("========%s=====%s===\n", error, name);
 
 	return NULL;
 }
@@ -300,7 +312,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	if (function_regs_count == MAXIMUM_FUNCTIONS)
 	{
 		error = "Already registered maximum number of functions";
-		DEBUG_PRINT("========%s========\n", error);
+		DEBUG_PRINT("========%s=====%s===\n", error, name);
 		return 1;
 	}
 
@@ -314,24 +326,36 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	return 0;
 }
 
-// Type is an optional output variable
-// pass NULL to it if you don't wait to know the type
-static void const * call_function(char const * name, void * data, variable_type_t * type)
+static function_reg_t * get_function(char const * name)
 {
 	nuint i = 0;
 	for (; i != function_regs_count; ++i)
 	{
 		if (strcmp(functions_regs[i].name, name) == 0)
 		{
-			if (type != NULL)
-				*type = functions_regs[i].type;
-
-			return functions_regs[i].fn(data);
+			return &functions_regs[i];
 		}
 	}
 
 	error = "Unknown function name";
-	DEBUG_PRINT("========%s========\n", error);
+	DEBUG_PRINT("========%s======%s==\n", error, name);
+
+	return NULL;
+}
+
+// Type is an optional output variable
+// pass NULL to it if you don't wait to know the type
+static void const * call_function(char const * name, void * data, variable_type_t * type)
+{
+	function_reg_t * reg = get_function(name);
+
+	if (reg != NULL)
+	{
+		if (type != NULL)
+			*type = reg->type;
+
+		return reg->fn(data);
+	}
 
 	return NULL;
 }
@@ -436,6 +460,8 @@ typedef enum {
   
   AFETCH, ALEN,
 
+  ASUM,
+
   CALL,
 
   ICASTF, FCASTI,
@@ -459,6 +485,8 @@ static const char * opcode_names[] = {
 	"IFETCH", "ISTORE", "FFETCH", "FSTORE", // Read / Write variables
 
 	"AFETCH", "ALEN", // Arrays Ops
+
+	"ASUM", // Custom user data array ops
 
 	"CALL",
 
@@ -488,13 +516,13 @@ static const char * opcode_names[] = {
 			push_stack(&res, sizeof(store_type)); \
 		} break
 
-static void evaluate(unsigned char * start, nuint program_length)
+static void evaluate(ubyte * start, nuint program_length)
 {
-	unsigned char * current = start;
+	ubyte * current = start;
 
 	while (current - start < program_length)
 	{
-		DEBUG_PRINT("Executing %s\n", opcode_names[*current]);
+		DEBUG_PRINT("Executing %s at %p\n", opcode_names[*current], current);
 
 		// Ideally want this op codes in numerical order
 		// so the compiler can generate a jump table
@@ -562,6 +590,54 @@ static void evaluate(unsigned char * start, nuint program_length)
 				nint length = var->length;
 				push_stack(&length, sizeof(nint));
 				current += strlen((char const *)(current + 1)) + 1;
+			} break;
+
+		case ASUM:
+			{
+				char const * array_name = (char const *)(current + 1);
+
+				current += strlen(array_name) + 1;
+
+				DEBUG_PRINT("Array name %s\n", array_name);
+
+				char const * fn_name = (char const *)(current + 1);
+
+				current += strlen(fn_name) + 1;
+
+				DEBUG_PRINT("FN name %s\n", fn_name);
+
+				variable_reg_t const * var_reg = get_variable(array_name);
+				function_reg_t const * fn_reg = get_function(fn_name);
+
+				nfloat op_result = 0;
+
+				if (var_reg->type == TYPE_USER)
+				{
+					byte const * data = (byte *)var_reg->location;
+
+					nuint size = variable_type_size(TYPE_USER);
+
+					byte const * const end = data + (size * var_reg->length);
+
+					for (; data != end; data += size)
+					{
+						void const * result = fn_reg->fn(data);
+
+						if (fn_reg->type == TYPE_INTEGER)
+							op_result += (nfloat)*(nint const *)result;
+						else
+							op_result += *(nfloat const *)result;
+					}
+
+					float_push_stack(op_result);
+				}
+				else
+				{
+					error = "Variable not an array of user types!";
+					DEBUG_PRINT("==========%s==========\n", error);
+
+					float_push_stack(-1);
+				}
 			} break;
 
 		case CALL:
@@ -780,6 +856,84 @@ static void const * get_humidity_fn(void const * ptr)
 }
 
 
+static void gen_example1(void)
+{
+	gen_op(IPUSH); gen_int(2);
+	gen_op(IPUSH); gen_int(3);
+	gen_op(IADD);
+	gen_op(IFETCH); gen_string("result");
+	gen_op(IADD);
+	gen_op(ICASTF);
+	gen_op(FPUSH); gen_float(7.5);
+	gen_op(FGT);
+	gen_op(NOT);
+}
+
+static void gen_example_mean(void)
+{
+	gen_op(ASUM); gen_string("n1"); gen_string("id");
+
+	gen_op(ALEN); gen_string("n1");
+
+	gen_op(ICASTF);
+
+	gen_op(FDIV2);
+}
+
+static void gen_example_for_loop(void)
+{
+	// Initial Code
+	gen_op(FPUSH); gen_float(0);
+
+	// Initalise loop counter
+	gen_op(IPUSH); gen_int(0);
+	gen_op(ISTORE); gen_string("i");
+
+	// Perform loop termination check
+	jmp_label_t label1 = 
+	gen_op(ALEN); gen_string("n1");
+
+	gen_op(INEQ);
+	gen_op(JZ); jmp_loc_ptr_t jmp1 = gen_jmp();
+
+
+	// Perform body operations
+	gen_op(IFETCH); gen_string("i");
+
+	gen_op(AFETCH); gen_string("n1");
+	gen_op(CALL); gen_string("slot");
+	gen_op(ICASTF);
+
+	gen_op(FADD);
+
+	gen_op(FPUSH); gen_float(2);
+
+	gen_op(FDIV2);
+
+	// Increment loop counter
+	gen_op(IFETCH); gen_string("i");
+	gen_op(IINC);
+	gen_op(ISTORE); gen_string("i");
+
+
+	// Jump to start of loop
+	gen_op(JMP); jmp_loc_ptr_t jmp2 = gen_jmp();
+
+
+	// Program termination
+	ubyte * last = gen_op(HALT);
+
+
+	// Set jump locations
+	// We do this here because when we add
+	// the jump in the code we may not know whereresolve (jump);
+	// we are jumping to because the destination
+	// may be after the current jump is added.
+	alloc_jmp(jmp1, last);
+	alloc_jmp(jmp2, label1);
+}
+
+
 int main(int argc, char * argv[])
 {
 	init_pred_lang(&local_node_data_fn, sizeof(user_data_t));
@@ -827,105 +981,9 @@ int main(int argc, char * argv[])
 		user_data->slot
 	);
 
-	// Load a small program into memory
+	// Load a program into memory
 	ubyte * const start = start_gen();
-
-	/*gen_op(IPUSH);
-	gen_int(2);
-	gen_op(IPUSH);
-	gen_int(3);
-	gen_op(IADD);
-	gen_op(IFETCH);
-	gen_string("result");
-	gen_op(IADD);
-	gen_op(ICASTF);
-	gen_op(FPUSH);
-	gen_float(7.5);
-	gen_op(FGT);
-	gen_op(NOT);
-	gen_op(HALT);*/
-
-
-	// Initial Code
-	gen_op(FPUSH);
-	gen_float(0);
-
-
-	// Initalise loop counter
-	gen_op(IPUSH);
-	gen_int(0);
-
-	gen_op(ISTORE);
-	gen_string("i");
-
-	//gen_op(IPOP);
-
-
-	// Perform loop termination check
-	jmp_label_t label1 = 
-	//gen_op(IFETCH);
-	//gen_string("i");
-
-	gen_op(ALEN);
-	gen_string("n1");
-
-	gen_op(INEQ);
-
-	gen_op(JZ);
-	jmp_loc_ptr_t jmp1 =
-	gen_jmp();
-
-
-	// Perform body operations
-	gen_op(IFETCH);
-	gen_string("i");
-
-	gen_op(AFETCH);
-	gen_string("n1");
-
-	gen_op(CALL);
-	gen_string("slot");
-
-	gen_op(ICASTF);
-
-	gen_op(FADD);
-
-	gen_op(FPUSH);
-	gen_float(2);
-
-	gen_op(FDIV2);
-
-	// Increment loop counter
-	gen_op(IFETCH);
-	gen_string("i");
-
-	gen_op(IINC);
-
-	gen_op(ISTORE);
-	gen_string("i");
-
-	//gen_op(IPOP);
-
-
-	// Jump to start of loop
-	gen_op(JMP);
-	jmp_loc_ptr_t jmp2 =
-	gen_jmp();
-
-
-	// Program termination
-	ubyte * last = gen_op(HALT);
-
-
-	// Set jump locations
-	// We do this here because when we add
-	// the jump in the code we may not know whereresolve (jump);
-	// we are jumping to because the destination
-	// may be after the current jump is added.
-	alloc_jmp(jmp1, last);
-	alloc_jmp(jmp2, label1);
-
-
+	gen_example_mean();
 	ubyte * const end = stop_gen();
 
 

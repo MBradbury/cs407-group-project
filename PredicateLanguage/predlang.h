@@ -12,6 +12,7 @@ typedef enum
 } variable_type_t;
 
 
+typedef signed char byte;
 typedef unsigned char ubyte;
 typedef int16_t nint;
 typedef uint16_t nuint;

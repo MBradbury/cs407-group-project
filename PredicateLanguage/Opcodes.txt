@@ -24,6 +24,13 @@ AFETCH (string)
 ALEN (string)
 	Pushes an integer onto the stack containing the length
 	of the named array
+	
+ASUM (string) (string)
+	Over the user defined array stored in the variable whose
+	name is the first parameter, transform it using the function
+	whose name is the second parameter. On this transformed data
+	calculate the mean and push the result as a float onto the
+	top of the stack.
 
 CALL (string)
 	Calls the named function on the data on top of the stack.

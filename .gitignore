@@ -43,6 +43,7 @@ VarDepthClustering
 /PredicateLanguage/Hoppy/build/
 /PredicateLanguage/Hoppy/dist/
 /PredicateLanguage/Debug/
+/PredicateLanguage/Release/
 *.opensdf
 *.sdf
 *.suo

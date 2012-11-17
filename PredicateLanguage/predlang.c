@@ -61,7 +61,7 @@ void reset_error(void)
 /****************************************************
  ** MEMORY MANAGEMENT
  ***************************************************/
-static void * heap_alloc(nuint size)
+static inline void * heap_alloc(nuint size)
 {
 #ifndef NDEBUG
 	if (heap_ptr + size > stack_ptr)
@@ -80,7 +80,7 @@ static void * heap_alloc(nuint size)
 }
 
 
-static void push_stack(void const * ptr, nuint size)
+static inline void push_stack(void const * ptr, nuint size)
 {
 #ifndef NDEBUG
 	if (stack_ptr - size < heap_ptr)
@@ -94,19 +94,19 @@ static void push_stack(void const * ptr, nuint size)
 	memcpy(stack_ptr, ptr, size);
 }
 
-static void int_push_stack(nint i)
+static inline void int_push_stack(nint i)
 {
 	stack_ptr -= sizeof(nint);
 	*((nint *)stack_ptr) = i;
 }
 
-static void float_push_stack(nfloat f)
+static inline void float_push_stack(nfloat f)
 {
 	stack_ptr -= sizeof(nfloat);
 	*((nfloat *)stack_ptr) = f;
 }
 
-static void pop_stack(nuint size)
+static inline void pop_stack(nuint size)
 {
 #ifndef NDEBUG
 	if (stack_ptr + size > (stack + STACK_SIZE))
@@ -131,7 +131,7 @@ static void inspect_stack(void)
 #endif
 }
 
-static nuint stack_size(void)
+static inline nuint stack_size(void)
 {
 	return (stack + STACK_SIZE) - stack_ptr;
 }
@@ -272,14 +272,14 @@ static variable_reg_t * get_variable(char const * name)
 	return NULL;
 }
 
-static nint * get_variable_as_int(char const * name)
+static inline nint * get_variable_as_int(char const * name)
 {
 	variable_reg_t * var = get_variable(name);
 
 	return (var != NULL) ? (nint *)var->location : NULL;
 }
 
-static nfloat * get_variable_as_float(char const * name)
+static inline nfloat * get_variable_as_float(char const * name)
 {
 	variable_reg_t * var = get_variable(name);
 
@@ -388,12 +388,12 @@ typedef ubyte * jmp_label_t;
 static ubyte * program_start;
 static ubyte * program_end;
 
-static ubyte * start_gen(void)
+static inline ubyte * start_gen(void)
 {
 	return program_start = heap_ptr;
 }
 
-static jmp_label_t gen_op(ubyte op)
+static inline jmp_label_t gen_op(ubyte op)
 {
 	ubyte * pos = heap_ptr;
 
@@ -403,19 +403,19 @@ static jmp_label_t gen_op(ubyte op)
 	return pos;
 }
 
-static void gen_int(nint i)
+static inline void gen_int(nint i)
 {
 	*(nint *)heap_ptr = i;
 	heap_ptr += sizeof(nint);
 }
 
-static void gen_float(nfloat f)
+static inline void gen_float(nfloat f)
 {
 	*(nfloat *)heap_ptr = f;
 	heap_ptr += sizeof(nfloat);
 }
 
-static void gen_string(char const * str)
+static inline void gen_string(char const * str)
 {
 	nuint len = strlen(str) + 1;
 
@@ -423,7 +423,7 @@ static void gen_string(char const * str)
 	heap_ptr += len;
 }
 
-static jmp_loc_ptr_t gen_jmp(void)
+static inline jmp_loc_ptr_t gen_jmp(void)
 {
 	jmp_loc_ptr_t pos = (jmp_loc_ptr_t)heap_ptr;
 
@@ -434,12 +434,12 @@ static jmp_loc_ptr_t gen_jmp(void)
 	return pos;
 }
 
-static void alloc_jmp(jmp_loc_ptr_t jmp, jmp_label_t label)
+static inline void alloc_jmp(jmp_loc_ptr_t jmp, jmp_label_t label)
 {
 	*jmp = label - program_start;
 }
 
-static ubyte * stop_gen(void)
+static inline ubyte * stop_gen(void)
 {
 	return program_end = heap_ptr;
 }
@@ -999,7 +999,6 @@ int main(int argc, char * argv[])
 	);
 
 	inspect_stack();
-
 
 	return 0;
 }

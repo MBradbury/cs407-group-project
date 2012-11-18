@@ -28,7 +28,6 @@ import java.util.ArrayList;
 public class Dragon
 {
 	public static final int INT_SIZE = 2;
-	public static final int FLOAT_SIZE = 4;
 
 	public static void main(String args[]) throws ParseException, Exception
 	{
@@ -139,7 +138,9 @@ enum OpcodeEnum
 	FADD(30), FSUB(31), FMUL(32), FDIV1(33), FDIV2(34),
 	FEQ(35), FNEQ(36), FLT(37), FLEQ(38), FGT(39), FGEQ(40),
 
-	AND(41), OR(42), XOR(43), NOT(44);
+	AND(41), OR(42), XOR(43), NOT(44),
+	
+	IVAR(45), FVAR(46);
 	
 	private final int value;
 	
@@ -274,6 +275,8 @@ TOKEN : {
 	| < LOGICOP2 :	"AND" | "OR" | "XOR" >
 	
 	| < LOGICOP1 :	"NOT" >
+	
+	| < VAR :		"IVAR" | "FVAR" >
 
 	//Regexes
 	| < INT :		(<DIGIT>)+ >
@@ -368,6 +371,9 @@ Opcode Operation() :
 		
 		| (t = <LOGICOP1>)
 		{ op.setName(t.image); }
+		
+		| (t = <VAR>) (t1 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
 	)
 	{
 		return op;

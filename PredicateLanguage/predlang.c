@@ -475,6 +475,8 @@ typedef enum {
   FEQ, FNEQ, FLT, FLEQ, FGT, FGEQ,
 
   AND, OR, XOR, NOT,
+
+  IVAR, FVAR,
 } opcode;
 
 #ifndef NDEBUG
@@ -501,6 +503,8 @@ static const char * opcode_names[] = {
 	"FEQ", "FNEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
 
 	"AND", "OR", "XOR", "NOT", // Logic operations
+
+	"IVAR", "FVAR", // Variable creation
 };
 #endif
 
@@ -539,7 +543,7 @@ static void evaluate(ubyte * start, nuint program_length)
 			break;
 
 		case IPOP:
-			pop_stack(sizeof(int));
+			pop_stack(sizeof(nint));
 			break;
 
 		case FPUSH:
@@ -748,6 +752,26 @@ static void evaluate(ubyte * start, nuint program_length)
 			((nint *)stack_ptr)[0] = ! ((nint *)stack_ptr)[0];
 			break;
 
+		case IVAR:
+			{
+				const char * name = (char const *)(current + 1);
+				nuint name_Length = strlen((char const *)(current + 1));
+
+				create_variable(name, name_Length, TYPE_INTEGER);
+
+				current += name_Length + 1;
+			} break;
+
+		case FVAR:
+			{
+				const char * name = (char const *)(current + 1);
+				nuint name_Length = strlen((char const *)(current + 1));
+
+				create_variable(name, name_Length, TYPE_FLOATING);
+
+				current += name_Length + 1;
+			} break;
+
 		default:
 			DEBUG_PRINT("Unknown OP CODE %d\n", *current);
 			break;
@@ -858,14 +882,25 @@ static void const * get_humidity_fn(void const * ptr)
 
 static void gen_example1(void)
 {
+	gen_op(IVAR); gen_string("result");
+
+	gen_op(IPUSH); gen_int(2);
+	gen_op(ISTORE); gen_string("result");
+	gen_op(IPOP);
+
 	gen_op(IPUSH); gen_int(2);
 	gen_op(IPUSH); gen_int(3);
 	gen_op(IADD);
+
 	gen_op(IFETCH); gen_string("result");
 	gen_op(IADD);
+
 	gen_op(ICASTF);
+
 	gen_op(FPUSH); gen_float(7.5);
+
 	gen_op(FGT);
+
 	gen_op(NOT);
 }
 
@@ -883,6 +918,8 @@ static void gen_example_mean(void)
 static void gen_example_for_loop(void)
 {
 	// Initial Code
+	gen_op(IVAR); gen_string("i");
+
 	gen_op(FPUSH); gen_float(0);
 
 	// Initalise loop counter
@@ -944,12 +981,6 @@ int main(int argc, char * argv[])
 	register_function("temp", &get_temp_fn, TYPE_FLOATING);
 	register_function("humidity", &get_humidity_fn, TYPE_FLOATING);
 
-	variable_reg_t * result = create_variable("result", strlen("result"), TYPE_INTEGER);
-
-	*((nint *)result->location) = *(nint const *)call_function("slot", (*data_fn)(), NULL);
-
-
-	create_variable("i", strlen("i"), TYPE_INTEGER);
 	variable_reg_t * var_array = create_array("n1", strlen("n1"), TYPE_USER, 10);
 
 	user_data_t * arr = (user_data_t *)var_array->location;
@@ -972,18 +1003,9 @@ int main(int argc, char * argv[])
 	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
-	nint * data = get_variable_as_int("result");
-
-	user_data_t const * user_data = (user_data_t const *) (*data_fn)();
-
-	printf("Data %d should equal %d\n",
-		*data,
-		user_data->slot
-	);
-
 	// Load a program into memory
 	ubyte * const start = start_gen();
-	gen_example_mean();
+	gen_example1();
 	ubyte * const end = stop_gen();
 
 

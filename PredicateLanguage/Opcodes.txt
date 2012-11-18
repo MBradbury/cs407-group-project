@@ -49,12 +49,12 @@ JMP (int)
 	Jumps to a position in the code relative to the start
 	of the program
 
-JZ
+JZ (int)
 	Reads the top of the stack as an integer, if it is 0
 	the program jumps to the location, otherwise evaluation
 	continues
 
-JNZ
+JNZ (int)
 	Reads the top of the stack as an integer, if it is not 0
 	the program jumps to the location, otherwise evaluation
 	continues
@@ -94,3 +94,7 @@ XOR		1 = 0 op 1
 NOT
 	Pops an integer off the stack, performs logical not on it.
 	Pushes the result back on the stack.
+	
+_VAR (string)
+	Creates a variable of type _ with the name set to the given
+	string.

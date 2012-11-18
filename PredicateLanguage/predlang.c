@@ -11,6 +11,9 @@
 #	define snprintf _snprintf
 #endif
 
+#define MAIN_FUNC
+//#define NDEBUG
+
 #ifndef NDEBUG
 #	define DEBUG_PRINT(...) do { printf(__VA_ARGS__); } while(false)
 #else
@@ -22,6 +25,7 @@
 
 #define MAXIMUM_FUNCTIONS 5
 #define MAXIMUM_VARIABLES 5
+
 
 
 
@@ -96,25 +100,49 @@ static inline void push_stack(void const * ptr, nuint size)
 
 static inline void int_push_stack(nint i)
 {
+#ifndef NDEBUG
+	if (stack_ptr - sizeof(nint) < heap_ptr)
+	{
+		error = "Stack overwriting heap";
+		DEBUG_PRINT("========%s========\n", error);
+	}
+#endif
+
 	stack_ptr -= sizeof(nint);
 	*((nint *)stack_ptr) = i;
 }
 
 static inline void float_push_stack(nfloat f)
 {
+	#ifndef NDEBUG
+		if (stack_ptr - sizeof(nfloat) < heap_ptr)
+		{
+			error = "Stack overwriting heap";
+			DEBUG_PRINT("========%s========\n", error);
+		}
+	#endif
+
 	stack_ptr -= sizeof(nfloat);
 	*((nfloat *)stack_ptr) = f;
 }
 
-static inline void pop_stack(nuint size)
+static inline nuint stack_size(void)
 {
-#ifndef NDEBUG
-	if (stack_ptr + size > (stack + STACK_SIZE))
+	return (stack + STACK_SIZE) - stack_ptr;
+}
+
+static void require_stack_size(nuint size)
+{
+	if (stack_size() < size)
 	{
 		error = "STACK UNDERFLOW";
-		DEBUG_PRINT("========%s==== %p < %p ==\n", error, stack_ptr + size, stack + STACK_SIZE);
+		DEBUG_PRINT("Stack too small is %d bytes needed %d bytes\n", (stack + STACK_SIZE) - stack_ptr, size);
 	}
-#endif
+}
+
+static inline void pop_stack(nuint size)
+{
+	require_stack_size(sizeof(nuint));
 
 	stack_ptr += size;
 }
@@ -129,19 +157,6 @@ static void inspect_stack(void)
 		printf("\tStack %p %d\n", ptr, *ptr);
 	}
 #endif
-}
-
-static inline nuint stack_size(void)
-{
-	return (stack + STACK_SIZE) - stack_ptr;
-}
-
-static void require_stack_size(nuint size)
-{
-	if (stack_size() < size)
-	{
-		DEBUG_PRINT("Stack too small is %d bytes needed %d bytes\n", (stack + STACK_SIZE) - stack_ptr, size);
-	}
 }
 
 /****************************************************
@@ -211,6 +226,8 @@ static variable_reg_t * create_variable(char const * name, nuint name_length, va
 	memset(variable->location, 0, variable_type_size(type));
 
 	variable->type = type;
+	variable->is_array = false;
+	variable->length = 0;
 
 	return variable;
 }
@@ -365,18 +382,7 @@ static void const * call_function(char const * name, void * data, variable_type_
  ** FUNCTION MANAGEMENT END
  ***************************************************/
 
-
-
-
-/****************************************************
- ** PARSING START
- ***************************************************/
-
-/****************************************************
- ** PARSING END
- ***************************************************/
-
-
+#ifdef ENABLE_CODE_GEN
 /****************************************************
  ** CODE GEN
  ***************************************************/
@@ -447,6 +453,7 @@ static inline ubyte * stop_gen(void)
 /****************************************************
  ** CODE GEN
  ***************************************************/
+#endif
 
 
 /****************************************************
@@ -475,6 +482,8 @@ typedef enum {
   FEQ, FNEQ, FLT, FLEQ, FGT, FGEQ,
 
   AND, OR, XOR, NOT,
+
+  IVAR, FVAR,
 } opcode;
 
 #ifndef NDEBUG
@@ -501,6 +510,8 @@ static const char * opcode_names[] = {
 	"FEQ", "FNEQ", "FLT", "FLEQ", "FGT", "FGEQ", // Comparison Operations
 
 	"AND", "OR", "XOR", "NOT", // Logic operations
+
+	"IVAR", "FVAR", // Variable creation
 };
 #endif
 
@@ -516,7 +527,7 @@ static const char * opcode_names[] = {
 			push_stack(&res, sizeof(store_type)); \
 		} break
 
-static void evaluate(ubyte * start, nuint program_length)
+nbool evaluate(ubyte * start, nuint program_length)
 {
 	ubyte * current = start;
 
@@ -530,7 +541,8 @@ static void evaluate(ubyte * start, nuint program_length)
 		{
 		case HALT:
 			DEBUG_PRINT("Halting\n");
-			return;
+			require_stack_size(sizeof(nbool));
+			return *(int *)stack_ptr;
 
 		case IPUSH:
 			DEBUG_PRINT("Pushing int %d onto the stack\n", *(nint*)(current + 1));
@@ -539,7 +551,7 @@ static void evaluate(ubyte * start, nuint program_length)
 			break;
 
 		case IPOP:
-			pop_stack(sizeof(int));
+			pop_stack(sizeof(nint));
 			break;
 
 		case FPUSH:
@@ -595,15 +607,11 @@ static void evaluate(ubyte * start, nuint program_length)
 		case ASUM:
 			{
 				char const * array_name = (char const *)(current + 1);
-
 				current += strlen(array_name) + 1;
-
 				DEBUG_PRINT("Array name %s\n", array_name);
 
 				char const * fn_name = (char const *)(current + 1);
-
 				current += strlen(fn_name) + 1;
-
 				DEBUG_PRINT("FN name %s\n", fn_name);
 
 				variable_reg_t const * var_reg = get_variable(array_name);
@@ -613,10 +621,8 @@ static void evaluate(ubyte * start, nuint program_length)
 
 				if (var_reg->type == TYPE_USER)
 				{
-					byte const * data = (byte *)var_reg->location;
-
 					nuint size = variable_type_size(TYPE_USER);
-
+					byte const * data = (byte *)var_reg->location;
 					byte const * const end = data + (size * var_reg->length);
 
 					for (; data != end; data += size)
@@ -628,29 +634,28 @@ static void evaluate(ubyte * start, nuint program_length)
 						else
 							op_result += *(nfloat const *)result;
 					}
-
-					float_push_stack(op_result);
 				}
 				else
 				{
+					op_result = -1;
 					error = "Variable not an array of user types!";
 					DEBUG_PRINT("==========%s==========\n", error);
-
-					float_push_stack(-1);
 				}
+
+				float_push_stack(op_result);
 			} break;
 
 		case CALL:
 			{
-				variable_type_t type;
+				require_stack_size(data_size);
 
+				variable_type_t type;
 				void const * data = call_function((char const *)(current + 1), stack_ptr, &type);
+				current += strlen((char const *)(current + 1)) + 1;
 
 				pop_stack(data_size);
-
 				push_stack(data, variable_type_size(type));
 
-				current += strlen((char const *)(current + 1)) + 1;
 			} break;
 
 		case ICASTF:
@@ -671,6 +676,7 @@ static void evaluate(ubyte * start, nuint program_length)
 
 		case JMP:
 			current = start + *(nint *)(current + 1) - 1;
+			DEBUG_PRINT("Jumping to %p\n", current + 1);
 			break;
 
 		case JZ:
@@ -718,12 +724,12 @@ static void evaluate(ubyte * start, nuint program_length)
 			((nint *)stack_ptr)[0] += 1;
 			break;
 
-		OPERATION_POP(IEQ, ==, nint, nint, "%d", 0, 1);
-		OPERATION_POP(INEQ, !=, nint, nint, "%d", 0, 1);
-		OPERATION_POP(ILT, <, nint, nint, "%d", 0, 1);
-		OPERATION_POP(ILEQ, <=, nint, nint, "%d", 0, 1);
-		OPERATION_POP(IGT, >, nint, nint, "%d", 0, 1);
-		OPERATION_POP(IGEQ, >=, nint, nint, "%d", 0, 1);
+		OPERATION_POP(IEQ, ==, nint, nbool, "%d", 0, 1);
+		OPERATION_POP(INEQ, !=, nint, nbool, "%d", 0, 1);
+		OPERATION_POP(ILT, <, nint, nbool, "%d", 0, 1);
+		OPERATION_POP(ILEQ, <=, nint, nbool, "%d", 0, 1);
+		OPERATION_POP(IGT, >, nint, nbool, "%d", 0, 1);
+		OPERATION_POP(IGEQ, >=, nint, nbool, "%d", 0, 1);
 
 		// Floating point operations
 		OPERATION_POP(FADD, +, nfloat, nfloat, "%f", 0, 1);
@@ -731,22 +737,42 @@ static void evaluate(ubyte * start, nuint program_length)
 		OPERATION_POP(FMUL, *, nfloat, nfloat, "%f", 0, 1);
 		OPERATION_POP(FDIV1, /, nfloat, nfloat, "%f", 0, 1);
 		OPERATION_POP(FDIV2, /, nfloat, nfloat, "%f", 1, 0);
-		OPERATION_POP(FEQ, ==, nfloat, nint, "%f", 0, 1);
-		OPERATION_POP(FNEQ, !=, nfloat, nint, "%f", 0, 1);
-		OPERATION_POP(FLT, <, nfloat, nint, "%f", 0, 1);
-		OPERATION_POP(FLEQ, <=, nfloat, nint, "%f", 0, 1);
-		OPERATION_POP(FGT, >, nfloat, nint, "%f", 0, 1);
-		OPERATION_POP(FGEQ, >=, nfloat, nint, "%f", 0, 1);
+		OPERATION_POP(FEQ, ==, nfloat, nbool, "%f", 0, 1);
+		OPERATION_POP(FNEQ, !=, nfloat, nbool, "%f", 0, 1);
+		OPERATION_POP(FLT, <, nfloat, nbool, "%f", 0, 1);
+		OPERATION_POP(FLEQ, <=, nfloat, nbool, "%f", 0, 1);
+		OPERATION_POP(FGT, >, nfloat, nbool, "%f", 0, 1);
+		OPERATION_POP(FGEQ, >=, nfloat, nbool, "%f", 0, 1);
 
 		// Logical operations
-		OPERATION_POP(AND, &&, nint, nint, "%d", 0, 1);
-		OPERATION_POP(OR, ||, nint, nint, "%d", 0, 1);
-		OPERATION_POP(XOR, ^, nint, nint, "%d", 0, 1);
+		OPERATION_POP(AND, &&, nbool, nbool, "%d", 0, 1);
+		OPERATION_POP(OR, ||, nbool, nbool, "%d", 0, 1);
+		OPERATION_POP(XOR, ^, nbool, nbool, "%d", 0, 1);
 
 		case NOT:
-			require_stack_size(sizeof(nint));
-			((nint *)stack_ptr)[0] = ! ((nint *)stack_ptr)[0];
+			require_stack_size(sizeof(nbool));
+			((nbool *)stack_ptr)[0] = ! ((nbool *)stack_ptr)[0];
 			break;
+
+		case IVAR:
+			{
+				const char * name = (char const *)(current + 1);
+				nuint name_Length = strlen((char const *)(current + 1));
+
+				create_variable(name, name_Length, TYPE_INTEGER);
+
+				current += name_Length + 1;
+			} break;
+
+		case FVAR:
+			{
+				const char * name = (char const *)(current + 1);
+				nuint name_Length = strlen((char const *)(current + 1));
+
+				create_variable(name, name_Length, TYPE_FLOATING);
+
+				current += name_Length + 1;
+			} break;
 
 		default:
 			DEBUG_PRINT("Unknown OP CODE %d\n", *current);
@@ -757,6 +783,10 @@ static void evaluate(ubyte * start, nuint program_length)
 
 		++current;
 	}
+
+	require_stack_size(sizeof(nbool));
+
+	return *(nbool *)stack_ptr;
 }
 
 
@@ -855,22 +885,39 @@ static void const * get_humidity_fn(void const * ptr)
 	return &((user_data_t const *)ptr)->humidity;
 }
 
-
+#ifdef ENABLE_CODE_GEN
 static void gen_example1(void)
 {
+	start_gen();
+
+	gen_op(IVAR); gen_string("result");
+
+	gen_op(IPUSH); gen_int(2);
+	gen_op(ISTORE); gen_string("result");
+	gen_op(IPOP);
+
 	gen_op(IPUSH); gen_int(2);
 	gen_op(IPUSH); gen_int(3);
 	gen_op(IADD);
+
 	gen_op(IFETCH); gen_string("result");
 	gen_op(IADD);
+
 	gen_op(ICASTF);
+
 	gen_op(FPUSH); gen_float(7.5);
+
 	gen_op(FGT);
+
 	gen_op(NOT);
+
+	stop_gen();
 }
 
 static void gen_example_mean(void)
 {
+	start_gen();
+
 	gen_op(ASUM); gen_string("n1"); gen_string("id");
 
 	gen_op(ALEN); gen_string("n1");
@@ -878,11 +925,17 @@ static void gen_example_mean(void)
 	gen_op(ICASTF);
 
 	gen_op(FDIV2);
+
+	stop_gen();
 }
 
 static void gen_example_for_loop(void)
 {
+	start_gen();
+
 	// Initial Code
+	gen_op(IVAR); gen_string("i");
+
 	gen_op(FPUSH); gen_float(0);
 
 	// Initalise loop counter
@@ -931,8 +984,38 @@ static void gen_example_for_loop(void)
 	// may be after the current jump is added.
 	alloc_jmp(jmp1, last);
 	alloc_jmp(jmp2, label1);
-}
 
+	stop_gen();
+}
+#endif
+
+#ifdef MAIN_FUNC
+// FROM: http://www.anyexample.com/programming/c/how_to_load_file_into_memory_using_plain_ansi_c_language.xml
+nuint load_file_to_memory(char const * filename, ubyte ** result) 
+{
+	FILE * f = fopen(filename, "rb");
+
+	if (f == NULL)
+	{
+		*result = NULL;
+		return -1; // -1 means file opening fail
+	}
+
+	fseek(f, 0, SEEK_END);
+	nint size = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	*result = (ubyte *)heap_alloc(size);
+
+	if (size != fread(*result, sizeof(ubyte), size, f))
+	{
+		return -2; // -2 means file reading fail
+	}
+
+	fclose(f);
+
+	return size;
+}
 
 int main(int argc, char * argv[])
 {
@@ -944,12 +1027,6 @@ int main(int argc, char * argv[])
 	register_function("temp", &get_temp_fn, TYPE_FLOATING);
 	register_function("humidity", &get_humidity_fn, TYPE_FLOATING);
 
-	variable_reg_t * result = create_variable("result", strlen("result"), TYPE_INTEGER);
-
-	*((nint *)result->location) = *(nint const *)call_function("slot", (*data_fn)(), NULL);
-
-
-	create_variable("i", strlen("i"), TYPE_INTEGER);
 	variable_reg_t * var_array = create_array("n1", strlen("n1"), TYPE_USER, 10);
 
 	user_data_t * arr = (user_data_t *)var_array->location;
@@ -972,34 +1049,29 @@ int main(int argc, char * argv[])
 	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
-	nint * data = get_variable_as_int("result");
-
-	user_data_t const * user_data = (user_data_t const *) (*data_fn)();
-
-	printf("Data %d should equal %d\n",
-		*data,
-		user_data->slot
-	);
-
 	// Load a program into memory
-	ubyte * const start = start_gen();
-	gen_example_mean();
-	ubyte * const end = stop_gen();
 
+	char const * filename = argv[1];
 
-	printf("Program length %d\n", end - start);
+	printf("Filename: %s\n", filename);
 
+	ubyte * start;
+	nuint program_size = load_file_to_memory(filename, &start);
+
+	printf("Program length %d\n", program_size);
 
 	// Evaluate the program
-	evaluate(start, end - start);
+	nbool result = evaluate(start, program_size);
 
 	// Print the results
-	printf("Stack ptr value %f\n",
-		*((nfloat *)stack_ptr)
+	printf("Stack ptr value (float %f) (int %d) (bool %d)\n",
+		*((nfloat *)stack_ptr), *((nint *)stack_ptr), *((nbool *)stack_ptr)
 	);
+
+	printf("Result: %d\n", result);
 
 	inspect_stack();
 
 	return 0;
 }
-
+#endif

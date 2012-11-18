@@ -65,6 +65,11 @@ public class Dragon
 			for (Opcode op : opcodes)
 			{
 				out.writeByte(op.getName().getValue());
+				
+				for (Arg arg : op.getArgs())
+				{
+					arg.write(out);
+				}
 			}
 			out.flush();
 		}

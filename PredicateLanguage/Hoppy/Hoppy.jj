@@ -31,10 +31,39 @@ public class Hoppy
 	}
 }
 
+final class FuncDecl
+{
+	private String name = null;
+	private String[] args = null;
+
+	public String getName() { return name; }
+	public void setName(String name) { this.name = name; }
+
+	public String[] getArgs() { return args; }
+	public void setArgs(String[] args) { this.args = args; }
+}
+
+final class PredicateTarget
+{
+	private boolean all = false;
+	private int[] addr = null;
+
+	public void setToAll() { all = true; addr = null; }
+	public boolean isToAll() { return all; }
+
+	public void setAddr(int[] addr) { this.addr = addr; all = false; }
+	public int[] getAddr() { return addr; }
+
+	public String toString()
+	{
+		return all ? "all" : addr[0] + "." + addr[1];
+	}
+}
+
 PARSER_END(Hoppy)
 
 TOKEN : {
-	//Keywords
+	// Keywords
 	< USING : 	"using" >
 	| < AS :	"as" >
 	| < IN : 	"in" >
@@ -42,34 +71,37 @@ TOKEN : {
 	| < ALL : 	"all" >
 	| < COLON :	":" >
 	| < TILDE :	"~" >
+
+	// Functions
+	| < NEIGHBOURS :		"Neighbours" >
 	
-	//Operators
+	// Operators
 	| < LOGICAL_MATH_OP : 	"==" | "!=" | "<" | "<=" | ">" | ">=" >
 	| < MATH_OP : 			"+" | "-" | "*" | "/" >
-	| < LOGICAL_OP :		"&" | "|" >
+	| < LOGICAL_BIN_OP :	"&" | "|" >
+	| < LOGICAL_UN_OP :		"!" >
 	| < QUANTIFIER :		"@" | "#" >
 
-	//Regexes
-	| < ADDR : 	(<DIGIT>)+ "." (<DIGIT>)+ >
-	| < NAME :	<LETTER> (<ALPHANUM>)* >
+	// Regexes
+	| < NUMBER :	(<DIGIT>)+ >
+	| < NAME :		<LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
-	| < LETTER :	["a"-"z"] >
-	| < DIGIT :	["0"-"9"] >
-	| < NEWLINE : 	"\n" | "\r" | "\r\n" >
+	| < #LETTER :	["a"-"z"] >
+	| < #DIGIT :	["0"-"9"] >
 }
 
-SKIP : { " " | "\t" }
+SKIP : { " " | "\t" | "\n" | "\r" }
 
 void Input(PrintStream out) :
 {
-	int[] target;
+	PredicateTarget target;
 	String using;
 }
 {
 	"[" 
 	(
 		target = Target()
-		{ out.println(target == null ? "*" : target.toString()); }
+		{ out.println(target.toString()); }
 	)
 	"]"
 	(
@@ -79,41 +111,63 @@ void Input(PrintStream out) :
 	<EOF>
 }
 
-int[] Target() :
+PredicateTarget Target() :
 {
-	Token t;
+	int a, b;
 	int[] addr = null;
 }
 {
 	(
 		(
-			//Flood targeting.
+			// Flood targeting.
 			<ALL>
 		)
 		|
 		(
-			//Specific node targeting.
-			t = <ADDR>
+			// Specific node targeting.
+			a = UnsignedCharNumber() "." b = UnsignedCharNumber()
 		)
 		{
-			//Build array of address components.
-			String[] comps = t.image.split("\\.");
-			addr = new int[2];
-			addr[0] = Integer.parseInt(comps[0]);
-			addr[1] = Integer.parseInt(comps[1]);
+			addr = new int[] { a, b };
 		}
 	)
 	{
-		return addr;
+		PredicateTarget target = new PredicateTarget();
+
+		if (addr == null)
+			target.setToAll();
+		else
+			target.setAddr(addr);
+
+		return target;
 	}
 }
 
+int UnsignedCharNumber() throws ParseException :
+{
+	Token t;
+}
+{
+	(t = <NUMBER>)
+	{
+		int i = Integer.parseInt(t.image);
+
+		if (!(i >= 0 && i <= 255))
+		{
+			throw new ParseException("Integer is not in desired format");
+		}
+
+		return i;
+	}
+}
+
+
 String Using() :
 {
-	String func = "null";
+	FuncDecl func = null;
 	Token nameToken;
-	String nt = "null";
-	String pred = "null";
+	String nt = null;
+	String pred = null;
 }
 {
 	(
@@ -130,22 +184,60 @@ String Using() :
 	)* 
 	pred = Predicate()
 	{
-		return func + nt + pred;
+		return func.getName() + nt + pred;
 	}
 } 
 
-String Function() :
+FuncDecl Function() :
 {
+	Token nameToken, argToken;
 }
 {
-	<NAME>
-	{ return "function"; }
+	((nameToken = <NEIGHBOURS>) "(" (argToken = <NUMBER>) ")")
+	{
+		FuncDecl fn = new FuncDecl();
+		fn.setName(nameToken.image);
+		fn.setArgs(new String[] { argToken.image });
+		return fn;
+	}
 }
 
 String Predicate() :
 {
 }
 {
-	<NAME>
+	(
+		(<QUANTIFIER> "(" <NAME> <COLON> <NAME> <TILDE> Predicate() ")")
+		|
+		(<LOGICAL_UN_OP> Predicate())
+		|
+		LogicalBinaryExpr()
+		|
+		MathBinaryExpr()
+	)
 	{ return "predicate"; }
 }
+
+void MathBinaryExpr() :
+{}
+{
+	(<LOGICAL_MATH_OP> VariableExpr() VariableExpr())
+}
+
+void VariableExpr() :
+{}
+{
+	<NAME> ("(" (<NAME> | <THIS>) ")")?
+	|
+	<NUMBER>
+	|
+	(<MATH_OP> VariableExpr() VariableExpr())
+}
+
+void LogicalBinaryExpr() :
+{}
+{
+	(<LOGICAL_BIN_OP> Predicate() Predicate())
+}
+
+

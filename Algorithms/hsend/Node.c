@@ -214,9 +214,39 @@ static char * evaluate_predicate(char const * predicate)
 	return "Value";
 }
 
+static void 
+delayed_forward_evaluated_predicate(predicate_return_msg_t * msg)
+{
+	rimeaddr_t * target = (rimeaddr_t *) malloc(sizeof(rimeaddr_t));
+	rimeaddr_copy(&target,&msg->target_reciever);
+	rimeaddr_t * sender = (rimeaddr_t *) malloc(sizeof(rimeaddr_t));
+	rimeaddr_copy(&sender,&msg->sender);
+	printf("From: %s\n",addr2str(sender) );
+	send_evaluated_predicate(sender,target,msg->message_id,msg->evaluated_predicate);
+	
+	free(msg);
+	free(target);
+	free(sender);
+}
+
 static void
 send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate)
-{
+{	
+
+	if (runicast_is_transmitting(&runicast))
+	{
+		static struct ctimer forward_timer;
+
+		predicate_return_msg_t * forwarder = (predicate_return_msg_t *)malloc(sizeof(predicate_return_msg_t));
+		rimeaddr_copy(&forwarder->sender, &sender);
+		rimeaddr_copy(&forwarder->target_reciever, &target_reciever);
+		forwarder->message_id = message_id;
+		forwarder->evaluated_predicate = evaluated_predicate;
+
+		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, forwarder);
+
+		return;
+	}	
 	printf("target receiver %s\n", addr2str(&target_reciever));
 
 	packetbuf_clear();
@@ -230,8 +260,12 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 	msg->message_id = message_id;
 	msg->evaluated_predicate = evaluated_predicate;
 
+
 	runicast_send(&runicast, &target_reciever, 10);
+	
 }
+
+
 
 static void
 send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id_to_send, char const * pred, uint8_t hop_limit)

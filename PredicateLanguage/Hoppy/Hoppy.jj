@@ -21,6 +21,7 @@ options {
 PARSER_BEGIN(Hoppy)
 
 import java.io.PrintStream;
+import java.util.*;
 
 public class Hoppy
 {
@@ -77,14 +78,14 @@ TOKEN : {
 	
 	// Operators
 	| < LOGICAL_MATH_OP : 	"==" | "!=" | "<" | "<=" | ">" | ">=" >
-	| < MATH_OP : 			"+" | "-" | "*" | "/" >
+	| < MATH_OP : 		"+" | "-" | "*" | "/" >
 	| < LOGICAL_BIN_OP :	"&" | "|" >
-	| < LOGICAL_UN_OP :		"!" >
-	| < QUANTIFIER :		"@" | "#" >
+	| < LOGICAL_UN_OP :	"!" >
+	| < QUANTIFIER :	"@" | "#" >
 
 	// Regexes
 	| < NUMBER :	(<DIGIT>)+ >
-	| < NAME :		<LETTER> (<ALPHANUM>)* >
+	| < NAME :	<LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
 	| < #LETTER :	["a"-"z"] >
 	| < #DIGIT :	["0"-"9"] >
@@ -134,10 +135,14 @@ PredicateTarget Target() :
 	{
 		PredicateTarget target = new PredicateTarget();
 
-		if (addr == null)
+		if (addr == null) 
+		{
 			target.setToAll();
+		}
 		else
+		{
 			target.setAddr(addr);
+		}
 
 		return target;
 	}
@@ -164,27 +169,50 @@ int UnsignedCharNumber() throws ParseException :
 
 String Using() :
 {
-	FuncDecl func = null;
-	Token nameToken;
-	String nt = null;
+	//Parse a list of aliased functions, return null instead of map if none.
+	FuncDecl fn = null;
+	Token fnAlias;
+	HashMap<String, FuncDecl> usings = null;
+
 	String pred = null;
 }
 {
 	(
 		<USING> 
 		(
-			func = Function()
+			fn = Function()
 		)
 		<AS>
 		(
 			nameToken = <NAME>
-			{ nt = nameToken.image; }
+			{ 
+				if(usings == null)
+				{
+					usings = new HashMap<String, FuncDecl>();
+				}
+				
+				usings[fnAlias.image] = fn;
+			}
 		) 
 		<IN>
 	)* 
+
 	pred = Predicate()
+
 	{
-		return func.getName() + nt + pred;
+		StringBuilder result = new StringBuilder();
+		if(usings == null)
+		{
+			result.appendLine("No function aliases.");
+		}
+		else
+		{
+			result.appendLine(usings.size() + " function aliases.");
+		}
+
+		result.append(pred);
+
+		return result.toString();
 	}
 } 
 

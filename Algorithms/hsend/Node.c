@@ -136,7 +136,6 @@ runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retrans
 static void
 delayed_send_evaluated_predicate(uint8_t message_id)
 {
-	int calls = 0;
 	struct list_elem_struct * list_iterator = NULL;
 	for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
 		  list_iterator != NULL;

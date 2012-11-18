@@ -174,8 +174,10 @@ However, there is an issue with this predicate. How would we implement the $Dist
 	\pn{string-rest} & \pp & \nn \oo \pn{alpha}\pn{string-rest} \oo \pn{digit}\pn{string-rest} \\
 %
 	\pn{alpha} & \pp & \sm{A}\dots\sm{Z} \oo \sm{a}\dots\sm{z} \\
-	\pn{number} & \pp & \pn{digit} \oo \pn{digit}\pn{number} \\
+	\pn{number} & \pp & \pn{sign} \pn{number-rest} \oo \pn{number-rest} \\
+	\pn{number-rest} & \pp & \pn{digit} \oo \pn{digit}\pn{number-rest} \\
 	\pn{digit} & \pp & \sm{0}\dots\sm{9} \\
+	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
 \end{eqnarray*}
 
 \subsubsection{Examples}

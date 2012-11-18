@@ -111,7 +111,7 @@ stbroadcast_callback_cancel(void * ptr)
 	stbroadcast_cancel(&stbroadcast);
 }
 
-
+//TODO need to collate responses, then send the on, right now messages collide while a node is trying to forward
 //RELIABLE UNICAST
 static void
 runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
@@ -146,7 +146,7 @@ runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 				printf("Trying to forward evaluated predicate to: %s\n", addr2str(&dest));
 	
 					send_evaluated_predicate(&msg->sender, 
-						dest,//&list_iterator->originator,  //TODO not being passed properly!!!!
+						dest,
 						list_iterator->message_id, 
 						msg->evaluated_predicate
 					);
@@ -230,7 +230,7 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 	msg->message_id = message_id;
 	msg->evaluated_predicate = evaluated_predicate;
 
-	runicast_send(&runicast, &target_reciever, 4);
+	runicast_send(&runicast, &target_reciever, 10);
 }
 
 static void

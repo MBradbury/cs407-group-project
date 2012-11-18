@@ -20,15 +20,12 @@ options {
 
 PARSER_BEGIN(Dragon)
 
-import java.io.PrintStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
+import java.io.*;
+import java.util.*;
+import com.google.common.io.LittleEndianDataOutputStream;
 
 public class Dragon
 {
-	public static final int INT_SIZE = 2;
-
 	public static void main(String args[]) throws ParseException, Exception
 	{
 		Dragon parser = new Dragon(System.in);
@@ -58,7 +55,13 @@ public class Dragon
 			System.err.println();
 		}
 		
-		DataOutputStream out = new DataOutputStream(System.out);
+		ByteArrayOutputStream os = new ByteArrayOutputStream();
+		
+		// Big-endian
+		//DataOutputStream out = new DataOutputStream(os);
+		
+		// Little-endian
+		LittleEndianDataOutputStream out = new LittleEndianDataOutputStream(os);
 		
 		try
 		{
@@ -85,6 +88,8 @@ public class Dragon
 				System.err.println(e);
 			}
 		}
+		
+		os.writeTo(System.out);
 	}
 	
 	private static void transformJumps(ArrayList<Opcode> opcodes) throws Exception
@@ -178,7 +183,7 @@ final class Opcode
 
 interface Arg
 {
-	void write(DataOutputStream out) throws IOException;
+	void write(DataOutput out) throws IOException;
 }
 
 final class StringArg implements Arg
@@ -192,7 +197,7 @@ final class StringArg implements Arg
 	
 	public String toString() { return value; }
 	
-	public void write(DataOutputStream out) throws IOException
+	public void write(DataOutput out) throws IOException
 	{
 		for (char ch : value.toCharArray())
 		{
@@ -214,7 +219,7 @@ final class FloatArg implements Arg
 	
 	public String toString() { return Float.toString(value); }
 	
-	public void write(DataOutputStream out) throws IOException
+	public void write(DataOutput out) throws IOException
 	{
 		out.writeFloat(value);
 	}
@@ -235,16 +240,9 @@ final class IntArg implements Arg
 	
 	public String toString() { return Integer.toString(value); }
 	
-	public void write(DataOutputStream out) throws IOException
+	public void write(DataOutput out) throws IOException
 	{
-		if (Dragon.INT_SIZE == 2)
-		{
-			out.writeShort(value);
-		}
-		else
-		{
-			out.writeInt(value);
-		}
+		out.writeShort(value);
 	}
 }
 

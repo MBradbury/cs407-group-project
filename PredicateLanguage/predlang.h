@@ -18,22 +18,21 @@ typedef int16_t nint;
 typedef uint16_t nuint;
 typedef float nfloat;
 
+// Please keep the boolean type the same size
+// as the integer size. Otherwise JZ and JNZ
+// will cause issues with the stack.
+typedef nint nbool;
 
 
 typedef void const * (*data_access_fn)(void const * ptr);
-
 int register_function(char const * name, data_access_fn fn, variable_type_t type);
 
-
-
 typedef void * (*node_data_fn)(void);
-
 void init_pred_lang(node_data_fn given_data_fn, nuint given_data_size);
 
-
+nbool evaluate(ubyte * start, nuint program_length);
 
 char const * error_message(void);
 void reset_error(void);
-
 
 #endif /*CS407_PRED_LANG_H*/

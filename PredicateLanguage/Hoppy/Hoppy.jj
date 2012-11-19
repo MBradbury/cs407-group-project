@@ -74,7 +74,7 @@ TOKEN : {
 	| < TILDE :	"~" >
 
 	// Functions
-	| < NEIGHBOURS :		"Neighbours" >
+	| < NEIGHBOURS :	"Neighbours" >
 	
 	// Operators
 	| < LOGICAL_MATH_OP : 	"==" | "!=" | "<" | "<=" | ">" | ">=" >
@@ -184,14 +184,14 @@ String Using() :
 		)
 		<AS>
 		(
-			nameToken = <NAME>
+			fnAlias = <NAME>
 			{ 
 				if(usings == null)
 				{
 					usings = new HashMap<String, FuncDecl>();
 				}
 				
-				usings[fnAlias.image] = fn;
+				usings.put(fnAlias.image, fn);
 			}
 		) 
 		<IN>
@@ -203,11 +203,14 @@ String Using() :
 		StringBuilder result = new StringBuilder();
 		if(usings == null)
 		{
-			result.appendLine("No function aliases.");
+			result.append("No function aliases.\n");
 		}
 		else
 		{
-			result.appendLine(usings.size() + " function aliases.");
+			for(FuncDecl f : usings.values())
+			{
+				result.append(f.getName() + " alias.\n");
+			}
 		}
 
 		result.append(pred);

@@ -32,6 +32,93 @@ public class Hoppy
 	}
 }
 
+/**
+ * Representation of the program's syntax tree.
+ */
+final class SyntaxTree
+{
+	private SyntaxTreeNode root = null;
+
+	public SyntaxTreeNode getRoot() { return root; }
+	public void setRoot(SyntaxTreeNode root) { this.root = root; }
+}
+
+/**
+ * Base class for syntax tree nodes.
+ */
+abstract class SyntaxTreeNode
+{
+	private List<SyntaxTreeNode> children = new ArrayList<SyntaxTreeNode>();
+}
+
+/**
+ * Concrete node class representing a unary operator.
+ */
+class UnaryOperatorNode extends SyntaxTreeNode
+{
+	public enum Operator
+	{
+		NOT
+	}
+
+	private Operator op;
+	private SyntaxTreeNode child;
+
+	public UnaryOperatorNode(Operator op, SyntaxTreeNode child)
+	{
+		this.op = op;
+		this.child = child;
+	}
+
+	public Operator getOp() { return op; }
+	public void setOp(Operator op) { this.op = op; }
+
+	public SyntaxTreeNode getChild() { return child; }
+	public void setChild(SyntaxTreeNode child) { this.child = child; }
+}
+
+/**
+ * Concrete node class representing a binary operator.
+ */
+class BinaryOperatorNode extends SyntaxTreeNode
+{
+	public enum Operator
+	{
+		EQUAL,
+		NOT_EQUAL,
+		LESS_THAN,
+		LESS_THAN_EQUAL,
+		GREATER_THAN,
+		GREATER_THAN_EQUAL,
+		PLUS,
+		MINUS,
+		MULTIPLY,
+		DIVIDE,
+		AND,
+		OR
+	}
+
+	private Operator op;
+	private SyntaxTreeNode left;
+	private SyntaxTreeNode right;
+
+	public BinaryOperatorNode(Operator op, SyntaxTreeNode left, SyntaxTreeNode right)
+	{
+		this.op = op;
+		this.left = left;
+		this.right = right;
+	}
+
+	public Operator getOp() { return op; }
+	public void setOp(Operator op) { this.op = op; }
+	
+	public SyntaxTreeNode getLeft() { return left; }
+	public void setLeft(SyntaxTreeNode left) { this.left = left; }
+
+	public SyntaxTreeNode getRight() { return right; }
+	public void setRight(SyntaxTreeNode right) { this.right = right; }
+}
+
 final class FuncDecl
 {
 	private String name = null;
@@ -42,6 +129,30 @@ final class FuncDecl
 
 	public String[] getArgs() { return args; }
 	public void setArgs(String[] args) { this.args = args; }
+
+	@Override
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder(name);
+		sb.append(", args: ");
+		
+		for(String arg : args)
+		{
+			sb.append(arg);
+			sb.append(" ");
+		}
+
+		return sb.toString();
+	}
+}
+
+final class PredDecl
+{
+	@Override
+	public String toString()
+	{
+		return "Predicate";
+	}
 }
 
 final class PredicateTarget
@@ -174,7 +285,7 @@ String Using() :
 	Token fnAlias;
 	HashMap<String, FuncDecl> usings = null;
 
-	String pred = null;
+	PredDecl pred = null;
 }
 {
 	(
@@ -207,9 +318,12 @@ String Using() :
 		}
 		else
 		{
-			for(FuncDecl f : usings.values())
+			for(String alias : usings.keySet())
 			{
-				result.append(f.getName() + " alias.\n");
+				result.append(usings.get(alias).toString());
+				result.append(" aliased as ");
+				result.append(alias);
+				result.append("\n");
 			}
 		}
 
@@ -233,42 +347,104 @@ FuncDecl Function() :
 	}
 }
 
-String Predicate() :
+PredDecl Predicate() :
 {
 }
 {
 	(
-		(<QUANTIFIER> "(" <NAME> <COLON> <NAME> <TILDE> Predicate() ")")
+		(
+			//A quantified predicate over a set.
+			<QUANTIFIER> "("
+				<NAME> <COLON> <NAME> <TILDE> 
+				Predicate() 
+			")"
+		)
 		|
-		(<LOGICAL_UN_OP> Predicate())
+		(
+			//A unary operator applied to a predicate.
+			<LOGICAL_UN_OP> Predicate()
+		)
 		|
-		LogicalBinaryExpr()
+		(
+			//A logical expression.
+			LogicalBinaryExpr()
+		)
 		|
-		MathBinaryExpr()
+		(
+			//An arithmetic expression.
+			MathBinaryExpr()
+		)
 	)
-	{ return "predicate"; }
+	{ 
+		return new PredDecl();
+	}
 }
 
 void MathBinaryExpr() :
 {}
 {
-	(<LOGICAL_MATH_OP> VariableExpr() VariableExpr())
+	//A logical comparison between two arithmetic expressions.
+	<LOGICAL_MATH_OP> VariableExpr() VariableExpr()
 }
 
-void VariableExpr() :
-{}
+SyntaxTree VariableExpr() :
 {
-	<NAME> ("(" (<NAME> | <THIS>) ")")?
+	SyntaxTree tree = new SyntaxTree();
+
+	//For named values.
+
+
+	//For literal values.
+	Token literal;
+
+	//For arithmetic ops.
+	Token op;
+	SyntaxTree left;
+	SyntaxTree right;
+}
+{
+	(
+		//A name (either a variable, or if arguments are supplied, a function).
+		<NAME>
+		("(" (<NAME> | <THIS>) ")")?
+		{
+			//named value
+		}
+	)
 	|
-	<NUMBER>
+	(
+		//A literal.
+		literal = <NUMBER>
+		{
+			//Parse the literal and wrap it in a node.
+			Integer val = Integer.parseInt(literal.image);
+			LiteralNode literalNode = new LiteralNode(val);
+			tree.setRoot(literalNode);
+			return tree;
+		}
+	)
 	|
-	(<MATH_OP> VariableExpr() VariableExpr())
+	(
+		//An arithmetic operation on two variable expressions.
+		op = <MATH_OP> 
+		left = VariableExpr()
+		right = VariableExpr()
+		{
+			//Combine the two syntax trees with the operator.
+			BinaryOperatorNode.Operator opWrapper = BinaryOperatorNode.parseOperator(op.image);
+			BinaryOperatorNode bopNode = new BinaryOperatorNode(opWrapper, left, right);
+			tree.setRoot(binaryNode);
+			return tree;
+		}
+	)
 }
 
-void LogicalBinaryExpr() :
-{}
+SyntaxTree LogicalBinaryExpr() :
 {
-	(<LOGICAL_BIN_OP> Predicate() Predicate())
+}
+{
+	//A conjunction or disjunction on two predicates.
+	<LOGICAL_BIN_OP> Predicate() Predicate()
 }
 
 

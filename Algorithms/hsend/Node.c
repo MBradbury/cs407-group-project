@@ -217,9 +217,9 @@ static char * evaluate_predicate(char const * predicate)
 static void 
 delayed_forward_evaluated_predicate(predicate_return_msg_t * msg)
 {
-	rimeaddr_t * target;
+	rimeaddr_t target;
 	rimeaddr_copy(&target,&msg->target_reciever);
-	rimeaddr_t * sender;
+	rimeaddr_t sender;
 	rimeaddr_copy(&sender,&msg->sender);
 	printf("From: %s\n",addr2str(sender) );
 	send_evaluated_predicate(sender,target,msg->message_id,msg->evaluated_predicate);

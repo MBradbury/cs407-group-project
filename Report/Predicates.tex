@@ -144,8 +144,7 @@ However, there is an issue with this predicate. How would we implement the $Dist
 	\pn{using} & \pp & \sm{using} \ww \sm{Neighbours}\sm{(}\pn{number}\sm{)} \ww \sm{as} \ww \pn{variable} \ww \sm{in} \ww \pn{using} \\
 	~ & \oo & \pn{predicate} \\
 %
-	\pn{predicate} & \pp & \sm{@}\sm{(}\pn{variable} \ww \sm{:} \ww \pn{variable} \ww \sm{\mytilde} \pn{predicate} \sm{)}\\
-	~ & \oo & \sm{\#}\sm{(}\pn{variable} \ww \sm{:} \ww \pn{variable} \ww \sm{\mytilde} \pn{predicate} \sm{)} \\
+	\pn{predicate} & \pp & \pn{quantifier}\sm{(}\pn{variable} \ww \sm{:} \ww \pn{variable} \ww \sm{\mytilde} \pn{predicate} \sm{)}\\
 	~ & \oo &  \pn{predicate} \ww \pn{logical-binary} \ww \pn{predicate} \\
 	~ & \oo &  \pn{logical-unary} \ww \pn{predicate} \\
 	~ & \oo &  \pn{var-expr} \ww \pn{math-logical-binary} \ww \pn{var-expr} \\
@@ -174,8 +173,11 @@ However, there is an issue with this predicate. How would we implement the $Dist
 	\pn{string-rest} & \pp & \nn \oo \pn{alpha}\pn{string-rest} \oo \pn{digit}\pn{string-rest} \\
 %
 	\pn{alpha} & \pp & \sm{A}\dots\sm{Z} \oo \sm{a}\dots\sm{z} \\
-	\pn{number} & \pp & \pn{digit} \oo \pn{digit}\pn{number} \\
+	\pn{number} & \pp & \pn{sign} \pn{number-rest} \oo \pn{number-rest} \\
+	\pn{number-rest} & \pp & \pn{digit} \oo \pn{digit}\pn{number-rest} \\
 	\pn{digit} & \pp & \sm{0}\dots\sm{9} \\
+	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
+	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
 \end{eqnarray*}
 
 \subsubsection{Examples}

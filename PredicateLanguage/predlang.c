@@ -12,6 +12,7 @@
 #endif
 
 #define MAIN_FUNC
+#define ENABLE_CODE_GEN
 //#define NDEBUG
 
 #ifndef NDEBUG
@@ -51,11 +52,6 @@ char const * error_message(void)
 	return error;
 }
 
-void reset_error(void)
-{
-	error = NULL;
-}
-
 /****************************************************
  ** ERROR MANAGEMENT START
  ***************************************************/
@@ -67,14 +63,12 @@ void reset_error(void)
  ***************************************************/
 static inline void * heap_alloc(nuint size)
 {
-#ifndef NDEBUG
 	if (heap_ptr + size > stack_ptr)
 	{
 		error = "Heap overwriting stack";
 		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
-#endif
 
 	void * ptr = heap_ptr;
 
@@ -84,46 +78,49 @@ static inline void * heap_alloc(nuint size)
 }
 
 
-static inline void push_stack(void const * ptr, nuint size)
+static inline bool push_stack(void const * ptr, nuint size)
 {
-#ifndef NDEBUG
 	if (stack_ptr - size < heap_ptr)
 	{
 		error = "Stack overwriting heap";
 		DEBUG_PRINT("========%s========\n", error);
+		return false;
 	}
-#endif
 
 	stack_ptr -= size;
 	memcpy(stack_ptr, ptr, size);
+
+	return true;
 }
 
-static inline void int_push_stack(nint i)
+static inline bool int_push_stack(nint i)
 {
-#ifndef NDEBUG
 	if (stack_ptr - sizeof(nint) < heap_ptr)
 	{
 		error = "Stack overwriting heap";
 		DEBUG_PRINT("========%s========\n", error);
+		return false;
 	}
-#endif
 
 	stack_ptr -= sizeof(nint);
 	*((nint *)stack_ptr) = i;
+
+	return true;
 }
 
-static inline void float_push_stack(nfloat f)
+static inline bool float_push_stack(nfloat f)
 {
-	#ifndef NDEBUG
-		if (stack_ptr - sizeof(nfloat) < heap_ptr)
-		{
-			error = "Stack overwriting heap";
-			DEBUG_PRINT("========%s========\n", error);
-		}
-	#endif
+	if (stack_ptr - sizeof(nfloat) < heap_ptr)
+	{
+		error = "Stack overwriting heap";
+		DEBUG_PRINT("========%s========\n", error);
+		return false;
+	}
 
 	stack_ptr -= sizeof(nfloat);
 	*((nfloat *)stack_ptr) = f;
+
+	return true;
 }
 
 static inline nuint stack_size(void)
@@ -131,20 +128,25 @@ static inline nuint stack_size(void)
 	return (stack + STACK_SIZE) - stack_ptr;
 }
 
-static void require_stack_size(nuint size)
+static bool require_stack_size(nuint size)
 {
 	if (stack_size() < size)
 	{
 		error = "STACK UNDERFLOW";
 		DEBUG_PRINT("Stack too small is %d bytes needed %d bytes\n", (stack + STACK_SIZE) - stack_ptr, size);
+		return false;
 	}
+	return true;
 }
 
-static inline void pop_stack(nuint size)
+static inline bool pop_stack(nuint size)
 {
-	require_stack_size(sizeof(nuint));
+	if (!require_stack_size(sizeof(nuint)))
+		return false;
 
 	stack_ptr += size;
+
+	return true;
 }
 
 static void inspect_stack(void)
@@ -214,20 +216,38 @@ static variable_reg_t * create_variable(char const * name, nuint name_length, va
 		return NULL;
 	}
 
-	variable_reg_t * variable = &variable_regs[variable_regs_count++];
+	variable_reg_t * variable = &variable_regs[variable_regs_count];
 
 	variable->name = (char *)heap_alloc(name_length + 1);
+
+	if (variable->name == NULL)
+	{
+		error = "Failed to allocate enough space on heap for variable name";
+		DEBUG_PRINT("========%s=====%d===\n", error, name_length + 1);
+		return NULL;
+	}
+
 	snprintf(variable->name, name_length + 1, "%s", name);
 
 	DEBUG_PRINT("Registered variable with name '%s'\n", variable->name);
 
 	// Lets create some space in the heap to store the variable
 	variable->location = heap_alloc(variable_type_size(type));
+
+	if (variable->location == NULL)
+	{
+		error = "Failed to allocate enough space on heap for variable";
+		DEBUG_PRINT("========%s=====%d===\n", error, variable_type_size(type));
+		return NULL;
+	}
+
 	memset(variable->location, 0, variable_type_size(type));
 
 	variable->type = type;
 	variable->is_array = false;
 	variable->length = 0;
+
+	variable_regs_count += 1;
 
 	return variable;
 }
@@ -249,15 +269,31 @@ static variable_reg_t * create_array(char const * name, nuint name_length, varia
 	}
 
 
-	variable_reg_t * variable = &variable_regs[variable_regs_count++];
+	variable_reg_t * variable = &variable_regs[variable_regs_count];
 
 	variable->name = (char *)heap_alloc(name_length + 1);
+
+	if (variable->name == NULL)
+	{
+		error = "Failed to allocate enough space on heap for variable name";
+		DEBUG_PRINT("========%s=====%d===\n", error, name_length + 1);
+		return NULL;
+	}
+
 	snprintf(variable->name, name_length + 1, "%s", name);
 
 	// Lets create some space in the heap to store the variable
 	// We allocate enough space of `length' `data_size'ed items
 	// So we can store `length' user data items
 	variable->location = heap_alloc(variable_type_size(type) * length);
+
+	if (variable->location == NULL)
+	{
+		error = "Failed to allocate enough space on heap for variable";
+		DEBUG_PRINT("========%s=====%d===\n", error, variable_type_size(type) * length);
+		return NULL;
+	}
+
 	memset(variable->location, 0, variable_type_size(type) * length);
 
 	variable->type = type;
@@ -266,6 +302,8 @@ static variable_reg_t * create_array(char const * name, nuint name_length, varia
 
 	DEBUG_PRINT("Registered array with name '%s' and length %d and elem size %d\n",
 		variable->name, variable->length, variable_type_size(type));
+
+	variable_regs_count += 1;
 
 	return variable;
 }
@@ -324,13 +362,13 @@ typedef struct
 static function_reg_t * functions_regs = NULL;
 static nuint function_regs_count = 0;
 
-int register_function(char const * name, data_access_fn fn, variable_type_t type)
+bool register_function(char const * name, data_access_fn fn, variable_type_t type)
 {
 	if (function_regs_count == MAXIMUM_FUNCTIONS)
 	{
 		error = "Already registered maximum number of functions";
 		DEBUG_PRINT("========%s=====%s===\n", error, name);
-		return 1;
+		return false;
 	}
 
 	functions_regs[function_regs_count].name = name;
@@ -340,7 +378,7 @@ int register_function(char const * name, data_access_fn fn, variable_type_t type
 	// Record that we have another function
 	++function_regs_count;
 
-	return 0;
+	return true;
 }
 
 static function_reg_t * get_function(char const * name)
@@ -373,6 +411,9 @@ static void const * call_function(char const * name, void * data, variable_type_
 
 		return reg->fn(data);
 	}
+
+	error = "Function with given name doesn't exist";
+	DEBUG_PRINT("========%s======%s==\n", error, name);
 
 	return NULL;
 }
@@ -515,16 +556,17 @@ static const char * opcode_names[] = {
 };
 #endif
 
-
-
 #define OPERATION_POP(code, op, type, store_type, format_type, idx1, idx2) \
 	case code: \
 		{ \
 			DEBUG_PRINT("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[idx1], ((type *)stack_ptr)[idx2]); \
-			require_stack_size(sizeof(type) * 2); \
+			if (!require_stack_size(sizeof(type) * 2)) \
+				return false; \
 			store_type res = ((type *)stack_ptr)[idx1] op ((type *)stack_ptr)[idx2]; \
-			pop_stack(sizeof(type) * 2); \
-			push_stack(&res, sizeof(store_type)); \
+			if (!pop_stack(sizeof(type) * 2)) \
+				return false; \
+			if (!push_stack(&res, sizeof(store_type))) \
+				return false; \
 		} break
 
 nbool evaluate(ubyte * start, nuint program_length)
@@ -541,12 +583,15 @@ nbool evaluate(ubyte * start, nuint program_length)
 		{
 		case HALT:
 			DEBUG_PRINT("Halting\n");
-			require_stack_size(sizeof(nbool));
+			if (!require_stack_size(sizeof(nbool)))
+				return false;
+
 			return *(int *)stack_ptr;
 
 		case IPUSH:
 			DEBUG_PRINT("Pushing int %d onto the stack\n", *(nint*)(current + 1));
-			int_push_stack(*(nint*)(current + 1));
+			if (!int_push_stack(*(nint*)(current + 1)))
+				return false;
 			current += sizeof(nint);
 			break;
 
@@ -556,51 +601,100 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case FPUSH:
 			DEBUG_PRINT("Pushing float %f onto the stack\n", *(nfloat*)(current + 1));
-			float_push_stack(*(nfloat*)(current + 1));
+			if (!float_push_stack(*(nfloat*)(current + 1)))
+				return false;
 			current += sizeof(nfloat);
 			break;
 
 		case FPOP:
-			pop_stack(sizeof(nfloat));
+			if (!pop_stack(sizeof(nfloat)))
+				return false;
 			break;
 
 		case IFETCH:
-			int_push_stack(*get_variable_as_int((char const *)(current + 1)));
-			current += strlen((char const *)(current + 1)) + 1;
-			break;
+			{
+				nint * var = get_variable_as_int((char const *)(current + 1));
+
+				if (var == NULL)
+					return false;
+
+				if (!int_push_stack(*var))
+					return false;
+
+				current += strlen((char const *)(current + 1)) + 1;
+			} break;
 
 		case ISTORE:
-			require_stack_size(sizeof(nint));
-			*get_variable_as_int((char const *)(current + 1)) = *(nint *)stack_ptr;
-			current += strlen((char const *)(current + 1)) + 1;
-			break;
+			{
+				if (!require_stack_size(sizeof(nint)))
+					return false;
+
+				nint * var = get_variable_as_int((char const *)(current + 1));
+
+				if (var == NULL)
+					return false;
+				
+				*var = *(nint *)stack_ptr;
+
+				current += strlen((char const *)(current + 1)) + 1;
+			} break;
 
 		case FFETCH:
-			float_push_stack(*get_variable_as_float((char const *)(current + 1)));
-			current += strlen((char const *)(current + 1)) + 1;
-			break;
+			{
+				nfloat * var = get_variable_as_float((char const *)(current + 1));
+
+				if (var == NULL)
+					return false;
+
+				if (!float_push_stack(*var))
+					return false;
+
+				current += strlen((char const *)(current + 1)) + 1;
+			} break;
 
 		case FSTORE:
-			require_stack_size(sizeof(nfloat));
-			*get_variable_as_float((char const *)(current + 1)) = *(nfloat *)stack_ptr;
-			current += strlen((char const *)(current + 1)) + 1;
-			break;
+			{
+				if (!require_stack_size(sizeof(nfloat)))
+					return false;
+
+				nfloat * var = get_variable_as_float((char const *)(current + 1));
+
+				if (var == NULL)
+					return false;
+				
+				*var = *(nfloat *)stack_ptr;
+
+				current += strlen((char const *)(current + 1)) + 1;
+			} break;
 
 		case AFETCH:
 			{
-				require_stack_size(sizeof(nint));
+				if (!require_stack_size(sizeof(nint)))
+					return false;
+
 				variable_reg_t * var = get_variable((char const *)(current + 1));
+
 				nint i = ((nint *)stack_ptr)[0];
-				pop_stack(sizeof(nint));
-				push_stack((char *)var->location + (i * variable_type_size(var->type)), variable_type_size(var->type));
+
+				if (!pop_stack(sizeof(nint)))
+					return false;
+
+				if (!push_stack((char *)var->location + (i * variable_type_size(var->type)), variable_type_size(var->type)))
+					return false;
+
 				current += strlen((char const *)(current + 1)) + 1;
 			} break;
 
 		case ALEN:
 			{
 				variable_reg_t * var = get_variable((char const *)(current + 1));
-				nint length = var->length;
-				push_stack(&length, sizeof(nint));
+
+				if (var == NULL)
+					return false;
+
+				if (!int_push_stack(var->length))
+					return false;
+
 				current += strlen((char const *)(current + 1)) + 1;
 			} break;
 
@@ -615,12 +709,18 @@ nbool evaluate(ubyte * start, nuint program_length)
 				DEBUG_PRINT("FN name %s\n", fn_name);
 
 				variable_reg_t const * var_reg = get_variable(array_name);
+
+				if (var_reg == NULL)
+					return false;
+
 				function_reg_t const * fn_reg = get_function(fn_name);
 
-				nfloat op_result = 0;
+				if (fn_reg == NULL)
+					return false;
 
 				if (var_reg->type == TYPE_USER)
 				{
+					nfloat op_result = 0;
 					nuint size = variable_type_size(TYPE_USER);
 					byte const * data = (byte *)var_reg->location;
 					byte const * const end = data + (size * var_reg->length);
@@ -629,49 +729,78 @@ nbool evaluate(ubyte * start, nuint program_length)
 					{
 						void const * result = fn_reg->fn(data);
 
+						if (result == NULL)
+						{
+							error = "User defined function returns NULL";
+							DEBUG_PRINT("==========%s==========\n", error);
+							return false;
+						}
+
 						if (fn_reg->type == TYPE_INTEGER)
 							op_result += (nfloat)*(nint const *)result;
 						else
 							op_result += *(nfloat const *)result;
 					}
+
+					if (!float_push_stack(op_result))
+						return false;
 				}
 				else
 				{
-					op_result = -1;
 					error = "Variable not an array of user types!";
 					DEBUG_PRINT("==========%s==========\n", error);
+					return false;
 				}
-
-				float_push_stack(op_result);
 			} break;
 
 		case CALL:
 			{
-				require_stack_size(data_size);
+				if (!require_stack_size(data_size))
+					return false;
 
 				variable_type_t type;
 				void const * data = call_function((char const *)(current + 1), stack_ptr, &type);
 				current += strlen((char const *)(current + 1)) + 1;
 
-				pop_stack(data_size);
-				push_stack(data, variable_type_size(type));
+				if (data == NULL)
+				{
+					return false;
+				}
+
+				if (!pop_stack(data_size))
+					return false;
+
+				if (!push_stack(data, variable_type_size(type)))
+					return false;
 
 			} break;
 
 		case ICASTF:
 			{
-				require_stack_size(sizeof(nint));
+				if (!require_stack_size(sizeof(nint)))
+					return false;
+
 				nfloat val = (nfloat)((nint *)stack_ptr)[0];
-				pop_stack(sizeof(nint));
-				push_stack(&val, sizeof(nfloat));
+
+				if (!pop_stack(sizeof(nint)))
+					return false;
+
+				if (!float_push_stack(val))
+					return false;
 			} break;
 
 		case FCASTI:
 			{
-				require_stack_size(sizeof(nfloat));
+				if (!require_stack_size(sizeof(nfloat)))
+					return false;
+
 				nint val = (nint)((nfloat *)stack_ptr)[0];
-				pop_stack(sizeof(nfloat));
-				push_stack(&val, sizeof(nint));
+
+				if (!pop_stack(sizeof(nfloat)))
+					return false;
+
+				if (!int_push_stack(val))
+					return false;
 			} break;
 
 		case JMP:
@@ -680,7 +809,9 @@ nbool evaluate(ubyte * start, nuint program_length)
 			break;
 
 		case JZ:
-			require_stack_size(sizeof(nint));
+			if (!require_stack_size(sizeof(nint)))
+				return false;
+
 			if (((nint *)stack_ptr)[0] == 0)
 			{
 				current = start + *(nint *)(current + 1) - 1;
@@ -691,12 +822,15 @@ nbool evaluate(ubyte * start, nuint program_length)
 				current += sizeof(nint);
 			}
 
-			pop_stack(sizeof(nint));
+			if (!pop_stack(sizeof(nint)))
+				return false;
 
 			break;
 
 		case JNZ:
-			require_stack_size(sizeof(nint));
+			if (!require_stack_size(sizeof(nint)))
+				return false;
+
 			if (((nint *)stack_ptr)[0] != 0)
 			{
 				current = start + *(nint *)(current + 1) - 1;
@@ -707,7 +841,8 @@ nbool evaluate(ubyte * start, nuint program_length)
 				current += sizeof(nint);
 			}
 
-			pop_stack(sizeof(nint));
+			if (!pop_stack(sizeof(nint)))
+				return false;
 
 			break;
 
@@ -719,9 +854,12 @@ nbool evaluate(ubyte * start, nuint program_length)
 		OPERATION_POP(IDIV2, /, nint, nint, "%d", 1, 0);
 
 		case IINC:
-			require_stack_size(sizeof(nint));
+			if (!require_stack_size(sizeof(nint)))
+				return false;
+
 			DEBUG_PRINT("Incrementing %d\n", ((nint *)stack_ptr)[0]);
 			((nint *)stack_ptr)[0] += 1;
+
 			break;
 
 		OPERATION_POP(IEQ, ==, nint, nbool, "%d", 0, 1);
@@ -750,7 +888,8 @@ nbool evaluate(ubyte * start, nuint program_length)
 		OPERATION_POP(XOR, ^, nbool, nbool, "%d", 0, 1);
 
 		case NOT:
-			require_stack_size(sizeof(nbool));
+			if (!require_stack_size(sizeof(nbool)))
+				return false;
 			((nbool *)stack_ptr)[0] = ! ((nbool *)stack_ptr)[0];
 			break;
 
@@ -759,7 +898,10 @@ nbool evaluate(ubyte * start, nuint program_length)
 				const char * name = (char const *)(current + 1);
 				nuint name_Length = strlen((char const *)(current + 1));
 
-				create_variable(name, name_Length, TYPE_INTEGER);
+				if (create_variable(name, name_Length, TYPE_INTEGER) == NULL)
+				{
+					return false;
+				}
 
 				current += name_Length + 1;
 			} break;
@@ -769,7 +911,10 @@ nbool evaluate(ubyte * start, nuint program_length)
 				const char * name = (char const *)(current + 1);
 				nuint name_Length = strlen((char const *)(current + 1));
 
-				create_variable(name, name_Length, TYPE_FLOATING);
+				if (create_variable(name, name_Length, TYPE_FLOATING) == NULL)
+				{
+					return false;
+				}
 
 				current += name_Length + 1;
 			} break;
@@ -801,8 +946,15 @@ nbool evaluate(ubyte * start, nuint program_length)
  ** INIT MANAGEMENT END
  ***************************************************/
 
-void init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
+bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 {
+	// Make sure wqe are given valid functions
+	if (given_data_fn == NULL)
+		return false;
+
+	if (given_data_size == NULL)
+		return false;
+
 	// Record the user's data access function
 	data_fn = given_data_fn;
 	data_size = given_data_size;
@@ -819,8 +971,23 @@ void init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	// Allocate some space for function registrations
 	functions_regs = (function_reg_t *)heap_alloc(sizeof(function_reg_t) * MAXIMUM_FUNCTIONS);
 
+	if (functions_regs == NULL)
+	{
+		return false;
+	}
+
 	// Allocate space for variable registrations
 	variable_regs = (variable_reg_t *)heap_alloc(sizeof(variable_reg_t) * MAXIMUM_VARIABLES);
+
+	if (variable_regs == NULL)
+	{
+		return false;
+	}
+
+	// Reset the error message variable
+	error = NULL;
+
+	return true;
 }
 
 
@@ -993,6 +1160,11 @@ static void gen_example_for_loop(void)
 // FROM: http://www.anyexample.com/programming/c/how_to_load_file_into_memory_using_plain_ansi_c_language.xml
 nuint load_file_to_memory(char const * filename, ubyte ** result) 
 {
+	if (filename == NULL || result == NULL)
+	{
+		return -4;
+	}
+
 	FILE * f = fopen(filename, "rb");
 
 	if (f == NULL)
@@ -1007,6 +1179,11 @@ nuint load_file_to_memory(char const * filename, ubyte ** result)
 
 	*result = (ubyte *)heap_alloc(size);
 
+	if (*result == NULL)
+	{
+		return -3;
+	}
+
 	if (size != fread(*result, sizeof(ubyte), size, f))
 	{
 		return -2; // -2 means file reading fail
@@ -1015,6 +1192,26 @@ nuint load_file_to_memory(char const * filename, ubyte ** result)
 	fclose(f);
 
 	return size;
+}
+
+static bool run_program_from_file(int argc, char ** argv)
+{
+	char const * filename = argv[1];
+
+	printf("Filename: %s\n", filename);
+
+	nuint program_size = load_file_to_memory(filename, &program_start);
+
+	if (program_size <= 0)
+	{
+		return false;
+	}
+
+	program_end = program_start + program_size;
+
+	printf("Program length %d\n", program_size);
+
+	return true;
 }
 
 int main(int argc, char * argv[])
@@ -1050,22 +1247,14 @@ int main(int argc, char * argv[])
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
 	// Load a program into memory
-
-	char const * filename = argv[1];
-
-	printf("Filename: %s\n", filename);
-
-	ubyte * start;
-	nuint program_size = load_file_to_memory(filename, &start);
-
-	printf("Program length %d\n", program_size);
+	gen_example_for_loop();
 
 	// Evaluate the program
-	nbool result = evaluate(start, program_size);
+	nbool result = evaluate(program_start, program_end - program_start);
 
 	// Print the results
 	printf("Stack ptr value (float %f) (int %d) (bool %d)\n",
-		*((nfloat *)stack_ptr), *((nint *)stack_ptr), *((nbool *)stack_ptr)
+		*((nfloat *)stack_ptr), *((nint *)stack_ptr), *((nbool *)stack_ptr) != 0
 	);
 
 	printf("Result: %d\n", result);

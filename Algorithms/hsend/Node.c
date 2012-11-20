@@ -192,7 +192,6 @@ delayed_send_evaluated_predicate(void * ptr)
 		{
 			rimeaddr_t dest;
 			rimeaddr_copy(&dest,&list_iterator->originator);
-			printf("Trying to send evaluated predicate to: %s\n", addr2str(&dest));
 
 			send_evaluated_predicate(&rimeaddr_node_addr, 
 				&dest,
@@ -223,7 +222,7 @@ delayed_forward_evaluated_predicate(void * ptr)
 	rimeaddr_copy(&target,&msg->target_reciever);
 	rimeaddr_t sender;
 	rimeaddr_copy(&sender,&msg->sender);
-	printf("From: %s\n",addr2str(&sender) );
+
 	send_evaluated_predicate(&sender,&target,msg->message_id,msg->evaluated_predicate);
 	
 	free(msg);
@@ -235,6 +234,7 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 
 	if (runicast_is_transmitting(&runicast))
 	{
+		printf("runicast is already transmitting, trying again in a few seconds\n");
 		static struct ctimer forward_timer;
 
 		predicate_return_msg_t * forwarder = (predicate_return_msg_t *)malloc(sizeof(predicate_return_msg_t));
@@ -242,12 +242,11 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 		rimeaddr_copy(&forwarder->target_reciever, target_reciever);
 		forwarder->message_id = message_id;
 		forwarder->evaluated_predicate = evaluated_predicate;
-		printf("saved: %s\n",addr2str(&forwarder->target_reciever));
-		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, &forwarder);
+
+		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, forwarder);
 
 		return;
 	}	
-	printf("target receiver %s\n", addr2str(target_reciever));
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_return_msg_t));
@@ -357,7 +356,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 			{
 				struct list_elem_struct * delivered_msg =  (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
 				delivered_msg->message_id = get_message_id();
-				delivered_msg->hops = 2;
+				delivered_msg->hops = 3;
 				//set the originator to self
 				rimeaddr_copy(&delivered_msg->originator,&rimeaddr_node_addr); 
 				list_push(message_list, delivered_msg);

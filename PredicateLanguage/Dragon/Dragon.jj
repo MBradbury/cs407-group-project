@@ -1,0 +1,384 @@
+options {
+  LOOKAHEAD = 1;
+  CHOICE_AMBIGUITY_CHECK = 2;
+  OTHER_AMBIGUITY_CHECK = 1;
+  STATIC = true;
+  DEBUG_PARSER = false;
+  DEBUG_LOOKAHEAD = false;
+  DEBUG_TOKEN_MANAGER = false;
+  ERROR_REPORTING = true;
+  JAVA_UNICODE_ESCAPE = false;
+  UNICODE_INPUT = false;
+  IGNORE_CASE = false;
+  USER_TOKEN_MANAGER = false;
+  USER_CHAR_STREAM = false;
+  BUILD_PARSER = true;
+  BUILD_TOKEN_MANAGER = true;
+  SANITY_CHECK = true;
+  FORCE_LA_CHECK = false;
+}
+
+PARSER_BEGIN(Dragon)
+
+import java.io.*;
+import java.util.*;
+import com.google.common.io.LittleEndianDataOutputStream;
+
+public class Dragon
+{
+	public static void main(String args[]) throws ParseException, Exception
+	{
+		Dragon parser = new Dragon(System.in);
+		ArrayList<Opcode> opcodes = parser.Input();
+		
+		transformJumps(opcodes);
+		
+		for (Opcode op : opcodes)
+		{
+			System.err.print(op.getName());
+			
+			ArrayList<Arg> opArgs = op.getArgs();
+			
+			for (Arg arg : opArgs)
+			{
+				System.err.print(" ");
+				System.err.print(arg.toString());
+			}
+			
+			if (op.getLabel() != null)
+			{
+				System.err.print(" (Label=");
+				System.err.print(op.getLabel());
+				System.err.print(")");
+			}
+			
+			System.err.println();
+		}
+		
+		ByteArrayOutputStream os = new ByteArrayOutputStream();
+		
+		// Big-endian
+		//DataOutputStream out = new DataOutputStream(os);
+		
+		// Little-endian
+		LittleEndianDataOutputStream out = new LittleEndianDataOutputStream(os);
+		
+		try
+		{
+			for (Opcode op : opcodes)
+			{
+				out.writeByte(op.getName().getValue());
+				
+				for (Arg arg : op.getArgs())
+				{
+					arg.write(out);
+				}
+			}
+			out.flush();
+		}
+		catch (IOException e)
+		{
+			System.err.println(e);
+		}
+		finally
+		{
+			try {
+				out.close();
+			} catch (Exception e) {
+				System.err.println(e);
+			}
+		}
+		
+		os.writeTo(System.out);
+	}
+	
+	private static void transformJumps(ArrayList<Opcode> opcodes) throws Exception
+	{
+		for (Opcode op : opcodes)
+		{
+			OpcodeEnum name = op.getName();
+			
+			if (name == OpcodeEnum.JMP || name == OpcodeEnum.JZ || name == OpcodeEnum.JNZ)
+			{
+				int index = getLabelIndex(opcodes, op.getArgs().get(0).toString());
+				
+				System.err.println("Converting label " + op.getArgs().get(0).toString() + " to " + index);
+				
+				// Update the label name, with the jump position
+				op.getArgs().set(0, new IntArg(index));
+			}
+		}
+	}
+	
+	private static int getLabelIndex(ArrayList<Opcode> opcodes, String label) throws Exception
+	{
+		for (int i = 0; i != opcodes.size(); ++i)
+		{
+			Opcode op = opcodes.get(i);
+			if (op.getLabel() != null && op.getLabel().equals(label))
+			{
+				return i;
+			}
+		}
+		
+		throw new Exception("Failed to find label called `" + label + "'");
+	}
+}
+
+enum OpcodeEnum
+{
+	HALT(0),
+
+	IPUSH(1), IPOP(2), FPUSH(3), FPOP(4),
+	IFETCH(5), ISTORE(6), FFETCH(7), FSTORE(8),
+  
+	AFETCH(9), ALEN(10),
+
+	ASUM(11),
+
+	CALL(12),
+
+	ICASTF(13), FCASTI(14),
+
+	JMP(15), JZ(16), JNZ(17),
+
+	IADD(18), ISUB(19), IMUL(20), IDIV1(21), IDIV2(22), IINC(23),
+	IEQ(24), INEQ(25), ILT(26), ILEQ(27), IGT(28), IGEQ(29),
+
+	FADD(30), FSUB(31), FMUL(32), FDIV1(33), FDIV2(34),
+	FEQ(35), FNEQ(36), FLT(37), FLEQ(38), FGT(39), FGEQ(40),
+
+	AND(41), OR(42), XOR(43), NOT(44),
+	
+	IVAR(45), FVAR(46);
+	
+	private final int value;
+	
+	private OpcodeEnum(int value)
+	{
+		this.value = value;
+	}
+
+	public int getValue()
+	{
+		return value;
+	}
+}
+
+final class Opcode
+{
+	private OpcodeEnum name;
+	private ArrayList<Arg> args = new ArrayList<Arg>();
+	private String label;
+	
+	public OpcodeEnum getName() { return name; }
+	public void setName(String name) { this.name = OpcodeEnum.valueOf(name); }
+	
+	public void addArg(Arg arg) { args.add(arg); }
+	public ArrayList<Arg> getArgs() { return args; }
+	
+	public String getLabel() { return label; }
+	public void setLabel(String label) { this.label = label; }
+}
+
+interface Arg
+{
+	void write(DataOutput out) throws IOException;
+}
+
+final class StringArg implements Arg
+{
+	private final String value;
+	
+	public StringArg(Token t)
+	{
+		value = t.image;
+	}
+	
+	public String toString() { return value; }
+	
+	public void write(DataOutput out) throws IOException
+	{
+		for (char ch : value.toCharArray())
+		{
+			out.writeByte(ch);
+		}
+		// Write out the NUL character
+		out.writeByte(0);
+	}
+}
+
+final class FloatArg implements Arg
+{
+	private final float value;
+	
+	public FloatArg(Token t)
+	{
+		value = Float.parseFloat(t.image);
+	}
+	
+	public String toString() { return Float.toString(value); }
+	
+	public void write(DataOutput out) throws IOException
+	{
+		out.writeFloat(value);
+	}
+}
+
+final class IntArg implements Arg
+{
+	private final int value;
+	
+	public IntArg(Token t)
+	{
+		value = Integer.parseInt(t.image);
+	}
+	public IntArg(int i)
+	{
+		value = i;
+	}
+	
+	public String toString() { return Integer.toString(value); }
+	
+	public void write(DataOutput out) throws IOException
+	{
+		out.writeShort(value);
+	}
+}
+
+PARSER_END(Dragon)
+
+TOKEN : {
+	//Keywords
+	< HALT : 		"HALT" >
+	
+	| < IPUSH :		"IPUSH" >
+	| < FPUSH :		"FPUSH" >
+	
+	| < POP :		"IPOP" | "FPOP">
+	
+	| < FETCH :		"IFETCH" | "FFETCH" | "AFETCH" >
+	
+	| < STORE :		"ISTORE" | "FSTORE" >
+	
+	| < ALEN :		"ALEN" >
+	
+	| < ABIGOP :	"ASUM" >
+	
+	| < CALL :		"CALL" >
+	
+	| < CAST :		"ICASTF" | "FCASTI" >
+	
+	| < JUMP :		"JMP" | "JZ" | "JNZ" >
+	
+	| < MATHOP :	"IADD" | "FADD" | "ISUB" | "FSUB" | "IMUL" | "FMUL" | "IDIV1" | "IDIV2" | "FDIV1" | "FDIV2" | "IINC" >
+	
+	| < MATHLOP :	"IEQ" | "FEQ" | "INEQ" | "FNEQ" | "ILT" | "FLT" | "ILEQ" | "ILEQ" | "FGT" | "FGT" | "IGEQ" | "FGEQ" >
+	
+	| < LOGICOP2 :	"AND" | "OR" | "XOR" >
+	
+	| < LOGICOP1 :	"NOT" >
+	
+	| < VAR :		"IVAR" | "FVAR" >
+
+	//Regexes
+	| < INT :		(<DIGIT>)+ >
+	| < FLOAT :		(<DIGIT>)+ ("." (<DIGIT>)*)? >
+	| < LABEL :		<NAME> ":" >
+	| < NAME :		<LETTER> (<ALPHANUM>)* >
+	| < ALPHANUM : 	<LETTER> | <DIGIT> >
+	| < LETTER :	["a"-"z"] >
+	| < DIGIT :		["0"-"9"] >
+	| < NEWLINE : 	"\n" | "\r" | "\r\n" >
+}
+
+SKIP : { " " | "\t" }
+
+ArrayList<Opcode> Input() :
+{
+	ArrayList<Opcode> opcodes = new ArrayList<Opcode>();
+	Opcode op;
+	Token label = null;
+}
+{
+	(
+		(label = <LABEL>)?
+		op = Operation()
+		{
+			if (label != null)
+			{
+				// Need to substring to get rid of the extra colon at the
+				// end of the label name
+				op.setLabel(label.image.substring(0, label.image.length() - 1));
+				label = null;
+			}
+		
+			opcodes.add(op);
+		}
+		<NEWLINE>
+	)*
+	<EOF>
+	{
+		return opcodes;
+	}
+}
+
+Opcode Operation() :
+{
+	Token t, t1, t2;
+	Opcode op = new Opcode();
+}
+{
+	(
+		(t = <HALT>)
+		{ op.setName(t.image); }
+		
+		| (t = <IPUSH>) (t1 = <INT>)
+		{ op.setName(t.image); op.addArg(new IntArg(t1)); }
+
+		| (t = <FPUSH>) (t1 = <FLOAT>)
+		{ op.setName(t.image); }
+		
+		| (t = <POP>)
+		{ op.setName(t.image); }
+		
+		| (t = <FETCH>) (t1 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		
+		| (t = <STORE>) (t1 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		
+		| (t = <ALEN>) (t1 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		
+		| (t = <ABIGOP>) (t1 = <NAME>) (t2 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); op.addArg(new StringArg(t2)); }
+		
+		| (t = <CALL>) (t1 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		
+		| (t = <CAST>)
+		{ op.setName(t.image); }
+		
+		| (t = <JUMP>) (t1 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		
+		| (t = <MATHOP>)
+		{ op.setName(t.image); }
+		
+		| (t = <MATHLOP>)
+		{ op.setName(t.image); }
+		
+		| (t = <LOGICOP2>)
+		{ op.setName(t.image); }
+		
+		| (t = <LOGICOP1>)
+		{ op.setName(t.image); }
+		
+		| (t = <VAR>) (t1 = <NAME>)
+		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+	)
+	{
+		return op;
+	}
+}

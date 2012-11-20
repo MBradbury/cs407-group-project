@@ -101,7 +101,7 @@ So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages t
 &				\forall n \in Nodes \cdot \\
 & \hspace{3em}		\forall n' \in Neighbours(n, 1) \cup \{n\} \cdot \\
 & \hspace{6em}			\forall n'' \in Neighbours(n, 1) \cup \{n\} \cdot \\
-& \hspace{9em}				(n' \not= n'' \land n'.slot \neq n''.slot)
+& \hspace{9em}				(n' \not= n'' \implies n'.slot \neq n''.slot)
 \end{align}
 
 Overall we can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer message. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
@@ -131,3 +131,222 @@ An alternative way that we might specify this predicate is to check that the dis
 \end{align}
 
 However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for $2 \times D \times T_{send}$ time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter.
+
+
+\subsection{Domain Specific Language}
+
+\subsubsection{Definition}
+\begin{eqnarray*}
+	\pn{eval} & \pp & [ \pn{target} ] \ww \pn{using} \\
+	\pn{target} & \pp & \sm{all} \\
+	~ & \oo & \pn{number}\sm{.}\pn{number} \\
+%
+	\pn{using} & \pp & \sm{using} \ww \sm{Neighbours}\sm{(}\pn{number}\sm{)} \ww \sm{as} \ww \pn{variable} \ww \sm{in} \ww \pn{using} \\
+	~ & \oo & \pn{predicate} \\
+%
+	\pn{predicate} & \pp & \pn{quantifier}\sm{(}\pn{variable} \ww \sm{:} \ww \pn{variable} \ww \sm{\mytilde} \pn{predicate} \sm{)}\\
+	~ & \oo &  \pn{predicate} \ww \pn{logical-binary} \ww \pn{predicate} \\
+	~ & \oo &  \pn{logical-unary} \ww \pn{predicate} \\
+	~ & \oo &  \pn{var-expr} \ww \pn{math-logical-binary} \ww \pn{var-expr} \\
+%
+	\pn{var-expr} & \pp & \pn{variable} \\
+	~ & \oo & \pn{number} \\
+	~ & \oo & \pn{string}\sm{(}\pn{this-variable}\sm{)} \\
+	~ & \oo & \pn{var-expr} \ww \pn{math-binary} \ww \pn{var-expr} \\
+	~ & \oo & \sm{abs}\sm{(}\pn{var-expr}\sm{)} \\
+	~ & \oo & \pn{set-fn}\sm{(}\pn{variable}\sm{)} \\
+	~ & \oo & \pn{transform-set-fn}\sm{(}\pn{transform-fn}\sm{,} \ww \pn{variable}\sm{)} \\
+%
+	\pn{this-variable} & \pp & \pn{variable} \oo \sm{this} \\
+	\pn{variable} & \pp & \pn{string} \\
+%
+	\pn{transform-fn} & \pp & \pn{string} \\
+	\pn{transform-set-fn} & \pp & \sm{sum} \oo  \sm{mean} \oo \sm{max} \oo \sm{min} \\
+	\pn{set-fn} & \pp & \sm{len} \\
+%
+	\pn{logical-binary} & \pp & \sm{\&} \oo \sm{\textbar} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
+	\pn{logical-unary} & \pp & \sm{!} \\
+	\pn{math-logical-binary} & \pp & \sm{==} \oo \sm{!=} \oo \sm{\textless} \oo \sm{\textless=} \oo \sm{\textgreater} \oo \sm{\textgreater=} \\
+	\pn{math-binary} & \pp & \sm{+} \oo \sm{-} \oo \sm{*} \oo \sm{/} \\
+%
+	\pn{string} & \pp & \pn{alpha}\pn{string-rest} \\
+	\pn{string-rest} & \pp & \nn \oo \pn{alpha}\pn{string-rest} \oo \pn{digit}\pn{string-rest} \\
+%
+	\pn{alpha} & \pp & \sm{A}\dots\sm{Z} \oo \sm{a}\dots\sm{z} \\
+	\pn{number} & \pp & \pn{sign} \pn{number-rest} \oo \pn{number-rest} \\
+	\pn{number-rest} & \pp & \pn{digit} \oo \pn{digit}\pn{number-rest} \\
+	\pn{digit} & \pp & \sm{0}\dots\sm{9} \\
+	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
+	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
+\end{eqnarray*}
+
+\subsubsection{Examples}
+
+\begin{figure}[H]
+\begin{verbatim}
+using Neighbours(2) as twohopn in
+    @(x : twohopn ~
+        slot(x) != slot(this)
+    )
+\end{verbatim}
+\caption{Check that no two neighbours have the same slot}
+\end{figure}
+
+\begin{figure}[H]
+\begin{verbatim}
+using Neighbours(1) as onehopn in
+    @(x : onehopn ~
+        @(y : onehopn ~
+            addr(x) != addr(y) => slot(x) != slot(y)
+        )
+    )
+\end{verbatim}
+\caption{Check that no two neighbours have the same slot}
+\end{figure}
+
+\begin{figure}[H]
+\begin{verbatim}
+temperature(this) <= 40.0
+\end{verbatim}
+\caption{Check that our temperature is less than or equal to 40 degrees}
+\end{figure}
+
+\begin{figure}[H]
+\begin{verbatim}
+using Neighbours(2) as twohopn in
+    abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
+\end{verbatim}
+\caption{Check that the average neighbour temperature is with 10 degrees of ours}
+\end{figure}
+
+
+\begin{figure}[H]
+\begin{verbatim}
+using Neighbours(H(this)) as neighbours in
+    #(node : neighbours ~
+        ch(this) == addr(node)
+    )
+\end{verbatim}
+\caption{Check cluster head is in H-hop neighbourhood}
+\end{figure}
+
+
+
+\begin{figure}[H]
+\begin{verbatim}
+using Neighbours(1) as onehopn in
+    using Neighbours(2) as twohopn in
+        @(a : onehopn ~
+            #(b : twohopn ~ addr(a) == addr(b)
+        )
+\end{verbatim}
+\caption{Check 1-hop neighbourhood is in 2-hop neighbourhood}
+\end{figure}
+
+
+\subsection{Virtual Machine}
+
+\subsubsection{Opcodes}
+
+\begin{verbatim}
+_ is either I for int or F for float
+
+HALT
+    Halts execution
+
+_PUSH (_)
+    Pushes an _ onto the stack
+
+_POP
+    Pops the stack by sizeof(_) bytes
+
+_FETCH (string)
+    Fetches the value of the given variable and pushes the
+    first sizeof(_) bytes of it onto the stack
+
+_STORE (string)
+    Stores the first sizeof(_) bytes in the variable
+    of the given name
+
+AFETCH (string)
+    Fetches the value of the array named in the parameter
+    at the integer index at the top of the stack
+
+ALEN (string)
+    Pushes an integer onto the stack containing the length
+    of the named array
+	
+ASUM (string) (string)
+    Over the user defined array stored in the variable whose
+    name is the first parameter, transform it using the function
+    whose name is the second parameter. On this transformed data
+    calculate the mean and push the result as a float onto the
+    top of the stack.
+
+CALL (string)
+    Calls the named function on the data on top of the stack.
+    The data this is called on is popped and the result
+    is pushed onto the stack.
+
+ICASTF
+    Pops an integer off the stack, casts it to a float
+    then stores it back on the stack
+
+FCASTI
+    Pops a float off the stack, casts it to a integer
+    then stores it back on the stack
+
+JMP (int)
+    Jumps to a position in the code relative to the start
+    of the program
+
+JZ (int)
+    Reads the top of the stack as an integer, if it is 0
+    the program jumps to the location, otherwise evaluation
+    continues
+
+JNZ (int)
+    Reads the top of the stack as an integer, if it is not 0
+    the program jumps to the location, otherwise evaluation
+    continues
+
+_ADD     1 = 0 op 1
+_SUB     1 = 0 op 1
+_MUL     1 = 0 op 1
+_DIV1    1 = 0 op 1
+_DIV2    1 = 1 op 0
+    Performs a mathematical operations on the first two sizeof(_)
+    values on the stack. Pops both values off the stack, stores
+    the result in the same type back on the stack.
+
+IINC
+    Pops the top of the stack by sizeof(int) bytes, increments
+    the value as an integer. Pushes the result back on the stack
+
+_EQ	     1 = 0 op 1
+_NEQ     1 = 0 op 1
+_ILT     1 = 0 op 1
+_LEQ     1 = 0 op 1
+_GT	     1 = 0 op 1
+_GEQ     1 = 0 op 1
+    Performs a mathematical operations on the first two sizeof(_)
+    values on the stack. Pops both values off the stack, stores
+    the result in an integer on the stack.
+
+AND     1 = 0 op 1
+OR      1 = 0 op 1
+XOR	    1 = 0 op 1
+    Performs a logical operation on the first two values on the
+    stack. These are not bitwise operations and the expected
+    formats of the values are integers. 0 is false, 1 is true.
+    Pops both values off the stack,
+    stores the result in an integer back on the stack.
+
+NOT
+    Pops an integer off the stack, performs logical not on it.
+    Pushes the result back on the stack.
+	
+_VAR (string)
+    Creates a variable of type _ with the name set to the given
+    string.
+\end{verbatim}

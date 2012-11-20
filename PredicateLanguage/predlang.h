@@ -1,10 +1,7 @@
 #ifndef CS407_PRED_LANG_H
 #define CS407_PRED_LANG_H
 
-#include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
-
 
 typedef enum
 {
@@ -15,21 +12,26 @@ typedef enum
 } variable_type_t;
 
 
+typedef signed char byte;
+typedef unsigned char ubyte;
+typedef int16_t nint;
+typedef uint16_t nuint;
+typedef float nfloat;
+
+// Please keep the boolean type the same size
+// as the integer size. Otherwise JZ and JNZ
+// will cause issues with the stack.
+typedef nint nbool;
+
 
 typedef void const * (*data_access_fn)(void const * ptr);
-
-int register_function(char const * name, data_access_fn fn, variable_type_t type);
-
-
+bool register_function(char const * name, data_access_fn fn, variable_type_t type);
 
 typedef void * (*node_data_fn)(void);
+bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size);
 
-void init_pred_lang(node_data_fn given_data_fn, size_t given_data_size);
-
-
+nbool evaluate(ubyte * start, nuint program_length);
 
 char const * error_message(void);
-void reset_error(void);
-
 
 #endif /*CS407_PRED_LANG_H*/

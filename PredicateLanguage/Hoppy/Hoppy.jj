@@ -32,6 +32,98 @@ public class Hoppy
 	}
 }
 
+
+
+
+/**
+ * Exception thrown when evaluation of a syntax tree gets into trouble.
+ */
+class EvaluationException extends Exception
+{
+	String error;
+
+	public EvaluationException()
+	{
+		super();
+		error = "unknown";
+	}
+
+	public EvaluationException(String error)
+	{
+		super(error);
+		this.error = error;
+	}
+
+	@Override
+	public String getError()
+	{
+		return error;
+	}
+}
+
+class IncompleteInformationException extends EvaluationException
+{
+	public IncompleteInformationException()
+	{
+		super("Can't evaluate this at compile-time.");
+	}
+}
+
+
+abstract class Value
+{
+}
+
+class BooleanValue extends Value
+{
+	private boolean value;
+	
+	public BooleanValue(boolean value)
+	{
+		this.value = value;
+	}
+
+	public boolean getValue() { return value; }
+	public void setValue(boolean value) { this.value = value; }
+
+	public static BooleanValue assertType(Value val)
+	{
+		if(!val instanceof BooleanValue)
+		{
+			throw new EvaluationException("Value type not boolean.");
+		}
+		else
+		{
+			return (BooleanValue)val;
+		}
+	}
+}
+
+class IntegerValue extends Value
+{
+	private int value;
+	
+	public IntegerValue(int value)
+	{
+		this.value = value;
+	}
+
+	public int getValue() { return value; }
+	public void setValue(int value) { this.value = value; }
+
+	public static IntegerValue assertType(Value val)
+	{
+		if(!val instanceof IntegerValue)
+		{
+			throw new EvaluationException("Value type not integer.");
+		}
+		else
+		{
+			return (IntegerValue)val;
+		}
+	}
+}
+
 /**
  * Representation of the program's syntax tree.
  */
@@ -41,6 +133,8 @@ final class SyntaxTree
 
 	public SyntaxTreeNode getRoot() { return root; }
 	public void setRoot(SyntaxTreeNode root) { this.root = root; }
+
+	public Value evaluate() { return root.evaluate(); }
 }
 
 /**
@@ -48,7 +142,51 @@ final class SyntaxTree
  */
 abstract class SyntaxTreeNode
 {
-	private List<SyntaxTreeNode> children = new ArrayList<SyntaxTreeNode>();
+	public abstract Value evaluate();
+}
+
+/**
+ * Abstract class representing values.
+ */
+abstract class ValueNode extends SyntaxTreeNode
+{
+}
+
+/**
+ * Concrete node class representing a named value.
+ */
+class NamedValueNode extends ValueNode
+{
+	//blah blah
+
+	@Override
+	public Value evaluate()
+	{
+		//TODO might be able to evaluate some constant values.
+		throw new IncompleteInformationException("Can't evaluate this at compile time");
+	}
+}
+
+/**
+ * Concrete node class representing a literal value.
+ */
+class LiteralValueNode extends ValueNode
+{
+	private Value val;
+
+	public LiteralValueNode(Value val)
+	{
+		this.val = val;
+	}
+
+	public Value getVal() { return val; }
+	public void setVal(Value val) { this.val = val; }
+
+	@Override
+	public Value evaluate()
+	{
+		return val;
+	}
 }
 
 /**
@@ -75,10 +213,31 @@ class UnaryOperatorNode extends SyntaxTreeNode
 
 	public SyntaxTreeNode getChild() { return child; }
 	public void setChild(SyntaxTreeNode child) { this.child = child; }
+
+	@Override
+	public Value evaluate()
+	{
+		//Evaluate the child node.
+		Value childValue = child.evaluate();
+
+		switch(op)
+		{
+		case NOT:
+			//Must be a boolean value for logical inversion.
+			BooleanValue val = BooleanValue.assertType(childValue);
+		
+			//Invert the value;
+			val.setValue(!val.getValue());
+			return val;
+
+		default:
+			throw new EvaluationException("Unrecognised unary operator.");
+		}
+	}
 }
 
 /**
- * Concrete node class representing a binary operator.
+ * Concrete node class representing an binary operator.
  */
 class BinaryOperatorNode extends SyntaxTreeNode
 {
@@ -117,6 +276,70 @@ class BinaryOperatorNode extends SyntaxTreeNode
 
 	public SyntaxTreeNode getRight() { return right; }
 	public void setRight(SyntaxTreeNode right) { this.right = right; }
+
+	@Override
+	public Value evaluate()
+	{
+		//Evaluate the child nodes.
+		Value leftValue = left.evaluate();
+		Value rightValue = right.evaluate();
+
+		switch(op)
+		{
+		case EQUAL:
+			BooleanValue lval = BooleanValue.assertType(leftValue);
+			BooleanValue rval = BooleanValue.assertType(rightValue);
+			BooleanValue result = new BooleanValue(lval.getValue() == rval.getValue());
+			return result;
+
+		case NOT_EQUAL:
+			BooleanValue lval = BooleanValue.assertType(leftValue);
+			BooleanValue rval = BooleanValue.assertType(rightValue);
+			BooleanValue result = new BooleanValue(lval.getValue() != rval.getValue());
+			return result;
+
+		case LESS_THAN:
+			IntegerValue lval = IntegerValue.assertType(leftValue);
+			IntegerValue rval = IntegerValue.assertType(rightValue);
+			BooleanValue result = new BooleanValue(lval.getValue() < rval.getValue());
+			return result;
+
+		case LESS_THAN_EQUAL:
+			IntegerValue lval = IntegerValue.assertType(leftValue);
+			IntegerValue rval = IntegerValue.assertType(rightValue);
+			BooleanValue result = new BooleanValue(lval.getValue() <= rval.getValue());
+			return result;
+
+		case GREATER_THAN:
+			IntegerValue lval = IntegerValue.assertType(leftValue);
+			IntegerValue rval = IntegerValue.assertType(rightValue);
+			BooleanValue result = new BooleanValue(lval.getValue() > rval.getValue());
+			return result;
+
+		case GREATER_THAN_EQUAL:
+			IntegerValue lval = IntegerValue.assertType(leftValue);
+			IntegerValue rval = IntegerValue.assertType(rightValue);
+			BooleanValue result = new BooleanValue(lval.getValue() <= rval.getValue());
+			return result;
+
+		case PLUS:
+			IntegerValue lval = IntegerValue.assertType(leftValue);
+			IntegerValue rval = IntegerValue.assertType(rightValue);
+			IntegerValue result = new IntegerValue(lval.getValue() + rval.getValue());
+			return result;
+
+		case MINUS:
+			IntegerValue lval = IntegerValue.assertType(leftValue);
+			IntegerValue rval = IntegerValue.assertType(rightValue);
+			IntegerValue result = new IntegerValue(lval.getValue() - rval.getValue());
+			return result;
+
+		
+	
+		default:
+			throw new EvaluationException("Unrecognised binary operator.");
+		}
+	}
 }
 
 final class FuncDecl
@@ -380,17 +603,29 @@ PredDecl Predicate() :
 	}
 }
 
-void MathBinaryExpr() :
-{}
+SyntaxTree MathBinaryExpr() :
+{
+	Token op;
+	SyntaxTree left;
+	SyntaxTree right;
+}
 {
 	//A logical comparison between two arithmetic expressions.
-	<LOGICAL_MATH_OP> VariableExpr() VariableExpr()
+	op = <LOGICAL_MATH_OP>
+	left = VariableExpr()
+	right = VariableExpr()
+	{
+		LogicalBinaryOperatorNode.Operator opWrapper = LogicalBinaryOperatorNode.parseOperator(op.image);
+		LogicalBinaryOperatorNode lbopNode = new LogicalBinaryOperatorNode(opWrapper, left, right);
+
+		SyntaxTree tree = new SyntaxTree();
+		tree.setRoot(lbopNode);
+		return tree;
+	}
 }
 
-SyntaxTree VariableExpr() :
+SyntaxTreeNode VariableExpr() :
 {
-	SyntaxTree tree = new SyntaxTree();
-
 	//For named values.
 
 
@@ -399,8 +634,8 @@ SyntaxTree VariableExpr() :
 
 	//For arithmetic ops.
 	Token op;
-	SyntaxTree left;
-	SyntaxTree right;
+	SyntaxTreeNode left;
+	SyntaxTreeNode right;
 }
 {
 	(
@@ -409,18 +644,32 @@ SyntaxTree VariableExpr() :
 		("(" (<NAME> | <THIS>) ")")?
 		{
 			//named value
+			NamedValueNode namedValueNode = new NamedValueNode();
+			
+			Value val;
+			try
+			{
+				val = namedValueNode.evaluate();
+			}
+			catch(IncompleteInformationException)
+			{
+				//Can't evaluate at compile time.
+				return namedValueNode;
+			}
+			
+			LiteralValueNode literalNode = new LiteralValueNode(val);
+			return literalNode;
 		}
 	)
 	|
 	(
-		//A literal.
+		//An arithmetic literal.
 		literal = <NUMBER>
 		{
 			//Parse the literal and wrap it in a node.
 			Integer val = Integer.parseInt(literal.image);
-			LiteralNode literalNode = new LiteralNode(val);
-			tree.setRoot(literalNode);
-			return tree;
+			LiteralValueNode literalNode = new LiteralValueNode(val);
+			return literalNode;
 		}
 	)
 	|
@@ -431,20 +680,42 @@ SyntaxTree VariableExpr() :
 		right = VariableExpr()
 		{
 			//Combine the two syntax trees with the operator.
-			BinaryOperatorNode.Operator opWrapper = BinaryOperatorNode.parseOperator(op.image);
-			BinaryOperatorNode bopNode = new BinaryOperatorNode(opWrapper, left, right);
-			tree.setRoot(binaryNode);
+			ArithmeticBinaryOperatorNode.Operator opWrapper = ArithmeticBinaryOperatorNode.parseOperator(op.image);
+			ArithmeticBinaryOperatorNode abopNode = new ArithmeticBinaryOperatorNode(opWrapper, left, right);
+			tree.setRoot(abopNode);
 			return tree;
 		}
 	)
 }
 
-SyntaxTree LogicalBinaryExpr() :
+SyntaxTreeNode LogicalBinaryExpr() :
 {
+	Token op;
+	SyntaxTreeNode left;
+	SyntaxTreeNode right;
 }
 {
 	//A conjunction or disjunction on two predicates.
-	<LOGICAL_BIN_OP> Predicate() Predicate()
-}
+	op = <LOGICAL_BIN_OP>
+	left = Predicate()
+	right = Predicate()
+	{
+		BinaryOperatorNode.Operator opWrapper = BinaryOperatorNode.parseOperator(op.image);
+		BinaryOperatorNode bopNode = new BinaryOperatorNode(opWrapper, left, right);
 
+		Value val;
+		try
+		{
+			val = bopNode.evaluate();
+		}
+		catch(IncompleteInformationException)
+		{
+			//We can't evaluate this at compile time, return the full node.
+			return bopNode;
+		}
+
+		LiteralValueNode literal = new LiteralValueNode(val);
+		return literal;
+	}
+}
 

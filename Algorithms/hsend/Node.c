@@ -1,5 +1,10 @@
 #include "Node.h"
 
+//Methods
+static void
+delayed_send_evaluated_predicate(void * ptr);
+
+
 //CREATE MESSAGE LIST DATA STRUCTURE
 LIST(message_list);
 
@@ -84,14 +89,11 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 		//Send predicate value back to originator
 
 		static struct ctimer runicast_timer;
-		ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, msg->message_id);
+		ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, &msg->message_id);
 
 		//Rebroadcast Message If Hop Count Is Greater Than 1 
 		if (msg->hop_limit > 1) //last node 
 		{
-			static char addr_str[RIMEADDR_STRING_LENGTH];
-			static char addr_str2[RIMEADDR_STRING_LENGTH];
-
 			//Broadcast Message On
 			send_n_hop_predicate_check(&rimeaddr_node_addr, msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
 		}
@@ -141,16 +143,15 @@ runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 			}
 			else 
 			{
-				rimeaddr_t * dest = (rimeaddr_t *) malloc(sizeof(rimeaddr_t));
+				rimeaddr_t dest;
 				rimeaddr_copy(&dest,&list_iterator->originator);
 				printf("Trying to forward evaluated predicate to: %s\n", addr2str(&dest));
 	
 					send_evaluated_predicate(&msg->sender, 
-						dest,
+						&dest,
 						list_iterator->message_id, 
 						msg->evaluated_predicate
 					);
-				free(dest);
 			}
 			break;
 		}
@@ -178,8 +179,9 @@ runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retrans
 
 //METHODS
 static void
-delayed_send_evaluated_predicate(uint8_t message_id)
+delayed_send_evaluated_predicate(void * ptr)
 {
+	uint8_t message_id = *(uint8_t *)ptr;
 	struct list_elem_struct * list_iterator = NULL;
 	for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
 		  list_iterator != NULL;
@@ -188,16 +190,15 @@ delayed_send_evaluated_predicate(uint8_t message_id)
 	{
 		if (list_iterator->message_id == message_id)
 		{
-			rimeaddr_t * dest = (rimeaddr_t *) malloc(sizeof(rimeaddr_t));
+			rimeaddr_t dest;
 			rimeaddr_copy(&dest,&list_iterator->originator);
 			printf("Trying to send evaluated predicate to: %s\n", addr2str(&dest));
 
 			send_evaluated_predicate(&rimeaddr_node_addr, 
-				dest,//&list_iterator->originator, 
+				&dest,
 				list_iterator->message_id, 
 				evaluate_predicate(&list_iterator->predicate_to_check)
 			);
-			free(dest);
 			//TODO remove item from the list
 			break;
 		}
@@ -215,20 +216,21 @@ static char * evaluate_predicate(char const * predicate)
 }
 
 static void 
-delayed_forward_evaluated_predicate(predicate_return_msg_t * msg)
+delayed_forward_evaluated_predicate(void * ptr)
 {
+	predicate_return_msg_t * msg = (predicate_return_msg_t *)ptr;
 	rimeaddr_t target;
 	rimeaddr_copy(&target,&msg->target_reciever);
 	rimeaddr_t sender;
 	rimeaddr_copy(&sender,&msg->sender);
-	printf("From: %s\n",addr2str(sender) );
-	send_evaluated_predicate(sender,target,msg->message_id,msg->evaluated_predicate);
+	printf("From: %s\n",addr2str(&sender) );
+	send_evaluated_predicate(&sender,&target,msg->message_id,msg->evaluated_predicate);
 	
 	free(msg);
 }
 
 static void
-send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t const * message_id, char const * evaluated_predicate)
+send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t message_id, char const * evaluated_predicate)
 {	
 
 	if (runicast_is_transmitting(&runicast))
@@ -236,16 +238,16 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 		static struct ctimer forward_timer;
 
 		predicate_return_msg_t * forwarder = (predicate_return_msg_t *)malloc(sizeof(predicate_return_msg_t));
-		rimeaddr_copy(&forwarder->sender, &sender);
-		rimeaddr_copy(&forwarder->target_reciever, &target_reciever);
+		rimeaddr_copy(&forwarder->sender, sender);
+		rimeaddr_copy(&forwarder->target_reciever, target_reciever);
 		forwarder->message_id = message_id;
 		forwarder->evaluated_predicate = evaluated_predicate;
 
-		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, forwarder);
+		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, &forwarder);
 
 		return;
 	}	
-	printf("target receiver %s\n", addr2str(&target_reciever));
+	printf("target receiver %s\n", addr2str(target_reciever));
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(predicate_return_msg_t));
@@ -259,7 +261,7 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 	msg->evaluated_predicate = evaluated_predicate;
 
 
-	runicast_send(&runicast, &target_reciever, 10);
+	runicast_send(&runicast, target_reciever, 10);
 	
 }
 

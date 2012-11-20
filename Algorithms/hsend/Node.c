@@ -242,7 +242,7 @@ send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_re
 		rimeaddr_copy(&forwarder->target_reciever, target_reciever);
 		forwarder->message_id = message_id;
 		forwarder->evaluated_predicate = evaluated_predicate;
-
+		printf("saved: %s\n",addr2str(&forwarder->target_reciever));
 		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, &forwarder);
 
 		return;

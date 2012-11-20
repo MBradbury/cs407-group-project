@@ -54,7 +54,6 @@ class EvaluationException extends Exception
 		this.error = error;
 	}
 
-	@Override
 	public String getError()
 	{
 		return error;
@@ -142,7 +141,7 @@ final class SyntaxTree
  */
 abstract class SyntaxTreeNode
 {
-	public abstract Value evaluate();
+	public abstract Value evaluate() throws EvaluationException, IncompleteInformationException;
 }
 
 /**
@@ -468,7 +467,7 @@ void Input(PrintStream out) :
 	(
 		tree = Using()
 		{
-			Value val;
+			Value val = null;
 			boolean evaluated = true;
 			try
 			{

@@ -27,46 +27,46 @@ static uint8_t message_id = 1; //initial message ID
 //struct for the list elements, used to see if messages have already been sent
 struct list_elem_struct
 {
-	struct list_elem_struct *next;
-	rimeaddr_t originator;
-	uint8_t message_id;
-	uint8_t hops;
-	char * predicate_to_check;
+    struct list_elem_struct *next;
+    rimeaddr_t originator;
+    uint8_t message_id;
+    uint8_t hops;
+    char *predicate_to_check;
 };
 
 //struct used to ask other nodes for predicate values
 typedef struct
 {
-	rimeaddr_t originator;
-	uint8_t message_id;
-	uint8_t hop_limit;
-	char * predicate_to_check;
+    rimeaddr_t originator;
+    uint8_t message_id;
+    uint8_t hop_limit;
+    char *predicate_to_check;
 } predicate_check_msg_t;
 
 //struct to send back to the originator with the value of a predicate
 typedef struct
 {
-	rimeaddr_t sender;
-	rimeaddr_t target_reciever;
-	uint8_t message_id;
-	char * evaluated_predicate;
+    rimeaddr_t sender;
+    rimeaddr_t target_reciever;
+    uint8_t message_id;
+    char *evaluated_predicate;
 } predicate_return_msg_t;
 
 //Methods
-static bool 
+static bool
 is_base(void);
 
-static uint8_t 
+static uint8_t
 get_message_id(void);
 
-static char * 
-evaluate_predicate(char const * predicate);
+static char *
+evaluate_predicate(char const *predicate);
 
 static void
-send_evaluated_predicate(rimeaddr_t const * sender, rimeaddr_t const * target_reciever, uint8_t message_id, char const * evaluated_predicate);
+send_evaluated_predicate(rimeaddr_t const *sender, rimeaddr_t const *target_reciever, uint8_t message_id, char const *evaluated_predicate);
 
-static void 
-send_n_hop_predicate_check(rimeaddr_t const * originator, uint8_t message_id, char const * pred, uint8_t hop_limit);
+static void
+send_n_hop_predicate_check(rimeaddr_t const *originator, uint8_t message_id, char const *pred, uint8_t hop_limit);
 
 //RELIABLE UNICAST
 static void
@@ -86,7 +86,7 @@ static void
 stbroadcast_sent(struct stbroadcast_conn *c);
 
 static void
-stbroadcast_callback_cancel(void * ptr);
+stbroadcast_callback_cancel(void *ptr);
 
 //Callbacks
 static const struct runicast_callbacks runicastCallbacks = {runicast_recv, runicast_sent, runicast_timedout};

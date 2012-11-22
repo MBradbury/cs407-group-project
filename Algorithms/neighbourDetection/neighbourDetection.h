@@ -13,21 +13,11 @@
 
 #include "debug-helper.h"
 
-struct neighbor_list_item_t
+static rimeaddr_t base_station_rimeaddr; //address of the base station
+static struct neighbor_discovery_conn neighbor_discovery; //Neighbour Discovery Protocol Connection
+
+struct neighbor_list_item
 {
-	struct neighbor_list_item_t *next;
-	rimeaddr_t neighbor;
+	struct neighbor_list_item *next;
+	rimeaddr_t neighbor_rimeaddr;
 };
-
-LIST(neighbor_list); //create neighbour list 
-
-static rimeaddr_t baseStationAddr; //address of the base station
-static struct neighbor_discovery_conn neighborDiscovery; //Neighbour Discovery Protocol Connection
-
-static void
-neighbor_discovery_recv(struct neighbor_discovery_conn * c, const rimeaddr_t * from, uint16_t val);
-
-static void
-neighbor_discovery_sent(struct neighbor_discovery_conn * c);
-
-static const struct neighbor_discovery_callbacks neighborDiscoveryCallbacks = {neighbor_discovery_recv, neighbor_discovery_sent};

@@ -1,48 +1,34 @@
 #include "neighbourDetection.h"
 
+LIST(neighbor_list); //create neighbor list
+
 static void
 neighbor_discovery_recv(struct neighbor_discovery_conn * c, const rimeaddr_t * from, uint16_t val)
 {
-	printf("Mote With Address: %s is my Neighbour.\n", addr2str(from));
+	//printf("Mote With Address: %s is my Neighbour.\n", addr2str(from));
 
-	bool deliver_msg = false;
-	/*struct list_elem_struct * list_iterator = NULL;
-	for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
+	struct neighbor_list_item * list_iterator = NULL;
+	for ( list_iterator = (struct neighbor_list_item *)list_head(neighbor_list);
 		  list_iterator != NULL;
-		  list_iterator = (struct list_elem_struct *)list_item_next(&list_iterator)
+		  list_iterator = (struct neighbor_list_item *)list_item_next(&list_iterator)
 		)
 	{
-		// Message has been delivered before
-		if (list_iterator->message_id == msg->message_id)
+		// Neighbour has been discovered before
+		printf("%s\n", list_iterator);
+		printf("%s\n", addr2str(from));
+		if (rimeaddr_cmp(&list_iterator->neighbor_rimeaddr, from))
 		{
-			// If the new message has a higher hop count
-			if (msg->hop_limit > list_iterator->hops)
-			{
-				printf("Message received before and hops is higher\n");
-
-				//clear the memory, and update the new originator and hop count
-				memset(&list_iterator->originator, 0, sizeof(rimeaddr_t));
-				rimeaddr_copy(&list_iterator->originator, &msg->originator);
-
-				list_iterator->hops = msg->hop_limit;
-
-				deliver_msg = true;
-			}
 			break;
-		} 
+		}
 	}
-	// End of List and the Message has NOT been delivered before
+	// End of List and neighbor has not been discovered before
 	if (list_iterator == NULL)
 	{
-		struct list_elem_struct * delivered_msg = (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
-		rimeaddr_copy(&delivered_msg->originator,&msg->originator);
-		delivered_msg->message_id = msg->message_id;
-		delivered_msg->hops = msg->hop_limit;
-		delivered_msg->predicate_to_check = msg->predicate_to_check;
-		list_push(message_list, delivered_msg);
-
-		deliver_msg = true;
-	}*/
+		struct neighbor_list_item * neighbor_to_store = (struct neighbor_list_item *)malloc(sizeof(struct neighbor_list_item));
+		rimeaddr_copy(&neighbor_to_store->neighbor_rimeaddr, from);
+		printf("%s\n", addr2str(&neighbor_to_store->neighbor_rimeaddr));
+		list_push(neighbor_list, neighbor_to_store);		
+	}
 }
 
 static void
@@ -51,11 +37,13 @@ neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 
 }
 
-PROCESS(mainProcess, "Main Neighbour Detection Process");
+static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks = {neighbor_discovery_recv, neighbor_discovery_sent};
 
-AUTOSTART_PROCESSES(&mainProcess);
+PROCESS(main_process, "Main Neighbour Detection Process");
 
-PROCESS_THREAD(mainProcess, ev, data)
+AUTOSTART_PROCESSES(&main_process);
+
+PROCESS_THREAD(main_process, ev, data)
 {
 	static struct etimer et;
 
@@ -63,14 +51,14 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_BEGIN();
 
 	neighbor_discovery_open(
-		&neighborDiscovery,
+		&neighbor_discovery,
 		5, 
 		10 * CLOCK_SECOND, 
 		10 * CLOCK_SECOND, 
 		60 * CLOCK_SECOND,
-		&neighborDiscoveryCallbacks);
+		&neighbor_discovery_callbacks);
 
-	neighbor_discovery_start(&neighborDiscovery, 5);
+	neighbor_discovery_start(&neighbor_discovery, 5);
 
 	while(true)
 	{
@@ -81,6 +69,6 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 exit:
 	printf("Exiting Process...\n");
-	neighbor_discovery_close(&neighborDiscovery);
+	neighbor_discovery_close(&neighbor_discovery);
 	PROCESS_END();
 }

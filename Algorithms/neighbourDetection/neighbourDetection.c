@@ -5,29 +5,28 @@ LIST(neighbor_list); //create neighbor list
 static void
 neighbor_discovery_recv(struct neighbor_discovery_conn * c, const rimeaddr_t * from, uint16_t val)
 {
-	//printf("Mote With Address: %s is my Neighbour.\n", addr2str(from));
-
 	struct neighbor_list_item * list_iterator = NULL;
 	for ( list_iterator = (struct neighbor_list_item *)list_head(neighbor_list);
 		  list_iterator != NULL;
-		  list_iterator = (struct neighbor_list_item *)list_item_next(&list_iterator)
+		  list_iterator = (struct neighbor_list_item *)list_item_next(list_iterator)
 		)
 	{
-		// Neighbour has been discovered before
-		printf("%s\n", list_iterator);
-		printf("%s\n", addr2str(from));
+		// Neighbour has been discovered before;
+		//printf("%s ", addr2str(from));
+		//printf("%s\n", addr2str(&list_iterator->neighbor_rimeaddr));
 		if (rimeaddr_cmp(&list_iterator->neighbor_rimeaddr, from))
 		{
 			break;
 		}
+
 	}
 	// End of List and neighbor has not been discovered before
 	if (list_iterator == NULL)
 	{
 		struct neighbor_list_item * neighbor_to_store = (struct neighbor_list_item *)malloc(sizeof(struct neighbor_list_item));
 		rimeaddr_copy(&neighbor_to_store->neighbor_rimeaddr, from);
-		printf("%s\n", addr2str(&neighbor_to_store->neighbor_rimeaddr));
 		list_push(neighbor_list, neighbor_to_store);		
+		printf("Mote With Address: %s is my Neighbour.\n", addr2str(from));
 	}
 }
 

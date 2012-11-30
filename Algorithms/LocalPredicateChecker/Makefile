@@ -6,7 +6,7 @@ all: $(CONTIKI_PROJECT)
 
 TARGET = sky
 
-PROJECTDIRS := $(CS407DIR)/Samples/Common
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common
 PROJECT_SOURCEFILES = predicate-checker.c
 
 CONTIKIDIRS :=

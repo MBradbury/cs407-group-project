@@ -462,6 +462,7 @@ get_message_id(hsend_conn_t * conn)
 
 typedef struct
 {
+	rimeaddr_t addr;
 	double temp;
 	double humidity;
 } node_data_t;
@@ -471,6 +472,9 @@ static void node_data(void * data)
 	if (data != NULL)
 	{
 		node_data_t * nd = (node_data_t *)data;
+
+		// Store the current nodes address
+		rimeaddr_cpy(&nd->addr, &rimeaddr_node_addr);
 
 		SENSORS_ACTIVATE(sht11_sensor);
 		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);

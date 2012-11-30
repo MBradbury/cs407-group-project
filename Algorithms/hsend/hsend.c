@@ -3,29 +3,29 @@
 #include "contiki.h"
 
 #include "dev/leds.h"
-#include "lib/list.h"
-
-#include "net/rime.h"
-#include "net/rime/trickle.h"
-#include "net/rime/stbroadcast.h"
-#include "net/rime/trickle.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 #include "lib/random.h"
+
+#include "lib/sensors.h"
+#include "dev/sht11.h"
+#include "dev/sht11-sensor.h"
+
+#include "sensor-converter.h"
 #include "debug-helper.h"
 
 // Struct for the list elements, used to see if messages have already been sent
-struct list_elem_struct
+typedef struct list_elem_struct
 {
-    struct list_elem_struct *next;
+    struct list_elem_struct * next;
     rimeaddr_t originator;
     uint8_t message_id;
     uint8_t hops;
-    char *predicate_to_check;
-};
+    char const * predicate_to_check;
+} list_elem_struct_t;
 
 // Struct used to ask other nodes for predicate values
 typedef struct
@@ -33,7 +33,7 @@ typedef struct
     rimeaddr_t originator;
     uint8_t message_id;
     uint8_t hop_limit;
-    char *predicate_to_check;
+    char const * predicate_to_check;
 } predicate_check_msg_t;
 
 // Struct to send back to the originator with the value of a predicate
@@ -42,57 +42,62 @@ typedef struct
     rimeaddr_t sender;
     rimeaddr_t target_reciever;
     uint8_t message_id;
-    char *evaluated_predicate;
+    char const * evaluated_predicate;
 } predicate_return_msg_t;
 
 
+static hsend_conn_t * conncvt_runicast(struct runicast_conn * conn)
+{
+	return (hsend_conn_t *)conn;
+}
 
-static struct runicast_conn runicast; // connection for trickle
-static struct stbroadcast_conn stbroadcast; // connection for the stubborn broadcast
+static hsend_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
+{
+	return (hsend_conn_t *)
+		(((char *)conn) - sizeof(struct stbroadcast_conn));
+}
 
-static rimeaddr_t baseStationAddr; // address of the base station
 
-static uint8_t message_id = 1; // initial message ID
+// Argument structs
+typedef struct
+{
+	hsend_conn_t * conn;
+	uint8_t message_id;
+} delayed_send_evaluated_predicate_params_t;
 
-// CREATE MESSAGE LIST DATA STRUCTURE
-LIST(message_list);
+typedef struct
+{
+	hsend_conn_t * conn;
+	predicate_return_msg_t msg;
+} delayed_forward_evaluated_predicate_params_t;
 
 
 // Prototypes
 static void
-delayed_send_evaluated_predicate(void *ptr);
+delayed_send_evaluated_predicate(void * ptr);
 
 static void
-send_n_hop_predicate_check(rimeaddr_t const *originator, uint8_t message_id_to_send, char const *pred, uint8_t hop_limit);
+send_n_hop_predicate_check(
+	hsend_conn_t * conn, rimeaddr_t const *originator, uint8_t message_id_to_send,
+	char const *pred, uint8_t hop_limit);
 
 static void
-send_evaluated_predicate(rimeaddr_t const *sender, rimeaddr_t const *target_reciever, uint8_t message_id, char const *evaluated_predicate);
-
-// Methods
-bool
-is_base(void)
-{
-    static rimeaddr_t base;
-    memset(&base, 0, sizeof(rimeaddr_t));
-    base.u8[sizeof(rimeaddr_t) - 2] = 1;
-
-    return rimeaddr_cmp(&rimeaddr_node_addr, &base) != 0;
-}
+send_evaluated_predicate(
+	hsend_conn_t * conn, rimeaddr_t const * sender, rimeaddr_t const * target_reciever,
+	uint8_t message_id, char const * evaluated_predicate);
 
 static uint8_t
-get_message_id(void)
-{
-    uint8_t returnvalue;
-    returnvalue = message_id++;
-    returnvalue *= 100;
-    returnvalue += rimeaddr_node_addr.u8[0];
-    return returnvalue;
-}
+get_message_id(hsend_conn_t * conn);
+
+static char const *
+evaluate_predicate(char const * predicate);
 
 // STUBBORN BROADCAST
 static void
 stbroadcast_recv(struct stbroadcast_conn *c)
 {
+	hsend_conn_t * hc = conncvt_stbcast(c);
+
     // Copy Packet Buffer To Memory
     char tmpBuffer[PACKETBUF_SIZE];
     packetbuf_copyto(tmpBuffer);
@@ -106,11 +111,10 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 
     // Check message has not been received before
     bool deliver_msg = false;
-    struct list_elem_struct *list_iterator = NULL;
-    for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
-            list_iterator != NULL;
-            list_iterator = (struct list_elem_struct *)list_item_next(&list_iterator)
-        )
+    list_elem_struct_t * list_iterator = NULL;
+    for (list_iterator = (list_elem_struct_t *)list_head(hc->message_list);
+         list_iterator != NULL;
+         list_iterator = (list_elem_struct_t *)list_item_next(&list_iterator))
     {
         // Message has been delivered before
         if (list_iterator->message_id == msg->message_id)
@@ -134,12 +138,15 @@ stbroadcast_recv(struct stbroadcast_conn *c)
     // End of List and the Message has NOT been delivered before
     if (list_iterator == NULL)
     {
-        struct list_elem_struct *delivered_msg = (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
+        list_elem_struct_t * delivered_msg =
+			(list_elem_struct_t *)malloc(sizeof(list_elem_struct_t));
+
         rimeaddr_copy(&delivered_msg->originator, &msg->originator);
         delivered_msg->message_id = msg->message_id;
         delivered_msg->hops = msg->hop_limit;
         delivered_msg->predicate_to_check = msg->predicate_to_check;
-        list_push(message_list, delivered_msg);
+
+        list_push(hc->message_list, delivered_msg);
 
         deliver_msg = true;
     }
@@ -149,14 +156,23 @@ stbroadcast_recv(struct stbroadcast_conn *c)
     {
         // Send predicate value back to originator
 
+		delayed_send_evaluated_predicate_params_t * p =
+			(delayed_send_evaluated_predicate_params_t *)
+				malloc(sizeof(delayed_send_evaluated_predicate_params_t));
+
+		p->conn = hc;
+		p->message_id = msg->message_id;
+
         static struct ctimer runicast_timer;
-        ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, &msg->message_id);
+        ctimer_set(&runicast_timer, 21 * CLOCK_SECOND,
+			&delayed_send_evaluated_predicate, p);
 
         // Rebroadcast Message If Hop Count Is Greater Than 1
-        if (msg->hop_limit > 1) //last node
+        if (msg->hop_limit > 1) // last node
         {
             // Broadcast Message On
-            send_n_hop_predicate_check(&rimeaddr_node_addr, msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
+            send_n_hop_predicate_check(hc, &rimeaddr_node_addr, msg->message_id,
+				msg->predicate_to_check, msg->hop_limit - 1);
         }
     }
 }
@@ -170,15 +186,20 @@ stbroadcast_sent(struct stbroadcast_conn *c)
 static void
 stbroadcast_callback_cancel(void *ptr)
 {
+	hsend_conn_t * conn = (hsend_conn_t *)ptr;
+
     printf("Canceling Stubborn Broadcast.\n");
-    stbroadcast_cancel(&stbroadcast);
+    stbroadcast_cancel(&conn->bc);
 }
 
-// TODO: need to collate responses, then send the on, right now messages collide while a node is trying to forward
+// TODO: need to collate responses, then send the on,
+// right now messages collide while a node is trying to forward
 // RELIABLE UNICAST
 static void
-runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
+runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
 {
+	hsend_conn_t * conn = conncvt_runicast(c);
+
     printf("runicast received from %s\n", addr2str(from));
 
     // When recieve message, forward the message on to the originator
@@ -187,28 +208,32 @@ runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
     // Copy Packet Buffer To Memory
     char tmpBuffer[PACKETBUF_SIZE];
     packetbuf_copyto(tmpBuffer);
-    predicate_return_msg_t *msg = (predicate_return_msg_t *)tmpBuffer;
+    predicate_return_msg_t * msg = (predicate_return_msg_t *)tmpBuffer;
 
 
-    struct list_elem_struct *list_iterator = NULL;
-    for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
-            list_iterator != NULL;
-            list_iterator = (struct list_elem_struct *)list_item_next(&list_iterator)
-        )
+    list_elem_struct_t *list_iterator = NULL;
+    for (list_iterator = (list_elem_struct_t *)list_head(conn->message_list);
+         list_iterator != NULL;
+         list_iterator = (list_elem_struct_t *)list_item_next(&list_iterator))
     {
         if (list_iterator->message_id == msg->message_id)
         {
-            if (rimeaddr_cmp(&rimeaddr_node_addr, &list_iterator->originator)) //if this node was the one who sent the message
+			// If this node was the one who sent the message
+            if (rimeaddr_cmp(&rimeaddr_node_addr, &list_iterator->originator)) 
             {
-                printf("End of forwarding Value: %s received from: %s\n", msg->evaluated_predicate, addr2str(&msg->sender));
+                printf("End of forwarding Value: %s received from: %s\n",
+					msg->evaluated_predicate, addr2str(&msg->sender));
             }
             else
             {
                 rimeaddr_t dest;
                 rimeaddr_copy(&dest, &list_iterator->originator);
-                printf("Trying to forward evaluated predicate to: %s\n", addr2str(&dest));
 
-                send_evaluated_predicate(&msg->sender,
+                printf("Trying to forward evaluated predicate to: %s\n",
+					addr2str(&dest));
+
+                send_evaluated_predicate(conn,
+										 &msg->sender,
                                          &dest,
                                          list_iterator->message_id,
                                          msg->evaluated_predicate
@@ -226,45 +251,47 @@ runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 }
 
 static void
-runicast_sent(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+runicast_sent(struct runicast_conn *c, rimeaddr_t const * to, uint8_t retransmissions)
 {
     //printf("runicast sent\n");
 }
 
 static void
-runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+runicast_timedout(struct runicast_conn *c, rimeaddr_t const * to, uint8_t retransmissions)
 {
     printf("Runicast timed out to:%s retransmissions:%d\n", addr2str(to), retransmissions);
 }
 
 
 //Callbacks
-static const struct runicast_callbacks runicastCallbacks = {runicast_recv, runicast_sent, runicast_timedout};
-static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
+static const struct runicast_callbacks runicastCallbacks = { runicast_recv, runicast_sent, runicast_timedout };
+static const struct stbroadcast_callbacks stbroadcastCallbacks = { stbroadcast_recv, stbroadcast_sent };
 
 
 //METHODS
 static void
-delayed_send_evaluated_predicate(void *ptr)
+delayed_send_evaluated_predicate(void * ptr)
 {
-    uint8_t message_id = *(uint8_t *)ptr;
-    struct list_elem_struct *list_iterator = NULL;
-    for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
-            list_iterator != NULL;
-            list_iterator = (struct list_elem_struct *)list_item_next(&list_iterator)
-        )
+	delayed_send_evaluated_predicate_params_t * p = (delayed_send_evaluated_predicate_params_t *)ptr;
+
+    list_elem_struct_t * list_iterator = NULL;
+    for (list_iterator = (list_elem_struct_t *)list_head(p->conn->message_list);
+         list_iterator != NULL;
+         list_iterator = (list_elem_struct_t *)list_item_next(&list_iterator))
     {
-        if (list_iterator->message_id == message_id)
+        if (list_iterator->message_id == p->message_id)
         {
             rimeaddr_t dest;
             rimeaddr_copy(&dest, &list_iterator->originator);
 
-            send_evaluated_predicate(&rimeaddr_node_addr,
+            send_evaluated_predicate(p->conn,
+								     &rimeaddr_node_addr,
                                      &dest,
                                      list_iterator->message_id,
-                                     evaluate_predicate(&list_iterator->predicate_to_check)
+                                     evaluate_predicate(list_iterator->predicate_to_check)
                                     );
-            //TODO remove item from the list
+
+            // TODO: remove item from the list
             break;
         }
     }
@@ -273,43 +300,52 @@ delayed_send_evaluated_predicate(void *ptr)
     {
         printf("DEBUG: ERROR - LIST IS NULL, THIS IS VERY BAD\n");
     }
+
+	// Need to free allocated parameter struct
+	free(ptr);
 }
 
-char const * evaluate_predicate(char const *predicate)
+static char const *
+evaluate_predicate(char const *predicate)
 {
     return "Value";
 }
 
 static void
-delayed_forward_evaluated_predicate(void *ptr)
+delayed_forward_evaluated_predicate(void * ptr)
 {
-    predicate_return_msg_t *msg = (predicate_return_msg_t *)ptr;
-    rimeaddr_t target;
-    rimeaddr_copy(&target, &msg->target_reciever);
-    rimeaddr_t sender;
-    rimeaddr_copy(&sender, &msg->sender);
+    delayed_forward_evaluated_predicate_params_t * p = (delayed_forward_evaluated_predicate_params_t *)ptr;
 
-    send_evaluated_predicate(&sender, &target, msg->message_id, msg->evaluated_predicate);
+    send_evaluated_predicate(p->conn,
+		&p->msg.sender, &p->msg.target_reciever,
+		p->msg.message_id, p->msg.evaluated_predicate);
 
-    free(msg);
+    free(ptr);
 }
 
 static void
-send_evaluated_predicate(rimeaddr_t const *sender, rimeaddr_t const *target_reciever, uint8_t message_id, char const *evaluated_predicate)
+send_evaluated_predicate(
+	hsend_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_reciever,
+	uint8_t message_id, char const * evaluated_predicate)
 {
 
-    if (runicast_is_transmitting(&runicast))
+    if (runicast_is_transmitting(&hc->ru))
     {
         printf("runicast is already transmitting, trying again in a few seconds\n");
         static struct ctimer forward_timer;
 
-        predicate_return_msg_t *forwarder = (predicate_return_msg_t *)malloc(sizeof(predicate_return_msg_t));
-        rimeaddr_copy(&forwarder->sender, sender);
-        rimeaddr_copy(&forwarder->target_reciever, target_reciever);
-        forwarder->message_id = message_id;
-        forwarder->evaluated_predicate = evaluated_predicate;
+        delayed_forward_evaluated_predicate_params_t * p =
+			(delayed_forward_evaluated_predicate_params_t *)
+				malloc(sizeof(delayed_forward_evaluated_predicate_params_t));
 
-        ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, forwarder);
+        rimeaddr_copy(&p->msg.sender, sender);
+        rimeaddr_copy(&p->msg.target_reciever, target_reciever);
+        p->msg.message_id = message_id;
+        p->msg.evaluated_predicate = evaluated_predicate;
+
+		p->conn = hc;
+
+        ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, p);
 
         return;
     }
@@ -325,20 +361,20 @@ send_evaluated_predicate(rimeaddr_t const *sender, rimeaddr_t const *target_reci
     msg->message_id = message_id;
     msg->evaluated_predicate = evaluated_predicate;
 
-
-    runicast_send(&runicast, target_reciever, 10);
-
+    runicast_send(&hc->ru, target_reciever, 10);
 }
 
 
 
 static void
-send_n_hop_predicate_check(rimeaddr_t const *originator, uint8_t message_id_to_send, char const *pred, uint8_t hop_limit)
+send_n_hop_predicate_check(
+	hsend_conn_t * conn, rimeaddr_t const * originator,
+	uint8_t message_id_to_send, char const * pred, uint8_t hop_limit)
 {
     packetbuf_clear();
     packetbuf_set_datalen(sizeof(predicate_check_msg_t));
     debug_packet_size(sizeof(predicate_check_msg_t));
-    predicate_check_msg_t *msg = (predicate_check_msg_t *)packetbuf_dataptr();
+    predicate_check_msg_t * msg = (predicate_check_msg_t *)packetbuf_dataptr();
     memset(msg, 0, sizeof(predicate_check_msg_t));
 
     rimeaddr_copy(&msg->originator, originator);
@@ -350,95 +386,178 @@ send_n_hop_predicate_check(rimeaddr_t const *originator, uint8_t message_id_to_s
     int random = (random_rand() % 5);
     if (random <= 1) random++;
 
-    stbroadcast_send_stubborn(&stbroadcast, random * CLOCK_SECOND);
+	printf("Starting sbcast every %d second(s) for %d seconds\n", random, 20);
+
+    stbroadcast_send_stubborn(&conn->bc, random * CLOCK_SECOND);
 
     static struct ctimer stbroadcast_stop_timer;
-    ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &stbroadcast_callback_cancel, NULL);
+    ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &stbroadcast_callback_cancel, conn);
 }
 
-PROCESS(networkInit, "Network Init");
-PROCESS(mainProcess, "Main Predicate Checker Process");
 
-AUTOSTART_PROCESSES(&networkInit, &mainProcess);
+// Library Functions
 
-PROCESS_THREAD(networkInit, ev, data)
+// Initialise multi-hop predicate checking
+bool hsend_start(
+	hsend_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * baseStationAddr,
+	data_generation_fn data_fn, unsigned int data_size)
 {
-    static struct etimer et;
+	if (conn == NULL || baseStationAddr == NULL ||
+		data_fn == NULL || ch1 == ch2 || data_size == 0)
+	{
+		return false;
+	}
 
-    PROCESS_BEGIN();
+	stbroadcast_open(&conn->bc, ch1, &stbroadcastCallbacks);
+	runicast_open(&conn->ru, ch2, &runicastCallbacks);
 
-    random_init(rimeaddr_node_addr.u8[0] + 7);
-    int random = (random_rand() % 10);
-    if (random <= 1) random++;
-    runicast_open(&runicast, 144, &runicastCallbacks);
+	rimeaddr_copy(&conn->baseStationAddr, baseStationAddr);
 
-    // Set the base station
-    memset(&baseStationAddr, 0, sizeof(rimeaddr_t));
-    baseStationAddr.u8[sizeof(rimeaddr_t) - 2] = 1;
+	conn->message_id = 1;
 
+	conn->data_fn = data_fn;
+	conn->data_size = data_size;
 
-    //5 second timer
-    etimer_set(&et, 5 * CLOCK_SECOND);
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	LIST_STRUCT_INIT(conn, message_list);
 
-    PROCESS_END();
+	return true;
 }
+
+// Shutdown multi-hop predicate checking
+bool hsend_end(hsend_conn_t * conn)
+{
+	if (conn == NULL)
+	{
+		return false;
+	}
+
+	runicast_close(&conn->ru);
+    stbroadcast_close(&conn->bc);
+
+	// TODO: Free List
+
+	return true;
+}
+
+
+bool
+is_base(hsend_conn_t const * conn)
+{
+    return rimeaddr_cmp(&rimeaddr_node_addr, &conn->baseStationAddr) != 0;
+}
+
+static uint8_t
+get_message_id(hsend_conn_t * conn)
+{
+    uint8_t returnvalue = conn->message_id++;
+    returnvalue *= 100;
+    returnvalue += rimeaddr_node_addr.u8[0];
+    return returnvalue;
+}
+
+
+//////////////////////////////
+/// NORMAL PROCESS STARTS HERE
+//////////////////////////////
+
+typedef struct
+{
+	double temp;
+	double humidity;
+} node_data_t;
+
+static void node_data(void * data)
+{
+	if (data != NULL)
+	{
+		node_data_t * nd = (node_data_t *)data;
+
+		SENSORS_ACTIVATE(sht11_sensor);
+		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		SENSORS_DEACTIVATE(sht11_sensor);
+
+		nd->temp = sht11_temperature(raw_temperature);
+		nd->humidity = sht11_relative_humidity_compensated(raw_humidity, nd->temp);
+	}
+}
+
+
+static hsend_conn_t hc;
+
+PROCESS(mainProcess, "HSEND Process");
+
+AUTOSTART_PROCESSES(&mainProcess);
 
 PROCESS_THREAD(mainProcess, ev, data)
 {
+	static rimeaddr_t baseStationAddr, test;
     static struct etimer et;
 
     PROCESS_EXITHANDLER(goto exit;)
     PROCESS_BEGIN();
 
-    if (is_base()) //SINK
+	// Set the address of the base station
+	baseStationAddr.u8[0] = 1;
+	baseStationAddr.u8[1] = 0;
+
+	// Set the id of the node that will do the testing
+	test.u8[0] = 2;
+	test.u8[1] = 0;
+
+	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t)))
+	{
+		printf("start function failed\n");
+	}
+
+	// 10 second timer
+	etimer_set(&et, 10 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	printf("Starting loops:\n");
+
+    if (is_base(&hc)) //SINK
     {
+		printf("Is the base station!\n");
+
         leds_on(LEDS_BLUE);
 
         while (true)
         {
-            etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
-
+			etimer_set(&et, 10 * CLOCK_SECOND);
             PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
         }
     }
     else //NODE
     {
-        stbroadcast_open(&stbroadcast, 259, &stbroadcastCallbacks);
-        list_init(message_list);
-
-        etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
-
-        PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-        static rimeaddr_t test;
-        memset(&test, 0, sizeof(rimeaddr_t));
-        test.u8[sizeof(rimeaddr_t) - 2] = 2;
         static int count = 0;
 
         while (true)
         {
+			etimer_reset(&et);
+
             if (rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
             {
-                struct list_elem_struct *delivered_msg =  (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
-                delivered_msg->message_id = get_message_id();
-                delivered_msg->hops = 3;
-                //set the originator to self
-                rimeaddr_copy(&delivered_msg->originator, &rimeaddr_node_addr);
-                list_push(message_list, delivered_msg);
+				printf("Sending pred req\n");
 
-                send_n_hop_predicate_check(&rimeaddr_node_addr, delivered_msg->message_id, "Hello World!!!", delivered_msg->hops);
+                struct list_elem_struct * delivered_msg =  (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
+                delivered_msg->message_id = get_message_id(&hc);
+                delivered_msg->hops = 3;
+                // set the originator to self
+                rimeaddr_copy(&delivered_msg->originator, &rimeaddr_node_addr);
+
+                list_push(hc.message_list, delivered_msg);
+
+                send_n_hop_predicate_check(&hc, &rimeaddr_node_addr, delivered_msg->message_id, "Hello World!!!", delivered_msg->hops);
             }
 
-            etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
-            PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
         }
     }
 
 exit:
     printf("Exiting Process...\n");
-    runicast_close(&runicast);
-    stbroadcast_close(&stbroadcast);
+    hsend_end(&hc);
     PROCESS_END();
 }
 

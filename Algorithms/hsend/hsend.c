@@ -98,7 +98,10 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 {
 	hsend_conn_t * hc = conncvt_stbcast(c);
 
-    predicate_check_msg_t * msg = (predicate_check_msg_t *)packetbuf_dataptr();
+	// Copy Packet Buffer To Memory
+	char tmpBuffer[PACKETBUF_SIZE];
+	packetbuf_copyto(tmpBuffer);
+	predicate_check_msg_t * msg = (predicate_check_msg_t *)tmpBuffer;
 
     //  printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n",
     //      addr2str(&msg->originator),

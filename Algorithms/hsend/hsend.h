@@ -1,3 +1,6 @@
+#ifndef CS407_HSEND_H
+#define CS407_HSEND_H
+
 #include "contiki.h"
 
 #include "dev/leds.h"
@@ -91,3 +94,6 @@ stbroadcast_callback_cancel(void *ptr);
 //Callbacks
 static const struct runicast_callbacks runicastCallbacks = {runicast_recv, runicast_sent, runicast_timedout};
 static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
+
+#endif /*CS407_HSEND_H*/
+

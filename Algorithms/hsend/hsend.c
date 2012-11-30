@@ -272,7 +272,8 @@ static void
 delayed_send_evaluated_predicate(void * ptr)
 {
     printf("Starting delayed send of evaluated predicate\n");
-	delayed_send_evaluated_predicate_params_t * p = (delayed_send_evaluated_predicate_params_t *)ptr;
+	delayed_send_evaluated_predicate_params_t * p =
+		(delayed_send_evaluated_predicate_params_t *)ptr;
 
     list_elem_struct_t * list_iterator = NULL;
     for (list_iterator = (list_elem_struct_t *)list_head(p->conn->message_list);
@@ -314,13 +315,15 @@ evaluate_predicate(char const *predicate)
 static void
 delayed_forward_evaluated_predicate(void * ptr)
 {
-    delayed_forward_evaluated_predicate_params_t * p = (delayed_forward_evaluated_predicate_params_t *)ptr;
+    delayed_forward_evaluated_predicate_params_t * p =
+		(delayed_forward_evaluated_predicate_params_t *)ptr;
 
     send_evaluated_predicate(p->conn,
 		&p->msg.sender, &p->msg.target_reciever,
 		p->msg.message_id, p->msg.evaluated_predicate);
 
-    free(ptr);
+    // Need to free allocated parameter struct
+	free(ptr);
 }
 
 static void
@@ -328,7 +331,6 @@ send_evaluated_predicate(
 	hsend_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_reciever,
 	uint8_t message_id, char const * evaluated_predicate)
 {
-
     if (runicast_is_transmitting(&hc->ru))
     {
         printf("runicast is already transmitting, trying again in a few seconds\n");
@@ -443,6 +445,8 @@ bool hsend_end(hsend_conn_t * conn)
 bool
 is_base(hsend_conn_t const * conn)
 {
+	printf("%s\n", addr2str(&rimeaddr_node_addr));
+	printf("%s\n", addr2str(&conn->baseStationAddr));
     return rimeaddr_cmp(&rimeaddr_node_addr, &conn->baseStationAddr) != 0;
 }
 
@@ -474,7 +478,7 @@ static void node_data(void * data)
 		node_data_t * nd = (node_data_t *)data;
 
 		// Store the current nodes address
-		rimeaddr_cpy(&nd->addr, &rimeaddr_node_addr);
+		rimeaddr_copy(&nd->addr, &rimeaddr_node_addr);
 
 		SENSORS_ACTIVATE(sht11_sensor);
 		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);

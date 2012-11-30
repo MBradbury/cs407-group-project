@@ -16,3 +16,4 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmis
 
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include
+

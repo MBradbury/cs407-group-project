@@ -54,7 +54,7 @@ static hsend_conn_t * conncvt_runicast(struct runicast_conn * conn)
 static hsend_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
 {
 	return (hsend_conn_t *)
-		(((char *)conn) - sizeof(struct stbroadcast_conn));
+		(((char *)conn) - sizeof(struct runicast_conn));
 }
 
 
@@ -98,10 +98,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
 {
 	hsend_conn_t * hc = conncvt_stbcast(c);
 
-    // Copy Packet Buffer To Memory
-    char tmpBuffer[PACKETBUF_SIZE];
-    packetbuf_copyto(tmpBuffer);
-    predicate_check_msg_t *msg = (predicate_check_msg_t *)tmpBuffer;
+    predicate_check_msg_t * msg = (predicate_check_msg_t *)packetbuf_dataptr();
 
     //  printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n",
     //      addr2str(&msg->originator),
@@ -491,14 +488,13 @@ static void node_data(void * data)
 }
 
 
-static hsend_conn_t hc;
-
 PROCESS(mainProcess, "HSEND Process");
 
 AUTOSTART_PROCESSES(&mainProcess);
 
 PROCESS_THREAD(mainProcess, ev, data)
 {
+	static hsend_conn_t hc;
 	static rimeaddr_t baseStationAddr, test;
     static struct etimer et;
 

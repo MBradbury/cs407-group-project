@@ -114,7 +114,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
     list_elem_struct_t * list_iterator = NULL;
     for (list_iterator = (list_elem_struct_t *)list_head(hc->message_list);
          list_iterator != NULL;
-         list_iterator = (list_elem_struct_t *)list_item_next(&list_iterator))
+         list_iterator = (list_elem_struct_t *)list_item_next(list_iterator))
     {
         // Message has been delivered before
         if (list_iterator->message_id == msg->message_id)
@@ -155,7 +155,6 @@ stbroadcast_recv(struct stbroadcast_conn *c)
     if (deliver_msg)
     {
         // Send predicate value back to originator
-
 		delayed_send_evaluated_predicate_params_t * p =
 			(delayed_send_evaluated_predicate_params_t *)
 				malloc(sizeof(delayed_send_evaluated_predicate_params_t));
@@ -214,7 +213,7 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
     list_elem_struct_t *list_iterator = NULL;
     for (list_iterator = (list_elem_struct_t *)list_head(conn->message_list);
          list_iterator != NULL;
-         list_iterator = (list_elem_struct_t *)list_item_next(&list_iterator))
+         list_iterator = (list_elem_struct_t *)list_item_next(list_iterator))
     {
         if (list_iterator->message_id == msg->message_id)
         {
@@ -272,12 +271,13 @@ static const struct stbroadcast_callbacks stbroadcastCallbacks = { stbroadcast_r
 static void
 delayed_send_evaluated_predicate(void * ptr)
 {
+    printf("Starting delayed send of evaluated predicate\n");
 	delayed_send_evaluated_predicate_params_t * p = (delayed_send_evaluated_predicate_params_t *)ptr;
 
     list_elem_struct_t * list_iterator = NULL;
     for (list_iterator = (list_elem_struct_t *)list_head(p->conn->message_list);
          list_iterator != NULL;
-         list_iterator = (list_elem_struct_t *)list_item_next(&list_iterator))
+         list_iterator = (list_elem_struct_t *)list_item_next(list_iterator))
     {
         if (list_iterator->message_id == p->message_id)
         {

@@ -385,7 +385,7 @@ send_n_hop_predicate_check(
     msg->hop_limit = hop_limit;
 
     random_init(rimeaddr_node_addr.u8[0] + 2);
-    int random = (random_rand() % 5);
+    unsigned int random = (random_rand() % 5);
     if (random <= 1) random++;
 
 	printf("Starting sbcast every %d second(s) for %d seconds\n", random, 20);

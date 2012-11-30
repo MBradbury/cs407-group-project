@@ -63,8 +63,10 @@ static void
 delayed_send_evaluated_predicate(void *ptr);
 
 static void
-send_n_hop_predicate_check(rimeaddr_t const *originator, uint8_t message_id_to_send, char const *pred, uint8_t hop_limit)
+send_n_hop_predicate_check(rimeaddr_t const *originator, uint8_t message_id_to_send, char const *pred, uint8_t hop_limit);
 
+static void
+send_evaluated_predicate(rimeaddr_t const *sender, rimeaddr_t const *target_reciever, uint8_t message_id, char const *evaluated_predicate);
 
 // Methods
 bool

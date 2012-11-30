@@ -1,14 +1,73 @@
 #include "hsend.h"
 
-//Methods
+#include "contiki.h"
+
+#include "dev/leds.h"
+#include "lib/list.h"
+
+#include "net/rime.h"
+#include "net/rime/trickle.h"
+#include "net/rime/stbroadcast.h"
+#include "net/rime/trickle.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "lib/random.h"
+#include "debug-helper.h"
+
+// Struct for the list elements, used to see if messages have already been sent
+struct list_elem_struct
+{
+    struct list_elem_struct *next;
+    rimeaddr_t originator;
+    uint8_t message_id;
+    uint8_t hops;
+    char *predicate_to_check;
+};
+
+// Struct used to ask other nodes for predicate values
+typedef struct
+{
+    rimeaddr_t originator;
+    uint8_t message_id;
+    uint8_t hop_limit;
+    char *predicate_to_check;
+} predicate_check_msg_t;
+
+// Struct to send back to the originator with the value of a predicate
+typedef struct
+{
+    rimeaddr_t sender;
+    rimeaddr_t target_reciever;
+    uint8_t message_id;
+    char *evaluated_predicate;
+} predicate_return_msg_t;
+
+
+
+static struct runicast_conn runicast; // connection for trickle
+static struct stbroadcast_conn stbroadcast; // connection for the stubborn broadcast
+
+static rimeaddr_t baseStationAddr; // address of the base station
+
+static uint8_t message_id = 1; // initial message ID
+
+// CREATE MESSAGE LIST DATA STRUCTURE
+LIST(message_list);
+
+
+// Prototypes
 static void
 delayed_send_evaluated_predicate(void *ptr);
 
+static void
+send_n_hop_predicate_check(rimeaddr_t const *originator, uint8_t message_id_to_send, char const *pred, uint8_t hop_limit)
 
-//CREATE MESSAGE LIST DATA STRUCTURE
-LIST(message_list);
 
-static bool
+// Methods
+bool
 is_base(void)
 {
     static rimeaddr_t base;
@@ -28,11 +87,11 @@ get_message_id(void)
     return returnvalue;
 }
 
-//STUBBORN BROADCAST
+// STUBBORN BROADCAST
 static void
 stbroadcast_recv(struct stbroadcast_conn *c)
 {
-    //Copy Packet Buffer To Memory
+    // Copy Packet Buffer To Memory
     char tmpBuffer[PACKETBUF_SIZE];
     packetbuf_copyto(tmpBuffer);
     predicate_check_msg_t *msg = (predicate_check_msg_t *)tmpBuffer;
@@ -43,7 +102,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
     //      msg->hop_limit,
     //      msg->message_id);
 
-    // Check message has not been recieved before
+    // Check message has not been received before
     bool deliver_msg = false;
     struct list_elem_struct *list_iterator = NULL;
     for ( list_iterator = (struct list_elem_struct *)list_head(message_list);
@@ -59,8 +118,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
             {
                 printf("Message received before and hops is higher\n");
 
-                //clear the memory, and update the new originator and hop count
-                memset(&list_iterator->originator, 0, sizeof(rimeaddr_t));
+                // Update the new originator and hop count
                 rimeaddr_copy(&list_iterator->originator, &msg->originator);
 
                 list_iterator->hops = msg->hop_limit;
@@ -70,6 +128,7 @@ stbroadcast_recv(struct stbroadcast_conn *c)
             break;
         }
     }
+
     // End of List and the Message has NOT been delivered before
     if (list_iterator == NULL)
     {
@@ -83,18 +142,18 @@ stbroadcast_recv(struct stbroadcast_conn *c)
         deliver_msg = true;
     }
 
-    //Respond To
+    // Respond To
     if (deliver_msg)
     {
-        //Send predicate value back to originator
+        // Send predicate value back to originator
 
         static struct ctimer runicast_timer;
         ctimer_set(&runicast_timer, 21 * CLOCK_SECOND, &delayed_send_evaluated_predicate, &msg->message_id);
 
-        //Rebroadcast Message If Hop Count Is Greater Than 1
+        // Rebroadcast Message If Hop Count Is Greater Than 1
         if (msg->hop_limit > 1) //last node
         {
-            //Broadcast Message On
+            // Broadcast Message On
             send_n_hop_predicate_check(&rimeaddr_node_addr, msg->message_id, msg->predicate_to_check, msg->hop_limit - 1);
         }
     }
@@ -113,17 +172,17 @@ stbroadcast_callback_cancel(void *ptr)
     stbroadcast_cancel(&stbroadcast);
 }
 
-//TODO need to collate responses, then send the on, right now messages collide while a node is trying to forward
-//RELIABLE UNICAST
+// TODO: need to collate responses, then send the on, right now messages collide while a node is trying to forward
+// RELIABLE UNICAST
 static void
 runicast_recv(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
     printf("runicast received from %s\n", addr2str(from));
 
-    //when recieve message, forward the message on to the originator
-    //if the final originator, do something with the value
+    // When recieve message, forward the message on to the originator
+    // if the final originator, do something with the value
 
-    //Copy Packet Buffer To Memory
+    // Copy Packet Buffer To Memory
     char tmpBuffer[PACKETBUF_SIZE];
     packetbuf_copyto(tmpBuffer);
     predicate_return_msg_t *msg = (predicate_return_msg_t *)tmpBuffer;
@@ -177,6 +236,11 @@ runicast_timedout(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retrans
 }
 
 
+//Callbacks
+static const struct runicast_callbacks runicastCallbacks = {runicast_recv, runicast_sent, runicast_timedout};
+static const struct stbroadcast_callbacks stbroadcastCallbacks = {stbroadcast_recv, stbroadcast_sent};
+
+
 //METHODS
 static void
 delayed_send_evaluated_predicate(void *ptr)
@@ -209,7 +273,7 @@ delayed_send_evaluated_predicate(void *ptr)
     }
 }
 
-static char *evaluate_predicate(char const *predicate)
+char const * evaluate_predicate(char const *predicate)
 {
     return "Value";
 }
@@ -375,3 +439,4 @@ exit:
     stbroadcast_close(&stbroadcast);
     PROCESS_END();
 }
+

@@ -210,7 +210,7 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
     predicate_return_msg_t * msg = (predicate_return_msg_t *)tmpBuffer;
 
 
-    list_elem_struct_t *list_iterator = NULL;
+    list_elem_struct_t * list_iterator = NULL;
     for (list_iterator = (list_elem_struct_t *)list_head(conn->message_list);
          list_iterator != NULL;
          list_iterator = (list_elem_struct_t *)list_item_next(list_iterator))
@@ -225,15 +225,12 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
             }
             else
             {
-                rimeaddr_t dest;
-                rimeaddr_copy(&dest, &list_iterator->originator);
-
                 printf("Trying to forward evaluated predicate to: %s\n",
-					addr2str(&dest));
+					addr2str(&list_iterator->originator));
 
                 send_evaluated_predicate(conn,
-										 &msg->sender,
-                                         &dest,
+										 &msg->sender, // Source
+                                         &list_iterator->originator, // Destination
                                          list_iterator->message_id,
                                          msg->evaluated_predicate
                                         );
@@ -263,8 +260,11 @@ runicast_timedout(struct runicast_conn *c, rimeaddr_t const * to, uint8_t retran
 
 
 //Callbacks
-static const struct runicast_callbacks runicastCallbacks = { runicast_recv, runicast_sent, runicast_timedout };
-static const struct stbroadcast_callbacks stbroadcastCallbacks = { stbroadcast_recv, stbroadcast_sent };
+static const struct runicast_callbacks runicastCallbacks =
+	{ runicast_recv, runicast_sent, runicast_timedout };
+
+static const struct stbroadcast_callbacks stbroadcastCallbacks =
+	{ stbroadcast_recv, stbroadcast_sent };
 
 
 //METHODS
@@ -282,12 +282,9 @@ delayed_send_evaluated_predicate(void * ptr)
     {
         if (list_iterator->message_id == p->message_id)
         {
-            rimeaddr_t dest;
-            rimeaddr_copy(&dest, &list_iterator->originator);
-
             send_evaluated_predicate(p->conn,
-								     &rimeaddr_node_addr,
-                                     &dest,
+								     &rimeaddr_node_addr, // Source
+                                     &list_iterator->originator, // Destination
                                      list_iterator->message_id,
                                      evaluate_predicate(list_iterator->predicate_to_check)
                                     );
@@ -334,7 +331,6 @@ send_evaluated_predicate(
     if (runicast_is_transmitting(&hc->ru))
     {
         printf("runicast is already transmitting, trying again in a few seconds\n");
-        static struct ctimer forward_timer;
 
         delayed_forward_evaluated_predicate_params_t * p =
 			(delayed_forward_evaluated_predicate_params_t *)
@@ -347,6 +343,7 @@ send_evaluated_predicate(
 
 		p->conn = hc;
 
+		static struct ctimer forward_timer;
         ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, p);
 
         return;

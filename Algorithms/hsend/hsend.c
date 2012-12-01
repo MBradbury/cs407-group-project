@@ -94,7 +94,7 @@ evaluate_predicate(char const * predicate);
 
 // STUBBORN BROADCAST
 static void
-stbroadcast_recv(struct stbroadcast_conn *c)
+stbroadcast_recv(struct stbroadcast_conn * c)
 {
 	hsend_conn_t * hc = conncvt_stbcast(c);
 
@@ -247,13 +247,13 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
 }
 
 static void
-runicast_sent(struct runicast_conn *c, rimeaddr_t const * to, uint8_t retransmissions)
+runicast_sent(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
     //printf("runicast sent\n");
 }
 
 static void
-runicast_timedout(struct runicast_conn *c, rimeaddr_t const * to, uint8_t retransmissions)
+runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
     printf("Runicast timed out to:%s retransmissions:%d\n", addr2str(to), retransmissions);
 }
@@ -442,8 +442,6 @@ bool hsend_end(hsend_conn_t * conn)
 bool
 is_base(hsend_conn_t const * conn)
 {
-	printf("%s\n", addr2str(&rimeaddr_node_addr));
-	printf("%s\n", addr2str(&conn->baseStationAddr));
     return rimeaddr_cmp(&rimeaddr_node_addr, &conn->baseStationAddr) != 0;
 }
 
@@ -544,7 +542,9 @@ PROCESS_THREAD(mainProcess, ev, data)
             {
 				printf("Sending pred req\n");
 
-                struct list_elem_struct * delivered_msg =  (struct list_elem_struct *)malloc(sizeof(struct list_elem_struct));
+                list_elem_struct_t * delivered_msg =
+					(list_elem_struct_t *)malloc(sizeof(list_elem_struct_t));
+
                 delivered_msg->message_id = get_message_id(&hc);
                 delivered_msg->hops = 3;
                 // set the originator to self
@@ -552,7 +552,9 @@ PROCESS_THREAD(mainProcess, ev, data)
 
                 list_push(hc.message_list, delivered_msg);
 
-                send_n_hop_predicate_check(&hc, &rimeaddr_node_addr, delivered_msg->message_id, "Hello World!!!", delivered_msg->hops);
+                send_n_hop_predicate_check(&hc,
+					&rimeaddr_node_addr, delivered_msg->message_id,
+					"Hello World!!!", delivered_msg->hops);
             }
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

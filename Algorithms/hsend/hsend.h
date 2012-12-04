@@ -12,6 +12,8 @@
 
 typedef void (*data_generation_fn)(void * data);
 
+typedef void (*data_receive_fn)(rimeaddr_t const * from, void const * data);
+
 typedef struct
 {
 	struct runicast_conn ru;
@@ -23,6 +25,7 @@ typedef struct
 
 	unsigned int data_size;
 	data_generation_fn data_fn;
+	data_receive_fn receive_fn;
 
 	LIST_STRUCT(message_list);
 
@@ -33,7 +36,7 @@ bool is_base(hsend_conn_t const * conn);
 // Initialise multi-hop predicate checking
 bool hsend_start(
 	hsend_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * baseStationAddr,
-	data_generation_fn data_fn, unsigned int data_size);
+	data_generation_fn data_fn, unsigned int data_size, data_receive_fn receive_fn);
 
 // Shutdown multi-hop predicate checking
 bool hsend_end(hsend_conn_t * conn);

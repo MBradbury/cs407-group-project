@@ -24,7 +24,6 @@ typedef struct list_elem_struct
     rimeaddr_t originator;
     uint8_t message_id;
     uint8_t hops;
-    char const * predicate_to_check;
 } list_elem_struct_t;
 
 // Struct used to ask other nodes for predicate values
@@ -33,17 +32,16 @@ typedef struct
     rimeaddr_t originator;
     uint8_t message_id;
     uint8_t hop_limit;
-    char const * predicate_to_check;
-} predicate_check_msg_t;
+} req_data_msg_t;
 
 // Struct to send back to the originator with the value of a predicate
 typedef struct
 {
     rimeaddr_t sender;
-    rimeaddr_t target_reciever;
+    rimeaddr_t target_receiver;
     uint8_t message_id;
-    char const * evaluated_predicate;
-} predicate_return_msg_t;
+	// After this point the user generated data will be contained
+} return_data_msg_t;
 
 
 static hsend_conn_t * conncvt_runicast(struct runicast_conn * conn)
@@ -68,7 +66,7 @@ typedef struct
 typedef struct
 {
 	hsend_conn_t * conn;
-	predicate_return_msg_t msg;
+	return_data_msg_t msg;
 } delayed_forward_evaluated_predicate_params_t;
 
 
@@ -78,19 +76,16 @@ delayed_send_evaluated_predicate(void * ptr);
 
 static void
 send_n_hop_predicate_check(
-	hsend_conn_t * conn, rimeaddr_t const *originator, uint8_t message_id_to_send,
-	char const *pred, uint8_t hop_limit);
+	hsend_conn_t * conn, rimeaddr_t const *originator,
+	uint8_t message_id_to_send, uint8_t hop_limit);
 
 static void
 send_evaluated_predicate(
-	hsend_conn_t * conn, rimeaddr_t const * sender, rimeaddr_t const * target_reciever,
-	uint8_t message_id, char const * evaluated_predicate);
+	hsend_conn_t * conn, rimeaddr_t const * sender,
+	rimeaddr_t const * target_receiver, uint8_t message_id);
 
 static uint8_t
 get_message_id(hsend_conn_t * conn);
-
-static char const *
-evaluate_predicate(char const * predicate);
 
 // STUBBORN BROADCAST
 static void
@@ -101,7 +96,7 @@ stbroadcast_recv(struct stbroadcast_conn * c)
 	// Copy Packet Buffer To Memory
 	char tmpBuffer[PACKETBUF_SIZE];
 	packetbuf_copyto(tmpBuffer);
-	predicate_check_msg_t * msg = (predicate_check_msg_t *)tmpBuffer;
+	req_data_msg_t * msg = (req_data_msg_t *)tmpBuffer;
 
     //  printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n",
     //      addr2str(&msg->originator),
@@ -144,7 +139,6 @@ stbroadcast_recv(struct stbroadcast_conn * c)
         rimeaddr_copy(&delivered_msg->originator, &msg->originator);
         delivered_msg->message_id = msg->message_id;
         delivered_msg->hops = msg->hop_limit;
-        delivered_msg->predicate_to_check = msg->predicate_to_check;
 
         list_push(hc->message_list, delivered_msg);
 
@@ -170,8 +164,9 @@ stbroadcast_recv(struct stbroadcast_conn * c)
         if (msg->hop_limit > 1) // last node
         {
             // Broadcast Message On
-            send_n_hop_predicate_check(hc, &rimeaddr_node_addr, msg->message_id,
-				msg->predicate_to_check, msg->hop_limit - 1);
+            send_n_hop_predicate_check(
+				hc, &rimeaddr_node_addr,
+				msg->message_id, msg->hop_limit - 1);
         }
     }
 }
@@ -199,7 +194,7 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
 {
 	hsend_conn_t * conn = conncvt_runicast(c);
 
-    printf("runicast received from %s\n", addr2str(from));
+    //printf("runicast received from %s\n", addr2str(from));
 
     // When recieve message, forward the message on to the originator
     // if the final originator, do something with the value
@@ -207,7 +202,7 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
     // Copy Packet Buffer To Memory
     char tmpBuffer[PACKETBUF_SIZE];
     packetbuf_copyto(tmpBuffer);
-    predicate_return_msg_t * msg = (predicate_return_msg_t *)tmpBuffer;
+    return_data_msg_t * msg = (return_data_msg_t *)tmpBuffer;
 
 
     list_elem_struct_t * list_iterator = NULL;
@@ -220,8 +215,9 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
 			// If this node was the one who sent the message
             if (rimeaddr_cmp(&rimeaddr_node_addr, &list_iterator->originator)) 
             {
-                printf("End of forwarding Value: %s received from: %s\n",
-					msg->evaluated_predicate, addr2str(&msg->sender));
+				// The target node has received the required data,
+				// so provide it to the upper layer
+				(*conn->receive_fn)(&msg->sender, ((char *)msg) + sizeof(return_data_msg_t));
             }
             else
             {
@@ -231,8 +227,7 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
                 send_evaluated_predicate(conn,
 										 &msg->sender, // Source
                                          &list_iterator->originator, // Destination
-                                         list_iterator->message_id,
-                                         msg->evaluated_predicate
+                                         list_iterator->message_id
                                         );
             }
             break;
@@ -285,8 +280,7 @@ delayed_send_evaluated_predicate(void * ptr)
             send_evaluated_predicate(p->conn,
 								     &rimeaddr_node_addr, // Source
                                      &list_iterator->originator, // Destination
-                                     list_iterator->message_id,
-                                     evaluate_predicate(list_iterator->predicate_to_check)
+                                     list_iterator->message_id
                                     );
 
             // TODO: remove item from the list
@@ -303,12 +297,6 @@ delayed_send_evaluated_predicate(void * ptr)
 	free(ptr);
 }
 
-static char const *
-evaluate_predicate(char const *predicate)
-{
-    return "Value";
-}
-
 static void
 delayed_forward_evaluated_predicate(void * ptr)
 {
@@ -316,8 +304,8 @@ delayed_forward_evaluated_predicate(void * ptr)
 		(delayed_forward_evaluated_predicate_params_t *)ptr;
 
     send_evaluated_predicate(p->conn,
-		&p->msg.sender, &p->msg.target_reciever,
-		p->msg.message_id, p->msg.evaluated_predicate);
+		&p->msg.sender, &p->msg.target_receiver,
+		p->msg.message_id);
 
     // Need to free allocated parameter struct
 	free(ptr);
@@ -325,8 +313,8 @@ delayed_forward_evaluated_predicate(void * ptr)
 
 static void
 send_evaluated_predicate(
-	hsend_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_reciever,
-	uint8_t message_id, char const * evaluated_predicate)
+	hsend_conn_t * hc, rimeaddr_t const * sender,
+	rimeaddr_t const * target_receiver, uint8_t message_id)
 {
     if (runicast_is_transmitting(&hc->ru))
     {
@@ -337,30 +325,33 @@ send_evaluated_predicate(
 				malloc(sizeof(delayed_forward_evaluated_predicate_params_t));
 
         rimeaddr_copy(&p->msg.sender, sender);
-        rimeaddr_copy(&p->msg.target_reciever, target_reciever);
+        rimeaddr_copy(&p->msg.target_receiver, target_receiver);
         p->msg.message_id = message_id;
-        p->msg.evaluated_predicate = evaluated_predicate;
 
 		p->conn = hc;
 
 		static struct ctimer forward_timer;
         ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, p);
-
-        return;
     }
+	else
+	{
+		unsigned int packet_size = sizeof(return_data_msg_t) + hc->data_size;
 
-    packetbuf_clear();
-    packetbuf_set_datalen(sizeof(predicate_return_msg_t));
-    debug_packet_size(sizeof(predicate_return_msg_t));
-    predicate_return_msg_t *msg = (predicate_return_msg_t *)packetbuf_dataptr();
-    memset(msg, 0, sizeof(predicate_return_msg_t));
+		packetbuf_clear();
+		packetbuf_set_datalen(packet_size);
+		debug_packet_size(packet_size);
+		return_data_msg_t * msg = (return_data_msg_t *)packetbuf_dataptr();
+		memset(msg, 0, packet_size);
 
-    rimeaddr_copy(&msg->sender, sender);
-    rimeaddr_copy(&msg->target_reciever, target_reciever);
-    msg->message_id = message_id;
-    msg->evaluated_predicate = evaluated_predicate;
+		rimeaddr_copy(&msg->sender, sender);
+		rimeaddr_copy(&msg->target_receiver, target_receiver);
+		msg->message_id = message_id;
 
-    runicast_send(&hc->ru, target_reciever, 10);
+		// Call data get functions and store result in outwards bound packet
+		(*hc->data_fn)(((char *)msg) + sizeof(return_data_msg_t));
+
+		runicast_send(&hc->ru, target_receiver, 10);
+	}
 }
 
 
@@ -368,17 +359,16 @@ send_evaluated_predicate(
 static void
 send_n_hop_predicate_check(
 	hsend_conn_t * conn, rimeaddr_t const * originator,
-	uint8_t message_id_to_send, char const * pred, uint8_t hop_limit)
+	uint8_t message_id_to_send, uint8_t hop_limit)
 {
     packetbuf_clear();
-    packetbuf_set_datalen(sizeof(predicate_check_msg_t));
-    debug_packet_size(sizeof(predicate_check_msg_t));
-    predicate_check_msg_t * msg = (predicate_check_msg_t *)packetbuf_dataptr();
-    memset(msg, 0, sizeof(predicate_check_msg_t));
+    packetbuf_set_datalen(sizeof(req_data_msg_t));
+    debug_packet_size(sizeof(req_data_msg_t));
+    req_data_msg_t * msg = (req_data_msg_t *)packetbuf_dataptr();
+    memset(msg, 0, sizeof(req_data_msg_t));
 
     rimeaddr_copy(&msg->originator, originator);
     msg->message_id = message_id_to_send;
-    msg->predicate_to_check = pred;
     msg->hop_limit = hop_limit;
 
     random_init(rimeaddr_node_addr.u8[0] + 2);
@@ -399,7 +389,7 @@ send_n_hop_predicate_check(
 // Initialise multi-hop predicate checking
 bool hsend_start(
 	hsend_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * baseStationAddr,
-	data_generation_fn data_fn, unsigned int data_size)
+	data_generation_fn data_fn, unsigned int data_size, data_receive_fn receive_fn)
 {
 	if (conn == NULL || baseStationAddr == NULL ||
 		data_fn == NULL || ch1 == ch2 || data_size == 0)
@@ -416,6 +406,7 @@ bool hsend_start(
 
 	conn->data_fn = data_fn;
 	conn->data_size = data_size;
+	conn->receive_fn = receive_fn;
 
 	LIST_STRUCT_INIT(conn, message_list);
 
@@ -485,6 +476,13 @@ static void node_data(void * data)
 	}
 }
 
+static void receieved_data(rimeaddr_t const * from, void const * data)
+{
+	node_data_t const * nd = (node_data_t const *)data;
+
+	printf("Obtained information from %s T:%d H:%d%%\n", addr2str(from), (int)nd->temp, (int)nd->humidity);
+}
+
 
 PROCESS(mainProcess, "HSEND Process");
 
@@ -507,7 +505,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	test.u8[0] = 2;
 	test.u8[1] = 0;
 
-	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t)))
+	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
 	{
 		printf("start function failed\n");
 	}
@@ -552,9 +550,9 @@ PROCESS_THREAD(mainProcess, ev, data)
 
                 list_push(hc.message_list, delivered_msg);
 
-                send_n_hop_predicate_check(&hc,
-					&rimeaddr_node_addr, delivered_msg->message_id,
-					"Hello World!!!", delivered_msg->hops);
+                send_n_hop_predicate_check(
+					&hc, &rimeaddr_node_addr,
+					delivered_msg->message_id, delivered_msg->hops);
             }
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

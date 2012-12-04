@@ -217,7 +217,7 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
 			{
 				// The target node has received the required data,
 				// so provide it to the upper layer
-				(*conn->receive_fn)(&msg->sender, ((char *)msg) + sizeof(return_data_msg_t));
+				(*conn->receive_fn)(&msg->sender, list_iterator->hops, ((char *)msg) + sizeof(return_data_msg_t));
 			}
 			else
 			{
@@ -453,6 +453,24 @@ is_base(hsend_conn_t const * conn)
 	return rimeaddr_cmp(&rimeaddr_node_addr, &conn->baseStationAddr) != 0;
 }
 
+void hsend_request_info(hsend_conn_t * conn, uint8_t hops)
+{
+	list_elem_struct_t * delivered_msg =
+		(list_elem_struct_t *)malloc(sizeof(list_elem_struct_t));
+
+	delivered_msg->message_id = get_message_id(conn);
+	delivered_msg->hops = hops;
+
+	// Set the originator to self
+	rimeaddr_copy(&delivered_msg->originator, &rimeaddr_node_addr);
+
+	list_push(conn->message_list, delivered_msg);
+
+	send_n_hop_predicate_check(
+		conn, &rimeaddr_node_addr,
+		delivered_msg->message_id, delivered_msg->hops);
+}
+
 static uint8_t
 get_message_id(hsend_conn_t * conn)
 {
@@ -461,7 +479,6 @@ get_message_id(hsend_conn_t * conn)
 	returnvalue += rimeaddr_node_addr.u8[0];
 	return returnvalue;
 }
-
 
 //////////////////////////////
 /// NORMAL PROCESS STARTS HERE
@@ -493,16 +510,17 @@ static void node_data(void * data)
 	}
 }
 
-static void receieved_data(rimeaddr_t const * from, void const * data)
+static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
 {
 	node_data_t const * nd = (node_data_t const *)data;
 
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
 
-	printf("Obtained information from %s (%s) T:%d H:%d%%\n",
+	printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%%\n",
 		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
 		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
+		hops,
 		(int)nd->temp, (int)nd->humidity);
 }
 
@@ -563,19 +581,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 			{
 				printf("Sending pred req\n");
 
-				list_elem_struct_t * delivered_msg =
-					(list_elem_struct_t *)malloc(sizeof(list_elem_struct_t));
-
-				delivered_msg->message_id = get_message_id(&hc);
-				delivered_msg->hops = 3;
-				// set the originator to self
-				rimeaddr_copy(&delivered_msg->originator, &rimeaddr_node_addr);
-
-				list_push(hc.message_list, delivered_msg);
-
-				send_n_hop_predicate_check(
-					&hc, &rimeaddr_node_addr,
-					delivered_msg->message_id, delivered_msg->hops);
+				hsend_request_info(&hc, 3);
 			}
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

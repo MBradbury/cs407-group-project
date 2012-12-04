@@ -12,7 +12,7 @@
 
 typedef void (*data_generation_fn)(void * data);
 
-typedef void (*data_receive_fn)(rimeaddr_t const * from, void const * data);
+typedef void (*data_receive_fn)(rimeaddr_t const * from, uint8_t hops, void const * data);
 
 typedef struct
 {
@@ -41,7 +41,7 @@ bool hsend_start(
 // Shutdown multi-hop predicate checking
 bool hsend_end(hsend_conn_t * conn);
 
-unsigned int hsend_request_info(unsigned int hops, void ** data);
+void hsend_request_info(hsend_conn_t * conn, uint8_t hops);
 
 #endif /*CS407_HSEND_H*/
 

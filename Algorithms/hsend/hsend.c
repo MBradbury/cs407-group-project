@@ -239,7 +239,6 @@ runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
 	{
 		printf("DEBUG: ERROR - LIST IS NULL, THIS IS VERY VERY BAD\n");
 	}
-
 }
 
 static void
@@ -335,7 +334,17 @@ send_evaluated_predicate(
 		p->conn = hc;
 
 		void * data_dest = ((char *)p) + sizeof(delayed_forward_evaluated_predicate_params_t);
-		memcpy(data_dest, data, hc->data_size);
+
+		if (data == NULL)
+		{
+			// Call data get functions and store result in outwards bound packet
+			(*hc->data_fn)(data_dest);
+		}
+		else
+		{
+			// Copy the provided data
+			memcpy(data_dest, data, hc->data_size);
+		}
 
 		static struct ctimer forward_timer;
 		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, p);

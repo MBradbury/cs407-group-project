@@ -18,7 +18,7 @@ log_info_t * log_start(void);
 
 // Gets the next message in the log.
 // Returns NULL if there are no messages left to consume.
-log_info_t * log_next(log_info_t * log);
+log_info_t * log_next(log_info_t * log_item);
 
 void log_message(
 	clock_time_t time,

@@ -450,7 +450,12 @@ bool hsend_end(hsend_conn_t * conn)
 	runicast_close(&conn->ru);
 	stbroadcast_close(&conn->bc);
 
-	// TODO: Free List
+	// Free List
+	while (list_length(conn->message_list) > 0)
+	{
+		void * elem = list_pop(conn->message_list);
+		free(elem);
+	}
 
 	return true;
 }

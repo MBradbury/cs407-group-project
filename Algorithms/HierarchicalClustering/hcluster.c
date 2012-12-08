@@ -275,7 +275,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	cluster_conn_t * conn = conncvt_stbcast(ptr);
 
 	setup_msg_t const * msg = (setup_msg_t const *)packetbuf_dataptr();
-	log_message(clock_time(), "setup", "stbcast", msg->source, rimeaddr_null);
+	log_write(&ml, clock_time(), "setup", "stbcast", msg->source, rimeaddr_null);
 	static struct ctimer detect_ct;
 
 	printf("Got setup message from %s, level %u\n",
@@ -495,6 +495,8 @@ static cluster_callbacks_t callbacks = { &cluster_recv, &cluster_setup_finished 
 PROCESS_THREAD(startup_process, ev, data)
 {
 	static rimeaddr_t sink;
+	static message_log ml;
+	log_init(&ml);
 
 	PROCESS_BEGIN();
 	

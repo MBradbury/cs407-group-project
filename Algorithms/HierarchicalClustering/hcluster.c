@@ -26,6 +26,8 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+static message_log ml;
+
 typedef struct
 {
 	rimeaddr_t source;
@@ -180,6 +182,8 @@ static void recv_runicast(struct runicast_conn * ptr, rimeaddr_t const * origina
 	// Extract the source we included at the end of the packet
 	rimeaddr_t const * source = (rimeaddr_t const *)
 		(((char *)packetbuf_dataptr()) + packetbuf_datalen() - sizeof(rimeaddr_t));
+		
+	log_write(&ml, clock_time(), "data", "runicast", source, is_sink ? &rimeaddr_node_addr : &conn->our_cluster_head);
 
 	if (is_sink(conn))
 	{
@@ -237,6 +241,8 @@ static void recv_mesh(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 	{
 		leds_on(LEDS_BLUE);
 	}
+
+	log_write(&ml, clock_time(), "data", "mesh", &originator, &conn->our_cluster_head);
 	
 	char originator_str[RIMEADDR_STRING_LENGTH];
 	char current_str[RIMEADDR_STRING_LENGTH];
@@ -275,7 +281,9 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	cluster_conn_t * conn = conncvt_stbcast(ptr);
 
 	setup_msg_t const * msg = (setup_msg_t const *)packetbuf_dataptr();
-	log_write(&ml, clock_time(), "setup", "stbcast", msg->source, rimeaddr_null);
+	printf("About to write...\n");
+	log_write(&ml, clock_time(), "setup", "stbcast", &msg->source, &rimeaddr_null);
+	printf("Written\n");
 	static struct ctimer detect_ct;
 
 	printf("Got setup message from %s, level %u\n",
@@ -495,7 +503,6 @@ static cluster_callbacks_t callbacks = { &cluster_recv, &cluster_setup_finished 
 PROCESS_THREAD(startup_process, ev, data)
 {
 	static rimeaddr_t sink;
-	static message_log ml;
 	log_init(&ml);
 
 	PROCESS_BEGIN();

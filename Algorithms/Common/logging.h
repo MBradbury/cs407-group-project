@@ -1,6 +1,10 @@
 #ifndef CS407_LOGGING_H
 #define CS407_LOGGING_H
 
+#include "net/netstack.h"
+#include "net/rime.h"
+#include "sys/clock.h"
+
 typedef struct
 {
 	clock_time_t time;
@@ -18,7 +22,7 @@ typedef struct {
 	int head;
 	int count;
 	log_info_t *elems;
-} message_log
+} message_log;
 
 int is_empty(message_log *ml);
 
@@ -27,7 +31,7 @@ void log_init(message_log * ml);
 
 // Gets the nth message in the log.
 // Returns NULL if there are no messages left to consume.
-void * log_read(message_log * ml, log_info_t * log_item, int n);
+void log_read(message_log * ml, log_info_t * log_item, int n);
 
 void log_write(
 	message_log * ml, clock_time_t time,

@@ -1,9 +1,9 @@
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
-	CPSEP=:
+	CPSEP=":"
 else
-	CPSEP=;
+	CPSEP=";"
 endif
 
 all:

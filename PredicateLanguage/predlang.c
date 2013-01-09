@@ -4,12 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifndef _MSC_VER
-#	include <stdbool.h>
-#else
-#	define snprintf _snprintf
-#endif
+#include <math.h>
 
 //#define MAIN_FUNC
 //#define ENABLE_CODE_GEN
@@ -17,8 +12,10 @@
 
 #ifndef NDEBUG
 #	define DEBUG_PRINT(...) do { printf(__VA_ARGS__); } while(false)
+#	define DEBUG_ERR_PRINT(...) do { fprintf(stderr, __VA_ARGS__); } while(false)
 #else
 #	define DEBUG_PRINT(...) (void)0
+#	define DEBUG_ERR_PRINT(...) (void)0
 #endif
 
 
@@ -153,10 +150,11 @@ static void inspect_stack(void)
 {
 #ifndef NDEGBUG
 	printf("Stack values:\n");
+	ubyte * max = stack + STACK_SIZE;
 	ubyte * ptr;
-	for (ptr = stack_ptr; ptr < (stack + STACK_SIZE); ++ptr)
+	for (ptr = stack_ptr; ptr < max; ++ptr)
 	{
-		printf("\tStack %p %d\n", ptr, *ptr);
+		printf("\tStack %d %d\n", max - ptr, *ptr);
 	}
 #endif
 }
@@ -224,7 +222,7 @@ static variable_reg_t * create_variable(variable_id_t id, variable_type_t type)
 
 	variable->id = id;
 
-	DEBUG_PRINT("Registered variable with id '%u'\n", variable->id);
+	DEBUG_ERR_PRINT("Registered variable with id '%u'\n", variable->id);
 
 	// Lets create some space in the heap to store the variable
 	variable->location = heap_alloc(variable_type_size(type));
@@ -289,7 +287,7 @@ static variable_reg_t * create_array(variable_id_t id, variable_type_t type, nui
 	variable->is_array = true;
 	variable->length = length;
 
-	DEBUG_PRINT("Registered array with id '%u' and length %d and elem size %d\n",
+	DEBUG_ERR_PRINT("Registered array with id '%u' and length %d and elem size %d\n",
 		variable->id, variable->length, variable_type_size(type));
 
 	variable_regs_count += 1;
@@ -566,7 +564,7 @@ static const char * opcode_names[] = {
 #define OPERATION_POP(code, op, type, store_type, format_type, idx1, idx2) \
 	case code: \
 		{ \
-			DEBUG_PRINT("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[idx1], ((type *)stack_ptr)[idx2]); \
+			DEBUG_ERR_PRINT("Calling %s on " format_type " and " format_type "\n", opcode_names[*current], ((type *)stack_ptr)[idx1], ((type *)stack_ptr)[idx2]); \
 			if (!require_stack_size(sizeof(type) * 2)) \
 				return false; \
 			store_type res = ((type *)stack_ptr)[idx1] op ((type *)stack_ptr)[idx2]; \
@@ -581,11 +579,11 @@ static const char * opcode_names[] = {
 		{ \
 			variable_id_t array_id = *(variable_id_t *)(current + 1); \
 			current += sizeof(variable_id_t); \
-			DEBUG_PRINT("Array id %u\n", array_id); \
+			DEBUG_ERR_PRINT("Array id %u\n", array_id); \
 			 \
 			variable_id_t fn_id = *(variable_id_t *)(current + 1); \
 			current += sizeof(variable_id_t); \
-			DEBUG_PRINT("FN id %u\n", fn_id); \
+			DEBUG_ERR_PRINT("FN id %u\n", fn_id); \
 			 \
 			variable_reg_t const * var_reg = get_variable(array_id); \
 			 \
@@ -663,21 +661,21 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 	while (current - start < program_length)
 	{
-		DEBUG_PRINT("Executing %s at %p\n", opcode_names[*current], current);
+		DEBUG_ERR_PRINT("Executing %s at %p\n", opcode_names[*current], (stack + STACK_SIZE) - (current));
 
 		// Ideally want this op codes in numerical order
 		// so the compiler can generate a jump table
 		switch (*current)
 		{
 		case HALT:
-			DEBUG_PRINT("Halting\n");
+			DEBUG_ERR_PRINT("Halting\n");
 			if (!require_stack_size(sizeof(nbool)))
 				return false;
 
 			return *(int *)stack_ptr;
 
 		case IPUSH:
-			DEBUG_PRINT("Pushing int %d onto the stack\n", *(nint*)(current + 1));
+			DEBUG_ERR_PRINT("Pushing int %d onto the stack\n", *(nint*)(current + 1));
 			if (!int_push_stack(*(nint*)(current + 1)))
 				return false;
 			current += sizeof(nint);
@@ -689,7 +687,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			break;
 
 		case FPUSH:
-			DEBUG_PRINT("Pushing float %f onto the stack\n", *(nfloat*)(current + 1));
+			DEBUG_ERR_PRINT("Pushing float %f onto the stack\n", *(nfloat*)(current + 1));
 			if (!float_push_stack(*(nfloat*)(current + 1)))
 				return false;
 			current += sizeof(nfloat);
@@ -844,7 +842,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case JMP:
 			current = start + *(ubyte *)(current + 1) - 1;
-			DEBUG_PRINT("Jumping to %p\n", current + 1);
+			DEBUG_ERR_PRINT("Jumping to %p\n", (stack + STACK_SIZE) - (current + 1));
 			break;
 
 		case JZ:
@@ -854,7 +852,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			if (((nint *)stack_ptr)[0] == 0)
 			{
 				current = start + *(ubyte *)(current + 1) - 1;
-				DEBUG_PRINT("Jumping to %p\n", current + 1);
+				DEBUG_ERR_PRINT("Jumping to %p\n", (stack + STACK_SIZE) - (current + 1));
 			}
 			else
 			{
@@ -873,7 +871,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			if (((nint *)stack_ptr)[0] != 0)
 			{
 				current = start + *(ubyte *)(current + 1) - 1;
-				DEBUG_PRINT("Jumping to %p\n", current + 1);
+				DEBUG_ERR_PRINT("Jumping to %p\n", (stack + STACK_SIZE) - (current + 1));
 			}
 			else
 			{
@@ -896,7 +894,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			if (!require_stack_size(sizeof(nint)))
 				return false;
 
-			DEBUG_PRINT("Incrementing %d\n", ((nint *)stack_ptr)[0]);
+			DEBUG_ERR_PRINT("Incrementing %d\n", ((nint *)stack_ptr)[0]);
 			((nint *)stack_ptr)[0] += 1;
 
 			break;
@@ -1316,7 +1314,7 @@ static bool run_program_from_file(int argc, char ** argv)
 {
 	char const * filename = argv[1];
 
-	printf("Filename: %s\n", filename);
+	fprintf(stderr, "Filename: %s\n", filename);
 
 	nuint program_size = load_file_to_memory(filename, &program_start);
 
@@ -1354,19 +1352,19 @@ int main(int argc, char * argv[])
 	set_user_data(&arr[8], 8, 17, 25, 122);
 	set_user_data(&arr[9], 9, 19, 26, 122);
 
-	printf("Array length %d\n", var_array->length);
+	fprintf(stderr, "Array length %d\n", var_array->length);
 
-	printf("sizeof(void *): %u\n", sizeof(void *));
-	printf("sizeof(int): %u\n", sizeof(nint));
-	printf("sizeof(float): %u\n", sizeof(nfloat));
-	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
-	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
+	fprintf(stderr, "sizeof(void *): %u\n", sizeof(void *));
+	fprintf(stderr, "sizeof(int): %u\n", sizeof(nint));
+	fprintf(stderr, "sizeof(float): %u\n", sizeof(nfloat));
+	fprintf(stderr, "sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
+	fprintf(stderr, "sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
-	//run_program_from_file(argc, argv);
+	run_program_from_file(argc, argv);
 
 	// Load a program into memory
 	//gen_example_for_loop();
-	gen_example_array_op(AMEAN);
+	//gen_example_array_op(AMEAN);
 
 	printf("Program length %u\n", (unsigned)(program_end - program_start));
 

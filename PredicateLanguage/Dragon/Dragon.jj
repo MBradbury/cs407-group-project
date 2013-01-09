@@ -279,6 +279,21 @@ final class IntArg implements Arg
 
 PARSER_END(Dragon)
 
+// Whitespace
+
+SKIP : {
+	 " "
+	| "\t"
+	}
+
+SPECIAL_TOKEN : {
+	< SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")? >
+}
+	
+
+
+// Opcodes
+
 TOKEN : {
 	//Keywords
 	  <#HALT : 		"HALT" >
@@ -314,19 +329,28 @@ TOKEN : {
 	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> >
 	| < ONEARGS :	<JUMP> >
 	| < TWOARGB :	<ABIGOP> >
-
-	//Regexes
-	| < INT :		(<DIGIT>)+ >
-	| < FLOAT :		(<DIGIT>)+ ("." (<DIGIT>)*)? >
-	| < LABEL :		<NAME> ":" >
-	| < NAME :		<LETTER> (<ALPHANUM>)* >
-	| < ALPHANUM : 	<LETTER> | <DIGIT> >
-	| < LETTER :	["a"-"z"] >
-	| < DIGIT :		["0"-"9"] >
-	| < NEWLINE : 	"\n" | "\r" | "\r\n" >
 }
 
-SKIP : { " " | "\t" }
+// Numbers
+
+TOKEN : {
+	  < INT :		["1"-"9"] (["0"-"9"])* >
+	| < FLOAT :		(["0"-"9"])+ "." (["0"-"9"])* >
+}
+
+
+// Identifiers
+
+TOKEN : {
+	  < NAME :			<LETTER> (<PARTLETTER>)* >
+	| <#PARTLETTER : 	["A"-"Z", "a"-"z", "0"-"9"] >
+	| <#LETTER :		["A"-"Z", "a"-"z"] >
+}
+
+
+TOKEN : {
+	  < NEWLINE : 	"\n" | "\r" | "\r\n" >
+}
 
 ArrayList<Opcode> Input() :
 {
@@ -337,15 +361,13 @@ ArrayList<Opcode> Input() :
 {
 	(
 		// Can optionally provide a label for this instruction
-		(label = <LABEL>)?
+		((label = <NAME>) ":" )?
 
 		op = Operation()
 		{
 			if (label != null)
 			{
-				// Need to substring to get rid of the extra colon at the
-				// end of the label name
-				op.setLabel(label.image.substring(0, label.image.length() - 1));
+				op.setLabel(label.image);
 				label = null;
 			}
 		

@@ -50,3 +50,5 @@ VarDepthClustering
 *.class
 *.swp
 /Poster/~$Poster.pptx
+/PredicateLanguage/Tests/Intermediate
+/PredicateLanguage/Tests/Output

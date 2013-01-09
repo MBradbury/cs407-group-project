@@ -2,7 +2,12 @@
 #define CS407_PRED_LANG_H
 
 #include <stdint.h>
-#include <stdbool.h>
+
+#ifndef _MSC_VER
+#	include <stdbool.h>
+#else
+#	define snprintf _snprintf
+#endif
 
 typedef enum
 {

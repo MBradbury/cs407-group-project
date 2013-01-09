@@ -1,0 +1,36 @@
+// Initial Code
+IVAR 2
+FPUSH 0
+
+// Initalise loop counter
+IPUSH 0
+ISTORE 2
+
+// Perform loop termination check
+label1: ALEN 255
+INEQ
+JZ last
+
+// Perform body operations
+IFETCH 2
+
+AFETCH 255
+CALL 0
+ICASTF
+
+FADD
+
+FPUSH 2
+
+FDIV2
+
+// Increment loop counter
+IFETCH 2
+IINC
+ISTORE 2
+
+// Jump to start of loop
+JMP label1
+
+// Program termination
+last: HALT

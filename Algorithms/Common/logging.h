@@ -21,10 +21,15 @@ typedef struct {
 	int size;
 	int head;
 	int count;
+<<<<<<< HEAD
+	log_info_t * elems;
+} message_log
+=======
 	log_info_t *elems;
 } message_log;
+>>>>>>> 11e762c076436375638de8a20a2a3a7fe8077131
 
-int is_empty(message_log *ml);
+int is_empty(message_log * ml);
 
 // Initialise an empty message log
 void log_init(message_log * ml);

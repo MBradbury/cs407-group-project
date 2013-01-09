@@ -19,12 +19,37 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+
+// Struct for the list elements, used to hold the variable names and their bytecode symbols
+typedef struct var_elem_t
+{
+	int hops;
+	char * var_id;
+} var_elem_t;
+
+typedef struct values_list_elem
+{
+	struct list_elem_struct * next;
+	node_data_t data;
+} values_list_elem;
+
+//struct recieved from a trickle message
+typedef struct 
+{
+	rimeaddr_t target;
+	int bytecode_length; //length of the bytecode, located after the struct
+	int num_of_bytecode_var; //number of variables after the struct
+} eval_pred_req_t;
+
 typedef struct
 {
 	rimeaddr_t addr;
 	double temp;
 	double humidity;
 } node_data_t;
+
+var_elem_t[] variables; //array of the variables from bytecode
+values_list_elem[] hops_data;
 
 static void node_data(void * data)
 {
@@ -47,7 +72,10 @@ static void node_data(void * data)
 
 static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
 {
-	node_data_t const * nd = (node_data_t const *)data;
+	nd = malloc(sizeof(node_data_t));
+	&nd->humidity = &data->humidity;
+	&nd->temp = &data->temp;
+	rimeaddr_copy(&nd->from,&data->from);
 
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
@@ -57,10 +85,9 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
 		hops,
 		(int)nd->temp, (int)nd->humidity);
+
+	list_push(hops_data[hops-1], nd);
 }
-
-
-
 
 static void const * get_addr_fn(void const * ptr)
 {
@@ -77,7 +104,6 @@ static void const * get_humidity_fn(void const * ptr)
 	return &((node_data_t const *)ptr)->humidity;
 }
 
-
 static void init(void)
 {
 	init_pred_lang(&node_data, sizeof(node_data_t));
@@ -88,24 +114,24 @@ static void init(void)
 	register_function("humidity", &get_humidity_fn, TYPE_FLOATING);
 }
 
-
 static hsend_conn_t hc;
 static struct trickle_conn tc;
 static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
-
+//Rime adress of target node (or null for everyone)
+//binary bytecode for the VM
 void trickle_rcv(struct trickle_conn * c)
 {
-	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
-	{
-	}
-	else
+	//might have to copy out packet, if recieving two messages at once
+	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+
+	if (&msg->target == NULL || rimeaddr_cmp(&msg->target, &rimeaddr_node_addr)) // Sink
 	{
 		// Start HSEND
 		// TODO: pass arguments from trickle message to HSEND
-		process_start(hsendProcess, NULL);
+		process_start(hsendProcess, &msg);
 	}
 }
 
@@ -166,7 +192,7 @@ exit:
 }
 
 
-PROCESS_THREAD(hsendProcess, ev, data)
+PROCESS_THREAD(hsendProcess, ev, msg)
 {
 	static hsend_conn_t hc;
 	static struct etimer et;
@@ -177,6 +203,41 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// 10 second timer
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	char const * bytecode = ((char const *)msg) + 
+							sizeof(eval_pred_req_t) + 
+							((&msg->num_of_bytecode_var * sizeof(unsigned char)) * 2) ;
+
+	variables = malloc(sizeof(var_elem_t) * &msg->num_of_bytecode_var);
+
+	//pointer for bytecode variables
+	char const * ptr = ((char const *)msg) + sizeof(eval_pred_req_t); 
+	int max_hops = 0;
+	int i;
+	for (i = 0; i < &msg->num_of_bytecode_var; i++)
+	{
+		//create temporary elements
+		var_elem_t *tmp = malloc(sizeof(var_elem_t));
+		
+		//populate the struct
+		&tmp->hops = &ptr[(2 * i)];
+		&tmp->var_id = &ptr[(2 * i)+1];
+
+		if (&tmp->hops > max_hops)
+		{
+			max_hops = &tmp->hops;
+		}
+
+		//insert into the array
+		variables[i] = &tmp;
+	}
+
+
+	hops_data = malloc(sizeof(int) * max_hops);
+	for (i = 0; i < max_hops; i++)
+	{
+		LIST_STRUCT(hops_data[i]);
+	}
 
 	// TODO:
 	// Work out how many hops of information is being requested
@@ -202,4 +263,3 @@ exit:
 	printf("Exiting HSEND Process...\n");
 	PROCESS_END();
 }
-

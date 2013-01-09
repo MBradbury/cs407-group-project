@@ -1244,11 +1244,16 @@ int main(int argc, char * argv[])
 	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
+	run_program_from_file(argc, argv);
+
+	#if 0
 	// Load a program into memory
 	gen_example_for_loop();
+	#endif
 
 	// Evaluate the program
 	nbool result = evaluate(program_start, program_end - program_start);
+	
 
 	// Print the results
 	printf("Stack ptr value (float %f) (int %d) (bool %d)\n",

@@ -6,11 +6,11 @@ all: $(CONTIKI_PROJECT)
 
 TARGET = sky
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/TreeAggregator
 PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c
+CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c tree-aggregator.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

@@ -152,7 +152,9 @@ enum OpcodeEnum
 	
 	IVAR(48), FVAR(49),
 
-	IABS(50), FABS(51);
+	IABS(50), FABS(51),
+
+	FPOW(52);
 	
 	private final int value;
 	
@@ -279,38 +281,39 @@ PARSER_END(Dragon)
 
 TOKEN : {
 	//Keywords
-	< HALT : 		"HALT" >
+	  <#HALT : 		"HALT" >
 	
-	| < IPUSH :		"IPUSH" >
-	| < FPUSH :		"FPUSH" >
+	| <#IPUSH :		"IPUSH" >
+	| <#FPUSH :		"FPUSH" >
 	
-	| < POP :		"IPOP" | "FPOP">
+	| <#POP :		"IPOP" | "FPOP">
 	
-	| < FETCH :		"IFETCH" | "FFETCH" | "AFETCH" >
+	| <#FETCH :		"IFETCH" | "FFETCH" | "AFETCH" >
 	
-	| < STORE :		"ISTORE" | "FSTORE" >
+	| <#STORE :		"ISTORE" | "FSTORE" >
 	
-	| < ALEN :		"ALEN" >
+	| <#ABIGOP :	"ASUM" | "AMEAN" | "AMAX" | "AMIN" >
 	
-	| < ABIGOP :	"ASUM" | "AMEAN" | "AMAX" | "AMIN" >
+	| <#CAST :		"ICASTF" | "FCASTI" >
 	
-	| < CALL :		"CALL" >
+	| <#JUMP :		"JMP" | "JZ" | "JNZ" >
 	
-	| < CAST :		"ICASTF" | "FCASTI" >
+	| <#MATHOP :	"IADD" | "FADD" | "ISUB" | "FSUB" | "IMUL" | "FMUL" | "IDIV1" | "IDIV2" | "FDIV1" | "FDIV2" | "IINC" >
 	
-	| < JUMP :		"JMP" | "JZ" | "JNZ" >
+	| <#MATHLOP :	"IEQ" | "FEQ" | "INEQ" | "FNEQ" | "ILT" | "FLT" | "ILEQ" | "ILEQ" | "FGT" | "FGT" | "IGEQ" | "FGEQ" >
 	
-	| < MATHOP :	"IADD" | "FADD" | "ISUB" | "FSUB" | "IMUL" | "FMUL" | "IDIV1" | "IDIV2" | "FDIV1" | "FDIV2" | "IINC" >
+	| <#LOGICOP :	"AND" | "OR" | "XOR" | "NOT" >
 	
-	| < MATHLOP :	"IEQ" | "FEQ" | "INEQ" | "FNEQ" | "ILT" | "FLT" | "ILEQ" | "ILEQ" | "FGT" | "FGT" | "IGEQ" | "FGEQ" >
-	
-	| < LOGICOP2 :	"AND" | "OR" | "XOR" >
-	
-	| < LOGICOP1 :	"NOT" >
-	
-	| < VAR :		"IVAR" | "FVAR" >
+	| <#VAR :		"IVAR" | "FVAR" >
 
-	| < ABS :		"IABS" | "FABS" >
+	| <#ABS :		"IABS" | "FABS" >
+
+	| < ZEROARG :	"HALT" | <POP> | <CAST> | <MATHOP> | <MATHLOP> | <LOGICOP> | <ABS> | "FPOW" >
+	| < ONEARGI :	<IPUSH> >
+	| < ONEARGF :	<FPUSH> >
+	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> >
+	| < ONEARGS :	<JUMP> >
+	| < TWOARGB :	<ABIGOP> >
 
 	//Regexes
 	| < INT :		(<DIGIT>)+ >
@@ -365,56 +368,23 @@ Opcode Operation() throws ArithmeticException :
 }
 {
 	(
-		(t = <HALT>)
+		(t = <ZEROARG>)
 		{ op.setName(t.image); }
 		
-		| (t = <IPUSH>) (t1 = <INT>)
+		| (t = <ONEARGI>) (t1 = <INT>)
 		{ op.setName(t.image); op.addArg(new IntArg(t1)); }
 
-		| (t = <FPUSH>) (t1 = <FLOAT>)
-		{ op.setName(t.image); }
+		| (t = <ONEARGF>) (t1 = <FLOAT>)
+		{ op.setName(t.image); op.addArg(new FloatArg(t1)); }
 		
-		| (t = <POP>)
-		{ op.setName(t.image); }
-		
-		| (t = <FETCH>) (t1 = <INT>)
+		| (t = <ONEARGB>) (t1 = <INT>)
 		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
 		
-		| (t = <STORE>) (t1 = <INT>)
-		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
-		
-		| (t = <ALEN>) (t1 = <INT>)
-		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
-		
-		| (t = <ABIGOP>) (t1 = <INT>) (t2 = <INT>)
-		{ op.setName(t.image); op.addArg(new ByteArg(t1)); op.addArg(new ByteArg(t2)); }
-		
-		| (t = <CALL>) (t1 = <INT>)
-		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
-		
-		| (t = <CAST>)
-		{ op.setName(t.image); }
-		
-		| (t = <JUMP>) (t1 = <NAME>)
+		| (t = <ONEARGS>) (t1 = <NAME>)
 		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
-		
-		| (t = <MATHOP>)
-		{ op.setName(t.image); }
-		
-		| (t = <MATHLOP>)
-		{ op.setName(t.image); }
-		
-		| (t = <LOGICOP2>)
-		{ op.setName(t.image); }
-		
-		| (t = <LOGICOP1>)
-		{ op.setName(t.image); }
-		
-		| (t = <VAR>) (t1 = <INT>)
-		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
 
-		| (t = <ABS>)
-		{ op.setName(t.image); }
+		| (t = <TWOARGB>) (t1 = <INT>) (t2 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); op.addArg(new ByteArg(t2)); }
 	)
 	{
 		return op;

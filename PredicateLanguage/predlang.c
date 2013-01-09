@@ -381,7 +381,7 @@ bool register_function(function_id_t id, data_access_fn fn, variable_type_t type
 	return true;
 }
 
-static function_reg_t * get_function(function_id_t id)
+static function_reg_t const * get_function(function_id_t id)
 {
 	nuint i = 0;
 	for (; i != function_regs_count; ++i)
@@ -402,7 +402,7 @@ static function_reg_t * get_function(function_id_t id)
 // pass NULL to it if you don't wait to know the type
 static void const * call_function(function_id_t id, void * data, variable_type_t * type)
 {
-	function_reg_t * reg = get_function(id);
+	function_reg_t const * reg = get_function(id);
 
 	if (reg != NULL)
 	{
@@ -526,6 +526,8 @@ typedef enum {
 
   IABS, FABS,
 
+  FPOW, 
+
 } opcode;
 
 #ifndef NDEBUG
@@ -556,6 +558,8 @@ static const char * opcode_names[] = {
 	"IVAR", "FVAR", // Variable creation
 
 	"IABS", "FABS",
+
+	"FPOW"
 };
 #endif
 
@@ -634,18 +638,18 @@ static const char * opcode_names[] = {
 			} \
 		} break;
 
-static void array_sum_fn(float * out, float in)
+static inline void array_sum_fn(float * out, float in)
 {
 	*out += in;
 }
 
-static void array_max_fn(float * out, float in)
+static inline void array_max_fn(float * out, float in)
 {
 	if (in > *out)
 		*out = in;
 }
 
-static void array_min_fn(float * out, float in)
+static inline void array_min_fn(float * out, float in)
 {
 	if (in < *out)
 		*out = in;
@@ -953,35 +957,50 @@ nbool evaluate(ubyte * start, nuint program_length)
 			} break;
 
 		case FABS:
-		{
-			if (!require_stack_size(sizeof(nfloat)))
-				return false;
+			{
+				if (!require_stack_size(sizeof(nfloat)))
+					return false;
 
-			nfloat res = abs(*(nfloat *)stack_ptr) ;
+				nfloat res = abs(*(nfloat *)stack_ptr) ;
 
-			if (!pop_stack(sizeof(nfloat)))
-				return false;
+				if (!pop_stack(sizeof(nfloat)))
+					return false;
 
-			if (!push_stack(&res, sizeof(nfloat)))
-				return false;
-		} break;
+				if (!push_stack(&res, sizeof(nfloat)))
+					return false;
+			} break;
 
 		case IABS:
-		{
-			if (!require_stack_size(sizeof(nint)))
-				return false;
+			{
+				if (!require_stack_size(sizeof(nint)))
+					return false;
 
-			nint res = *(nint *)stack_ptr;
+				nint res = *(nint *)stack_ptr;
 
-			if (res < 0)
-				res = -res;
+				if (res < 0)
+					res = -res;
 
-			if (!pop_stack(sizeof(nint)))
-				return false;
+				if (!pop_stack(sizeof(nint)))
+					return false;
 
-			if (!push_stack(&res, sizeof(nint)))
-				return false;
-		} break;
+				if (!push_stack(&res, sizeof(nint)))
+					return false;
+			} break;
+
+		case FPOW:
+			{
+				if (!require_stack_size(sizeof(nfloat) * 2))
+					return false;
+
+				nfloat res = (nfloat)pow(((nfloat *)stack_ptr)[0], ((nfloat *)stack_ptr)[1]);
+
+				if (!pop_stack(sizeof(nfloat) * 2))
+					return false;
+
+				if (!push_stack(&res, sizeof(nfloat)))
+					return false;
+
+			} break;
 
 		default:
 			DEBUG_PRINT("Unknown OP CODE %d\n", *current);
@@ -1065,16 +1084,16 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 }
 
 
-bool bind_input(variable_id_t id, void const * data, variable_type_t type, unsigned int data_length)
+bool bind_input(variable_id_t id, void const * data, unsigned int data_length)
 {
-	variable_reg_t * var_array = create_array(id, type, data_length);
+	variable_reg_t * var_array = create_array(id, TYPE_USER, data_length);
 
 	if (var_array == NULL)
 	{
 		return false;
 	}
 
-	memcpy(var_array->location, data, data_length * variable_type_size(type));
+	memcpy(var_array->location, data, data_length * variable_type_size(TYPE_USER));
 
 	return true;
 }
@@ -1279,16 +1298,17 @@ nuint load_file_to_memory(char const * filename, ubyte ** result)
 
 	if (*result == NULL)
 	{
+		fclose(f);
 		return -3;
 	}
 
 	if (size != fread(*result, sizeof(ubyte), size, f))
 	{
+		fclose(f);
 		return -2; // -2 means file reading fail
 	}
 
 	fclose(f);
-
 	return size;
 }
 

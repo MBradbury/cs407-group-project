@@ -35,7 +35,7 @@ bool register_function(function_id_t id, data_access_fn fn, variable_type_t type
 typedef void (*node_data_fn)(void *);
 bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size);
 
-bool bind_input(variable_id_t id, void const * data, variable_type_t type, unsigned int data_length);
+bool bind_input(variable_id_t id, void const * data, unsigned int data_length);
 
 nbool evaluate(ubyte * start, nuint program_length);
 

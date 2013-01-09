@@ -37,7 +37,6 @@ static ubyte * heap_ptr = NULL;
 
 
 // Function that gets data on this node
-static node_data_fn data_fn = NULL;
 static nuint data_size = 0;
 
 
@@ -955,10 +954,6 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	if (given_data_size == NULL)
 		return false;
 
-	// Record the user's data access function
-	data_fn = given_data_fn;
-	data_size = given_data_size;
-
 	// Reset the stack and heap positions
 	stack_ptr = &stack[STACK_SIZE];
 	heap_ptr = stack;
@@ -983,6 +978,10 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	{
 		return false;
 	}
+
+	// Put values in the `this' variable
+	variable_reg_t * thisvar = create_variable("this", given_data_size, TYPE_USER);
+	given_data_fn(thisvar->location);
 
 	// Reset the error message variable
 	error = NULL;
@@ -1022,13 +1021,11 @@ static void set_user_data(user_data_t * data, nint id, nint slot, nfloat temp, n
 	}
 }
 
-static void * local_node_data_fn(void)
+static void local_node_data_fn(void * data)
 {
-	static user_data_t node_data;
+	user_data_t * node_data = (user_data_t *)data;
 
-	set_user_data(&node_data, 1, 2, 20.0, 122);
-
-	return &node_data;
+	set_user_data(node_data, 1, 2, 20.0, 122);
 }
 
 
@@ -1264,3 +1261,4 @@ int main(int argc, char * argv[])
 	return 0;
 }
 #endif
+

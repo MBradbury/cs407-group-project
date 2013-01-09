@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = hsend
+CONTIKI_PROJECT = nhopreq
 all: $(CONTIKI_PROJECT)
 
 PROJECTDIRS := $(CS407DIR)/Algorithms/Common

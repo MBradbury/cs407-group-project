@@ -1,5 +1,5 @@
-#ifndef CS407_HSEND_H
-#define CS407_HSEND_H
+#ifndef CS407_NHOPREQ_H
+#define CS407_NHOPREQ_H
 
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
@@ -43,5 +43,5 @@ bool hsend_end(hsend_conn_t * conn);
 
 void hsend_request_info(hsend_conn_t * conn, uint8_t hops);
 
-#endif /*CS407_HSEND_H*/
+#endif /*CS407_NHOPREQ_H*/
 

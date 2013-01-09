@@ -6,7 +6,7 @@
 
 #define LOG_SIZE 10
 
-void log_init(message_log *ml)
+void log_init(message_log * ml)
 {
 	ml->size = LOG_SIZE;
 	ml->head = 0;
@@ -19,7 +19,7 @@ int is_empty(message_log *ml)
 	return ml->count==0;
 }
 
-void log_read(message_log *ml, log_info_t * log_item, int n)
+void log_read(message_log * ml, log_info_t * log_item, int n)
 {
 	if (n <= ml->head + ml->count)
 		log_item = ml->elems[ml->head+n];
@@ -27,7 +27,7 @@ void log_read(message_log *ml, log_info_t * log_item, int n)
 		log_item =  NULL;
 }
 
-void log_write(message_log *ml, clock_time_t time, char * msg_type, char * send_type, rimeaddr_t const * from, rimeaddr_t const * to)
+void log_write(message_log * ml, clock_time_t time, char * msg_type, char * send_type, rimeaddr_t const * from, rimeaddr_t const * to)
 {
 	/*char from_str[RIMEADDR_STRING_LENGTH];
 	char to_str[RIMEADDR_STRING_LENGTH];

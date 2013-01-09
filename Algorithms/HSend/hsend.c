@@ -89,45 +89,48 @@ static void init(void)
 }
 
 
-PROCESS(mainProcess, "HSEND Process");
+static struct trickle_conn tc;
+static rimeaddr_t baseStationAddr;
+
+static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
+
+
+void trickle_rcv(struct trickle_conn * c)
+{
+	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
+	{
+	}
+	else
+	{
+		// Start HSEND
+		// TODO: pass arguments from trickle message to HSEND
+		process_start(hsendProcess, NULL);
+	}
+}
+
+static const trickle_callbacks callbacks = { &trickle_rcv };
+
+
+PROCESS(mainProcess, "MAIN Process");
+PROCESS(hsendProcess, "HSEND Process");
 
 AUTOSTART_PROCESSES(&mainProcess);
 
 PROCESS_THREAD(mainProcess, ev, data)
 {
 	static hsend_conn_t hc;
-	static rimeaddr_t baseStationAddr, test;
 	static struct etimer et;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	// Set up the predicate language VM
-	init();
-
-	// TODO:
-	// - Wait for sink to send us a Request-Evaluation message
-
 	// Set the address of the base station
 	baseStationAddr.u8[0] = 1;
 	baseStationAddr.u8[1] = 0;
 
-	// Set the id of the node that will do the testing
-	test.u8[0] = 2;
-	test.u8[1] = 0;
+	trickle_open(&tc, trickle_interval, 121, &callbacks);
 
-	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
-	{
-		printf("start function failed\n");
-	}
-
-	// 10 second timer
-	etimer_set(&et, 10 * CLOCK_SECOND);
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-	printf("Starting loops:\n");
-
-	if (is_base(&hc)) //SINK
+	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
 	{
 		printf("Is the base station!\n");
 
@@ -139,31 +142,63 @@ PROCESS_THREAD(mainProcess, ev, data)
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
 	}
-	else //NODE
+	else
 	{
-		static int count = 0;
+		leds_on(LEDS_GREEN);
 
 		while (true)
 		{
-			etimer_reset(&et);
-
-			if (rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
-			{
-				printf("Sending pred req\n");
-
-				hsend_request_info(&hc, 3);
-			}
-
+			etimer_set(&et, 10 * CLOCK_SECOND);
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
+	}	
+
+exit:
+	printf("Exiting MAIN Process...\n");
+	trickle_close(&tc);
+	PROCESS_END();
+}
+
+
+PROCESS_THREAD(hsendProcess, ev, data)
+{
+	static hsend_conn_t hc;
+	static struct etimer et;
+
+	PROCESS_EXITHANDLER(goto exit;)
+	PROCESS_BEGIN();
+
+	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
+	{
+		printf("start function failed\n");
 	}
+
+	// 10 second timer
+	etimer_set(&et, 10 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	// TODO:
+	// Work out how many hops of information is being requested
+	unsigned int hops = 2;
+
+	printf("Sending pred req\n");
+
+	hsend_request_info(&hc, hop);
+
+	// Get as much information as possible within a given time bound
+	etimer_set(&et, 60 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	// Set up the predicate language VM
+	init();
 
 	// TODO:
 	// - Feed N-Hop neighbourhood info into predicate evualuator
 	//   If predicate failed inform sink
+	
 
 exit:
-	printf("Exiting Process...\n");
+	printf("Exiting HSEND Process...\n");
 	hsend_end(&hc);
 	PROCESS_END();
 }

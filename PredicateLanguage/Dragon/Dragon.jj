@@ -281,16 +281,13 @@ PARSER_END(Dragon)
 
 // Whitespace
 
-SKIP : {
-	 " "
-	| "\t"
-	}
+SKIP : { " " | "\t" }
+
+// Comments
 
 SPECIAL_TOKEN : {
 	< SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")? >
 }
-	
-
 
 // Opcodes
 

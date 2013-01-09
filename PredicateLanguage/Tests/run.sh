@@ -43,6 +43,26 @@ fi
 
 for test in Intermediate/*
 do
-	$VMBINARY $test > "Output/$(basename $test)"
+	name=$(basename $test)
+	
+	echo "$VMBINARY $test > \"Output/$name\""
+
+	$VMBINARY $test > "Output/$name"
+	
+	# Check that we got the expected result
+	
+	`cmp -s Output/$name Expected/$name >/dev/null`
+	
+	if [[ $? != 0 ]]
+	then
+		echo "==================================Test $name Failed"
+	else
+		echo "==================================Test $name Succeeded"
+	fi
 done
+
+
+
+
+
 

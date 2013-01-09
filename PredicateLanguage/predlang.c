@@ -661,7 +661,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 	while (current - start < program_length)
 	{
-		DEBUG_ERR_PRINT("Executing %s at %p\n", opcode_names[*current], (stack + STACK_SIZE) - (current));
+		DEBUG_ERR_PRINT("Executing %s at %d\n", opcode_names[*current], current - stack);
 
 		// Ideally want this op codes in numerical order
 		// so the compiler can generate a jump table
@@ -842,7 +842,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case JMP:
 			current = start + *(ubyte *)(current + 1) - 1;
-			DEBUG_ERR_PRINT("Jumping to %p\n", (stack + STACK_SIZE) - (current + 1));
+			DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - stack);
 			break;
 
 		case JZ:
@@ -852,7 +852,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			if (((nint *)stack_ptr)[0] == 0)
 			{
 				current = start + *(ubyte *)(current + 1) - 1;
-				DEBUG_ERR_PRINT("Jumping to %p\n", (stack + STACK_SIZE) - (current + 1));
+				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - stack);
 			}
 			else
 			{
@@ -871,7 +871,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			if (((nint *)stack_ptr)[0] != 0)
 			{
 				current = start + *(ubyte *)(current + 1) - 1;
-				DEBUG_ERR_PRINT("Jumping to %p\n", (stack + STACK_SIZE) - (current + 1));
+				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - stack);
 			}
 			else
 			{
@@ -1273,7 +1273,7 @@ static void gen_example_for_loop(void)
 
 #ifdef MAIN_FUNC
 // FROM: http://www.anyexample.com/programming/c/how_to_load_file_into_memory_using_plain_ansi_c_language.xml
-nuint load_file_to_memory(char const * filename, ubyte ** result) 
+nint load_file_to_memory(char const * filename, ubyte ** result) 
 {
 	if (filename == NULL || result == NULL)
 	{
@@ -1291,6 +1291,12 @@ nuint load_file_to_memory(char const * filename, ubyte ** result)
 	fseek(f, 0, SEEK_END);
 	nint size = ftell(f);
 	fseek(f, 0, SEEK_SET);
+
+	if (size == 0)
+	{
+		fclose(f);
+		return -4;
+	}
 
 	*result = (ubyte *)heap_alloc(size);
 
@@ -1316,10 +1322,11 @@ static bool run_program_from_file(int argc, char ** argv)
 
 	fprintf(stderr, "Filename: %s\n", filename);
 
-	nuint program_size = load_file_to_memory(filename, &program_start);
+	nint program_size = load_file_to_memory(filename, &program_start);
 
 	if (program_size <= 0)
 	{
+		printf("No program to execute\n");
 		return false;
 	}
 
@@ -1360,13 +1367,18 @@ int main(int argc, char * argv[])
 	fprintf(stderr, "sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	fprintf(stderr, "sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
-	run_program_from_file(argc, argv);
+	if (!run_program_from_file(argc, argv))
+	{
+		return 1;
+	}
 
 	// Load a program into memory
 	//gen_example_for_loop();
 	//gen_example_array_op(AMEAN);
 
-	printf("Program length %u\n", (unsigned)(program_end - program_start));
+	unsigned program_length = (unsigned)(program_end - program_start);
+
+	printf("Program length %u\n", program_length);
 
 	// Evaluate the program
 	nbool result = evaluate(program_start, program_end - program_start);

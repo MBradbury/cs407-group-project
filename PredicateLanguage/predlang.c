@@ -11,8 +11,8 @@
 #	define snprintf _snprintf
 #endif
 
-#define MAIN_FUNC
-#define ENABLE_CODE_GEN
+//#define MAIN_FUNC
+//#define ENABLE_CODE_GEN
 //#define NDEBUG
 
 #ifndef NDEBUG
@@ -951,7 +951,7 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	if (given_data_fn == NULL)
 		return false;
 
-	if (given_data_size == NULL)
+	if (given_data_size == 0)
 		return false;
 
 	// Reset the stack and heap positions
@@ -997,7 +997,7 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 
 
 
-
+#ifdef MAIN_FUNC
 /****************************************************
  ** USER CODE FROM HERE ON
  ***************************************************/
@@ -1048,6 +1048,7 @@ static void const * get_humidity_fn(void const * ptr)
 {
 	return &((user_data_t const *)ptr)->humidity;
 }
+#endif
 
 #ifdef ENABLE_CODE_GEN
 static void gen_example1(void)

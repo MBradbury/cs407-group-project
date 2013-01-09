@@ -2,6 +2,7 @@
 #define CS407_PRED_LANG_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum
 {
@@ -27,7 +28,7 @@ typedef nint nbool;
 typedef void const * (*data_access_fn)(void const * ptr);
 bool register_function(char const * name, data_access_fn fn, variable_type_t type);
 
-typedef void * (*node_data_fn)(void);
+typedef void (*node_data_fn)(void *);
 bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size);
 
 nbool evaluate(ubyte * start, nuint program_length);
@@ -35,3 +36,4 @@ nbool evaluate(ubyte * start, nuint program_length);
 char const * error_message(void);
 
 #endif /*CS407_PRED_LANG_H*/
+

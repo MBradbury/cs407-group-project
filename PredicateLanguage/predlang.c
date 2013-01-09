@@ -428,7 +428,7 @@ static void const * call_function(function_id_t id, void * data, variable_type_t
  ** CODE GEN
  ***************************************************/
 
-typedef nint jmp_loc_t;
+typedef ubyte jmp_loc_t;
 typedef jmp_loc_t * jmp_loc_ptr_t;
 typedef ubyte * jmp_label_t;
 
@@ -506,7 +506,7 @@ typedef enum {
   
   AFETCH, ALEN,
 
-  ASUM,
+  ASUM, AMEAN, AMAX, AMIN,
 
   CALL,
 
@@ -523,6 +523,9 @@ typedef enum {
   AND, OR, XOR, NOT,
 
   IVAR, FVAR,
+
+  IABS, FABS,
+
 } opcode;
 
 #ifndef NDEBUG
@@ -534,7 +537,7 @@ static const char * opcode_names[] = {
 
 	"AFETCH", "ALEN", // Arrays Ops
 
-	"ASUM", // Custom user data array ops
+	"ASUM", "AMEAN", "AMAX", "AMIN", // Custom user data array ops
 
 	"CALL",
 
@@ -551,6 +554,8 @@ static const char * opcode_names[] = {
 	"AND", "OR", "XOR", "NOT", // Logic operations
 
 	"IVAR", "FVAR", // Variable creation
+
+	"IABS", "FABS",
 };
 #endif
 
@@ -566,6 +571,87 @@ static const char * opcode_names[] = {
 			if (!push_stack(&res, sizeof(store_type))) \
 				return false; \
 		} break
+
+#define OPERATION_ARRAY(code, array_fn, end_array_fn) \
+	case code: \
+		{ \
+			variable_id_t array_id = *(variable_id_t *)(current + 1); \
+			current += sizeof(variable_id_t); \
+			DEBUG_PRINT("Array id %u\n", array_id); \
+			 \
+			variable_id_t fn_id = *(variable_id_t *)(current + 1); \
+			current += sizeof(variable_id_t); \
+			DEBUG_PRINT("FN id %u\n", fn_id); \
+			 \
+			variable_reg_t const * var_reg = get_variable(array_id); \
+			 \
+			if (var_reg == NULL) \
+				return false; \
+			 \
+			function_reg_t const * fn_reg = get_function(fn_id); \
+			 \
+			if (fn_reg == NULL) \
+				return false; \
+			 \
+			if (var_reg->type == TYPE_USER) \
+			{ \
+				nfloat op_result = 0; \
+				nuint size = variable_type_size(TYPE_USER); \
+				byte const * data = (byte *)var_reg->location; \
+				byte const * const end = data + (size * var_reg->length); \
+				 \
+				for (; data != end; data += size) \
+				{ \
+					void const * result = fn_reg->fn(data); \
+					 \
+					if (result == NULL) \
+					{ \
+						error = "User defined function returns NULL"; \
+						DEBUG_PRINT("==========%s==========\n", error); \
+						return false; \
+					} \
+					 \
+					nfloat temp_result; \
+					 \
+					if (fn_reg->type == TYPE_INTEGER) \
+						temp_result = (nfloat)*(nint const *)result; \
+					else \
+						temp_result = *(nfloat const *)result; \
+					 \
+					array_fn(&op_result, temp_result); \
+				} \
+				 \
+				end_array_fn \
+				 \
+				if (!float_push_stack(op_result)) \
+					return false; \
+			} \
+			else \
+			{ \
+				error = "Variable not an array of user types!"; \
+				DEBUG_PRINT("==========%s==========\n", error); \
+				return false; \
+			} \
+		} break;
+
+static void array_sum_fn(float * out, float in)
+{
+	*out += in;
+}
+
+static void array_max_fn(float * out, float in)
+{
+	if (in > *out)
+		*out = in;
+}
+
+static void array_min_fn(float * out, float in)
+{
+	if (in < *out)
+		*out = in;
+}
+
+
 
 nbool evaluate(ubyte * start, nuint program_length)
 {
@@ -594,7 +680,8 @@ nbool evaluate(ubyte * start, nuint program_length)
 			break;
 
 		case IPOP:
-			pop_stack(sizeof(nint));
+			if (!pop_stack(sizeof(nint)))
+				return false;
 			break;
 
 		case FPUSH:
@@ -696,60 +783,10 @@ nbool evaluate(ubyte * start, nuint program_length)
 				current += sizeof(variable_id_t);
 			} break;
 
-		case ASUM:
-			{
-				variable_id_t array_id = *(variable_id_t *)(current + 1);
-				current += sizeof(variable_id_t);
-				DEBUG_PRINT("Array id %u\n", array_id);
-
-				variable_id_t fn_id = *(variable_id_t *)(current + 1);
-				current += sizeof(variable_id_t);
-				DEBUG_PRINT("FN id %u\n", fn_id);
-
-				variable_reg_t const * var_reg = get_variable(array_id);
-
-				if (var_reg == NULL)
-					return false;
-
-				function_reg_t const * fn_reg = get_function(fn_id);
-
-				if (fn_reg == NULL)
-					return false;
-
-				if (var_reg->type == TYPE_USER)
-				{
-					nfloat op_result = 0;
-					nuint size = variable_type_size(TYPE_USER);
-					byte const * data = (byte *)var_reg->location;
-					byte const * const end = data + (size * var_reg->length);
-
-					for (; data != end; data += size)
-					{
-						void const * result = fn_reg->fn(data);
-
-						if (result == NULL)
-						{
-							error = "User defined function returns NULL";
-							DEBUG_PRINT("==========%s==========\n", error);
-							return false;
-						}
-
-						if (fn_reg->type == TYPE_INTEGER)
-							op_result += (nfloat)*(nint const *)result;
-						else
-							op_result += *(nfloat const *)result;
-					}
-
-					if (!float_push_stack(op_result))
-						return false;
-				}
-				else
-				{
-					error = "Variable not an array of user types!";
-					DEBUG_PRINT("==========%s==========\n", error);
-					return false;
-				}
-			} break;
+		OPERATION_ARRAY(ASUM, array_sum_fn, (void)0;)
+		OPERATION_ARRAY(AMEAN, array_sum_fn, op_result /= var_reg->length;)
+		OPERATION_ARRAY(AMAX, array_max_fn, (void)0;)
+		OPERATION_ARRAY(AMIN, array_min_fn, (void)0;)
 
 		case CALL:
 			{
@@ -802,7 +839,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			} break;
 
 		case JMP:
-			current = start + *(nint *)(current + 1) - 1;
+			current = start + *(ubyte *)(current + 1) - 1;
 			DEBUG_PRINT("Jumping to %p\n", current + 1);
 			break;
 
@@ -812,12 +849,12 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 			if (((nint *)stack_ptr)[0] == 0)
 			{
-				current = start + *(nint *)(current + 1) - 1;
+				current = start + *(ubyte *)(current + 1) - 1;
 				DEBUG_PRINT("Jumping to %p\n", current + 1);
 			}
 			else
 			{
-				current += sizeof(nint);
+				current += sizeof(ubyte);
 			}
 
 			if (!pop_stack(sizeof(nint)))
@@ -831,12 +868,12 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 			if (((nint *)stack_ptr)[0] != 0)
 			{
-				current = start + *(nint *)(current + 1) - 1;
+				current = start + *(ubyte *)(current + 1) - 1;
 				DEBUG_PRINT("Jumping to %p\n", current + 1);
 			}
 			else
 			{
-				current += sizeof(nint);
+				current += sizeof(ubyte);
 			}
 
 			if (!pop_stack(sizeof(nint)))
@@ -914,6 +951,37 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 				current += sizeof(variable_id_t);
 			} break;
+
+		case FABS:
+		{
+			if (!require_stack_size(sizeof(nfloat)))
+				return false;
+
+			nfloat res = abs(*(nfloat *)stack_ptr) ;
+
+			if (!pop_stack(sizeof(nfloat)))
+				return false;
+
+			if (!push_stack(&res, sizeof(nfloat)))
+				return false;
+		} break;
+
+		case IABS:
+		{
+			if (!require_stack_size(sizeof(nint)))
+				return false;
+
+			nint res = *(nint *)stack_ptr;
+
+			if (res < 0)
+				res = -res;
+
+			if (!pop_stack(sizeof(nint)))
+				return false;
+
+			if (!push_stack(&res, sizeof(nint)))
+				return false;
+		} break;
 
 		default:
 			DEBUG_PRINT("Unknown OP CODE %d\n", *current);
@@ -1001,7 +1069,14 @@ bool bind_input(variable_id_t id, void const * data, variable_type_t type, unsig
 {
 	variable_reg_t * var_array = create_array(id, type, data_length);
 
+	if (var_array == NULL)
+	{
+		return false;
+	}
+
 	memcpy(var_array->location, data, data_length * variable_type_size(type));
+
+	return true;
 }
 
 /****************************************************
@@ -1099,19 +1174,19 @@ static void gen_example1(void)
 	stop_gen();
 }
 
-static void gen_example_mean(void)
+static void gen_example_array_op(opcode arrayop)
 {
 	variable_id_t n1_id = 255;
 
 	start_gen();
 
-	gen_op(ASUM); gen_ubyte(n1_id); gen_ubyte(ID_FN_ID);
+	gen_op(arrayop); gen_ubyte(n1_id); gen_ubyte(ID_FN_ID);
 
-	gen_op(ALEN); gen_ubyte(n1_id);
+	//gen_op(ALEN); gen_ubyte(n1_id);
 
-	gen_op(ICASTF);
+	//gen_op(ICASTF);
 
-	gen_op(FDIV2);
+	//gen_op(FDIV2);
 
 	stop_gen();
 }
@@ -1232,8 +1307,6 @@ static bool run_program_from_file(int argc, char ** argv)
 
 	program_end = program_start + program_size;
 
-	printf("Program length %d\n", program_size);
-
 	return true;
 }
 
@@ -1269,10 +1342,13 @@ int main(int argc, char * argv[])
 	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
-	run_program_from_file(argc, argv);
+	//run_program_from_file(argc, argv);
 
 	// Load a program into memory
 	//gen_example_for_loop();
+	gen_example_array_op(AMEAN);
+
+	printf("Program length %u\n", (unsigned)(program_end - program_start));
 
 	// Evaluate the program
 	nbool result = evaluate(program_start, program_end - program_start);

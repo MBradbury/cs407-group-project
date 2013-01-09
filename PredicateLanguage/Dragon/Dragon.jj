@@ -105,7 +105,7 @@ public class Dragon
 				System.err.println("Converting label " + op.getArgs().get(0).toString() + " to " + index);
 				
 				// Update the label name, with the jump position
-				op.getArgs().set(0, new IntArg(index));
+				op.getArgs().set(0, new ByteArg(index));
 			}
 		}
 	}
@@ -134,23 +134,25 @@ enum OpcodeEnum
   
 	AFETCH(9), ALEN(10),
 
-	ASUM(11),
+	ASUM(11), AMEAN(12), AMAX(13), AMIN(14),
 
-	CALL(12),
+	CALL(15),
 
-	ICASTF(13), FCASTI(14),
+	ICASTF(16), FCASTI(17),
 
-	JMP(15), JZ(16), JNZ(17),
+	JMP(18), JZ(19), JNZ(20),
 
-	IADD(18), ISUB(19), IMUL(20), IDIV1(21), IDIV2(22), IINC(23),
-	IEQ(24), INEQ(25), ILT(26), ILEQ(27), IGT(28), IGEQ(29),
+	IADD(21), ISUB(22), IMUL(23), IDIV1(24), IDIV2(25), IINC(26),
+	IEQ(27), INEQ(28), ILT(29), ILEQ(30), IGT(31), IGEQ(32),
 
-	FADD(30), FSUB(31), FMUL(32), FDIV1(33), FDIV2(34),
-	FEQ(35), FNEQ(36), FLT(37), FLEQ(38), FGT(39), FGEQ(40),
+	FADD(33), FSUB(34), FMUL(35), FDIV1(36), FDIV2(37),
+	FEQ(38), FNEQ(39), FLT(40), FLEQ(41), FGT(42), FGEQ(43),
 
-	AND(41), OR(42), XOR(43), NOT(44),
+	AND(44), OR(45), XOR(46), NOT(47),
 	
-	IVAR(45), FVAR(46);
+	IVAR(48), FVAR(49),
+
+	IABS(50), FABS(51);
 	
 	private final int value;
 	
@@ -206,6 +208,16 @@ final class StringArg implements Arg
 final class ByteArg implements Arg
 {
 	private final int value;
+
+	public ByteArg(int i) throws ArithmeticException
+	{
+		value = i;
+
+		if (!(value >= 0 && value <= 255))
+		{
+			throw new ArithmeticException(i + " is not in the range of [0, 255]");
+		}
+	}
 	
 	public ByteArg(Token t) throws ArithmeticException
 	{
@@ -280,7 +292,7 @@ TOKEN : {
 	
 	| < ALEN :		"ALEN" >
 	
-	| < ABIGOP :	"ASUM" >
+	| < ABIGOP :	"ASUM" | "AMEAN" | "AMAX" | "AMIN" >
 	
 	| < CALL :		"CALL" >
 	
@@ -297,6 +309,8 @@ TOKEN : {
 	| < LOGICOP1 :	"NOT" >
 	
 	| < VAR :		"IVAR" | "FVAR" >
+
+	| < ABS :		"IABS" | "FABS" >
 
 	//Regexes
 	| < INT :		(<DIGIT>)+ >
@@ -398,6 +412,9 @@ Opcode Operation() throws ArithmeticException :
 		
 		| (t = <VAR>) (t1 = <INT>)
 		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
+
+		| (t = <ABS>)
+		{ op.setName(t.image); }
 	)
 	{
 		return op;

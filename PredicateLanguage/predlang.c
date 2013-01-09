@@ -1101,7 +1101,7 @@ static void gen_example1(void)
 
 static void gen_example_mean(void)
 {
-	variable_id_t n1_id = 1;
+	variable_id_t n1_id = 255;
 
 	start_gen();
 
@@ -1118,7 +1118,7 @@ static void gen_example_mean(void)
 
 static void gen_example_for_loop(void)
 {
-	variable_id_t n1_id = 1;
+	variable_id_t n1_id = 255;
 	variable_id_t i_id = 2;
 
 	start_gen();
@@ -1247,7 +1247,7 @@ int main(int argc, char * argv[])
 	register_function(TEMP_FN_ID, &get_temp_fn, TYPE_FLOATING);
 	register_function(HUMIDITY_FN_ID, &get_humidity_fn, TYPE_FLOATING);
 
-	variable_reg_t * var_array = create_array(1, TYPE_USER, 10);
+	variable_reg_t * var_array = create_array(255, TYPE_USER, 10);
 
 	user_data_t * arr = (user_data_t *)var_array->location;
 	set_user_data(&arr[0], 0, 1, 25, 122);

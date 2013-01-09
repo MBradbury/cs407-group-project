@@ -199,12 +199,29 @@ final class StringArg implements Arg
 	
 	public void write(DataOutput out) throws IOException
 	{
-		for (char ch : value.toCharArray())
+		throw new IOException("Should never call StringArg.write");
+	}
+}
+
+final class ByteArg implements Arg
+{
+	private final int value;
+	
+	public ByteArg(Token t) throws ArithmeticException
+	{
+		value = Integer.parseInt(t.image);
+
+		if (!(value >= 0 && value <= 255))
 		{
-			out.writeByte(ch);
+			throw new ArithmeticException(t.image + " is not in the range of [0, 255]");
 		}
-		// Write out the NUL character
-		out.writeByte(0);
+	}
+	
+	public String toString() { return Integer.toString(value); }
+	
+	public void write(DataOutput out) throws IOException
+	{
+		out.writeByte(value);
 	}
 }
 
@@ -327,7 +344,7 @@ ArrayList<Opcode> Input() :
 	}
 }
 
-Opcode Operation() :
+Opcode Operation() throws ArithmeticException :
 {
 	Token t, t1, t2;
 	Opcode op = new Opcode();
@@ -346,20 +363,20 @@ Opcode Operation() :
 		| (t = <POP>)
 		{ op.setName(t.image); }
 		
-		| (t = <FETCH>) (t1 = <NAME>)
-		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		| (t = <FETCH>) (t1 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
 		
-		| (t = <STORE>) (t1 = <NAME>)
-		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		| (t = <STORE>) (t1 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
 		
-		| (t = <ALEN>) (t1 = <NAME>)
-		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		| (t = <ALEN>) (t1 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
 		
-		| (t = <ABIGOP>) (t1 = <NAME>) (t2 = <NAME>)
-		{ op.setName(t.image); op.addArg(new StringArg(t1)); op.addArg(new StringArg(t2)); }
+		| (t = <ABIGOP>) (t1 = <INT>) (t2 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); op.addArg(new ByteArg(t2)); }
 		
-		| (t = <CALL>) (t1 = <NAME>)
-		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		| (t = <CALL>) (t1 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
 		
 		| (t = <CAST>)
 		{ op.setName(t.image); }
@@ -379,10 +396,11 @@ Opcode Operation() :
 		| (t = <LOGICOP1>)
 		{ op.setName(t.image); }
 		
-		| (t = <VAR>) (t1 = <NAME>)
-		{ op.setName(t.image); op.addArg(new StringArg(t1)); }
+		| (t = <VAR>) (t1 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); }
 	)
 	{
 		return op;
 	}
 }
+

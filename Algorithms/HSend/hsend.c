@@ -89,6 +89,7 @@ static void init(void)
 }
 
 
+static hsend_conn_t hc;
 static struct trickle_conn tc;
 static rimeaddr_t baseStationAddr;
 
@@ -118,7 +119,6 @@ AUTOSTART_PROCESSES(&mainProcess);
 
 PROCESS_THREAD(mainProcess, ev, data)
 {
-	static hsend_conn_t hc;
 	static struct etimer et;
 
 	PROCESS_EXITHANDLER(goto exit;)
@@ -129,6 +129,11 @@ PROCESS_THREAD(mainProcess, ev, data)
 	baseStationAddr.u8[1] = 0;
 
 	trickle_open(&tc, trickle_interval, 121, &callbacks);
+
+	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
+	{
+		printf("hsend start function failed\n");
+	}
 
 	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
 	{
@@ -155,6 +160,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 exit:
 	printf("Exiting MAIN Process...\n");
+	hsend_end(&hc);
 	trickle_close(&tc);
 	PROCESS_END();
 }
@@ -167,11 +173,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
-
-	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
-	{
-		printf("start function failed\n");
-	}
 
 	// 10 second timer
 	etimer_set(&et, 10 * CLOCK_SECOND);
@@ -199,7 +200,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 exit:
 	printf("Exiting HSEND Process...\n");
-	hsend_end(&hc);
 	PROCESS_END();
 }
 

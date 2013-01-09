@@ -19,12 +19,37 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+
+// Struct for the list elements, used to hold the variable names and their bytecode symbols
+typedef struct var_elem_t
+{
+	int hops;
+	char * var_id;
+} var_elem_t;
+
+typedef struct values_list_elem
+{
+	struct list_elem_struct * next;
+	node_data_t data;
+} values_list_elem;
+
+//struct recieved from a trickle message
+typedef struct 
+{
+	rimeaddr_t target;
+	int bytecode_length; //length of the bytecode, located after the struct
+	int num_of_bytecode_var; //number of variables after the struct
+} eval_pred_req_t;
+
 typedef struct
 {
 	rimeaddr_t addr;
 	double temp;
 	double humidity;
 } node_data_t;
+
+var_elem_t[] variables; //array of the variables from bytecode
+values_list_elem[] hops_data;
 
 static void node_data(void * data)
 {
@@ -47,7 +72,10 @@ static void node_data(void * data)
 
 static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
 {
-	node_data_t const * nd = (node_data_t const *)data;
+	nd = malloc(sizeof(node_data_t));
+	&nd->humidity = &data->humidity;
+	&nd->temp = &data->temp;
+	rimeaddr_copy(&nd->from,&data->from);
 
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
@@ -57,10 +85,9 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
 		hops,
 		(int)nd->temp, (int)nd->humidity);
+
+	list_push(hops_data[hops-1], nd);
 }
-
-
-
 
 static void const * get_addr_fn(void const * ptr)
 {
@@ -77,7 +104,6 @@ static void const * get_humidity_fn(void const * ptr)
 	return &((node_data_t const *)ptr)->humidity;
 }
 
-
 static void init(void)
 {
 	init_pred_lang(&node_data, sizeof(node_data_t));
@@ -88,46 +114,54 @@ static void init(void)
 	register_function("humidity", &get_humidity_fn, TYPE_FLOATING);
 }
 
+static hsend_conn_t hc;
+static struct trickle_conn tc;
+static rimeaddr_t baseStationAddr;
 
-PROCESS(mainProcess, "HSEND Process");
+static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
+
+//Rime adress of target node (or null for everyone)
+//binary bytecode for the VM
+void trickle_rcv(struct trickle_conn * c)
+{
+	//might have to copy out packet, if recieving two messages at once
+	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+
+	if (&msg->target == NULL || rimeaddr_cmp(&msg->target, &rimeaddr_node_addr)) // Sink
+	{
+		// Start HSEND
+		// TODO: pass arguments from trickle message to HSEND
+		process_start(hsendProcess, &msg);
+	}
+}
+
+static const trickle_callbacks callbacks = { &trickle_rcv };
+
+
+PROCESS(mainProcess, "MAIN Process");
+PROCESS(hsendProcess, "HSEND Process");
 
 AUTOSTART_PROCESSES(&mainProcess);
 
 PROCESS_THREAD(mainProcess, ev, data)
 {
-	static hsend_conn_t hc;
-	static rimeaddr_t baseStationAddr, test;
 	static struct etimer et;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	// Set up the predicate language VM
-	init();
-
-	// TODO:
-	// - Wait for sink to send us a Request-Evaluation message
-
 	// Set the address of the base station
 	baseStationAddr.u8[0] = 1;
 	baseStationAddr.u8[1] = 0;
 
-	// Set the id of the node that will do the testing
-	test.u8[0] = 2;
-	test.u8[1] = 0;
+	trickle_open(&tc, trickle_interval, 121, &callbacks);
 
 	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
 	{
-		printf("start function failed\n");
+		printf("hsend start function failed\n");
 	}
 
-	// 10 second timer
-	etimer_set(&et, 10 * CLOCK_SECOND);
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-	printf("Starting loops:\n");
-
-	if (is_base(&hc)) //SINK
+	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
 	{
 		printf("Is the base station!\n");
 
@@ -139,32 +173,93 @@ PROCESS_THREAD(mainProcess, ev, data)
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
 	}
-	else //NODE
+	else
 	{
-		static int count = 0;
+		leds_on(LEDS_GREEN);
 
 		while (true)
 		{
-			etimer_reset(&et);
-
-			if (rimeaddr_cmp(&rimeaddr_node_addr, &test) && count++ == 0)
-			{
-				printf("Sending pred req\n");
-
-				hsend_request_info(&hc, 3);
-			}
-
+			etimer_set(&et, 10 * CLOCK_SECOND);
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
+	}	
+
+exit:
+	printf("Exiting MAIN Process...\n");
+	hsend_end(&hc);
+	trickle_close(&tc);
+	PROCESS_END();
+}
+
+
+PROCESS_THREAD(hsendProcess, ev, msg)
+{
+	static hsend_conn_t hc;
+	static struct etimer et;
+
+	PROCESS_EXITHANDLER(goto exit;)
+	PROCESS_BEGIN();
+
+	// 10 second timer
+	etimer_set(&et, 10 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	char const * bytecode = ((char const *)msg) + 
+							sizeof(eval_pred_req_t) + 
+							((&msg->num_of_bytecode_var * sizeof(unsigned char)) * 2) ;
+
+	variables = malloc(sizeof(var_elem_t) * &msg->num_of_bytecode_var);
+
+	//pointer for bytecode variables
+	char const * ptr = ((char const *)msg) + sizeof(eval_pred_req_t); 
+	int max_hops = 0;
+	int i;
+	for (i = 0; i < &msg->num_of_bytecode_var; i++)
+	{
+		//create temporary elements
+		var_elem_t *tmp = malloc(sizeof(var_elem_t));
+		
+		//populate the struct
+		&tmp->hops = &ptr[(2 * i)];
+		&tmp->var_id = &ptr[(2 * i)+1];
+
+		if (&tmp->hops > max_hops)
+		{
+			max_hops = &tmp->hops;
+		}
+
+		//insert into the array
+		variables[i] = &tmp;
 	}
+
+
+	hops_data = malloc(sizeof(int) * max_hops);
+	for (i = 0; i < max_hops; i++)
+	{
+		LIST_STRUCT(hops_data[i]);
+	}
+
+	// TODO:
+	// Work out how many hops of information is being requested
+	unsigned int hops = 2;
+
+	printf("Sending pred req\n");
+
+	hsend_request_info(&hc, hop);
+
+	// Get as much information as possible within a given time bound
+	etimer_set(&et, 60 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	// Set up the predicate language VM
+	init();
 
 	// TODO:
 	// - Feed N-Hop neighbourhood info into predicate evualuator
 	//   If predicate failed inform sink
+	
 
 exit:
-	printf("Exiting Process...\n");
-	hsend_end(&hc);
+	printf("Exiting HSEND Process...\n");
 	PROCESS_END();
 }
-

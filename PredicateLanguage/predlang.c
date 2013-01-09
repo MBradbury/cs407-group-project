@@ -28,6 +28,7 @@
 #define MAXIMUM_VARIABLES 5
 
 
+#define THIS_VAR_ID 0
 
 
 static ubyte stack[STACK_SIZE];
@@ -171,7 +172,7 @@ static void inspect_stack(void)
 
 typedef struct
 {
-	char * name;
+	variable_id_t id;
 	void * location;
 
 	nuint type : 2;
@@ -199,7 +200,7 @@ static nuint variable_type_size(nuint type)
 static variable_reg_t * variable_regs = NULL;
 static nuint variable_regs_count = 0;
 
-static variable_reg_t * create_variable(char const * name, nuint name_length, variable_type_t type)
+static variable_reg_t * create_variable(variable_id_t id, variable_type_t type)
 {
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
@@ -208,27 +209,22 @@ static variable_reg_t * create_variable(char const * name, nuint name_length, va
 		return NULL;
 	}
 
-	if (name_length == 0)
+	size_t i = 0;
+	for (; i != variable_regs_count; ++i)
 	{
-		error = "Need to provide a name for variable";
-		DEBUG_PRINT("========%s========\n", error);
-		return NULL;
+		if (variable_regs[i].id == id)
+		{
+			error = "Already registered variable with id";
+			DEBUG_PRINT("========%s=====%u===\n", error, id);
+			return NULL;
+		}
 	}
 
 	variable_reg_t * variable = &variable_regs[variable_regs_count];
 
-	variable->name = (char *)heap_alloc(name_length + 1);
+	variable->id = id;
 
-	if (variable->name == NULL)
-	{
-		error = "Failed to allocate enough space on heap for variable name";
-		DEBUG_PRINT("========%s=====%d===\n", error, name_length + 1);
-		return NULL;
-	}
-
-	snprintf(variable->name, name_length + 1, "%s", name);
-
-	DEBUG_PRINT("Registered variable with name '%s'\n", variable->name);
+	DEBUG_PRINT("Registered variable with id '%u'\n", variable->id);
 
 	// Lets create some space in the heap to store the variable
 	variable->location = heap_alloc(variable_type_size(type));
@@ -251,7 +247,7 @@ static variable_reg_t * create_variable(char const * name, nuint name_length, va
 	return variable;
 }
 
-static variable_reg_t * create_array(char const * name, nuint name_length, variable_type_t type, nuint length)
+static variable_reg_t * create_array(variable_id_t id, variable_type_t type, nuint length)
 {
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
@@ -260,26 +256,20 @@ static variable_reg_t * create_array(char const * name, nuint name_length, varia
 		return NULL;
 	}
 
-	if (name_length == 0)
+	size_t i = 0;
+	for (; i != variable_regs_count; ++i)
 	{
-		error = "Need to provide a name for variable";
-		DEBUG_PRINT("========%s========\n", error);
-		return NULL;
+		if (variable_regs[i].id == id)
+		{
+			error = "Already registered variable with id";
+			DEBUG_PRINT("========%s=====%u===\n", error, id);
+			return NULL;
+		}
 	}
-
 
 	variable_reg_t * variable = &variable_regs[variable_regs_count];
 
-	variable->name = (char *)heap_alloc(name_length + 1);
-
-	if (variable->name == NULL)
-	{
-		error = "Failed to allocate enough space on heap for variable name";
-		DEBUG_PRINT("========%s=====%d===\n", error, name_length + 1);
-		return NULL;
-	}
-
-	snprintf(variable->name, name_length + 1, "%s", name);
+	variable->id = id;
 
 	// Lets create some space in the heap to store the variable
 	// We allocate enough space of `length' `data_size'ed items
@@ -299,43 +289,43 @@ static variable_reg_t * create_array(char const * name, nuint name_length, varia
 	variable->is_array = true;
 	variable->length = length;
 
-	DEBUG_PRINT("Registered array with name '%s' and length %d and elem size %d\n",
-		variable->name, variable->length, variable_type_size(type));
+	DEBUG_PRINT("Registered array with id '%u' and length %d and elem size %d\n",
+		variable->id, variable->length, variable_type_size(type));
 
 	variable_regs_count += 1;
 
 	return variable;
 }
 
-static variable_reg_t * get_variable(char const * name)
+static variable_reg_t * get_variable(variable_id_t id)
 {
 	nuint i = 0;
 	for (; i != variable_regs_count; ++i)
 	{
 		variable_reg_t * variable = &variable_regs[i];
 
-		if (strcmp(name, variable->name) == 0)
+		if (id == variable->id)
 		{
 			return variable;
 		}
 	}
 
 	error = "No variable with the given name exists";
-	DEBUG_PRINT("========%s=====%s===\n", error, name);
+	DEBUG_PRINT("========%s=====%u===\n", error, id);
 
 	return NULL;
 }
 
-static inline nint * get_variable_as_int(char const * name)
+static inline nint * get_variable_as_int(variable_id_t id)
 {
-	variable_reg_t * var = get_variable(name);
+	variable_reg_t * var = get_variable(id);
 
 	return (var != NULL) ? (nint *)var->location : NULL;
 }
 
-static inline nfloat * get_variable_as_float(char const * name)
+static inline nfloat * get_variable_as_float(variable_id_t id)
 {
-	variable_reg_t * var = get_variable(name);
+	variable_reg_t * var = get_variable(id);
 
 	return (var != NULL) ? (nfloat *)var->location : NULL;
 }
@@ -353,7 +343,7 @@ static inline nfloat * get_variable_as_float(char const * name)
 
 typedef struct
 {
-	char const * name;
+	function_id_t id;
 	data_access_fn fn;
 	variable_type_t type;
 } function_reg_t;
@@ -361,16 +351,27 @@ typedef struct
 static function_reg_t * functions_regs = NULL;
 static nuint function_regs_count = 0;
 
-bool register_function(char const * name, data_access_fn fn, variable_type_t type)
+bool register_function(function_id_t id, data_access_fn fn, variable_type_t type)
 {
 	if (function_regs_count == MAXIMUM_FUNCTIONS)
 	{
 		error = "Already registered maximum number of functions";
-		DEBUG_PRINT("========%s=====%s===\n", error, name);
+		DEBUG_PRINT("========%s=====%u===\n", error, id);
 		return false;
 	}
 
-	functions_regs[function_regs_count].name = name;
+	size_t i = 0;
+	for (; i != function_regs_count; ++i)
+	{
+		if (functions_regs[i].id == id)
+		{
+			error = "Already registered function with id";
+			DEBUG_PRINT("========%s=====%u===\n", error, id);
+			return false;
+		}
+	}
+
+	functions_regs[function_regs_count].id = id;
 	functions_regs[function_regs_count].fn = fn;
 	functions_regs[function_regs_count].type = type;
 
@@ -380,28 +381,28 @@ bool register_function(char const * name, data_access_fn fn, variable_type_t typ
 	return true;
 }
 
-static function_reg_t * get_function(char const * name)
+static function_reg_t * get_function(function_id_t id)
 {
 	nuint i = 0;
 	for (; i != function_regs_count; ++i)
 	{
-		if (strcmp(functions_regs[i].name, name) == 0)
+		if (functions_regs[i].id == id)
 		{
 			return &functions_regs[i];
 		}
 	}
 
 	error = "Unknown function name";
-	DEBUG_PRINT("========%s======%s==\n", error, name);
+	DEBUG_PRINT("========%s======%u==\n", error, id);
 
 	return NULL;
 }
 
 // Type is an optional output variable
 // pass NULL to it if you don't wait to know the type
-static void const * call_function(char const * name, void * data, variable_type_t * type)
+static void const * call_function(function_id_t id, void * data, variable_type_t * type)
 {
-	function_reg_t * reg = get_function(name);
+	function_reg_t * reg = get_function(id);
 
 	if (reg != NULL)
 	{
@@ -411,8 +412,8 @@ static void const * call_function(char const * name, void * data, variable_type_
 		return reg->fn(data);
 	}
 
-	error = "Function with given name doesn't exist";
-	DEBUG_PRINT("========%s======%s==\n", error, name);
+	error = "Function with given id doesn't exist";
+	DEBUG_PRINT("========%s======%u==\n", error, id);
 
 	return NULL;
 }
@@ -449,6 +450,12 @@ static inline jmp_label_t gen_op(ubyte op)
 	return pos;
 }
 
+static inline void gen_ubyte(ubyte i)
+{
+	*(ubyte *)heap_ptr = i;
+	heap_ptr += sizeof(ubyte);
+}
+
 static inline void gen_int(nint i)
 {
 	*(nint *)heap_ptr = i;
@@ -459,14 +466,6 @@ static inline void gen_float(nfloat f)
 {
 	*(nfloat *)heap_ptr = f;
 	heap_ptr += sizeof(nfloat);
-}
-
-static inline void gen_string(char const * str)
-{
-	nuint len = strlen(str) + 1;
-
-	memcpy(heap_ptr, str, len);
-	heap_ptr += len;
 }
 
 static inline jmp_loc_ptr_t gen_jmp(void)
@@ -612,7 +611,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case IFETCH:
 			{
-				nint * var = get_variable_as_int((char const *)(current + 1));
+				nint * var = get_variable_as_int(*(variable_id_t *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -620,7 +619,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!int_push_stack(*var))
 					return false;
 
-				current += strlen((char const *)(current + 1)) + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		case ISTORE:
@@ -628,19 +627,19 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!require_stack_size(sizeof(nint)))
 					return false;
 
-				nint * var = get_variable_as_int((char const *)(current + 1));
+				nint * var = get_variable_as_int(*(variable_id_t *)(current + 1));
 
 				if (var == NULL)
 					return false;
 				
 				*var = *(nint *)stack_ptr;
 
-				current += strlen((char const *)(current + 1)) + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		case FFETCH:
 			{
-				nfloat * var = get_variable_as_float((char const *)(current + 1));
+				nfloat * var = get_variable_as_float(*(variable_id_t *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -648,7 +647,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!float_push_stack(*var))
 					return false;
 
-				current += strlen((char const *)(current + 1)) + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		case FSTORE:
@@ -656,14 +655,14 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!require_stack_size(sizeof(nfloat)))
 					return false;
 
-				nfloat * var = get_variable_as_float((char const *)(current + 1));
+				nfloat * var = get_variable_as_float(*(variable_id_t *)(current + 1));
 
 				if (var == NULL)
 					return false;
 				
 				*var = *(nfloat *)stack_ptr;
 
-				current += strlen((char const *)(current + 1)) + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		case AFETCH:
@@ -671,7 +670,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!require_stack_size(sizeof(nint)))
 					return false;
 
-				variable_reg_t * var = get_variable((char const *)(current + 1));
+				variable_reg_t * var = get_variable(*(variable_id_t *)(current + 1));
 
 				nint i = ((nint *)stack_ptr)[0];
 
@@ -681,12 +680,12 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!push_stack((char *)var->location + (i * variable_type_size(var->type)), variable_type_size(var->type)))
 					return false;
 
-				current += strlen((char const *)(current + 1)) + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		case ALEN:
 			{
-				variable_reg_t * var = get_variable((char const *)(current + 1));
+				variable_reg_t * var = get_variable(*(variable_id_t *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -694,25 +693,25 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!int_push_stack(var->length))
 					return false;
 
-				current += strlen((char const *)(current + 1)) + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		case ASUM:
 			{
-				char const * array_name = (char const *)(current + 1);
-				current += strlen(array_name) + 1;
-				DEBUG_PRINT("Array name %s\n", array_name);
+				variable_id_t array_id = *(variable_id_t *)(current + 1);
+				current += sizeof(variable_id_t);
+				DEBUG_PRINT("Array id %u\n", array_id);
 
-				char const * fn_name = (char const *)(current + 1);
-				current += strlen(fn_name) + 1;
-				DEBUG_PRINT("FN name %s\n", fn_name);
+				variable_id_t fn_id = *(variable_id_t *)(current + 1);
+				current += sizeof(variable_id_t);
+				DEBUG_PRINT("FN id %u\n", fn_id);
 
-				variable_reg_t const * var_reg = get_variable(array_name);
+				variable_reg_t const * var_reg = get_variable(array_id);
 
 				if (var_reg == NULL)
 					return false;
 
-				function_reg_t const * fn_reg = get_function(fn_name);
+				function_reg_t const * fn_reg = get_function(fn_id);
 
 				if (fn_reg == NULL)
 					return false;
@@ -758,8 +757,8 @@ nbool evaluate(ubyte * start, nuint program_length)
 					return false;
 
 				variable_type_t type;
-				void const * data = call_function((char const *)(current + 1), stack_ptr, &type);
-				current += strlen((char const *)(current + 1)) + 1;
+				void const * data = call_function(*(function_id_t *)(current + 1), stack_ptr, &type);
+				current += sizeof(function_id_t);
 
 				if (data == NULL)
 				{
@@ -894,28 +893,26 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case IVAR:
 			{
-				const char * name = (char const *)(current + 1);
-				nuint name_Length = strlen((char const *)(current + 1));
+				variable_id_t id = *(variable_id_t *)(current + 1);
 
-				if (create_variable(name, name_Length, TYPE_INTEGER) == NULL)
+				if (create_variable(id, TYPE_INTEGER) == NULL)
 				{
 					return false;
 				}
 
-				current += name_Length + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		case FVAR:
 			{
-				const char * name = (char const *)(current + 1);
-				nuint name_Length = strlen((char const *)(current + 1));
+				variable_id_t id = *(variable_id_t *)(current + 1);
 
-				if (create_variable(name, name_Length, TYPE_FLOATING) == NULL)
+				if (create_variable(id, TYPE_FLOATING) == NULL)
 				{
 					return false;
 				}
 
-				current += name_Length + 1;
+				current += sizeof(variable_id_t);
 			} break;
 
 		default:
@@ -949,10 +946,20 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 {
 	// Make sure wqe are given valid functions
 	if (given_data_fn == NULL)
+	{
+		error = "No user data function provided";
+		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
+	}
 
 	if (given_data_size == 0)
+	{
+		error = "Zero sized user data";
+		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
+	}
+
+	data_size = given_data_size;
 
 	// Reset the stack and heap positions
 	stack_ptr = &stack[STACK_SIZE];
@@ -980,7 +987,7 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	}
 
 	// Put values in the `this' variable
-	variable_reg_t * thisvar = create_variable("this", given_data_size, TYPE_USER);
+	variable_reg_t * thisvar = create_variable(THIS_VAR_ID, TYPE_USER);
 	given_data_fn(thisvar->location);
 
 	// Reset the error message variable
@@ -989,6 +996,13 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	return true;
 }
 
+
+bool bind_input(variable_id_t id, void const * data, variable_type_t type, unsigned int data_length)
+{
+	variable_reg_t * var_array = create_array(id, type, data_length);
+
+	memcpy(var_array->location, data, data_length * variable_type_size(type));
+}
 
 /****************************************************
  ** INIT MANAGEMENT END
@@ -1028,6 +1042,10 @@ static void local_node_data_fn(void * data)
 	set_user_data(node_data, 1, 2, 20.0, 122);
 }
 
+#define ID_FN_ID 0
+#define SLOT_FN_ID 1
+#define TEMP_FN_ID 2
+#define HUMIDITY_FN_ID 3
 
 static void const * get_id_fn(void const * ptr)
 {
@@ -1053,19 +1071,21 @@ static void const * get_humidity_fn(void const * ptr)
 #ifdef ENABLE_CODE_GEN
 static void gen_example1(void)
 {
+	variable_id_t result_id = 2;
+
 	start_gen();
 
-	gen_op(IVAR); gen_string("result");
+	gen_op(IVAR); gen_ubyte(result_id);
 
 	gen_op(IPUSH); gen_int(2);
-	gen_op(ISTORE); gen_string("result");
+	gen_op(ISTORE); gen_ubyte(result_id);
 	gen_op(IPOP);
 
 	gen_op(IPUSH); gen_int(2);
 	gen_op(IPUSH); gen_int(3);
 	gen_op(IADD);
 
-	gen_op(IFETCH); gen_string("result");
+	gen_op(IFETCH); gen_ubyte(result_id);
 	gen_op(IADD);
 
 	gen_op(ICASTF);
@@ -1081,11 +1101,13 @@ static void gen_example1(void)
 
 static void gen_example_mean(void)
 {
+	variable_id_t n1_id = 255;
+
 	start_gen();
 
-	gen_op(ASUM); gen_string("n1"); gen_string("id");
+	gen_op(ASUM); gen_ubyte(n1_id); gen_ubyte(ID_FN_ID);
 
-	gen_op(ALEN); gen_string("n1");
+	gen_op(ALEN); gen_ubyte(n1_id);
 
 	gen_op(ICASTF);
 
@@ -1096,30 +1118,33 @@ static void gen_example_mean(void)
 
 static void gen_example_for_loop(void)
 {
+	variable_id_t n1_id = 255;
+	variable_id_t i_id = 2;
+
 	start_gen();
 
 	// Initial Code
-	gen_op(IVAR); gen_string("i");
+	gen_op(IVAR); gen_ubyte(i_id);
 
 	gen_op(FPUSH); gen_float(0);
 
 	// Initalise loop counter
 	gen_op(IPUSH); gen_int(0);
-	gen_op(ISTORE); gen_string("i");
+	gen_op(ISTORE); gen_ubyte(i_id);
 
 	// Perform loop termination check
 	jmp_label_t label1 = 
-	gen_op(ALEN); gen_string("n1");
+	gen_op(ALEN); gen_ubyte(n1_id);
 
 	gen_op(INEQ);
 	gen_op(JZ); jmp_loc_ptr_t jmp1 = gen_jmp();
 
 
 	// Perform body operations
-	gen_op(IFETCH); gen_string("i");
+	gen_op(IFETCH); gen_ubyte(i_id);
 
-	gen_op(AFETCH); gen_string("n1");
-	gen_op(CALL); gen_string("slot");
+	gen_op(AFETCH); gen_ubyte(n1_id);
+	gen_op(CALL); gen_ubyte(SLOT_FN_ID);
 	gen_op(ICASTF);
 
 	gen_op(FADD);
@@ -1129,9 +1154,9 @@ static void gen_example_for_loop(void)
 	gen_op(FDIV2);
 
 	// Increment loop counter
-	gen_op(IFETCH); gen_string("i");
+	gen_op(IFETCH); gen_ubyte(i_id);
 	gen_op(IINC);
-	gen_op(ISTORE); gen_string("i");
+	gen_op(ISTORE); gen_ubyte(i_id);
 
 
 	// Jump to start of loop
@@ -1217,12 +1242,12 @@ int main(int argc, char * argv[])
 	init_pred_lang(&local_node_data_fn, sizeof(user_data_t));
 
 	// Register the data functions 
-	register_function("id", &get_id_fn, TYPE_INTEGER);
-	register_function("slot", &get_slot_fn, TYPE_INTEGER);
-	register_function("temp", &get_temp_fn, TYPE_FLOATING);
-	register_function("humidity", &get_humidity_fn, TYPE_FLOATING);
+	register_function(ID_FN_ID, &get_id_fn, TYPE_INTEGER);
+	register_function(SLOT_FN_ID, &get_slot_fn, TYPE_INTEGER);
+	register_function(TEMP_FN_ID, &get_temp_fn, TYPE_FLOATING);
+	register_function(HUMIDITY_FN_ID, &get_humidity_fn, TYPE_FLOATING);
 
-	variable_reg_t * var_array = create_array("n1", strlen("n1"), TYPE_USER, 10);
+	variable_reg_t * var_array = create_array(255, TYPE_USER, 10);
 
 	user_data_t * arr = (user_data_t *)var_array->location;
 	set_user_data(&arr[0], 0, 1, 25, 122);
@@ -1246,10 +1271,8 @@ int main(int argc, char * argv[])
 
 	run_program_from_file(argc, argv);
 
-	#if 0
 	// Load a program into memory
-	gen_example_for_loop();
-	#endif
+	//gen_example_for_loop();
 
 	// Evaluate the program
 	nbool result = evaluate(program_start, program_end - program_start);

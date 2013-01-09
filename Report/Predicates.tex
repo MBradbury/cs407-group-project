@@ -260,30 +260,30 @@ _PUSH (_)
 _POP
     Pops the stack by sizeof(_) bytes
 
-_FETCH (string)
+_FETCH (variable id - ubyte)
     Fetches the value of the given variable and pushes the
     first sizeof(_) bytes of it onto the stack
 
-_STORE (string)
+_STORE (variable id - ubyte)
     Stores the first sizeof(_) bytes in the variable
     of the given name
 
-AFETCH (string)
+AFETCH (variable id - ubyte)
     Fetches the value of the array named in the parameter
     at the integer index at the top of the stack
 
-ALEN (string)
+ALEN (variable id - ubyte)
     Pushes an integer onto the stack containing the length
     of the named array
 	
-ASUM (string) (string)
+ASUM (variable id - ubyte) (function id - ubyte)
     Over the user defined array stored in the variable whose
     name is the first parameter, transform it using the function
     whose name is the second parameter. On this transformed data
     calculate the mean and push the result as a float onto the
     top of the stack.
 
-CALL (string)
+CALL (function id - ubyte)
     Calls the named function on the data on top of the stack.
     The data this is called on is popped and the result
     is pushed onto the stack.
@@ -346,7 +346,7 @@ NOT
     Pops an integer off the stack, performs logical not on it.
     Pushes the result back on the stack.
 	
-_VAR (string)
-    Creates a variable of type _ with the name set to the given
-    string.
+_VAR (variable id - ubyte)
+    Creates a variable of type _ with the id set to the given
+    unsigned byte.
 \end{verbatim}

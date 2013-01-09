@@ -41,12 +41,21 @@ public class PredicateVisualiser extends javax.swing.JFrame {
         predicateNameIcon1 = new ImagePanel("E:\\Users\\Tim\\Downloads\\glyphicons_free\\glyphicons_free\\glyphicons\\png\\glyphicons_351_book_open.png");
         predicateNameLabel1 = new javax.swing.JLabel();
         nameTextField1 = new javax.swing.JTextField();
-        predicateListScrollPane = new javax.swing.JScrollPane();
-        predicateList = new javax.swing.JList();
+        mainViewLayeredPane = new javax.swing.JLayeredPane();
+        networkViewPanel = new javax.swing.JPanel();
+        networkDiagram = new javax.swing.JPanel();
+        jButton1 = new javax.swing.JButton();
+        predicateListViewPanel = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        javax.swing.DefaultListModel listModel = new javax.swing.DefaultListModel();
+        predicateList = new javax.swing.JList(listModel);
         menuBar = new javax.swing.JMenuBar();
         fileMenu = new javax.swing.JMenu();
         newPredicateMenuItem = new javax.swing.JMenuItem();
         quitMenuItem = new javax.swing.JMenuItem();
+        viewMenu = new javax.swing.JMenu();
+        predicateListMenuItem = new javax.swing.JMenuItem();
+        networkMenuItem = new javax.swing.JMenuItem();
         helpMenu = new javax.swing.JMenu();
         aboutMenuItem = new javax.swing.JMenuItem();
 
@@ -226,12 +235,73 @@ public class PredicateVisualiser extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Predicate Visualiser");
 
-        predicateList.setModel(new javax.swing.DefaultListModel());
-        predicateListScrollPane.setViewportView(predicateList);
+        networkViewPanel.setBackground(new java.awt.Color(255, 128, 0));
+
+        javax.swing.GroupLayout networkDiagramLayout = new javax.swing.GroupLayout(networkDiagram);
+        networkDiagram.setLayout(networkDiagramLayout);
+        networkDiagramLayout.setHorizontalGroup(
+            networkDiagramLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+        networkDiagramLayout.setVerticalGroup(
+            networkDiagramLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 371, Short.MAX_VALUE)
+        );
+
+        jButton1.setText("fancy controls");
+
+        javax.swing.GroupLayout networkViewPanelLayout = new javax.swing.GroupLayout(networkViewPanel);
+        networkViewPanel.setLayout(networkViewPanelLayout);
+        networkViewPanelLayout.setHorizontalGroup(
+            networkViewPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(networkViewPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(networkViewPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(networkDiagram, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(networkViewPanelLayout.createSequentialGroup()
+                        .addComponent(jButton1)
+                        .addGap(0, 242, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        networkViewPanelLayout.setVerticalGroup(
+            networkViewPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(networkViewPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(networkDiagram, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButton1)
+                .addContainerGap(90, Short.MAX_VALUE))
+        );
+
+        networkViewPanel.setBounds(20, 20, 380, 509);
+        mainViewLayeredPane.add(networkViewPanel, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        predicateListViewPanel.setBackground(new java.awt.Color(47, 255, 0));
+
+        jScrollPane1.setViewportView(predicateList);
+
+        javax.swing.GroupLayout predicateListViewPanelLayout = new javax.swing.GroupLayout(predicateListViewPanel);
+        predicateListViewPanel.setLayout(predicateListViewPanelLayout);
+        predicateListViewPanelLayout.setHorizontalGroup(
+            predicateListViewPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(predicateListViewPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 425, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(123, Short.MAX_VALUE))
+        );
+        predicateListViewPanelLayout.setVerticalGroup(
+            predicateListViewPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(predicateListViewPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 566, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
+        predicateListViewPanel.setBounds(160, 110, 560, 590);
+        mainViewLayeredPane.add(predicateListViewPanel, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         fileMenu.setText("File");
 
-        newPredicateMenuItem.setIcon(new javax.swing.ImageIcon("E:\\Users\\Tim\\Downloads\\glyphicons_free\\glyphicons_free\\glyphicons\\png\\glyphicons_149_folder_new.png")); // NOI18N
         newPredicateMenuItem.setText("New Predicate");
         newPredicateMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -240,7 +310,6 @@ public class PredicateVisualiser extends javax.swing.JFrame {
         });
         fileMenu.add(newPredicateMenuItem);
 
-        quitMenuItem.setIcon(new javax.swing.ImageIcon("E:\\Users\\Tim\\Downloads\\glyphicons_free\\glyphicons_free\\glyphicons\\png\\glyphicons_197_remove.png")); // NOI18N
         quitMenuItem.setText("Quit");
         quitMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -251,9 +320,28 @@ public class PredicateVisualiser extends javax.swing.JFrame {
 
         menuBar.add(fileMenu);
 
+        viewMenu.setText("View");
+
+        predicateListMenuItem.setText("Predicate List");
+        predicateListMenuItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                predicateListMenuItemActionPerformed(evt);
+            }
+        });
+        viewMenu.add(predicateListMenuItem);
+
+        networkMenuItem.setText("Network");
+        networkMenuItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                networkMenuItemActionPerformed(evt);
+            }
+        });
+        viewMenu.add(networkMenuItem);
+
+        menuBar.add(viewMenu);
+
         helpMenu.setText("Help");
 
-        aboutMenuItem.setIcon(new javax.swing.ImageIcon("E:\\Users\\Tim\\Downloads\\glyphicons_free\\glyphicons_free\\glyphicons\\png\\glyphicons_351_book_open.png")); // NOI18N
         aboutMenuItem.setText("About");
         aboutMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -270,17 +358,11 @@ public class PredicateVisualiser extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(predicateListScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 375, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(415, Short.MAX_VALUE))
+            .addComponent(mainViewLayeredPane, javax.swing.GroupLayout.DEFAULT_SIZE, 802, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(predicateListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 557, Short.MAX_VALUE)
-                .addContainerGap())
+            .addComponent(mainViewLayeredPane, javax.swing.GroupLayout.DEFAULT_SIZE, 753, Short.MAX_VALUE)
         );
 
         pack();
@@ -321,6 +403,18 @@ public class PredicateVisualiser extends javax.swing.JFrame {
     private void cancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cancelButtonActionPerformed
         predicateCreationDialog.setVisible(false);
     }//GEN-LAST:event_cancelButtonActionPerformed
+
+    private void predicateListMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_predicateListMenuItemActionPerformed
+        //Bring container panel to front.
+        mainViewLayeredPane.setLayer(predicateListViewPanel, 1);
+        mainViewLayeredPane.setLayer(networkViewPanel, 0);
+    }//GEN-LAST:event_predicateListMenuItemActionPerformed
+
+    private void networkMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_networkMenuItemActionPerformed
+        //Bring container panel to front.
+        mainViewLayeredPane.setLayer(networkViewPanel, 1);
+        mainViewLayeredPane.setLayer(predicateListViewPanel, 0);
+    }//GEN-LAST:event_networkMenuItemActionPerformed
 
     /**
      * @param args the command line arguments
@@ -367,19 +461,27 @@ public class PredicateVisualiser extends javax.swing.JFrame {
     private javax.swing.JMenu fileMenu;
     private javax.swing.JButton finishButton;
     private javax.swing.JMenu helpMenu;
+    private javax.swing.JButton jButton1;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLayeredPane mainViewLayeredPane;
     private javax.swing.JMenuBar menuBar;
     private javax.swing.JPanel nameIcon;
     private javax.swing.JLabel nameLabel;
     private javax.swing.JPanel namePanel;
     private javax.swing.JTextField nameTextField;
     private javax.swing.JTextField nameTextField1;
+    private javax.swing.JPanel networkDiagram;
+    private javax.swing.JMenuItem networkMenuItem;
+    private javax.swing.JPanel networkViewPanel;
     private javax.swing.JMenuItem newPredicateMenuItem;
     private javax.swing.JDialog predicateCreationDialog;
     private javax.swing.JList predicateList;
-    private javax.swing.JScrollPane predicateListScrollPane;
+    private javax.swing.JMenuItem predicateListMenuItem;
+    private javax.swing.JPanel predicateListViewPanel;
     private javax.swing.JPanel predicateNameIcon1;
     private javax.swing.JLabel predicateNameLabel1;
     private javax.swing.JMenuItem quitMenuItem;
+    private javax.swing.JMenu viewMenu;
     // End of variables declaration//GEN-END:variables
 }

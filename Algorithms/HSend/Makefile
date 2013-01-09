@@ -1,7 +1,7 @@
 CONTIKI_PROJECT = hsend
 all: $(CONTIKI_PROJECT)
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/NHopReq $(CS407DIR)/Algorithms/PredicateLanguage
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/NHopReq $(CS407DIR)/PredicateLanguage
 PROJECT_SOURCEFILES = 
 
 CONTIKIDIRS :=

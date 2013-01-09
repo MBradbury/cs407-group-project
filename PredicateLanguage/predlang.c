@@ -11,8 +11,8 @@
 #	define snprintf _snprintf
 #endif
 
-#define MAIN_FUNC
-#define ENABLE_CODE_GEN
+//#define MAIN_FUNC
+//#define ENABLE_CODE_GEN
 //#define NDEBUG
 
 #ifndef NDEBUG
@@ -951,7 +951,7 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	if (given_data_fn == NULL)
 		return false;
 
-	if (given_data_size == NULL)
+	if (given_data_size == 0)
 		return false;
 
 	// Reset the stack and heap positions
@@ -997,7 +997,7 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 
 
 
-
+#ifdef MAIN_FUNC
 /****************************************************
  ** USER CODE FROM HERE ON
  ***************************************************/
@@ -1048,6 +1048,7 @@ static void const * get_humidity_fn(void const * ptr)
 {
 	return &((user_data_t const *)ptr)->humidity;
 }
+#endif
 
 #ifdef ENABLE_CODE_GEN
 static void gen_example1(void)
@@ -1243,11 +1244,16 @@ int main(int argc, char * argv[])
 	printf("sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	printf("sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 
+	run_program_from_file(argc, argv);
+
+	#if 0
 	// Load a program into memory
 	gen_example_for_loop();
+	#endif
 
 	// Evaluate the program
 	nbool result = evaluate(program_start, program_end - program_start);
+	
 
 	// Print the results
 	printf("Stack ptr value (float %f) (int %d) (bool %d)\n",

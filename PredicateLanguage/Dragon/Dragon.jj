@@ -302,7 +302,9 @@ ArrayList<Opcode> Input() :
 }
 {
 	(
+		// Can optionally provide a label for this instruction
 		(label = <LABEL>)?
+
 		op = Operation()
 		{
 			if (label != null)
@@ -315,7 +317,9 @@ ArrayList<Opcode> Input() :
 		
 			opcodes.add(op);
 		}
-		<NEWLINE>
+
+		// Can have any number of newlines between opcodes
+		(<NEWLINE>)+
 	)*
 	<EOF>
 	{

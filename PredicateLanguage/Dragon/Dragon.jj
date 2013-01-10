@@ -112,16 +112,41 @@ public class Dragon
 	
 	private static int getLabelIndex(ArrayList<Opcode> opcodes, String label) throws Exception
 	{
+		int index = 0;
+
 		for (int i = 0; i != opcodes.size(); ++i)
 		{
 			Opcode op = opcodes.get(i);
 			if (op.getLabel() != null && op.getLabel().equals(label))
 			{
-				return i;
+				return index;
 			}
+
+			index += op.getSize();
 		}
 		
 		throw new Exception("Failed to find label called `" + label + "'");
+	}
+}
+
+enum OpcodeType
+{
+	ZeroArg(1),
+	OneArgInt(1 + 2),
+	OneArgFloat(1 + 4),
+	OneArgByte(1 + 1),
+	TwoArgsByte(1 + (2*1));
+
+	private final int size;
+
+	private OpcodeType(int size)
+	{
+		this.size = size;
+	}
+
+	public int getSize()
+	{
+		return size;
 	}
 }
 
@@ -129,18 +154,30 @@ enum OpcodeEnum
 {
 	HALT(0),
 
-	IPUSH(1), IPOP(2), FPUSH(3), FPOP(4),
-	IFETCH(5), ISTORE(6), FFETCH(7), FSTORE(8),
+	IPUSH(1, OpcodeType.OneArgInt), IPOP(2),
+	FPUSH(3, OpcodeType.OneArgFloat), FPOP(4),
+
+	IFETCH(5, OpcodeType.OneArgByte),
+	ISTORE(6, OpcodeType.OneArgByte),
+	FFETCH(7, OpcodeType.OneArgByte),
+	FSTORE(8, OpcodeType.OneArgByte),
   
-	AFETCH(9), ALEN(10),
+	AFETCH(9, OpcodeType.OneArgByte),
+	ALEN(10, OpcodeType.OneArgByte),
 
-	ASUM(11), AMEAN(12), AMAX(13), AMIN(14),
+	ASUM(11, OpcodeType.TwoArgsByte),
+	AMEAN(12, OpcodeType.TwoArgsByte),
+	AMAX(13, OpcodeType.TwoArgsByte),
+	AMIN(14, OpcodeType.TwoArgsByte),
 
-	CALL(15),
+	CALL(15, OpcodeType.OneArgByte),
 
-	ICASTF(16), FCASTI(17),
+	ICASTF(16),
+	FCASTI(17),
 
-	JMP(18), JZ(19), JNZ(20),
+	JMP(18, OpcodeType.OneArgByte),
+	JZ(19, OpcodeType.OneArgByte),
+	JNZ(20, OpcodeType.OneArgByte),
 
 	IADD(21), ISUB(22), IMUL(23), IDIV1(24), IDIV2(25), IINC(26),
 	IEQ(27), INEQ(28), ILT(29), ILEQ(30), IGT(31), IGEQ(32),
@@ -150,22 +187,36 @@ enum OpcodeEnum
 
 	AND(44), OR(45), XOR(46), NOT(47),
 	
-	IVAR(48), FVAR(49),
+	IVAR(48, OpcodeType.OneArgByte),
+	FVAR(49, OpcodeType.OneArgByte),
 
 	IABS(50), FABS(51),
 
 	FPOW(52);
 	
 	private final int value;
-	
+	private final OpcodeType type;
+
 	private OpcodeEnum(int value)
 	{
 		this.value = value;
+		this.type = OpcodeType.ZeroArg;
+	}
+
+	private OpcodeEnum(int value, OpcodeType type)
+	{
+		this.value = value;
+		this.type = type;
 	}
 
 	public int getValue()
 	{
 		return value;
+	}
+
+	public int getSize()
+	{
+		return type.getSize();
 	}
 }
 
@@ -183,6 +234,8 @@ final class Opcode
 	
 	public String getLabel() { return label; }
 	public void setLabel(String label) { this.label = label; }
+
+	public int getSize() { return name.getSize(); }
 }
 
 interface Arg

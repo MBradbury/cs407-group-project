@@ -1,0 +1,5 @@
+FPUSH 2.0
+FPUSH 3.0
+FPOW
+HALT
+

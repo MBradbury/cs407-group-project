@@ -146,15 +146,15 @@ static inline bool pop_stack(nuint size)
 	return true;
 }
 
-static void inspect_stack(void)
+static void inspect_stack(FILE * f)
 {
 #ifndef NDEGBUG
-	printf("Stack values:\n");
+	fprintf(f, "Stack values:\n");
 	ubyte * max = stack + STACK_SIZE;
 	ubyte * ptr;
 	for (ptr = stack_ptr; ptr < max; ++ptr)
 	{
-		printf("\tStack %d %d\n", max - ptr, *ptr);
+		fprintf(f, "\tStack %d %d\n", max - ptr, *ptr);
 	}
 #endif
 }
@@ -661,7 +661,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 	while (current - start < program_length)
 	{
-		DEBUG_ERR_PRINT("Executing %s at %d\n", opcode_names[*current], current - stack);
+		DEBUG_ERR_PRINT("Executing %s at %d\n", opcode_names[*current], current - start);
 
 		// Ideally want this op codes in numerical order
 		// so the compiler can generate a jump table
@@ -842,7 +842,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case JMP:
 			current = start + *(ubyte *)(current + 1) - 1;
-			DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - stack);
+			DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			break;
 
 		case JZ:
@@ -852,7 +852,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			if (((nint *)stack_ptr)[0] == 0)
 			{
 				current = start + *(ubyte *)(current + 1) - 1;
-				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - stack);
+				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			}
 			else
 			{
@@ -871,7 +871,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			if (((nint *)stack_ptr)[0] != 0)
 			{
 				current = start + *(ubyte *)(current + 1) - 1;
-				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - stack);
+				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			}
 			else
 			{
@@ -1005,7 +1005,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			break;
 		}
 
-		//inspect_stack();
+		inspect_stack(stderr);
 
 		++current;
 	}
@@ -1396,7 +1396,7 @@ int main(int argc, char * argv[])
 
 	printf("Result: %d\n", result);
 
-	inspect_stack();
+	inspect_stack(stdout);
 
 	return 0;
 }

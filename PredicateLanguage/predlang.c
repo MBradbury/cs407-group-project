@@ -1005,7 +1005,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			break;
 		}
 
-		inspect_stack(stderr);
+		//inspect_stack(stderr);
 
 		++current;
 	}

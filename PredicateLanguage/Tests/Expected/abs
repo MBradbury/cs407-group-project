@@ -1,0 +1,16 @@
+Program length 20
+Stack ptr value (float 128.000000) (int 0) (bool 0)
+Result: 0
+Stack values:
+	Stack 12 0
+	Stack 11 0
+	Stack 10 0
+	Stack 9 67
+	Stack 8 0
+	Stack 7 0
+	Stack 6 0
+	Stack 5 67
+	Stack 4 10
+	Stack 3 0
+	Stack 2 10
+	Stack 1 0

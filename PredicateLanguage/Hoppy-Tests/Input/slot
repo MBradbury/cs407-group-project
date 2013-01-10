@@ -1,0 +1,5 @@
+using Neighbours(2) as twohopn in
+	@(a : twohopn ~
+		@(b : twohopn ~ addr(a) != addr(b) && slot(a) != slot(b))
+	)
+

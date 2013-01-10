@@ -237,7 +237,7 @@ using Neighbours(H(this)) as neighbours in
 using Neighbours(1) as onehopn in
     using Neighbours(2) as twohopn in
         @(a : onehopn ~
-            #(b : twohopn ~ addr(a) == addr(b)
+            #(b : twohopn ~ addr(a) == addr(b))
         )
 \end{verbatim}
 \caption{Check 1-hop neighbourhood is in 2-hop neighbourhood}

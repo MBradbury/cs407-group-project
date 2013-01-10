@@ -1,0 +1,3 @@
+using Neighbours(2) as twohopn in
+    abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
+

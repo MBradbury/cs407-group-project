@@ -1,6 +1,6 @@
 // Initial Code
 IVAR 1
-FPUSH 0
+FPUSH 0.0
 
 // Initalise loop counter
 IPUSH 0
@@ -20,7 +20,7 @@ ICASTF
 
 FADD
 
-FPUSH 2
+FPUSH 2.0
 
 FDIV2
 
@@ -34,3 +34,4 @@ JMP label1
 
 // Program termination
 last: HALT
+

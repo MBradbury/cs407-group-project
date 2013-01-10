@@ -293,12 +293,8 @@ SPECIAL_TOKEN : {
 
 TOKEN : {
 	//Keywords
-	  <#HALT : 		"HALT" >
 	
-	| <#IPUSH :		"IPUSH" >
-	| <#FPUSH :		"FPUSH" >
-	
-	| <#POP :		"IPOP" | "FPOP">
+	  <#POP :		"IPOP" | "FPOP">
 	
 	| <#FETCH :		"IFETCH" | "FFETCH" | "AFETCH" >
 	
@@ -321,8 +317,8 @@ TOKEN : {
 	| <#ABS :		"IABS" | "FABS" >
 
 	| < ZEROARG :	"HALT" | <POP> | <CAST> | <MATHOP> | <MATHLOP> | <LOGICOP> | <ABS> | "FPOW" >
-	| < ONEARGI :	<IPUSH> >
-	| < ONEARGF :	<FPUSH> >
+	| < ONEARGI :	"IPUSH" >
+	| < ONEARGF :	"FPUSH" >
 	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> >
 	| < ONEARGS :	<JUMP> >
 	| < TWOARGB :	<ABIGOP> >
@@ -331,7 +327,7 @@ TOKEN : {
 // Numbers
 
 TOKEN : {
-	  < INT :		["1"-"9"] (["0"-"9"])* >
+	  < INT :		"0" | (["1"-"9"] (["0"-"9"])*) >
 	| < FLOAT :		(["0"-"9"])+ "." (["0"-"9"])* >
 }
 

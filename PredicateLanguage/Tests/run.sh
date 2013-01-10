@@ -15,17 +15,13 @@ CP="${DRAGONDIR}${CPSEP}${DRAGONDIR}/guava-13.0.1.jar"
 rm -rf Intermediate Output
 mkdir Intermediate Output
 
+rm Input/*~
+
 # Make the Dragon assembler
 cd $DRAGONDIR
 make
 cd ../Tests
 
-for test in Input/*
-do
-	echo $CP
-
-	cat $test | java -cp "$CP" Dragon > "Intermediate/$(basename $test)"
-done
 
 
 if [[ $(uname) = "Linux" ]]
@@ -40,14 +36,18 @@ else
 fi
 
 
-
-for test in Intermediate/*
+for test in Input/*
 do
 	name=$(basename $test)
-	
-	echo "$VMBINARY $test > \"Output/$name\""
 
-	$VMBINARY $test > "Output/$name"
+	cat $test | java -cp "$CP" Dragon > "Intermediate/$name"
+
+
+	name=$(basename $test)
+	
+	echo "$VMBINARY Intermediate/$name > \"Output/$name\""
+
+	$VMBINARY Intermediate/$name > "Output/$name"
 	
 	# Check that we got the expected result
 	

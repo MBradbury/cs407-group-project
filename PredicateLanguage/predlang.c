@@ -497,34 +497,34 @@ static inline ubyte * stop_gen(void)
  ** VM START
  ***************************************************/
 typedef enum {
-  HALT,
+  HALT=0,
 
-  IPUSH, IPOP, FPUSH, FPOP,
-  IFETCH, ISTORE, FFETCH, FSTORE,
+  IPUSH=1, IPOP=2, FPUSH=3, FPOP=4,
+  IFETCH=5, ISTORE=6, FFETCH=7, FSTORE=8,
   
-  AFETCH, ALEN,
+  AFETCH=9, ALEN=10,
 
-  ASUM, AMEAN, AMAX, AMIN,
+  ASUM=11, AMEAN=12, AMAX=13, AMIN=14,
 
-  CALL,
+  CALL=15,
 
-  ICASTF, FCASTI,
+  ICASTF=16, FCASTI=17,
 
-  JMP, JZ, JNZ,
+  JMP=18, JZ=19, JNZ=20,
 
-  IADD, ISUB, IMUL, IDIV1, IDIV2, IINC,
-  IEQ, INEQ, ILT, ILEQ, IGT, IGEQ,
+  IADD=21, ISUB=22, IMUL=23, IDIV1=24, IDIV2=25, IINC=26,
+  IEQ=27, INEQ=28, ILT=29, ILEQ=30, IGT=31, IGEQ=32,
 
-  FADD, FSUB, FMUL, FDIV1, FDIV2,
-  FEQ, FNEQ, FLT, FLEQ, FGT, FGEQ,
+  FADD=33, FSUB=34, FMUL=35, FDIV1=36, FDIV2=37,
+  FEQ=38, FNEQ=39, FLT=40, FLEQ=41, FGT=42, FGEQ=43,
 
-  AND, OR, XOR, NOT,
+  AND=44, OR=45, XOR=46, NOT=47,
 
-  IVAR, FVAR,
+  IVAR=48, FVAR=49,
 
-  IABS, FABS,
+  IABS=50, FABS=51,
 
-  FPOW, 
+  FPOW=52, 
 
 } opcode;
 
@@ -1277,6 +1277,7 @@ nint load_file_to_memory(char const * filename, ubyte ** result)
 {
 	if (filename == NULL || result == NULL)
 	{
+		printf("Invalid parameters\n");
 		return -4;
 	}
 
@@ -1284,6 +1285,7 @@ nint load_file_to_memory(char const * filename, ubyte ** result)
 
 	if (f == NULL)
 	{
+		printf("Failed to open file\n");
 		*result = NULL;
 		return -1; // -1 means file opening fail
 	}
@@ -1294,6 +1296,7 @@ nint load_file_to_memory(char const * filename, ubyte ** result)
 
 	if (size == 0)
 	{
+		printf("File size is zero\n");
 		fclose(f);
 		return -4;
 	}
@@ -1302,12 +1305,14 @@ nint load_file_to_memory(char const * filename, ubyte ** result)
 
 	if (*result == NULL)
 	{
+		printf("Failed to allocate enough space (%d) for program\n", size);
 		fclose(f);
 		return -3;
 	}
 
 	if (size != fread(*result, sizeof(ubyte), size, f))
 	{
+		printf("Reading input file failed\n");
 		fclose(f);
 		return -2; // -2 means file reading fail
 	}

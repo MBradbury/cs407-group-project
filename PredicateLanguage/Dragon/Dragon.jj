@@ -361,7 +361,7 @@ TOKEN : {
 	
 	| <#MATHOP :	"IADD" | "FADD" | "ISUB" | "FSUB" | "IMUL" | "FMUL" | "IDIV1" | "IDIV2" | "FDIV1" | "FDIV2" | "IINC" >
 	
-	| <#MATHLOP :	"IEQ" | "FEQ" | "INEQ" | "FNEQ" | "ILT" | "FLT" | "ILEQ" | "ILEQ" | "FGT" | "FGT" | "IGEQ" | "FGEQ" >
+	| <#MATHLOP :	"IEQ" | "FEQ" | "INEQ" | "FNEQ" | "ILT" | "FLT" | "ILEQ" | "FLEQ" | "IGT" | "FGT" | "IGEQ" | "FGEQ" >
 	
 	| <#LOGICOP :	"AND" | "OR" | "XOR" | "NOT" >
 	

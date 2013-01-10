@@ -1,0 +1,12 @@
+// Prepare to compare to 40.0
+FPUSH 40.0
+
+// Get `this' variable
+IPUSH 0
+AFETCH 0
+
+// Get the temperature of the current node
+CALL 2
+
+// Check if it is less then or equal to 40
+FLEQ

@@ -40,7 +40,7 @@ public class Hoppy
  */
 class EvaluationException extends Exception
 {
-	String error;
+	private final String error;
 
 	public EvaluationException()
 	{
@@ -237,7 +237,7 @@ class UnaryOperatorNode extends SyntaxTreeNode
 	public static Operator parseOperator(String op)
 	{
 		if(op == "!")	return Operator.NOT;
-		else		assert false;
+		else			assert false;
 	}
 }
 
@@ -370,7 +370,7 @@ class QuantifierNode extends SyntaxTreeNode
 	{
 		if(quantifier == "@")		return Quantifier.FOR_ALL;
 		else if(quantifier == "#")	return Quantifier.EXISTS;
-		else				assert false;
+		else						assert false;
 	}
 }
 
@@ -412,6 +412,7 @@ final class PredicateTarget
 	public void setAddr(int[] addr) { this.addr = addr; all = false; }
 	public int[] getAddr() { return addr; }
 
+	@Override
 	public String toString()
 	{
 		return all ? "all" : addr[0] + "." + addr[1];
@@ -441,8 +442,8 @@ TOKEN : {
 	| < QUANTIFIER :	"@" | "#" >
 
 	// Regexes
-	| < NUMBER :	(<DIGIT>)+ >
-	| < NAME :	<LETTER> (<ALPHANUM>)* >
+	| < NUMBER :	("-")? (<DIGIT>)+ >
+	| < NAME :		("-")? <LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
 	| < #LETTER :	["a"-"z"] >
 	| < #DIGIT :	["0"-"9"] >
@@ -566,7 +567,7 @@ SyntaxTree Using() :
 		(
 			fnAlias = <NAME>
 			{ 
-				if(usings == null)
+				if (usings == null)
 				{
 					usings = new HashMap<String, FuncDecl>();
 				}

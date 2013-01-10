@@ -1,5 +1,6 @@
 #!/bin/bash
 
+THISDIR=$(basename "$(pwd)")
 DRAGONDIR="../Dragon"
 
 if [[ $(uname) = "Linux" ]]
@@ -15,12 +16,12 @@ CP="${DRAGONDIR}${CPSEP}${DRAGONDIR}/guava-13.0.1.jar"
 rm -rf Intermediate Output
 mkdir Intermediate Output
 
-rm Input/*~
+rm -f Input/*~
 
 # Make the Dragon assembler
 cd $DRAGONDIR
 make
-cd ../Tests
+cd ../$THISDIR
 
 
 
@@ -28,13 +29,12 @@ if [[ $(uname) = "Linux" ]]
 then
 	cd ../
 	make
-	cd Tests
+	cd $THISDIR
 	
 	VMBINARY="../predlang"
 else
 	VMBINARY="../Debug/PredicateLanguage.exe"
 fi
-
 
 for test in Input/*
 do
@@ -60,9 +60,3 @@ do
 		echo "==================================Test $name Succeeded"
 	fi
 done
-
-
-
-
-
-

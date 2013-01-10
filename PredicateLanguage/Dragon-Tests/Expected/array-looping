@@ -1,8 +1,8 @@
 Program length 39
-Stack ptr value (float 17.002930) (int 1536) (bool 1)
-Result: 1536
+Stack ptr value (float 8.001953) (int 2048) (bool 1)
+Result: 2048
 Stack values:
 	Stack 4 0
-	Stack 3 6
-	Stack 2 136
+	Stack 3 8
+	Stack 2 0
 	Stack 1 65

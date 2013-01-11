@@ -19,7 +19,7 @@
 #endif
 
 
-#define STACK_SIZE (2 * 1024)
+#define STACK_SIZE (1 * 512)
 
 #define MAXIMUM_FUNCTIONS 5
 #define MAXIMUM_VARIABLES 5

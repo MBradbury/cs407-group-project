@@ -1,3 +1,3 @@
 #!/bin/bash
-make; echo -e "[all] < x 3" | java -cp . Hoppy
+make; echo -e "[all] using Neighbours(2) as twohopn in & < ** x(y) 2 3 > y 5" | java -cp . Hoppy
 

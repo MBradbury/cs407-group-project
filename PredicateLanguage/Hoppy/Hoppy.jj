@@ -64,6 +64,11 @@ class IncompleteInformationException extends EvaluationException
 	{
 		super("Can't evaluate this at compile-time.");
 	}
+
+	public IncompleteInformationException(String reason)
+	{
+		super("Can't evaluate this at compile-time: " + reason);
+	}
 }
 
 
@@ -208,19 +213,23 @@ abstract class ValueNode
  */
 class NamedValueNode extends ValueNode implements ISyntaxTreeNode
 {
-	//blah blah
+	private final String name;
+
+	public NamedValueNode(String name)
+	{
+		this.name = name;
+	}
 
 	@Override
 	public Value evaluate() throws IncompleteInformationException
 	{
-		//TODO might be able to evaluate some constant values.
 		throw new IncompleteInformationException();
 	}
 
 	@Override
 	public String toString()
 	{
-		return "NamedValueNode";
+		return "Named:" + name;
 	}
 }
 
@@ -477,7 +486,7 @@ class QuantifierNode implements ISyntaxTreeNode
 	}
 }
 
-final class FuncDecl
+final class FuncDecl extends ValueNode implements ISyntaxTreeNode
 {
 	private String name = null;
 	private String[] args = null;
@@ -489,16 +498,29 @@ final class FuncDecl
 	public void setArgs(String[] args) { this.args = args; }
 
 	@Override
+	public Value evaluate() throws IncompleteInformationException
+	{
+		throw new IncompleteInformationException("Not possible to eval a function");
+	}
+
+	@Override
 	public String toString()
 	{
 		StringBuilder sb = new StringBuilder(name);
-		sb.append(", args: ");
-		
-		for(String arg : args)
+		sb.append("(");
+
+		if (args.length > 0)
 		{
-			sb.append(arg);
-			sb.append(" ");
+			sb.append(args[0]);
+
+			for (int i = 1; i < args.length; ++i)
+			{
+				sb.append(", ");
+				sb.append(args[i]);
+			}
 		}
+
+		sb.append(")");
 
 		return sb.toString();
 	}
@@ -674,7 +696,7 @@ SyntaxTree Using() throws EvaluationException :
 	(
 		<USING> 
 		(
-			fn = Function()
+			fn = Neighbours()
 		)
 		<AS>
 		(
@@ -700,7 +722,7 @@ SyntaxTree Using() throws EvaluationException :
 	}
 } 
 
-FuncDecl Function() :
+FuncDecl Neighbours() :
 {
 	Token nameToken, argToken;
 }
@@ -832,7 +854,8 @@ ISyntaxTreeNode VariableExpr() throws EvaluationException :
 	Value val;
 
 	//For named values.
-
+	Token varname;
+	Token varargs = null;
 
 	//For literal values.
 	Token literal;
@@ -845,23 +868,20 @@ ISyntaxTreeNode VariableExpr() throws EvaluationException :
 {
 	(
 		//A name (either a variable, or if arguments are supplied, a function).
-		<NAME>
-		("(" (<NAME> | <THIS>) ")")?
+		varname = <NAME>
+		("(" ((varargs = <NAME>) | (varargs = <THIS>)) ")")?
 		{
-			//named value
-			NamedValueNode namedValueNode = new NamedValueNode();
-			
-			try
+			if (varargs == null)
 			{
-				val = namedValueNode.evaluate();
+				return new NamedValueNode(varname.image);
 			}
-			catch(IncompleteInformationException ex)
+			else
 			{
-				//Can't evaluate at compile time.
-				return namedValueNode;
+				FuncDecl fn = new FuncDecl();
+				fn.setName(varname.image);
+				fn.setArgs(new String[] { varargs.image });
+				return fn;
 			}
-			
-			return new LiteralValueNode(val);
 		}
 	)
 	|

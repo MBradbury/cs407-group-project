@@ -28,7 +28,9 @@ public class Hoppy
 	public static void main(String args[]) throws ParseException, EvaluationException
 	{
 		Hoppy parser = new Hoppy(System.in);
-		parser.Input(System.out);
+		SyntaxTree tree = parser.Input(System.out);
+
+		System.out.println(tree.toString());
 	}
 }
 
@@ -40,23 +42,19 @@ public class Hoppy
  */
 class EvaluationException extends Exception
 {
-	private final String error;
-
 	public EvaluationException()
 	{
-		super();
-		error = "unknown";
+		super("unknown");
 	}
 
 	public EvaluationException(String error)
 	{
 		super(error);
-		this.error = error;
 	}
 
 	public String getError()
 	{
-		return error;
+		return toString();
 	}
 }
 
@@ -73,7 +71,7 @@ abstract class Value
 {
 }
 
-class BooleanValue extends Value
+final class BooleanValue extends Value
 {
 	private boolean value;
 	
@@ -84,6 +82,12 @@ class BooleanValue extends Value
 
 	public boolean getValue() { return value; }
 	public void setValue(boolean value) { this.value = value; }
+
+	@Override
+	public String toString()
+	{
+		return "B:" + value;
+	}
 
 	public static BooleanValue assertType(Value val) throws EvaluationException
 	{
@@ -98,7 +102,7 @@ class BooleanValue extends Value
 	}
 }
 
-class IntegerValue extends Value
+final class IntegerValue extends Value
 {
 	private int value;
 	
@@ -109,6 +113,12 @@ class IntegerValue extends Value
 
 	public int getValue() { return value; }
 	public void setValue(int value) { this.value = value; }
+
+	@Override
+	public String toString()
+	{
+		return "I:" + value;
+	}
 
 	public static IntegerValue assertType(Value val) throws EvaluationException
 	{
@@ -123,7 +133,7 @@ class IntegerValue extends Value
 	}
 }
 
-class FloatValue extends Value
+final class FloatValue extends Value
 {
 	private float value;
 	
@@ -134,6 +144,12 @@ class FloatValue extends Value
 
 	public float getValue() { return value; }
 	public void setValue(float value) { this.value = value; }
+
+	@Override
+	public String toString()
+	{
+		return "F:" + value;
+	}
 
 	public static FloatValue assertType(Value val) throws EvaluationException
 	{
@@ -162,6 +178,12 @@ final class SyntaxTree
 	{
 		return root.evaluate();
 	}
+
+	@Override
+	public String toString()
+	{
+		return root.toString();
+	}
 }
 
 /**
@@ -170,6 +192,8 @@ final class SyntaxTree
 interface ISyntaxTreeNode
 {
 	Value evaluate() throws EvaluationException, IncompleteInformationException;
+
+	String toString();
 }
 
 /**
@@ -192,6 +216,12 @@ class NamedValueNode extends ValueNode implements ISyntaxTreeNode
 		//TODO might be able to evaluate some constant values.
 		throw new IncompleteInformationException();
 	}
+
+	@Override
+	public String toString()
+	{
+		return "NamedValueNode";
+	}
 }
 
 /**
@@ -213,6 +243,12 @@ class LiteralValueNode extends ValueNode implements ISyntaxTreeNode
 	public Value evaluate() throws IncompleteInformationException
 	{
 		return val;
+	}
+
+	@Override
+	public String toString()
+	{
+		return val.toString();
 	}
 }
 
@@ -260,6 +296,12 @@ class UnaryOperatorNode implements ISyntaxTreeNode
 		default:
 			throw new EvaluationException("Unrecognised unary operator.");
 		}
+	}
+
+	@Override
+	public String toString()
+	{
+		return "(" + op.toString() + " " + child.toString() + ")";
 	}
 
 	public static Operator parseOperator(String op) throws ParseException
@@ -351,28 +393,34 @@ class BinaryOperatorNode implements ISyntaxTreeNode
 		}
 	}
 
+	@Override
+	public String toString()
+	{
+		return "(" + op.toString() + " " + left.toString() + " " + right.toString() + ")";
+	}
+
 	public static Operator parseOperator(String op) throws ParseException
 	{
-		if(op == "==")		return Operator.EQUAL;
-		else if(op == "!=")	return Operator.NOT_EQUAL;
-		else if(op == "<")	return Operator.LESS_THAN;
-		else if(op == "<=")	return Operator.LESS_THAN_EQUAL;
-		else if(op == ">")	return Operator.GREATER_THAN;
-		else if(op == ">=")	return Operator.GREATER_THAN_EQUAL;
+		if(op.equals("=="))			return Operator.EQUAL;
+		else if(op.equals("!="))	return Operator.NOT_EQUAL;
+		else if(op.equals("<"))		return Operator.LESS_THAN;
+		else if(op.equals("<="))	return Operator.LESS_THAN_EQUAL;
+		else if(op.equals(">"))		return Operator.GREATER_THAN;
+		else if(op.equals(">="))	return Operator.GREATER_THAN_EQUAL;
 
-		else if(op == "+")	return Operator.PLUS;
-		else if(op == "-")	return Operator.MINUS;
-		else if(op == "*")	return Operator.MULTIPLY;
-		else if(op == "/")	return Operator.DIVIDE;
-		else if(op == "**")	return Operator.POWER;
+		else if(op.equals("+"))		return Operator.PLUS;
+		else if(op.equals("-"))		return Operator.MINUS;
+		else if(op.equals("*"))		return Operator.MULTIPLY;
+		else if(op.equals("/"))		return Operator.DIVIDE;
+		else if(op.equals("**"))	return Operator.POWER;
 
-		else if(op == "&")	return Operator.AND;
-		else if(op == "|")	return Operator.OR;
-		else if(op == "^")	return Operator.XOR;
-		else if(op == "=>")	return Operator.IMPLIES;
-		else if(op == "<=>")return Operator.EQUIVALENT;
+		else if(op.equals("&"))		return Operator.AND;
+		else if(op.equals("|"))		return Operator.OR;
+		else if(op.equals("^"))		return Operator.XOR;
+		else if(op.equals("=>"))	return Operator.IMPLIES;
+		else if(op.equals("<=>"))	return Operator.EQUIVALENT;
 
-		else				throw new ParseException("TODO");
+		else						throw new ParseException("Unknown operator: " + op);
 	}
 }
 
@@ -415,11 +463,17 @@ class QuantifierNode implements ISyntaxTreeNode
 		throw new EvaluationException("TODO");
 	}
 
+	@Override
+	public String toString()
+	{
+		return "[" + quantifier.toString() + " " + var+ " " + set + "](" + predicate.toString() + ")";
+	}
+
 	public static Quantifier parseQuantifier(String quantifier) throws ParseException
 	{
-		if(quantifier == "@")		return Quantifier.FOR_ALL;
-		else if(quantifier == "#")	return Quantifier.EXISTS;
-		else						throw new ParseException("TODO");
+		if(quantifier.equals("@"))		return Quantifier.FOR_ALL;
+		else if(quantifier.equals("#"))	return Quantifier.EXISTS;
+		else							throw new ParseException("Unknown quantifier: " + quantifier);
 	}
 }
 
@@ -482,6 +536,13 @@ TOKEN : {
 
 	// Functions
 	| < NEIGHBOURS :	"Neighbours" >
+
+	// Set functions
+	| < SET_TRANS_FNS :	"sum" | "mean" | "max" | "min" >
+	| < SET_FNS : 		"len" >
+
+	// Variable functions
+	| < VAR_FNS :		"abs" >
 	
 	// Operators
 	| < LOGICAL_MATH_OP : 	"==" | "!=" | "<" | "<=" | ">" | ">=" >
@@ -491,7 +552,7 @@ TOKEN : {
 	| < QUANTIFIER :		"@" | "#" >
 
 	// Regexes
-	| < NUMBER :	("-")? (<DIGIT>)+ >
+	| < NUMBER :	("-")? ["1"-"9"] (<DIGIT>)* >
 	| < NAME :		<LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
 	| <#LETTER :	["A"-"Z", "a"-"z"] >
@@ -500,7 +561,7 @@ TOKEN : {
 
 SKIP : { " " | "\t" | "\n" | "\r" }
 
-void Input(PrintStream out) throws EvaluationException :
+SyntaxTree Input(PrintStream out) throws EvaluationException :
 {
 	PredicateTarget target;
 	SyntaxTree tree;
@@ -540,6 +601,9 @@ void Input(PrintStream out) throws EvaluationException :
 		}
 	)
 	<EOF>
+	{
+		return tree;
+	}
 }
 
 PredicateTarget Target() throws EvaluationException :

@@ -269,19 +269,7 @@ static variable_reg_t * create_array(variable_id_t id, variable_type_t type, nui
 
 	variable->id = id;
 
-	// Lets create some space in the heap to store the variable
-	// We allocate enough space of `length' `data_size'ed items
-	// So we can store `length' user data items
-	variable->location = heap_alloc(variable_type_size(type) * length);
-
-	if (variable->location == NULL)
-	{
-		error = "Failed to allocate enough space on heap for variable";
-		DEBUG_PRINT("========%s=====%d===\n", error, variable_type_size(type) * length);
-		return NULL;
-	}
-
-	memset(variable->location, 0, variable_type_size(type) * length);
+	variable->location = NULL;
 
 	variable->type = type;
 	variable->is_array = true;
@@ -293,6 +281,28 @@ static variable_reg_t * create_array(variable_id_t id, variable_type_t type, nui
 	variable_regs_count += 1;
 
 	return variable;
+}
+
+static bool alloc_array(variable_reg_t * variable)
+{
+	if (variable == NULL)
+		return false;
+
+	// Lets create some space in the heap to store the variable
+	// We allocate enough space of `length' `data_size'ed items
+	// So we can store `length' user data items
+	variable->location = heap_alloc(variable_type_size(variable->type) * variable->length);
+
+	if (variable->location == NULL)
+	{
+		error = "Failed to allocate enough space on heap for variable";
+		DEBUG_PRINT("========%s=====%d===\n", error, variable_type_size(variable->type) * variable->length);
+		return false;
+	}
+
+	memset(variable->location, 0, variable_type_size(variable->type) * variable->length);
+
+	return true;
 }
 
 static variable_reg_t * get_variable(variable_id_t id)
@@ -1141,16 +1151,20 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 }
 
 
-bool bind_input(variable_id_t id, void const * data, unsigned int data_length)
+bool bind_input(variable_id_t id, void const * data, unsigned int length)
 {
-	variable_reg_t * var_array = create_array(id, TYPE_USER, data_length);
+	if (data == NULL)
+		return false;
+
+	if (length == 0)
+		return false;
+
+	variable_reg_t * var_array = create_array(id, TYPE_USER, length);
 
 	if (var_array == NULL)
-	{
 		return false;
-	}
 
-	memcpy(var_array->location, data, data_length * variable_type_size(TYPE_USER));
+	var_array->location = data;
 
 	return true;
 }
@@ -1410,6 +1424,7 @@ int main(int argc, char * argv[])
 	register_function(HUMIDITY_FN_ID, &get_humidity_fn, TYPE_FLOATING);
 
 	variable_reg_t * var_array = create_array(255, TYPE_USER, 10);
+	alloc_array(var_array);
 
 	user_data_t * arr = (user_data_t *)var_array->location;
 	set_user_data(&arr[0], 0, 1, 25, 122);

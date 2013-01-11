@@ -1043,23 +1043,16 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (var == NULL)
 					return false;
 
-				if (!push_stack((char *)var->location + (*idx * variable_type_size(var->type)), variable_type_size(var->type)))
-					return false;
-
-				if (!require_stack_size(data_size))
-					return false;
+				void * inputdata = (char *)var->location + (*idx * variable_type_size(var->type));
 
 				variable_type_t type;
-				void const * data = call_function(*(function_id_t *)(current + 1), stack_ptr, &type);
+				void const * data = call_function(*(function_id_t *)(current + 1), inputdata, &type);
 				current += sizeof(function_id_t);
 
 				if (data == NULL)
 				{
 					return false;
 				}
-
-				if (!pop_stack(data_size))
-					return false;
 
 				if (!push_stack(data, variable_type_size(type)))
 					return false;

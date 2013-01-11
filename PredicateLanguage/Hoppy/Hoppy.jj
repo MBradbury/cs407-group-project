@@ -25,7 +25,7 @@ import java.util.*;
 
 public class Hoppy
 {
-	public static void main(String args[]) throws ParseException
+	public static void main(String args[]) throws ParseException, EvaluationException
 	{
 		Hoppy parser = new Hoppy(System.in);
 		parser.Input(System.out);
@@ -85,7 +85,7 @@ class BooleanValue extends Value
 	public boolean getValue() { return value; }
 	public void setValue(boolean value) { this.value = value; }
 
-	public static BooleanValue assertType(Value val)
+	public static BooleanValue assertType(Value val) throws EvaluationException
 	{
 		if(!(val instanceof BooleanValue))
 		{
@@ -110,7 +110,7 @@ class IntegerValue extends Value
 	public int getValue() { return value; }
 	public void setValue(int value) { this.value = value; }
 
-	public static IntegerValue assertType(Value val)
+	public static IntegerValue assertType(Value val) throws EvaluationException
 	{
 		if(!(val instanceof IntegerValue))
 		{
@@ -123,43 +123,71 @@ class IntegerValue extends Value
 	}
 }
 
+class FloatValue extends Value
+{
+	private float value;
+	
+	public FloatValue(float value)
+	{
+		this.value = value;
+	}
+
+	public float getValue() { return value; }
+	public void setValue(float value) { this.value = value; }
+
+	public static FloatValue assertType(Value val) throws EvaluationException
+	{
+		if(!(val instanceof FloatValue))
+		{
+			throw new EvaluationException("Value type not float.");
+		}
+		else
+		{
+			return (FloatValue)val;
+		}
+	}
+}
+
 /**
  * Representation of the program's syntax tree.
  */
 final class SyntaxTree
 {
-	private SyntaxTreeNode root = null;
+	private ISyntaxTreeNode root = null;
 
-	public SyntaxTreeNode getRoot() { return root; }
-	public void setRoot(SyntaxTreeNode root) { this.root = root; }
+	public ISyntaxTreeNode getRoot() { return root; }
+	public void setRoot(ISyntaxTreeNode root) { this.root = root; }
 
-	public Value evaluate() { return root.evaluate(); }
+	public Value evaluate() throws EvaluationException, IncompleteInformationException
+	{
+		return root.evaluate();
+	}
 }
 
 /**
  * Base class for syntax tree nodes.
  */
-abstract class SyntaxTreeNode
+interface ISyntaxTreeNode
 {
-	public abstract Value evaluate() throws EvaluationException, IncompleteInformationException;
+	Value evaluate() throws EvaluationException, IncompleteInformationException;
 }
 
 /**
  * Abstract class representing values.
  */
-abstract class ValueNode extends SyntaxTreeNode
+abstract class ValueNode
 {
 }
 
 /**
  * Concrete node class representing a named value.
  */
-class NamedValueNode extends ValueNode
+class NamedValueNode extends ValueNode implements ISyntaxTreeNode
 {
 	//blah blah
 
 	@Override
-	public Value evaluate()
+	public Value evaluate() throws IncompleteInformationException
 	{
 		//TODO might be able to evaluate some constant values.
 		throw new IncompleteInformationException();
@@ -169,7 +197,7 @@ class NamedValueNode extends ValueNode
 /**
  * Concrete node class representing a literal value.
  */
-class LiteralValueNode extends ValueNode
+class LiteralValueNode extends ValueNode implements ISyntaxTreeNode
 {
 	private Value val;
 
@@ -182,7 +210,7 @@ class LiteralValueNode extends ValueNode
 	public void setVal(Value val) { this.val = val; }
 
 	@Override
-	public Value evaluate()
+	public Value evaluate() throws IncompleteInformationException
 	{
 		return val;
 	}
@@ -191,7 +219,7 @@ class LiteralValueNode extends ValueNode
 /**
  * Concrete node class representing a unary operator.
  */
-class UnaryOperatorNode extends SyntaxTreeNode
+class UnaryOperatorNode implements ISyntaxTreeNode
 {
 	public enum Operator
 	{
@@ -199,9 +227,9 @@ class UnaryOperatorNode extends SyntaxTreeNode
 	}
 
 	private Operator op;
-	private SyntaxTreeNode child;
+	private ISyntaxTreeNode child;
 
-	public UnaryOperatorNode(Operator op, SyntaxTreeNode child)
+	public UnaryOperatorNode(Operator op, ISyntaxTreeNode child)
 	{
 		this.op = op;
 		this.child = child;
@@ -210,11 +238,11 @@ class UnaryOperatorNode extends SyntaxTreeNode
 	public Operator getOp() { return op; }
 	public void setOp(Operator op) { this.op = op; }
 
-	public SyntaxTreeNode getChild() { return child; }
-	public void setChild(SyntaxTreeNode child) { this.child = child; }
+	public ISyntaxTreeNode getChild() { return child; }
+	public void setChild(ISyntaxTreeNode child) { this.child = child; }
 
 	@Override
-	public Value evaluate()
+	public Value evaluate() throws EvaluationException, IncompleteInformationException
 	{
 		//Evaluate the child node.
 		Value childValue = child.evaluate();
@@ -234,17 +262,17 @@ class UnaryOperatorNode extends SyntaxTreeNode
 		}
 	}
 
-	public static Operator parseOperator(String op)
+	public static Operator parseOperator(String op) throws ParseException
 	{
 		if(op == "!")	return Operator.NOT;
-		else			assert false;
+		else			throw new ParseException("Expected `!'");
 	}
 }
 
 /**
  * Concrete node class representing an binary operator.
  */
-class BinaryOperatorNode extends SyntaxTreeNode
+class BinaryOperatorNode implements ISyntaxTreeNode
 {
 	public enum Operator
 	{
@@ -254,19 +282,25 @@ class BinaryOperatorNode extends SyntaxTreeNode
 		LESS_THAN_EQUAL,
 		GREATER_THAN,
 		GREATER_THAN_EQUAL,
+		
+		AND,
+		OR,
+		XOR,
+		IMPLIES,
+		EQUIVALENT,
+
 		PLUS,
 		MINUS,
 		MULTIPLY,
 		DIVIDE,
-		AND,
-		OR
+		POWER
 	}
 
 	private Operator op;
-	private SyntaxTreeNode left;
-	private SyntaxTreeNode right;
+	private ISyntaxTreeNode left;
+	private ISyntaxTreeNode right;
 
-	public BinaryOperatorNode(Operator op, SyntaxTreeNode left, SyntaxTreeNode right)
+	public BinaryOperatorNode(Operator op, ISyntaxTreeNode left, ISyntaxTreeNode right)
 	{
 		this.op = op;
 		this.left = left;
@@ -276,14 +310,14 @@ class BinaryOperatorNode extends SyntaxTreeNode
 	public Operator getOp() { return op; }
 	public void setOp(Operator op) { this.op = op; }
 	
-	public SyntaxTreeNode getLeft() { return left; }
-	public void setLeft(SyntaxTreeNode left) { this.left = left; }
+	public ISyntaxTreeNode getLeft() { return left; }
+	public void setLeft(ISyntaxTreeNode left) { this.left = left; }
 
-	public SyntaxTreeNode getRight() { return right; }
-	public void setRight(SyntaxTreeNode right) { this.right = right; }
+	public ISyntaxTreeNode getRight() { return right; }
+	public void setRight(ISyntaxTreeNode right) { this.right = right; }
 
 	@Override
-	public Value evaluate()
+	public Value evaluate() throws EvaluationException, IncompleteInformationException
 	{
 		//Evaluate the child nodes.
 		Value leftValue = left.evaluate();
@@ -297,19 +331,27 @@ class BinaryOperatorNode extends SyntaxTreeNode
 		case LESS_THAN_EQUAL:		return new BooleanValue(IntegerValue.assertType(leftValue).getValue() <= IntegerValue.assertType(rightValue).getValue());
 		case GREATER_THAN:			return new BooleanValue(IntegerValue.assertType(leftValue).getValue() > IntegerValue.assertType(rightValue).getValue());
 		case GREATER_THAN_EQUAL:	return new BooleanValue(IntegerValue.assertType(leftValue).getValue() <= IntegerValue.assertType(rightValue).getValue());
+
+
 		case PLUS:					return new IntegerValue(IntegerValue.assertType(leftValue).getValue() + IntegerValue.assertType(rightValue).getValue());
 		case MINUS:					return new IntegerValue(IntegerValue.assertType(leftValue).getValue() - IntegerValue.assertType(rightValue).getValue());
 		case MULTIPLY:				return new IntegerValue(IntegerValue.assertType(leftValue).getValue() * IntegerValue.assertType(rightValue).getValue());
 		case DIVIDE:				return new IntegerValue(IntegerValue.assertType(leftValue).getValue() / IntegerValue.assertType(rightValue).getValue());
+		case POWER:					return new IntegerValue((int)Math.pow(IntegerValue.assertType(leftValue).getValue(), IntegerValue.assertType(rightValue).getValue()));
+
+
 		case AND:					return new BooleanValue(BooleanValue.assertType(leftValue).getValue() && BooleanValue.assertType(rightValue).getValue());
 		case OR:					return new BooleanValue(BooleanValue.assertType(leftValue).getValue() || BooleanValue.assertType(rightValue).getValue());
+		case XOR:					return new BooleanValue(BooleanValue.assertType(leftValue).getValue() ^ BooleanValue.assertType(rightValue).getValue());
+		case IMPLIES:				return new BooleanValue(!BooleanValue.assertType(leftValue).getValue() || BooleanValue.assertType(rightValue).getValue());
+		case EQUIVALENT:			return new BooleanValue(BooleanValue.assertType(leftValue).getValue() == BooleanValue.assertType(rightValue).getValue());
 	
 		default:
 			throw new EvaluationException("Unrecognised binary operator.");
 		}
 	}
 
-	public static Operator parseOperator(String op)
+	public static Operator parseOperator(String op) throws ParseException
 	{
 		if(op == "==")		return Operator.EQUAL;
 		else if(op == "!=")	return Operator.NOT_EQUAL;
@@ -317,17 +359,24 @@ class BinaryOperatorNode extends SyntaxTreeNode
 		else if(op == "<=")	return Operator.LESS_THAN_EQUAL;
 		else if(op == ">")	return Operator.GREATER_THAN;
 		else if(op == ">=")	return Operator.GREATER_THAN_EQUAL;
+
 		else if(op == "+")	return Operator.PLUS;
 		else if(op == "-")	return Operator.MINUS;
 		else if(op == "*")	return Operator.MULTIPLY;
 		else if(op == "/")	return Operator.DIVIDE;
+		else if(op == "**")	return Operator.POWER;
+
 		else if(op == "&")	return Operator.AND;
 		else if(op == "|")	return Operator.OR;
-		else				assert false;
+		else if(op == "^")	return Operator.XOR;
+		else if(op == "=>")	return Operator.IMPLIES;
+		else if(op == "<=>")return Operator.EQUIVALENT;
+
+		else				throw new ParseException("TODO");
 	}
 }
 
-class QuantifierNode extends SyntaxTreeNode
+class QuantifierNode implements ISyntaxTreeNode
 {
 	public enum Quantifier
 	{
@@ -338,9 +387,9 @@ class QuantifierNode extends SyntaxTreeNode
 	private Quantifier quantifier;
 	private String var;
 	private String set;
-	private SyntaxTreeNode predicate;
+	private ISyntaxTreeNode predicate;
 
-	public QuantifierNode(Quantifier quantifier, String var, String set, SyntaxTreeNode predicate)
+	public QuantifierNode(Quantifier quantifier, String var, String set, ISyntaxTreeNode predicate)
 	{
 		this.quantifier = quantifier;
 		this.var = var;
@@ -357,20 +406,20 @@ class QuantifierNode extends SyntaxTreeNode
 	public String getSet() { return set; }
 	public void setSet(String set) { this.set = set; }
 
-	public SyntaxTreeNode getPredicate() { return predicate; }
-	public void setPredicate(SyntaxTreeNode predicate) { this.predicate = predicate; }
+	public ISyntaxTreeNode getPredicate() { return predicate; }
+	public void setPredicate(ISyntaxTreeNode predicate) { this.predicate = predicate; }
 
 	@Override
-	public Value evaluate()
+	public Value evaluate() throws EvaluationException, IncompleteInformationException
 	{
 		throw new EvaluationException("TODO");
 	}
 
-	public static Quantifier parseQuantifier(String quantifier)
+	public static Quantifier parseQuantifier(String quantifier) throws ParseException
 	{
 		if(quantifier == "@")		return Quantifier.FOR_ALL;
 		else if(quantifier == "#")	return Quantifier.EXISTS;
-		else						assert false;
+		else						throw new ParseException("TODO");
 	}
 }
 
@@ -451,7 +500,7 @@ TOKEN : {
 
 SKIP : { " " | "\t" | "\n" | "\r" }
 
-void Input(PrintStream out) :
+void Input(PrintStream out) throws EvaluationException :
 {
 	PredicateTarget target;
 	SyntaxTree tree;
@@ -493,7 +542,7 @@ void Input(PrintStream out) :
 	<EOF>
 }
 
-PredicateTarget Target() :
+PredicateTarget Target() throws EvaluationException :
 {
 	int a, b;
 	int[] addr = null;
@@ -548,14 +597,14 @@ int UnsignedCharNumber() throws ParseException :
 }
 
 
-SyntaxTree Using() :
+SyntaxTree Using() throws EvaluationException :
 {
 	//Parse a list of aliased functions, return null instead of map if none.
 	FuncDecl fn = null;
 	Token fnAlias;
 	HashMap<String, FuncDecl> usings = null;
 
-	SyntaxTreeNode node;
+	ISyntaxTreeNode node;
 }
 {
 	(
@@ -601,9 +650,9 @@ FuncDecl Function() :
 	}
 }
 
-SyntaxTreeNode Predicate() :
+ISyntaxTreeNode Predicate() throws EvaluationException :
 {
-	SyntaxTreeNode node;
+	ISyntaxTreeNode node;
 	Value val;
 
 	//Quantifier.
@@ -623,8 +672,8 @@ SyntaxTreeNode Predicate() :
 			var = <NAME>
 			<COLON>
 			set = <NAME>
-			<TILDE> 
-			node = Predicate() 
+			<TILDE>
+			node = Predicate()
 			")"
 			{
 				QuantifierNode.Quantifier qWrapper = QuantifierNode.parseQuantifier(quantifier.image);
@@ -684,11 +733,11 @@ SyntaxTreeNode Predicate() :
 	)
 }
 
-SyntaxTreeNode MathBinaryExpr() :
+ISyntaxTreeNode MathBinaryExpr() throws EvaluationException :
 {
 	Token op;
-	SyntaxTreeNode left;
-	SyntaxTreeNode right;
+	ISyntaxTreeNode left;
+	ISyntaxTreeNode right;
 }
 {
 	//A logical comparison between two arithmetic expressions.
@@ -714,7 +763,7 @@ SyntaxTreeNode MathBinaryExpr() :
 	}
 }
 
-SyntaxTreeNode VariableExpr() :
+ISyntaxTreeNode VariableExpr() throws EvaluationException :
 {
 	Value val;
 
@@ -726,8 +775,8 @@ SyntaxTreeNode VariableExpr() :
 
 	//For arithmetic ops.
 	Token op;
-	SyntaxTreeNode left;
-	SyntaxTreeNode right;
+	ISyntaxTreeNode left;
+	ISyntaxTreeNode right;
 }
 {
 	(
@@ -788,11 +837,11 @@ SyntaxTreeNode VariableExpr() :
 	)
 }
 
-SyntaxTreeNode LogicalBinaryExpr() :
+ISyntaxTreeNode LogicalBinaryExpr() throws EvaluationException :
 {
 	Token op;
-	SyntaxTreeNode left;
-	SyntaxTreeNode right;
+	ISyntaxTreeNode left;
+	ISyntaxTreeNode right;
 }
 {
 	//A conjunction or disjunction on two predicates.

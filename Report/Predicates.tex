@@ -174,7 +174,7 @@ However, there is an issue with this predicate. How would we implement the $Dist
 %
 	\pn{alpha} & \pp & \sm{A}\dots\sm{Z} \oo \sm{a}\dots\sm{z} \\
 	\pn{number} & \pp & \pn{sign} \pn{number-first} \oo \pn{number-first} \\
-	\pn{number-first} & \pp & \sm{0} \oo \sm{1}\dots\sm{9} \oo \sm{1}\dots\sm{9}\pn{number-rest} \\
+	\pn{number-first} & \pp & \pn{digit} \oo \sm{1}\dots\sm{9}\pn{number-rest} \\
 	\pn{number-rest} & \pp & \pn{digit} \oo \pn{digit}\pn{number-rest} \\
 	\pn{digit} & \pp & \sm{0}\dots\sm{9} \\
 	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\

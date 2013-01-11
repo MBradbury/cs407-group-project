@@ -423,7 +423,7 @@ PARSER_END(Hoppy)
 
 TOKEN : {
 	// Keywords
-	< USING : 	"using" >
+	  < USING : "using" >
 	| < AS :	"as" >
 	| < IN : 	"in" >
 	| < THIS : 	"this" >
@@ -443,10 +443,10 @@ TOKEN : {
 
 	// Regexes
 	| < NUMBER :	("-")? (<DIGIT>)+ >
-	| < NAME :		("-")? <LETTER> (<ALPHANUM>)* >
+	| < NAME :		<LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
-	| < #LETTER :	["A"-"Z", "a"-"z"] >
-	| < #DIGIT :	["0"-"9"] >
+	| <#LETTER :	["A"-"Z", "a"-"z"] >
+	| <#DIGIT :	["0"-"9"] >
 }
 
 SKIP : { " " | "\t" | "\n" | "\r" }

@@ -522,7 +522,7 @@ typedef enum {
 
   JMP=18, JZ=19, JNZ=20,
 
-  IADD=21, ISUB=22, IMUL=23, IDIV1=24, IDIV2=25, IINC=26,
+  IADD=21, ISUB=22, IMUL=23, IDIV1=24, IDIV2=25, IINC=26, 
   IEQ=27, INEQ=28, ILT=29, ILEQ=30, IGT=31, IGEQ=32,
 
   FADD=33, FSUB=34, FMUL=35, FDIV1=36, FDIV2=37,
@@ -536,7 +536,9 @@ typedef enum {
 
   FPOW=52,
 
-  VIINC=53, VIFAFC=54,
+  VIINC=53, VIDEC=54, VIFAFC=55,
+
+  IDEC=56,
 
 } opcode;
 
@@ -571,7 +573,9 @@ static const char * opcode_names[] = {
 
 	"FPOW",
 
-	"VIINC", "VIFAFC"
+	"VIINC", "VIDEC", "VIFAFC",
+
+	"IDEC",
 };
 #endif
 
@@ -591,11 +595,11 @@ static const char * opcode_names[] = {
 #define OPERATION_ARRAY(code, array_fn, end_array_fn) \
 	case code: \
 		{ \
-			variable_id_t array_id = *(variable_id_t *)(current + 1); \
+			variable_id_t array_id = *(variable_id_t const *)(current + 1); \
 			current += sizeof(variable_id_t); \
 			DEBUG_ERR_PRINT("Array id %u\n", array_id); \
 			 \
-			variable_id_t fn_id = *(variable_id_t *)(current + 1); \
+			variable_id_t fn_id = *(variable_id_t const *)(current + 1); \
 			current += sizeof(variable_id_t); \
 			DEBUG_ERR_PRINT("FN id %u\n", fn_id); \
 			 \
@@ -669,9 +673,9 @@ static inline void array_min_fn(float * out, float in)
 
 
 
-nbool evaluate(ubyte * start, nuint program_length)
+nbool evaluate(ubyte const * start, nuint program_length)
 {
-	ubyte * current = start;
+	ubyte const * current = start;
 
 	while (current - start < program_length)
 	{
@@ -689,8 +693,8 @@ nbool evaluate(ubyte * start, nuint program_length)
 			return *(int *)stack_ptr;
 
 		case IPUSH:
-			DEBUG_ERR_PRINT("Pushing int %d onto the stack\n", *(nint*)(current + 1));
-			if (!int_push_stack(*(nint*)(current + 1)))
+			DEBUG_ERR_PRINT("Pushing int %d onto the stack\n", *(nint const*)(current + 1));
+			if (!int_push_stack(*(nint const*)(current + 1)))
 				return false;
 			current += sizeof(nint);
 			break;
@@ -701,8 +705,8 @@ nbool evaluate(ubyte * start, nuint program_length)
 			break;
 
 		case FPUSH:
-			DEBUG_ERR_PRINT("Pushing float %f onto the stack\n", *(nfloat*)(current + 1));
-			if (!float_push_stack(*(nfloat*)(current + 1)))
+			DEBUG_ERR_PRINT("Pushing float %f onto the stack\n", *(nfloat const*)(current + 1));
+			if (!float_push_stack(*(nfloat const*)(current + 1)))
 				return false;
 			current += sizeof(nfloat);
 			break;
@@ -714,7 +718,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case IFETCH:
 			{
-				nint * var = get_variable_as_int(*(variable_id_t *)(current + 1));
+				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -730,7 +734,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!require_stack_size(sizeof(nint)))
 					return false;
 
-				nint * var = get_variable_as_int(*(variable_id_t *)(current + 1));
+				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -742,7 +746,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case FFETCH:
 			{
-				nfloat * var = get_variable_as_float(*(variable_id_t *)(current + 1));
+				nfloat * var = get_variable_as_float(*(variable_id_t const *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -758,7 +762,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!require_stack_size(sizeof(nfloat)))
 					return false;
 
-				nfloat * var = get_variable_as_float(*(variable_id_t *)(current + 1));
+				nfloat * var = get_variable_as_float(*(variable_id_t const *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -773,7 +777,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!require_stack_size(sizeof(nint)))
 					return false;
 
-				variable_reg_t * var = get_variable(*(variable_id_t *)(current + 1));
+				variable_reg_t * var = get_variable(*(variable_id_t const *)(current + 1));
 
 				nint i = ((nint *)stack_ptr)[0];
 
@@ -788,7 +792,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case ALEN:
 			{
-				variable_reg_t * var = get_variable(*(variable_id_t *)(current + 1));
+				variable_reg_t * var = get_variable(*(variable_id_t const *)(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -810,7 +814,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 					return false;
 
 				variable_type_t type;
-				void const * data = call_function(*(function_id_t *)(current + 1), stack_ptr, &type);
+				void const * data = call_function(*(function_id_t const *)(current + 1), stack_ptr, &type);
 				current += sizeof(function_id_t);
 
 				if (data == NULL)
@@ -855,7 +859,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 			} break;
 
 		case JMP:
-			current = start + *(ubyte *)(current + 1) - 1;
+			current = start + *(ubyte const *)(current + 1) - 1;
 			DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			break;
 
@@ -865,7 +869,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 			if (((nint *)stack_ptr)[0] == 0)
 			{
-				current = start + *(ubyte *)(current + 1) - 1;
+				current = start + *(ubyte const *)(current + 1) - 1;
 				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			}
 			else
@@ -884,7 +888,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 			if (((nint *)stack_ptr)[0] != 0)
 			{
-				current = start + *(ubyte *)(current + 1) - 1;
+				current = start + *(ubyte const *)(current + 1) - 1;
 				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			}
 			else
@@ -910,6 +914,15 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 			DEBUG_ERR_PRINT("Incrementing %d\n", ((nint *)stack_ptr)[0]);
 			((nint *)stack_ptr)[0] += 1;
+
+			break;
+
+		case IDEC:
+			if (!require_stack_size(sizeof(nint)))
+				return false;
+
+			DEBUG_ERR_PRINT("Decrementing %d\n", ((nint *)stack_ptr)[0]);
+			((nint *)stack_ptr)[0] -= 1;
 
 			break;
 
@@ -946,7 +959,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case IVAR:
 			{
-				variable_id_t id = *(variable_id_t *)(current + 1);
+				variable_id_t id = *(variable_id_t const *)(current + 1);
 
 				if (create_variable(id, TYPE_INTEGER) == NULL)
 				{
@@ -958,7 +971,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 
 		case FVAR:
 			{
-				variable_id_t id = *(variable_id_t *)(current + 1);
+				variable_id_t id = *(variable_id_t const *)(current + 1);
 
 				if (create_variable(id, TYPE_FLOATING) == NULL)
 				{
@@ -973,7 +986,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				if (!require_stack_size(sizeof(nfloat)))
 					return false;
 
-				nfloat res = abs(*(nfloat *)stack_ptr) ;
+				nfloat res = abs(*(nfloat *)stack_ptr);
 
 				if (!pop_stack(sizeof(nfloat)))
 					return false;
@@ -1021,12 +1034,32 @@ nbool evaluate(ubyte * start, nuint program_length)
 		// ISTORE x
 		case VIINC:
 			{
-				nint * var = get_variable_as_int(*(variable_id_t *)(current + 1));
+				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
 
 				if (var == NULL)
 					return false;
 
 				*var += 1;
+
+				if (!int_push_stack(*var))
+					return false;
+
+				current += sizeof(variable_id_t);
+			} break;
+
+		// VIINC x
+		// Same as doing:
+		// IFETCH x
+		// IDEC
+		// ISTORE x
+		case VIDEC:
+			{
+				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
+
+				if (var == NULL)
+					return false;
+
+				*var -= 1;
 
 				if (!int_push_stack(*var))
 					return false;
@@ -1041,13 +1074,13 @@ nbool evaluate(ubyte * start, nuint program_length)
 		// CALL z
 		case VIFAFC:
 			{
-				nint * idx = get_variable_as_int(*(variable_id_t *)(current + 1));
+				nint const * idx = get_variable_as_int(*(variable_id_t const *)(current + 1));
 				current += sizeof(variable_id_t);
 
 				if (idx == NULL)
 					return false;
 
-				variable_reg_t * var = get_variable(*(variable_id_t *)(current + 1));
+				variable_reg_t const * var = get_variable(*(variable_id_t const *)(current + 1));
 				current += sizeof(variable_id_t);
 
 				if (var == NULL)
@@ -1056,7 +1089,7 @@ nbool evaluate(ubyte * start, nuint program_length)
 				void * inputdata = (char *)var->location + (*idx * variable_type_size(var->type));
 
 				variable_type_t type;
-				void const * data = call_function(*(function_id_t *)(current + 1), inputdata, &type);
+				void const * data = call_function(*(function_id_t const *)(current + 1), inputdata, &type);
 				current += sizeof(function_id_t);
 
 				if (data == NULL)
@@ -1151,7 +1184,7 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 }
 
 
-bool bind_input(variable_id_t id, void const * data, unsigned int length)
+bool bind_input(variable_id_t id, void * data, unsigned int length)
 {
 	if (data == NULL)
 		return false;

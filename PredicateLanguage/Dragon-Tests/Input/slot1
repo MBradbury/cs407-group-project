@@ -1,0 +1,100 @@
+// Loop Counters
+IVAR 1
+IVAR 2
+
+// Result variable
+IPUSH 1
+
+// Initalise loop counter
+IPUSH 0
+ISTORE 1
+
+// Perform loop termination check
+label1: ALEN 255
+INEQ
+JZ after1
+
+
+// Perform body operations
+
+
+// Initalise loop counter
+IPUSH 0
+ISTORE 2
+
+// Perform loop termination check
+label2: ALEN 255
+INEQ
+JZ after2
+
+
+
+
+//////////////////////////
+// Perform body operations
+//////////////////////////
+
+// Get id(a)
+IFETCH 1
+AFETCH 255
+CALL 0
+
+// Get id(b)
+IFETCH 2
+AFETCH 255
+CALL 0
+
+// id(a) == id(b)
+IEQ
+
+
+
+// Get slot(a)
+IFETCH 1
+AFETCH 255
+CALL 1
+
+// Get slot(b)
+IFETCH 2
+AFETCH 255
+CALL 1
+
+// slot(a) != slot(b)
+INEQ
+
+// (id(a) == id(b)) || (slot(a) != slot(b))
+OR
+
+// Accumulate in for all result
+AND
+
+///////////////////////////////
+// END: Perform body operations
+///////////////////////////////
+
+
+
+
+// Increment loop counter
+IFETCH 2
+IINC
+ISTORE 2
+
+// Jump to start of loop
+JMP label2
+
+// END: Perform body operations
+
+
+
+// Increment loop counter
+after2: IFETCH 1
+IINC
+ISTORE 1
+
+// Jump to start of loop
+JMP label1
+
+// Program termination
+after1: HALT
+

@@ -180,7 +180,7 @@ enum OpcodeEnum
 	JZ(19, OpcodeType.OneArgByte),
 	JNZ(20, OpcodeType.OneArgByte),
 
-	IADD(21), ISUB(22), IMUL(23), IDIV1(24), IDIV2(25), IINC(26),
+	IADD(21), ISUB(22), IMUL(23), IDIV1(24), IDIV2(25), IINC(26), IDEC(56),
 	IEQ(27), INEQ(28), ILT(29), ILEQ(30), IGT(31), IGEQ(32),
 
 	FADD(33), FSUB(34), FMUL(35), FDIV1(36), FDIV2(37),
@@ -195,7 +195,8 @@ enum OpcodeEnum
 
 	FPOW(52),
 
-	VIINC(53, OpcodeType.OneArgByte), VIFAFC(54, OpcodeType.ThreeArgsByte);
+	VIINC(53, OpcodeType.OneArgByte), VIDEC(54, OpcodeType.OneArgByte),
+	VIFAFC(55, OpcodeType.ThreeArgsByte);
 	
 	private final int value;
 	private final OpcodeType type;
@@ -362,7 +363,7 @@ TOKEN : {
 	
 	| <#JUMP :		"JMP" | "JZ" | "JNZ" >
 	
-	| <#MATHOP :	"IADD" | "FADD" | "ISUB" | "FSUB" | "IMUL" | "FMUL" | "IDIV1" | "IDIV2" | "FDIV1" | "FDIV2" | "IINC" >
+	| <#MATHOP :	"IADD" | "FADD" | "ISUB" | "FSUB" | "IMUL" | "FMUL" | "IDIV1" | "IDIV2" | "FDIV1" | "FDIV2" | "IINC" | "IDEC" >
 	
 	| <#MATHLOP :	"IEQ" | "FEQ" | "INEQ" | "FNEQ" | "ILT" | "FLT" | "ILEQ" | "FLEQ" | "IGT" | "FGT" | "IGEQ" | "FGEQ" >
 	
@@ -375,7 +376,7 @@ TOKEN : {
 	| < ZEROARG :	"HALT" | <POP> | <CAST> | <MATHOP> | <MATHLOP> | <LOGICOP> | <ABS> | "FPOW" >
 	| < ONEARGI :	"IPUSH" >
 	| < ONEARGF :	"FPUSH" >
-	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> | "VIINC" >
+	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> | "VIINC" | "VIDEC" >
 	| < ONEARGS :	<JUMP> >
 	| < TWOARGB :	<ABIGOP> >
 	| < THREEARGB :	"VIFAFC" >
@@ -446,7 +447,7 @@ Opcode Operation() throws ArithmeticException :
 		| (t = <ONEARGI>) (t1 = <INT>)
 		{ op.setName(t.image); op.addArg(new IntArg(t1)); }
 
-		| (t = <ONEARGF>) (t1 = <FLOAT>)
+		| (t = <ONEARGF>) ((t1 = <INT>) | (t1 = <FLOAT>))
 		{ op.setName(t.image); op.addArg(new FloatArg(t1)); }
 		
 		| (t = <ONEARGB>) (t1 = <INT>)

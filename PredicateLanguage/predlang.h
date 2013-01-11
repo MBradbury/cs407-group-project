@@ -44,9 +44,9 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size);
 // This data must be a non-null array of length: sizeof(TYPE_USER) * length
 // The id must be the id the bytecode expects the array to be.
 // The memory provided must not be free'd until evaluate() has finished
-bool bind_input(variable_id_t id, void const * data, unsigned int length);
+bool bind_input(variable_id_t id, void * data, unsigned int length);
 
-nbool evaluate(ubyte * start, nuint program_length);
+nbool evaluate(ubyte const * start, nuint program_length);
 
 char const * error_message(void);
 

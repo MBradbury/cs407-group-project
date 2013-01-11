@@ -135,7 +135,8 @@ enum OpcodeType
 	OneArgInt(1 + 2),
 	OneArgFloat(1 + 4),
 	OneArgByte(1 + 1),
-	TwoArgsByte(1 + (2*1));
+	TwoArgsByte(1 + (2*1)),
+	ThreeArgsByte(1 + (3*1));
 
 	private final int size;
 
@@ -192,7 +193,9 @@ enum OpcodeEnum
 
 	IABS(50), FABS(51),
 
-	FPOW(52);
+	FPOW(52),
+
+	VIINC(53, OpcodeType.OneArgByte), VIFAFC(54, OpcodeType.ThreeArgsByte);
 	
 	private final int value;
 	private final OpcodeType type;
@@ -372,9 +375,10 @@ TOKEN : {
 	| < ZEROARG :	"HALT" | <POP> | <CAST> | <MATHOP> | <MATHLOP> | <LOGICOP> | <ABS> | "FPOW" >
 	| < ONEARGI :	"IPUSH" >
 	| < ONEARGF :	"FPUSH" >
-	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> >
+	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> | "VIINC" >
 	| < ONEARGS :	<JUMP> >
 	| < TWOARGB :	<ABIGOP> >
+	| < THREEARGB :	"VIFAFC" >
 }
 
 // Numbers
@@ -431,7 +435,7 @@ ArrayList<Opcode> Input() :
 
 Opcode Operation() throws ArithmeticException :
 {
-	Token t, t1, t2;
+	Token t, t1, t2, t3;
 	Opcode op = new Opcode();
 }
 {
@@ -453,6 +457,9 @@ Opcode Operation() throws ArithmeticException :
 
 		| (t = <TWOARGB>) (t1 = <INT>) (t2 = <INT>)
 		{ op.setName(t.image); op.addArg(new ByteArg(t1)); op.addArg(new ByteArg(t2)); }
+
+		| (t = <THREEARGB>) (t1 = <INT>) (t2 = <INT>) (t3 = <INT>)
+		{ op.setName(t.image); op.addArg(new ByteArg(t1)); op.addArg(new ByteArg(t2)); op.addArg(new ByteArg(t3)); }
 	)
 	{
 		return op;

@@ -35,14 +35,16 @@ JZ after2
 //////////////////////////
 
 // Get id(a)
-IFETCH 1
-AFETCH 255
-CALL 0
+//IFETCH 1
+//AFETCH 255
+//CALL 0
+VIFAFC 1 255 0
 
 // Get id(b)
-IFETCH 2
-AFETCH 255
-CALL 0
+//IFETCH 2
+//AFETCH 255
+//CALL 0
+VIFAFC 2 255 0
 
 // id(a) == id(b)
 IEQ
@@ -50,14 +52,16 @@ IEQ
 
 
 // Get slot(a)
-IFETCH 1
-AFETCH 255
-CALL 1
+//IFETCH 1
+//AFETCH 255
+//CALL 1
+VIFAFC 1 255 1
 
 // Get slot(b)
-IFETCH 2
-AFETCH 255
-CALL 1
+//IFETCH 2
+//AFETCH 255
+//CALL 1
+VIFAFC 2 255 1
 
 // slot(a) != slot(b)
 INEQ
@@ -76,9 +80,10 @@ AND
 
 
 // Increment loop counter
-IFETCH 2
-IINC
-ISTORE 2
+//IFETCH 2
+//IINC
+//ISTORE 2
+VIINC 2
 
 // Jump to start of loop
 JMP label2
@@ -88,9 +93,10 @@ JMP label2
 
 
 // Increment loop counter
-after2: IFETCH 1
-IINC
-ISTORE 1
+//after2: IFETCH 1
+//IINC
+//ISTORE 1
+after2: VIINC 1
 
 // Jump to start of loop
 JMP label1

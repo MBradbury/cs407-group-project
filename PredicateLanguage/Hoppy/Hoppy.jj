@@ -291,18 +291,18 @@ class BinaryOperatorNode extends SyntaxTreeNode
 
 		switch(op)
 		{
-		case EQUAL:			return new BooleanValue(BooleanValue.assertType(leftValue).getValue() == BooleanValue.assertType(rightValue).getValue());
-		case NOT_EQUAL:			return new BooleanValue(BooleanValue.assertType(leftValue).getValue() != BooleanValue.assertType(rightValue).getValue());
-		case LESS_THAN:			return new BooleanValue(IntegerValue.assertType(leftValue).getValue() < IntegerValue.assertType(rightValue).getValue());
+		case EQUAL:					return new BooleanValue(BooleanValue.assertType(leftValue).getValue() == BooleanValue.assertType(rightValue).getValue());
+		case NOT_EQUAL:				return new BooleanValue(BooleanValue.assertType(leftValue).getValue() != BooleanValue.assertType(rightValue).getValue());
+		case LESS_THAN:				return new BooleanValue(IntegerValue.assertType(leftValue).getValue() < IntegerValue.assertType(rightValue).getValue());
 		case LESS_THAN_EQUAL:		return new BooleanValue(IntegerValue.assertType(leftValue).getValue() <= IntegerValue.assertType(rightValue).getValue());
-		case GREATER_THAN:		return new BooleanValue(IntegerValue.assertType(leftValue).getValue() > IntegerValue.assertType(rightValue).getValue());
+		case GREATER_THAN:			return new BooleanValue(IntegerValue.assertType(leftValue).getValue() > IntegerValue.assertType(rightValue).getValue());
 		case GREATER_THAN_EQUAL:	return new BooleanValue(IntegerValue.assertType(leftValue).getValue() <= IntegerValue.assertType(rightValue).getValue());
-		case PLUS:			return new IntegerValue(IntegerValue.assertType(leftValue).getValue() + IntegerValue.assertType(rightValue).getValue());
-		case MINUS:			return new IntegerValue(IntegerValue.assertType(leftValue).getValue() - IntegerValue.assertType(rightValue).getValue());
-		case MULTIPLY:			return new IntegerValue(IntegerValue.assertType(leftValue).getValue() * IntegerValue.assertType(rightValue).getValue());
-		case DIVIDE:			return new IntegerValue(IntegerValue.assertType(leftValue).getValue() / IntegerValue.assertType(rightValue).getValue());
-		case AND:			return new BooleanValue(BooleanValue.assertType(leftValue).getValue() && BooleanValue.assertType(rightValue).getValue());
-		case OR:			return new BooleanValue(BooleanValue.assertType(leftValue).getValue() || BooleanValue.assertType(rightValue).getValue());
+		case PLUS:					return new IntegerValue(IntegerValue.assertType(leftValue).getValue() + IntegerValue.assertType(rightValue).getValue());
+		case MINUS:					return new IntegerValue(IntegerValue.assertType(leftValue).getValue() - IntegerValue.assertType(rightValue).getValue());
+		case MULTIPLY:				return new IntegerValue(IntegerValue.assertType(leftValue).getValue() * IntegerValue.assertType(rightValue).getValue());
+		case DIVIDE:				return new IntegerValue(IntegerValue.assertType(leftValue).getValue() / IntegerValue.assertType(rightValue).getValue());
+		case AND:					return new BooleanValue(BooleanValue.assertType(leftValue).getValue() && BooleanValue.assertType(rightValue).getValue());
+		case OR:					return new BooleanValue(BooleanValue.assertType(leftValue).getValue() || BooleanValue.assertType(rightValue).getValue());
 	
 		default:
 			throw new EvaluationException("Unrecognised binary operator.");
@@ -323,7 +323,7 @@ class BinaryOperatorNode extends SyntaxTreeNode
 		else if(op == "/")	return Operator.DIVIDE;
 		else if(op == "&")	return Operator.AND;
 		else if(op == "|")	return Operator.OR;
-		else			assert false;
+		else				assert false;
 	}
 }
 
@@ -436,16 +436,16 @@ TOKEN : {
 	
 	// Operators
 	| < LOGICAL_MATH_OP : 	"==" | "!=" | "<" | "<=" | ">" | ">=" >
-	| < MATH_OP : 		"+" | "-" | "*" | "/" >
-	| < LOGICAL_BIN_OP :	"&" | "|" >
-	| < LOGICAL_UN_OP :	"!" >
-	| < QUANTIFIER :	"@" | "#" >
+	| < MATH_OP : 			"+" | "-" | "**" | "*" | "/" >
+	| < LOGICAL_BIN_OP :	"&" | "|" | "^" | "=>" | "<=>" >
+	| < LOGICAL_UN_OP :		"!" >
+	| < QUANTIFIER :		"@" | "#" >
 
 	// Regexes
 	| < NUMBER :	("-")? (<DIGIT>)+ >
 	| < NAME :		("-")? <LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
-	| < #LETTER :	["a"-"z"] >
+	| < #LETTER :	["A"-"Z", "a"-"z"] >
 	| < #DIGIT :	["0"-"9"] >
 }
 

@@ -1,5 +1,5 @@
 using Neighbours(1) as onehopn in
 	@(a : onehopn ~
-		@(b : onehopn ~ addr(a) == addr(b) || slot(a) != slot(b))
+		@(b : onehopn ~ addr(a) == addr(b) | slot(a) != slot(b))
 	)
 

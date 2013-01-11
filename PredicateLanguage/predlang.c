@@ -524,7 +524,9 @@ typedef enum {
 
   IABS=50, FABS=51,
 
-  FPOW=52, 
+  FPOW=52,
+
+  VIINC=53, VIFAFC=54,
 
 } opcode;
 
@@ -557,7 +559,9 @@ static const char * opcode_names[] = {
 
 	"IABS", "FABS",
 
-	"FPOW"
+	"FPOW",
+
+	"VIINC", "VIFAFC"
 };
 #endif
 
@@ -996,6 +1000,68 @@ nbool evaluate(ubyte * start, nuint program_length)
 					return false;
 
 				if (!push_stack(&res, sizeof(nfloat)))
+					return false;
+
+			} break;
+
+		// VIINC x
+		// Same as doing:
+		// IFETCH x
+		// IINC
+		// ISTORE x
+		case VIINC:
+			{
+				nint * var = get_variable_as_int(*(variable_id_t *)(current + 1));
+
+				if (var == NULL)
+					return false;
+
+				*var += 1;
+
+				if (!int_push_stack(*var))
+					return false;
+
+				current += sizeof(variable_id_t);
+			} break;
+
+		// VIFAFC x y z
+		// Same as doing:
+		// IFETCH x
+		// AFETCH y
+		// CALL z
+		case VIFAFC:
+			{
+				nint * idx = get_variable_as_int(*(variable_id_t *)(current + 1));
+				current += sizeof(variable_id_t);
+
+				if (idx == NULL)
+					return false;
+
+				variable_reg_t * var = get_variable(*(variable_id_t *)(current + 1));
+				current += sizeof(variable_id_t);
+
+				if (var == NULL)
+					return false;
+
+				if (!push_stack((char *)var->location + (*idx * variable_type_size(var->type)), variable_type_size(var->type)))
+					return false;
+
+				if (!require_stack_size(data_size))
+					return false;
+
+				variable_type_t type;
+				void const * data = call_function(*(function_id_t *)(current + 1), stack_ptr, &type);
+				current += sizeof(function_id_t);
+
+				if (data == NULL)
+				{
+					return false;
+				}
+
+				if (!pop_stack(data_size))
+					return false;
+
+				if (!push_stack(data, variable_type_size(type)))
 					return false;
 
 			} break;

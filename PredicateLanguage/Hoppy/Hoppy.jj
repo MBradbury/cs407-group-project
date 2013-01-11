@@ -574,7 +574,7 @@ TOKEN : {
 	| < QUANTIFIER :		"@" | "#" >
 
 	// Regexes
-	| < NUMBER :	("-")? ["1"-"9"] (<DIGIT>)* >
+	| < NUMBER :	("-")? ("0" | (["1"-"9"] (<DIGIT>)*)) >
 	| < NAME :		<LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
 	| <#LETTER :	["A"-"Z", "a"-"z"] >

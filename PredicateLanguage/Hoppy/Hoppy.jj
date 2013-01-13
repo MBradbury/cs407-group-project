@@ -366,7 +366,7 @@ class QuantifierNode implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		return "[" + quantifier.toString() + " " + var+ " " + set + "](" + predicate.toString() + ")";
+		return "[" + quantifier.toString() + " " + var + " in " + set + "](" + predicate.toString() + ")";
 	}
 
 	public static Quantifier parseQuantifier(String quantifier) throws ParseException
@@ -391,8 +391,9 @@ final class FuncDecl implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		StringBuilder sb = new StringBuilder(name);
-		sb.append("(");
+		StringBuilder sb = new StringBuilder("(F:");
+		sb.append(name);
+		sb.append(" ");
 
 		if (args.length > 0)
 		{
@@ -400,7 +401,7 @@ final class FuncDecl implements ISyntaxTree
 
 			for (int i = 1; i < args.length; ++i)
 			{
-				sb.append(", ");
+				sb.append(" ");
 				sb.append(args[i]);
 			}
 		}
@@ -408,6 +409,28 @@ final class FuncDecl implements ISyntaxTree
 		sb.append(")");
 
 		return sb.toString();
+	}
+}
+
+final class UsingDecl implements ISyntaxTree
+{
+	private int neighbourCount = 0;
+	private String variable = null;
+	private ISyntaxTree scope = null;
+
+	public String getVariable() { return variable; }
+	public void setVariable(String variable) { this.variable = variable; }
+
+	public int getNeighbourCount() { return neighbourCount; }
+	public void setNeighbourCount(int neighbourCount) { this.neighbourCount = neighbourCount; }
+	
+	public ISyntaxTree getScope() { return scope; }
+	public void setScope(ISyntaxTree scope) { this.scope = scope; }
+
+	@Override
+	public String toString()
+	{
+		return "(USING " + neighbourCount + " AS " + variable + "IN " + scope.toString() + ")";
 	}
 }
 
@@ -472,6 +495,10 @@ TOKEN : {
 	// Variable functions
 	| < VAR_FNS :		"abs" >
 	
+	// High precedence operators have a higher number prefix after
+	// them here. However, when parsing the lowest numbered prefix
+	// is used first.
+	
 	// Operators
 	| < LOGICAL_MATH_OP_1 : "<" | "<=" | ">" | ">=" >
 	| < LOGICAL_MATH_OP_2 : "==" | "!=" >
@@ -490,8 +517,8 @@ TOKEN : {
 	| < QUANTIFIER :		"@" | "#" >
 	
 	// Regexes
-	| < NUMBER :	("-")? ("0" | (["1"-"9"] (<DIGIT>)*)) >
-	| < FLOAT :		("-")? ("0" | (["1"-"9"] (<DIGIT>)*)) ("." (<DIGIT>)*)? >
+	| < NUMBER :	("-")? (<DIGIT>)+ >
+	| < FLOAT :		("-")? (<DIGIT>)+ ("." (<DIGIT>)*)? >
 	| < NAME :		<LETTER> (<ALPHANUM>)* >
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
 	| <#LETTER :	["A"-"Z", "a"-"z"] >
@@ -545,7 +572,7 @@ PredicateTarget Target() :
 		|
 		(
 			// Specific node targeting.
-			a = UnsignedCharNumber() "." b = UnsignedCharNumber()
+			(a = UnsignedCharNumber() "," b = UnsignedCharNumber())
 		)
 		{
 			addr = new int[] { a, b };
@@ -585,54 +612,68 @@ int UnsignedCharNumber() :
 	}
 }
 
-
 ISyntaxTree Using() :
 {
-	//Parse a list of aliased functions, return null instead of map if none.
-	FuncDecl fn = null;
+	int count;
 	Token fnAlias;
-	HashMap<String, FuncDecl> usings = null;
 
+	UsingDecl root = null, current = null;
 	ISyntaxTree node;
 }
 {
 	(
-		<USING> 
 		(
-			fn = Neighbours()
+			<USING> 
+			(
+				count = Neighbours()
+			)
+			<AS>
+			(
+				fnAlias = <NAME>
+			) 
+			<IN>
 		)
-		<AS>
-		(
-			fnAlias = <NAME>
-			{ 
-				if (usings == null)
-				{
-					usings = new HashMap<String, FuncDecl>();
-				}
-				
-				usings.put(fnAlias.image, fn);
+		{
+			UsingDecl usingdecl = new UsingDecl();
+			usingdecl.setNeighbourCount(count);
+			usingdecl.setVariable(fnAlias.image);
+			
+			if (root == null)
+			{
+				current = root = usingdecl;
 			}
-		) 
-		<IN>
+			else
+			{
+				current.setScope(usingdecl);
+				
+				current = usingdecl;
+			}
+		}
 	)* 
 
 	node = Predicate()
 	{
-		return node;
+		if (current == null)
+		{
+			return node;
+		}
+		else
+		{
+			current.setScope(node);
+			
+			return root;
+		}
 	}
 } 
 
-FuncDecl Neighbours() :
+int Neighbours() :
 {
 	Token nameToken, argToken;
 }
 {
 	(nameToken = <NEIGHBOURS>) "(" (argToken = <NUMBER>) ")"
 	{
-		FuncDecl fn = new FuncDecl();
-		fn.setName(nameToken.image);
-		fn.setArgs(new ISyntaxTree[] { new NamedValueNode(argToken.image) });
-		return fn;
+		return Integer.parseInt(argToken.image);
 	}
 }
 
@@ -641,13 +682,7 @@ ISyntaxTree Predicate() :
 	ISyntaxTree node;
 }
 {
-	(
-		//A logical expression.
-		node = LogicalBinaryExprFirst()
-		{
-			return node;
-		}
-	)
+	node = LogicalBinaryExprFirst() { return node; }
 }
 
 ISyntaxTree QuantifierExpr() :
@@ -885,29 +920,11 @@ ISyntaxTree LogicalBinaryExprEnd() :
 	ISyntaxTree node;
 }
 {
-	(
-		//A quantified predicate over a set.
-		node = QuantifierExpr()
-		{
-			return node;
-		}
-	)
+	node = QuantifierExpr() { return node; }
 	|
-	(
-		//A unary operator applied to a predicate.
-		node = LogicalUnaryExpr()
-		{
-			return node;
-		}
-	)
+	node = LogicalUnaryExpr() { return node; }
 	|
-	(
-		// An arithmetic expression.
-		node = LogicalMathBinaryExprFirst()
-		{
-			return node;
-		}
-	)
+	node = LogicalMathBinaryExprFirst() { return node; }
 }
 
 
@@ -916,20 +933,13 @@ ISyntaxTree VariableExpr() :
 	ISyntaxTree node;
 }
 {
-	(
-		node = VariableNameOrFunctionLiteral()
-		{
-			return node;
-		}
-	)
+	node = VariableNameOrFunctionLiteral() { return node; }
 	|
-	(
-		// An arithmetic literal.
-		node = ArithmeticLiteral()
-		{
-			return node;
-		}
-	)
+	node = ArithmeticLiteral() { return node; }
+	|
+	node = MathFunction() { return node; }
+	|
+	node = SetFunction() { return node; }
 }
 
 ISyntaxTree VariableNameOrFunctionLiteral() :
@@ -985,3 +995,46 @@ ISyntaxTree ArithmeticLiteral() throws NumberFormatException, ParseException :
 	}
 }
 
+ISyntaxTree MathFunction() :
+{
+	ISyntaxTree expr;
+	Token varname;
+}
+{
+	(
+		varname = <VAR_FNS> "(" expr = MathBinaryExprFirst() ")"
+		{
+			FuncDecl fn = new FuncDecl();
+			fn.setName(varname.image);
+			fn.setArgs(new ISyntaxTree[] { expr });
+			return fn;
+		}
+	)
+}
+
+
+ISyntaxTree SetFunction() :
+{
+	Token setfnname, varname, fnname = null;
+}
+{
+	(
+		setfnname = <SET_FNS> "(" varname = <NAME> ")"
+		{
+			FuncDecl fn1 = new FuncDecl();
+			fn1.setName(setfnname.image);
+			fn1.setArgs(new ISyntaxTree[] { new NamedValueNode(varname.image) });
+			return fn1;
+		}
+	)
+	|
+	(
+		setfnname = <SET_TRANS_FNS> "(" varname = <NAME> "," fnname = <NAME> ")"
+		{
+			FuncDecl fn2 = new FuncDecl();
+			fn2.setName(setfnname.image);
+			fn2.setArgs(new ISyntaxTree[] { new NamedValueNode(varname.image), new NamedValueNode(fnname.image) });
+			return fn2;
+		}
+	)
+}

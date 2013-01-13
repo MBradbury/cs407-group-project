@@ -1,3 +1,3 @@
 #!/bin/bash
-make; echo -e "[all] using Neighbours(2) as twohopn in F(this) == 2.0 + 1 & 5 > 3" | java -cp . Hoppy
+make; echo -e "[01,00] using Neighbours(2) as twohopn in @(x : twohopn ~ fn(x) == abs(6 - 9 * 7) + len(twohopn) + mean(twohopn, temperature))" | java -cp . Hoppy
 

@@ -25,14 +25,133 @@ import java.util.*;
 
 public class Hoppy
 {
-	public static void main(String args[]) throws ParseException, EvaluationException
+	public static void main(String args[]) throws Exception, ParseException, EvaluationException
 	{
+		String[] builtins = new String[] { "id", "temperature", "humidity", "slot" };
+	
 		Hoppy parser = new Hoppy(System.in);
 		Program program = parser.Input();
 
 		System.out.println(program.toString());
+		
+		// Perform scope checking
+		(new ScopeChecker(Arrays.asList(builtins))).visit(program.getSyntaxTree());
 	}
 }
+
+
+final class NotInScopeException extends Exception
+{
+	public NotInScopeException(String name)
+	{
+		super("The variable called " + name + " is not in the scope");
+	}
+}
+
+final class AlreadyInScopeException extends Exception
+{
+	public AlreadyInScopeException(String name)
+	{
+		super("The variable called " + name + " is already in the scope");
+	}
+}
+
+
+final class ScopeChecker implements ISyntaxTreeVisitor
+{
+	private final HashSet<String> scope = new HashSet<String>();
+	
+	public ScopeChecker()
+	{
+		// The this variable is implicitly in the scope
+		scope.add("this");
+	}
+	
+	public ScopeChecker(Collection<String> scope)
+	{
+		this();
+		this.scope.addAll(scope);
+	}
+
+	public void visit(ISyntaxTree tree) throws Exception
+	{
+		if (tree instanceof NamedValueNode)
+		{
+			NamedValueNode item = (NamedValueNode)tree;
+			checkIs(item.getName());
+		}
+		else if (tree instanceof LiteralValueNode) { }
+		else if (tree instanceof UnaryOperatorNode)
+		{
+			UnaryOperatorNode item = (UnaryOperatorNode)tree;
+			item.getChild().acceptVisit(copy());
+		}
+		else if (tree instanceof BinaryOperatorNode)
+		{
+			BinaryOperatorNode item = (BinaryOperatorNode)tree;
+			item.getLeft().acceptVisit(copy());
+			item.getRight().acceptVisit(copy());
+		}
+		else if (tree instanceof QuantifierNode)
+		{
+			QuantifierNode item = (QuantifierNode)tree;
+			
+			checkIs(item.getSet());
+			
+			// Make sure not in scope before we add it
+			checkIsNot(item.getVar());
+			scope.add(item.getVar());
+			
+			item.getPredicate().acceptVisit(copy());
+		}
+		else if (tree instanceof FuncDecl)
+		{
+			FuncDecl item = (FuncDecl)tree;
+			
+			// Only check first argument
+			// Second arguments are function
+			for (ISyntaxTree arg : item.getArgs())
+			{
+				arg.acceptVisit(copy());
+			}
+		}
+		else if (tree instanceof UsingDecl)
+		{
+			UsingDecl item = (UsingDecl)tree;
+			
+			// Make sure not in scope before we add it
+			checkIsNot(item.getVariable());
+			scope.add(item.getVariable());
+			
+			item.getScope().acceptVisit(copy());
+		}
+		else
+		{
+			// Unknown class
+			//System.err.println("Unknown class " + tree);
+		}
+	}
+	
+	private ISyntaxTreeVisitor copy()
+	{
+		return new ScopeChecker(scope);
+	}
+	
+	private void checkIs(String name) throws NotInScopeException
+	{
+		if (!scope.contains(name))
+			throw new NotInScopeException(name);
+	}
+	
+	private void checkIsNot(String name) throws AlreadyInScopeException
+	{
+		if (scope.contains(name))
+			throw new AlreadyInScopeException(name);
+	}
+}
+
+
+
 
 interface IValue
 {
@@ -148,12 +267,19 @@ final class FloatValue implements IValue
 }
 
 
+interface ISyntaxTreeVisitor
+{
+	void visit(ISyntaxTree tree) throws Exception;
+}
+
 /**
  * Base class for syntax tree nodes.
  */
 interface ISyntaxTree
 {
 	String toString();
+	
+	void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception;
 }
 
 
@@ -168,11 +294,18 @@ class NamedValueNode implements ISyntaxTree
 	{
 		this.name = name;
 	}
+	
+	public String getName() { return name; }
 
 	@Override
 	public String toString()
 	{
 		return "N:" + name;
+	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
 	}
 }
 
@@ -195,6 +328,11 @@ class LiteralValueNode implements ISyntaxTree
 	public String toString()
 	{
 		return val.toString();
+	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
 	}
 }
 
@@ -232,6 +370,11 @@ class UnaryOperatorNode implements ISyntaxTree
 	public String toString()
 	{
 		return "(" + child.toString() + " " + op.toString() + ")";
+	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
 	}
 
 	public static Operator parseOperator(String op) throws ParseException
@@ -297,6 +440,11 @@ class BinaryOperatorNode implements ISyntaxTree
 	public String toString()
 	{
 		return "(" + left.toString() + " " + right.toString() + " " + op.toString() + ")";
+	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
 	}
 
 	public static Operator parseOperator(String op) throws ParseException
@@ -368,6 +516,11 @@ class QuantifierNode implements ISyntaxTree
 	{
 		return "[" + quantifier.toString() + " " + var + " in " + set + "](" + predicate.toString() + ")";
 	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
+	}
 
 	public static Quantifier parseQuantifier(String quantifier) throws ParseException
 	{
@@ -408,6 +561,11 @@ final class FuncDecl implements ISyntaxTree
 
 		return sb.toString();
 	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
+	}
 }
 
 final class UsingDecl implements ISyntaxTree
@@ -429,6 +587,11 @@ final class UsingDecl implements ISyntaxTree
 	public String toString()
 	{
 		return "(USING " + neighbourCount + " AS " + variable + " IN " + scope.toString() + ")";
+	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
 	}
 }
 

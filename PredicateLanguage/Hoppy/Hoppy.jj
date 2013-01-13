@@ -28,7 +28,7 @@ public class Hoppy
 	public static void main(String args[]) throws ParseException, EvaluationException
 	{
 		Hoppy parser = new Hoppy(System.in);
-		Program program = parser.Input(System.out);
+		Program program = parser.Input();
 
 		System.out.println(program.toString());
 	}
@@ -231,7 +231,7 @@ class UnaryOperatorNode implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		return "(" + op.toString() + " " + child.toString() + ")";
+		return "(" + child.toString() + " " + op.toString() + ")";
 	}
 
 	public static Operator parseOperator(String op) throws ParseException
@@ -296,7 +296,7 @@ class BinaryOperatorNode implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		return "(" + op.toString() + " " + left.toString() + " " + right.toString() + ")";
+		return "(" + left.toString() + " " + right.toString() + " " + op.toString() + ")";
 	}
 
 	public static Operator parseOperator(String op) throws ParseException
@@ -391,9 +391,7 @@ final class FuncDecl implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		StringBuilder sb = new StringBuilder("(F:");
-		sb.append(name);
-		sb.append(" ");
+		StringBuilder sb = new StringBuilder();
 
 		if (args.length > 0)
 		{
@@ -406,7 +404,7 @@ final class FuncDecl implements ISyntaxTree
 			}
 		}
 
-		sb.append(")");
+		sb.append(" F:" + name + ")");
 
 		return sb.toString();
 	}
@@ -430,7 +428,7 @@ final class UsingDecl implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		return "(USING " + neighbourCount + " AS " + variable + "IN " + scope.toString() + ")";
+		return "(USING " + neighbourCount + " AS " + variable + " IN " + scope.toString() + ")";
 	}
 }
 
@@ -535,7 +533,7 @@ SKIP : {
 	| <"//" (~["\n","\r"])* ("\n"|"\r")>
 }
 
-Program Input(PrintStream out) :
+Program Input() :
 {
 	PredicateTarget target;
 	ISyntaxTree tree;
@@ -544,9 +542,6 @@ Program Input(PrintStream out) :
 	"[" 
 	(
 		target = Target()
-		{
-			out.println(target.toString());
-		}
 	)
 	"]"
 	(
@@ -668,10 +663,10 @@ ISyntaxTree Using() :
 
 int Neighbours() :
 {
-	Token nameToken, argToken;
+	Token argToken;
 }
 {
-	(nameToken = <NEIGHBOURS>) "(" (argToken = <NUMBER>) ")"
+	<NEIGHBOURS> "(" (argToken = <NUMBER>) ")"
 	{
 		return Integer.parseInt(argToken.image);
 	}
@@ -687,7 +682,6 @@ ISyntaxTree Predicate() :
 
 ISyntaxTree QuantifierExpr() :
 {
-	//Quantifier.
 	Token quantifier;
 	Token var;
 	Token set;

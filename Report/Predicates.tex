@@ -144,12 +144,14 @@ However, there is an issue with this predicate. How would we implement the $Dist
 	\pn{using} & \pp & \sm{using} \ww \sm{Neighbours}\sm{(}\pn{number}\sm{)} \ww \sm{as} \ww \pn{variable} \ww \sm{in} \ww \pn{using} \\
 	~ & \oo & \pn{predicate} \\
 %
-	\pn{predicate} & \pp & \pn{quantifier}\sm{(}\pn{variable} \ww \sm{:} \ww \pn{variable} \ww \sm{\mytilde} \pn{predicate} \sm{)}\\
+	\pn{predicate} & \pp &  \sm{(}\pn{predicate}\sm{)} \\
+	~ & \oo & \pn{quantifier}\sm{(}\pn{variable} \ww \sm{:} \ww \pn{variable} \ww \sm{\mytilde} \pn{predicate} \sm{)}\\
 	~ & \oo &  \pn{predicate} \ww \pn{logical-binary} \ww \pn{predicate} \\
 	~ & \oo &  \pn{logical-unary} \ww \pn{predicate} \\
 	~ & \oo &  \pn{var-expr} \ww \pn{math-logical-binary} \ww \pn{var-expr} \\
 %
-	\pn{var-expr} & \pp & \pn{variable} \\
+	\pn{var-expr} & \pp & \sm{(}\pn{var-expr}\sm{)} \\
+	~ & \oo & \pn{variable} \\
 	~ & \oo & \pn{number} \\
 	~ & \oo & \pn{string}\sm{(}\pn{this-variable}\sm{)} \\
 	~ & \oo & \pn{var-expr} \ww \pn{math-binary} \ww \pn{var-expr} \\
@@ -164,20 +166,20 @@ However, there is an issue with this predicate. How would we implement the $Dist
 	\pn{transform-set-fn} & \pp & \sm{sum} \oo  \sm{mean} \oo \sm{max} \oo \sm{min} \\
 	\pn{set-fn} & \pp & \sm{len} \\
 %
-	\pn{logical-binary} & \pp & \sm{\&} \oo \sm{$\text{\^{}}$} \oo \sm{\textbar} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
+	\pn{logical-binary} & \pp & \sm{\&}  \oo \sm{\textbar} \oo \sm{\textasciicircum} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
 	\pn{logical-unary} & \pp & \sm{!} \\
 	\pn{math-logical-binary} & \pp & \sm{==} \oo \sm{!=} \oo \sm{\textless} \oo \sm{\textless=} \oo \sm{\textgreater} \oo \sm{\textgreater=} \\
 	\pn{math-binary} & \pp & \sm{+} \oo \sm{-} \oo \sm{*} \oo \sm{/} \oo \sm{**} \\
 %
-	\pn{string} & \pp & \pn{alpha}\pn{string-rest} \\
-	\pn{string-rest} & \pp & \nn \oo \pn{alpha}\pn{string-rest} \oo \pn{digit}\pn{string-rest} \\
+%	\pn{string} & \pp & \pn{alpha}\pn{string-rest} \\
+%	\pn{string-rest} & \pp & \nn \oo \pn{alpha}\pn{string-rest} \oo \pn{digit}\pn{string-rest} \\
 %
-	\pn{alpha} & \pp & \sm{A}\dots\sm{Z} \oo \sm{a}\dots\sm{z} \\
-	\pn{number} & \pp & \pn{sign} \pn{number-first} \oo \pn{number-first} \\
-	\pn{number-first} & \pp & \pn{digit} \oo \sm{1}\dots\sm{9}\pn{number-rest} \\
-	\pn{number-rest} & \pp & \pn{digit} \oo \pn{digit}\pn{number-rest} \\
-	\pn{digit} & \pp & \sm{0}\dots\sm{9} \\
-	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
+%	\pn{alpha} & \pp & \sm{A}\dots\sm{Z} \oo \sm{a}\dots\sm{z} \\
+%	\pn{number} & \pp & \pn{sign} \pn{number-first} \oo \pn{number-first} \\
+%	\pn{number-first} & \pp & \pn{digit} \oo \sm{1}\dots\sm{9}\pn{number-rest} \\
+%	\pn{number-rest} & \pp & \pn{digit} \oo \pn{digit}\pn{number-rest} \\
+%	\pn{digit} & \pp & \sm{0}\dots\sm{9} \\
+%	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
 	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
 \end{eqnarray*}
 

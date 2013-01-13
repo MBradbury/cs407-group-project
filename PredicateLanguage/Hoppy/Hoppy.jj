@@ -961,7 +961,7 @@ ISyntaxTree VariableNameOrFunctionLiteral() :
 	}
 }
 
-ISyntaxTree ArithmeticLiteral() throws ParseException :
+ISyntaxTree ArithmeticLiteral() throws NumberFormatException, ParseException :
 {
 	Token literal;
 }
@@ -971,12 +971,12 @@ ISyntaxTree ArithmeticLiteral() throws ParseException :
 	{
 		LiteralValueNode lvn = null;
 	
-		//Parse the literal and wrap it in a node.
+		// Parse the literal and wrap it in a node.
 		try
 		{
 			lvn = new LiteralValueNode(new IntegerValue(literal.image));
 		}
-		catch (ParseException e)
+		catch (NumberFormatException e)
 		{
 			lvn = new LiteralValueNode(new FloatValue(literal.image));
 		}

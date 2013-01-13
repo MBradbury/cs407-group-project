@@ -169,7 +169,7 @@ However, there is an issue with this predicate. How would we implement the $Dist
 	\pn{logical-binary} & \pp & \sm{\&}  \oo \sm{\textbar} \oo \sm{\textasciicircum} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
 	\pn{logical-unary} & \pp & \sm{!} \\
 	\pn{math-logical-binary} & \pp & \sm{==} \oo \sm{!=} \oo \sm{\textless} \oo \sm{\textless=} \oo \sm{\textgreater} \oo \sm{\textgreater=} \\
-	\pn{math-binary} & \pp & \sm{+} \oo \sm{-} \oo \sm{*} \oo \sm{/} \oo \sm{**} \\
+	\pn{math-binary} & \pp & \sm{+} \oo \sm{-} \oo \sm{*} \oo \sm{/} \oo \sm{**} \oo \sm{\%} \\
 %
 %	\pn{string} & \pp & \pn{alpha}\pn{string-rest} \\
 %	\pn{string-rest} & \pp & \nn \oo \pn{alpha}\pn{string-rest} \oo \pn{digit}\pn{string-rest} \\
@@ -184,6 +184,8 @@ However, there is an issue with this predicate. How would we implement the $Dist
 \end{eqnarray*}
 
 \textbf{TODO: Add float expansions}
+
+used \url{http://cs.lmu.edu/~ray/notes/javacc/} and \url{http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm} to get infix operator parsing working
 
 \subsubsection{Examples}
 

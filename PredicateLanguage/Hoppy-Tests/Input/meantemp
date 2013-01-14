@@ -1,3 +1,5 @@
-using Neighbours(2) as twohopn in
-    abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
+[all]
+function 2 as temperature returning float in
+	using Neighbours(2) as twohopn in
+    	abs(temperature(this) - mean(twohopn, temperature)) <= 10.0
 

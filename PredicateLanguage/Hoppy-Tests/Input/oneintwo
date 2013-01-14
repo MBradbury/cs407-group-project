@@ -1,6 +1,8 @@
-using Neighbours(1) as onehopn in
-    using Neighbours(2) as twohopn in
-        @(a : onehopn ~
-            #(b : twohopn ~ addr(a) == addr(b))
-        )
+[all]
+function 0 as addr returning int in
+	using Neighbours(1) as onehopn in
+    	using Neighbours(2) as twohopn in
+        	@(a : onehopn ~
+        	    #(b : twohopn ~ addr(a) == addr(b))
+        	)
 

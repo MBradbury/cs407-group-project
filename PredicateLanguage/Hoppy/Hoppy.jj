@@ -30,15 +30,26 @@ public class Hoppy
 		Hoppy parser = new Hoppy(System.in);
 		Program program = parser.Input();
 
-		System.out.println(program.toString());
-		
-		// Perform scope checking
-		(new ScopeChecker()).visit(program.getSyntaxTree());
+		compile(program);
+	}
+
+	private static void compile(Program program) throws Exception
+	{
+		System.out.println("//" + program.toString());
+
+		(new Compiler()).visit(program.getSyntaxTree());
 	}
 }
 
+class CompilationException extends Exception
+{
+	public CompilationException(String message)
+	{
+		super(message);
+	}
+}
 
-final class NotInScopeException extends Exception
+final class NotInScopeException extends CompilationException
 {
 	public NotInScopeException(String name)
 	{
@@ -46,7 +57,7 @@ final class NotInScopeException extends Exception
 	}
 }
 
-final class AlreadyInScopeException extends Exception
+final class AlreadyInScopeException extends CompilationException
 {
 	public AlreadyInScopeException(String name)
 	{
@@ -55,20 +66,83 @@ final class AlreadyInScopeException extends Exception
 }
 
 
-final class ScopeChecker implements ISyntaxTreeVisitor
+final class Compiler implements ISyntaxTreeVisitor
 {
-	private final HashSet<String> scope = new HashSet<String>();
+	private static final HashMap<String, String> setTransBuiltins = new HashMap<String, String>();
+	private static final HashMap<String, String> setBuiltins = new HashMap<String, String>();
+	private static final HashMap<String, String> mathBuiltins = new HashMap<String, String>();
+
+	static
+	{
+		setTransBuiltins.put("sum", "ASUM");
+		setTransBuiltins.put("mean", "AMEAN");
+		setTransBuiltins.put("max", "AMAX");
+		setTransBuiltins.put("min", "AMIN");
+
+		setBuiltins.put("len", "AMIN");
+
+		mathBuiltins.put("abs", "_ABS");
+	}
+
+	private final HashMap<String, Integer> functionScope = new HashMap<String, Integer>();
+	private final HashMap<String, Integer> variableScope = new HashMap<String, Integer>();
+	private final HashMap<String, Integer> arrayScope = new HashMap<String, Integer>();
+
+	private int variableId = 0;
 	
-	public ScopeChecker()
+	public Compiler()
 	{
 		// The this variable is implicitly in the scope
-		scope.add("this");
+		variableScope.put("this", variableId++);
 	}
 	
-	public ScopeChecker(Collection<String> scope)
+	public Compiler(Compiler other)
 	{
 		this();
-		this.scope.addAll(scope);
+		this.variableScope.putAll(other.variableScope);
+		this.arrayScope.putAll(other.arrayScope);
+		this.functionScope.putAll(other.functionScope);
+		this.variableId = other.variableId;
+	}
+
+	private void write(String code)
+	{
+		System.out.println(code);
+	}
+
+	private void write(String code, String label)
+	{
+		System.out.println(code + " " + label);
+	}
+
+	private void write(String code, int arg)
+	{
+		System.out.println(code + " " + arg);
+	}
+
+	private void write(String code, int arg1, int arg2)
+	{
+		System.out.println(code + " " + arg1 + " " + arg2);
+	}
+
+	private void write(String code, int arg1, int arg2, int arg3)
+	{
+		System.out.println(code + " " + arg1 + " " + arg2 + " " + arg3);
+	}
+
+	private void write(String code, float arg)
+	{
+		System.out.println(code + " " + arg);
+	}
+
+	private void label(String l)
+	{
+		System.out.print(l + ": ");
+	}
+
+	private void comment(String c)
+	{
+		System.out.print("//" + c);
 	}
 
 	public void visit(ISyntaxTree tree) throws Exception
@@ -76,41 +150,199 @@ final class ScopeChecker implements ISyntaxTreeVisitor
 		if (tree instanceof NamedValueNode)
 		{
 			NamedValueNode item = (NamedValueNode)tree;
-			checkIs(item.getName());
+			checkIs(variableScope.keySet(), item.getName());
+
+			comment(item.getName());
+
+			if (item.getName().equals("this"))
+			{
+				// Get `this' variable
+				write("IPUSH", 0);
+				write("AFETCH", 0);
+			}
 		}
-		else if (tree instanceof LiteralValueNode) { }
+		else if (tree instanceof LiteralValueNode)
+		{
+			LiteralValueNode item = (LiteralValueNode)tree;
+
+			IValue value = item.getVal();
+
+			if (value instanceof BooleanValue)
+			{
+				BooleanValue bval = (BooleanValue)value;
+				write("IPUSH", bval.getValue() ? 1 : 0);
+			}
+			else if (value instanceof IntegerValue)
+			{
+				IntegerValue bval = (IntegerValue)value;
+				write("IPUSH", bval.getValue());
+			}
+			else if (value instanceof FloatValue)
+			{
+				FloatValue bval = (FloatValue)value;
+				write("FPUSH", bval.getValue());
+			}
+			else
+			{
+			}
+		}
 		else if (tree instanceof UnaryOperatorNode)
 		{
 			UnaryOperatorNode item = (UnaryOperatorNode)tree;
+
 			item.getChild().acceptVisit(copy());
+
+			write(item.getBytecode());
 		}
 		else if (tree instanceof BinaryOperatorNode)
 		{
 			BinaryOperatorNode item = (BinaryOperatorNode)tree;
+
 			item.getLeft().acceptVisit(copy());
 			item.getRight().acceptVisit(copy());
+
+			write(item.getBytecode());
 		}
 		else if (tree instanceof QuantifierNode)
 		{
 			QuantifierNode item = (QuantifierNode)tree;
 			
-			checkIs(item.getSet());
+			checkIs(arrayScope.keySet(), item.getSet());
+
+			int arrayId = arrayScope.get(item.getSet());
+
+			int loopCounterId = variableId++;
+
+			String startlabel = "start" + loopCounterId;
+			String endlabel = "end" + loopCounterId;
 			
 			// Make sure not in scope before we add it
-			checkIsNot(item.getVar());
-			scope.add(item.getVar());
+			checkIsNot(variableScope.keySet(), item.getVar());
+			variableScope.put(item.getVar(), loopCounterId);
+
+
+			QuantifierNode.Quantifier q = item.getQuantifier();
+
+
+			boolean all = q == QuantifierNode.Quantifier.FOR_ALL;
+
+			// Allocate the variable id
+			write("IVAR", loopCounterId);
 			
+			// First we need to push a variable that will store the result
+			// This should be 1 for "ALL" and 0 for "EXIST"
+			write("IPUSH", all ? 1 : 0);
+
+
+			// Now we need to initialise the loop counter
+			write("IPUSH", 0);
+			write("ISTORE", loopCounterId);
+
+
+			// Perform loop termination check
+			label(startlabel); write("ALEN", arrayId);
+			write("INEQ");
+			write("JZ", endlabel);
+
+			// Perform body operations
 			item.getPredicate().acceptVisit(copy());
+
+			if (all)
+			{
+				write("AND");
+			}
+			else
+			{
+				write("OR");
+			}
+
+			//// Increment loop counter
+			write("VIINC", loopCounterId);
+
+			// Jump to start of loop
+			write("JMP", startlabel);
+
+			// Loop termination
+			label(endlabel);
 		}
 		else if (tree instanceof FuncDecl)
 		{
 			FuncDecl item = (FuncDecl)tree;
-			
-			// Only check first argument
-			// Second arguments are function
-			for (ISyntaxTree arg : item.getArgs())
+
+			if (setBuiltins.keySet().contains(item.getName()))
 			{
-				arg.acceptVisit(copy());
+				if (item.getArgs().length != 1)
+					throw new CompilationException("Expected 1 arguments for a set function");
+
+				ISyntaxTree arg = item.getArgs()[0];
+
+				if (arg instanceof NamedValueNode)
+				{
+					String argstr = ((NamedValueNode)arg).getName();
+
+					checkIs(arrayScope.keySet(), argstr);
+
+					int varid = arrayScope.get(argstr);
+
+					write(setBuiltins.get(item.getName()), varid);
+				}
+				else
+				{
+					throw new CompilationException("Parameters to set fn are not strings");
+				}
+			}
+			else if (mathBuiltins.keySet().contains(item.getName()))
+			{
+				if (item.getArgs().length != 1)
+					throw new CompilationException("Expected 1 arguments for a set function");
+
+				for (ISyntaxTree arg : item.getArgs())
+				{
+					arg.acceptVisit(copy());
+				}
+
+				write(mathBuiltins.get(item.getName()));
+			}
+			else if (setTransBuiltins.keySet().contains(item.getName()))
+			{
+				if (item.getArgs().length != 2)
+					throw new CompilationException("Expected 2 arguments for a set transformation function");
+
+				ISyntaxTree arg1 = item.getArgs()[0];
+				ISyntaxTree arg2 = item.getArgs()[1];
+
+				if (arg1 instanceof NamedValueNode && arg2 instanceof NamedValueNode)
+				{
+					String arg1str = ((NamedValueNode)arg1).getName();
+					String arg2str = ((NamedValueNode)arg2).getName();
+
+					checkIs(arrayScope.keySet(), arg1str);
+					checkIs(functionScope.keySet(), arg2str);
+
+					int varid = arrayScope.get(arg1str);
+					int fnid = functionScope.get(arg2str);
+
+					write(setTransBuiltins.get(item.getName()), varid, fnid);
+				}
+				else
+				{
+					throw new CompilationException("Parameters to set trans fn are not strings");
+				}
+			}
+			else if (functionScope.keySet().contains(item.getName()))
+			{
+				for (ISyntaxTree arg : item.getArgs())
+				{
+					arg.acceptVisit(copy());
+				}
+
+				int id = functionScope.get(item.getName());
+
+				write("CALL", id);
+			}
+			else
+			{
+				throw new CompilationException("Not sure what to do with " + item + " as a function.");
 			}
 		}
 		else if (tree instanceof UsingDecl)
@@ -118,18 +350,23 @@ final class ScopeChecker implements ISyntaxTreeVisitor
 			UsingDecl item = (UsingDecl)tree;
 			
 			// Make sure not in scope before we add it
-			checkIsNot(item.getVariable());
-			scope.add(item.getVariable());
+			checkIsNot(arrayScope.keySet(), item.getVariable());
+			arrayScope.put(item.getVariable(), variableId++);
 			
 			item.getScope().acceptVisit(copy());
+
+			// Write a halt just in case we have a quantifier
+			// that has no operations after it
+			write("HALT");
 		}
 		else if (tree instanceof FunDefDecl)
 		{
 			FunDefDecl item = (FunDefDecl)tree;
 
 			// Make sure not in scope before we add it
-			checkIsNot(item.getName());
-			scope.add(item.getName());
+			checkIsNot(functionScope.keySet(), item.getName());
+
+			functionScope.put(item.getName(), item.getId());
 
 			item.getScope().acceptVisit(copy());
 		}
@@ -142,18 +379,18 @@ final class ScopeChecker implements ISyntaxTreeVisitor
 	
 	private ISyntaxTreeVisitor copy()
 	{
-		return new ScopeChecker(scope);
+		return new Compiler(this);
 	}
 	
-	private void checkIs(String name) throws NotInScopeException
+	private void checkIs(Set<String> items, String name) throws NotInScopeException
 	{
-		if (!scope.contains(name))
+		if (!items.contains(name))
 			throw new NotInScopeException(name);
 	}
 	
-	private void checkIsNot(String name) throws AlreadyInScopeException
+	private void checkIsNot(Set<String> items, String name) throws AlreadyInScopeException
 	{
-		if (scope.contains(name))
+		if (items.contains(name))
 			throw new AlreadyInScopeException(name);
 	}
 }
@@ -351,7 +588,19 @@ class UnaryOperatorNode implements ISyntaxTree
 {
 	public enum Operator
 	{
-		NOT
+		NOT("NOT");
+
+		private final String code;
+
+		private Operator(String code)
+		{
+			this.code = code;
+		}
+
+		public String getBytecode()
+		{
+			return code;
+		}
 	}
 
 	private Operator op;
@@ -373,6 +622,11 @@ class UnaryOperatorNode implements ISyntaxTree
 
 	public ISyntaxTree getChild() { return child; }
 	public void setChild(ISyntaxTree child) { this.child = child; }
+
+	public String getBytecode()
+	{
+		return op.getBytecode();
+	}
 
 	@Override
 	public String toString()
@@ -399,24 +653,36 @@ class BinaryOperatorNode implements ISyntaxTree
 {
 	public enum Operator
 	{
-		EQUAL,
-		NOT_EQUAL,
-		LESS_THAN,
-		LESS_THAN_EQUAL,
-		GREATER_THAN,
-		GREATER_THAN_EQUAL,
+		EQUAL("_EQ"),
+		NOT_EQUAL("_NEQ"),
+		LESS_THAN("_LT"),
+		LESS_THAN_EQUAL("_LEQ"),
+		GREATER_THAN("_GT"),
+		GREATER_THAN_EQUAL("_GEQ"),
 		
-		AND,
-		OR,
-		XOR,
-		IMPLIES,
-		EQUIVALENT,
+		AND("AND"),
+		OR("OR"),
+		XOR("XOR"),
+		IMPLIES("IMPLIES"),
+		EQUIVALENT("EQUIVALENT"),
 
-		PLUS,
-		MINUS,
-		MULTIPLY,
-		DIVIDE,
-		POWER
+		PLUS("_ADD"),
+		MINUS("_SUB"),
+		MULTIPLY("_MUL"),
+		DIVIDE("_DIV"),
+		POWER("_POW");
+
+		private final String code;
+
+		private Operator(String code)
+		{
+			this.code = code;
+		}
+
+		public String getBytecode()
+		{
+			return code;
+		}
 	}
 
 	private Operator op;
@@ -443,6 +709,11 @@ class BinaryOperatorNode implements ISyntaxTree
 
 	public ISyntaxTree getRight() { return right; }
 	public void setRight(ISyntaxTree right) { this.right = right; }
+
+	public String getBytecode()
+	{
+		return op.getBytecode();
+	}
 
 	@Override
 	public String toString()
@@ -540,14 +811,17 @@ class QuantifierNode implements ISyntaxTree
 
 final class FuncDecl implements ISyntaxTree
 {
-	private String name = null;
-	private ISyntaxTree[] args = null;
+	private final String name;
+	private final ISyntaxTree[] args;
+
+	public FuncDecl(String name, ISyntaxTree[] args)
+	{
+		this.name = name;
+		this.args = args;
+	}
 
 	public String getName() { return name; }
-	public void setName(String name) { this.name = name; }
-
 	public ISyntaxTree[] getArgs() { return args; }
-	public void setArgs(ISyntaxTree[] args) { this.args = args; }
 
 	@Override
 	public String toString()
@@ -1218,10 +1492,7 @@ ISyntaxTree VariableNameOrFunctionLiteral() :
 	{
 		if (varargs != null)
 		{
-			FuncDecl fn = new FuncDecl();
-			fn.setName(varname.image);
-			fn.setArgs(new ISyntaxTree[] { new NamedValueNode(varargs.image) });
-			return fn;
+			return new FuncDecl(varname.image, new ISyntaxTree[] { new NamedValueNode(varargs.image) });
 		}
 		else
 		{
@@ -1263,10 +1534,7 @@ ISyntaxTree MathFunction() :
 	(
 		varname = <VAR_FNS> "(" expr = MathBinaryExprFirst() ")"
 		{
-			FuncDecl fn = new FuncDecl();
-			fn.setName(varname.image);
-			fn.setArgs(new ISyntaxTree[] { expr });
-			return fn;
+			return new FuncDecl(varname.image, new ISyntaxTree[] { expr });
 		}
 	)
 }
@@ -1274,26 +1542,21 @@ ISyntaxTree MathFunction() :
 
 ISyntaxTree SetFunction() :
 {
-	Token setfnname, varname, fnname = null;
+	Token setfnname, varname, fnname;
 }
 {
 	(
 		setfnname = <SET_FNS> "(" varname = <NAME> ")"
 		{
-			FuncDecl fn1 = new FuncDecl();
-			fn1.setName(setfnname.image);
-			fn1.setArgs(new ISyntaxTree[] { new NamedValueNode(varname.image) });
-			return fn1;
+			return new FuncDecl(setfnname.image, new ISyntaxTree[] { new NamedValueNode(varname.image) });
 		}
 	)
 	|
 	(
 		setfnname = <SET_TRANS_FNS> "(" varname = <NAME> "," fnname = <NAME> ")"
 		{
-			FuncDecl fn2 = new FuncDecl();
-			fn2.setName(setfnname.image);
-			fn2.setArgs(new ISyntaxTree[] { new NamedValueNode(varname.image), new NamedValueNode(fnname.image) });
-			return fn2;
+			return new FuncDecl(setfnname.image, new ISyntaxTree[] { new NamedValueNode(varname.image), new NamedValueNode(fnname.image) });
 		}
 	)
 }
+

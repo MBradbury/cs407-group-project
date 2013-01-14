@@ -27,15 +27,13 @@ public class Hoppy
 {
 	public static void main(String args[]) throws Exception, ParseException, EvaluationException
 	{
-		String[] builtins = new String[] { "id", "temperature", "humidity", "slot" };
-	
 		Hoppy parser = new Hoppy(System.in);
 		Program program = parser.Input();
 
 		System.out.println(program.toString());
 		
 		// Perform scope checking
-		(new ScopeChecker(Arrays.asList(builtins))).visit(program.getSyntaxTree());
+		(new ScopeChecker()).visit(program.getSyntaxTree());
 	}
 }
 
@@ -123,6 +121,16 @@ final class ScopeChecker implements ISyntaxTreeVisitor
 			checkIsNot(item.getVariable());
 			scope.add(item.getVariable());
 			
+			item.getScope().acceptVisit(copy());
+		}
+		else if (tree instanceof FunDefDecl)
+		{
+			FunDefDecl item = (FunDefDecl)tree;
+
+			// Make sure not in scope before we add it
+			checkIsNot(item.getName());
+			scope.add(item.getName());
+
 			item.getScope().acceptVisit(copy());
 		}
 		else
@@ -595,6 +603,37 @@ final class UsingDecl implements ISyntaxTree
 	}
 }
 
+final class FunDefDecl implements ISyntaxTree
+{
+	private int id = 0;
+	private String name = null;
+	private String type = null;
+	private ISyntaxTree scope = null;
+
+	public String getName() { return name; }
+	public void setName(String name) { this.name = name; }
+
+	public int getId() { return id; }
+	public void setId(int id) { this.id = id; }
+
+	public String getType() { return type; }
+	public void setType(String type) { this.type = type; }
+	
+	public ISyntaxTree getScope() { return scope; }
+	public void setScope(ISyntaxTree scope) { this.scope = scope; }
+
+	@Override
+	public String toString()
+	{
+		return "(FUNDEF " + id + " AS " + name + " RETURNING " + type + " IN " + scope.toString() + ")";
+	}
+	
+	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
+	{
+		visitor.visit(this);
+	}
+}
+
 final class PredicateTarget
 {
 	private boolean all = false;
@@ -645,6 +684,10 @@ TOKEN : {
 	| < ALL : 	"all" >
 	| < COLON :	":" >
 	| < TILDE :	"~" >
+
+	| < FUNCTION :	"function" >
+	| < RETURNING :	"returning" >
+	| < TYPE :		"int" | "float" >
 
 	// Functions
 	| < NEIGHBOURS :	"Neighbours" >
@@ -708,7 +751,7 @@ Program Input() :
 	)
 	"]"
 	(
-		tree = Using()
+		tree = FunctionDefinition()
 	)
 	<EOF>
 	{
@@ -769,6 +812,65 @@ int UnsignedCharNumber() :
 		return i;
 	}
 }
+
+
+ISyntaxTree FunctionDefinition() :
+{
+	Token id, name, type;
+
+	FunDefDecl root = null, current = null;
+	ISyntaxTree node;
+}
+{
+	(
+		(
+			<FUNCTION>
+			(
+				id = <NUMBER>
+			)
+			<AS>
+			(
+				name = <NAME>
+			)
+			<RETURNING>
+			(
+				type = <TYPE>
+			)
+			<IN>
+		)
+		{
+			FunDefDecl decl = new FunDefDecl();
+			decl.setId(Integer.parseInt(id.image));
+			decl.setName(name.image);
+			decl.setType(type.image);
+			
+			if (root == null)
+			{
+				current = root = decl;
+			}
+			else
+			{
+				current.setScope(decl);
+				
+				current = decl;
+			}
+		}
+	)* 
+
+	node = Using()
+	{
+		if (current == null)
+		{
+			return node;
+		}
+		else
+		{
+			current.setScope(node);
+			
+			return root;
+		}
+	}
+} 
 
 ISyntaxTree Using() :
 {

@@ -66,8 +66,20 @@ final class AlreadyInScopeException extends CompilationException
 }
 
 
+
+
 final class Compiler implements ISyntaxTreeVisitor
 {
+	class ArrIds
+	{ 
+		public final int id; 
+		public final int arrid; 
+		public ArrIds(int id, int arrid) { 
+			this.id = id; 
+			this.arrid = arrid; 
+		} 
+	} 
+
 	private static final HashMap<String, String> setTransBuiltins = new HashMap<String, String>();
 	private static final HashMap<String, String> setBuiltins = new HashMap<String, String>();
 	private static final HashMap<String, String> mathBuiltins = new HashMap<String, String>();
@@ -85,7 +97,7 @@ final class Compiler implements ISyntaxTreeVisitor
 	}
 
 	private final HashMap<String, Integer> functionScope = new HashMap<String, Integer>();
-	private final HashMap<String, Integer> variableScope = new HashMap<String, Integer>();
+	private final HashMap<String, ArrIds> variableScope = new HashMap<String, ArrIds>();
 	private final HashMap<String, Integer> arrayScope = new HashMap<String, Integer>();
 
 	private int variableId = 0;
@@ -93,7 +105,7 @@ final class Compiler implements ISyntaxTreeVisitor
 	public Compiler()
 	{
 		// The this variable is implicitly in the scope
-		variableScope.put("this", variableId++);
+		variableScope.put("this", new ArrIds(variableId++, 0));
 	}
 	
 	public Compiler(Compiler other)
@@ -142,7 +154,7 @@ final class Compiler implements ISyntaxTreeVisitor
 
 	private void comment(String c)
 	{
-		System.out.print("//" + c);
+		System.out.println("//" + c);
 	}
 
 	public void visit(ISyntaxTree tree) throws Exception
@@ -156,9 +168,14 @@ final class Compiler implements ISyntaxTreeVisitor
 
 			if (item.getName().equals("this"))
 			{
-				// Get `this' variable
 				write("IPUSH", 0);
 				write("AFETCH", 0);
+			}
+			else
+			{
+				ArrIds id = variableScope.get(item.getName());
+				write("IFETCH", id.id);
+				write("AFETCH", id.arrid);
 			}
 		}
 		else if (tree instanceof LiteralValueNode)
@@ -218,7 +235,7 @@ final class Compiler implements ISyntaxTreeVisitor
 			
 			// Make sure not in scope before we add it
 			checkIsNot(variableScope.keySet(), item.getVar());
-			variableScope.put(item.getVar(), loopCounterId);
+			variableScope.put(item.getVar(), new ArrIds(loopCounterId, arrayId));
 
 
 			QuantifierNode.Quantifier q = item.getQuantifier();
@@ -247,6 +264,8 @@ final class Compiler implements ISyntaxTreeVisitor
 			// Perform body operations
 			item.getPredicate().acceptVisit(copy());
 
+			// Combine this iteration's result with the result
+			// stack variable
 			if (all)
 			{
 				write("AND");
@@ -793,7 +812,7 @@ class QuantifierNode implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		return "[" + quantifier.toString() + " " + var + " in " + set + "](" + predicate.toString() + ")";
+		return "(" + quantifier.toString() + " " + var + " IN " + set + " DO " + predicate.toString() + ")";
 	}
 	
 	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception

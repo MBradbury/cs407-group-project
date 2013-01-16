@@ -36,6 +36,7 @@ public class Hoppy
 	private static void compile(Program program) throws Exception
 	{
 		System.out.println("//" + program.toString());
+		System.out.println("//TARGETING " + program.getPredicateTarget());
 
 		(new Compiler()).visit(program.getSyntaxTree());
 	}
@@ -606,6 +607,8 @@ final class Compiler implements ISyntaxTreeVisitor
 		else if (tree instanceof UsingDecl)
 		{
 			UsingDecl item = (UsingDecl)tree;
+
+			comment("STORING " + item.getNeighbourCount() + " IN " + item.getVariable());
 			
 			// Make sure not in scope before we add it
 			checkIsNot(arrayScope.keySet(), item.getVariable());
@@ -629,6 +632,8 @@ final class Compiler implements ISyntaxTreeVisitor
 		else if (tree instanceof FunDefDecl)
 		{
 			FunDefDecl item = (FunDefDecl)tree;
+
+			comment("FUNC " + item.getId() + " AS " + item.getName());
 
 			// Make sure not in scope before we add it
 			checkIsNot(functionScope.keySet(), item.getName());

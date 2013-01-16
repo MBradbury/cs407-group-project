@@ -540,6 +540,8 @@ typedef enum {
 
   IDEC=56,
 
+  EQUIVALENT=57, IMPLIES=58,
+
 } opcode;
 
 #ifndef NDEBUG
@@ -576,6 +578,8 @@ static const char * opcode_names[] = {
 	"VIINC", "VIDEC", "VIFAFC",
 
 	"IDEC",
+
+	"EQUIVALENT", "IMPLIES"
 };
 #endif
 
@@ -950,6 +954,20 @@ nbool evaluate(ubyte const * start, nuint program_length)
 		OPERATION_POP(AND, &&, nbool, nbool, "%d", 0, 1);
 		OPERATION_POP(OR, ||, nbool, nbool, "%d", 0, 1);
 		OPERATION_POP(XOR, ^, nbool, nbool, "%d", 0, 1);
+		OPERATION_POP(EQUIVALENT, ==, nbool, nbool, "%d", 0, 1);
+
+		//#define OPERATION_POP(code, op, type, store_type, format_type, idx1, idx2)
+		case IMPLIES:
+			{
+				DEBUG_ERR_PRINT("Calling %s on %d and %d\n", opcode_names[*current], ((nbool *)stack_ptr)[0], ((nbool *)stack_ptr)[1]);
+				if (!require_stack_size(sizeof(nbool) * 2))
+					return false;
+				nbool res = !((nbool *)stack_ptr)[0] || ((nbool *)stack_ptr)[1];
+				if (!pop_stack(sizeof(nbool) * 2))
+					return false;
+				if (!push_stack(&res, sizeof(nbool)))
+					return false;
+			} break;
 
 		case NOT:
 			if (!require_stack_size(sizeof(nbool)))

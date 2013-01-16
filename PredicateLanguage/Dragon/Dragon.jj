@@ -196,7 +196,9 @@ enum OpcodeEnum
 	FPOW(52),
 
 	VIINC(53, OpcodeType.OneArgByte), VIDEC(54, OpcodeType.OneArgByte),
-	VIFAFC(55, OpcodeType.ThreeArgsByte);
+	VIFAFC(55, OpcodeType.ThreeArgsByte),
+
+	EQUIVALENT(56), IMPLIES(57);
 	
 	private final int value;
 	private final OpcodeType type;
@@ -367,7 +369,7 @@ TOKEN : {
 	
 	| <#MATHLOP :	"IEQ" | "FEQ" | "INEQ" | "FNEQ" | "ILT" | "FLT" | "ILEQ" | "FLEQ" | "IGT" | "FGT" | "IGEQ" | "FGEQ" >
 	
-	| <#LOGICOP :	"AND" | "OR" | "XOR" | "NOT" >
+	| <#LOGICOP :	"AND" | "OR" | "XOR" | "NOT" | "EQUIVALENT" | "IMPLIES" >
 	
 	| <#VAR :		"IVAR" | "FVAR" >
 

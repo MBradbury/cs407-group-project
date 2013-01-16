@@ -65,7 +65,34 @@ final class AlreadyInScopeException extends CompilationException
 	}
 }
 
+class TypeException extends Exception
+{
+	public TypeException()
+	{
+		super();
+	}
 
+	public TypeException(String message)
+	{
+		super(message);
+	}
+
+	public TypeException(ISyntaxTree tree, ExprType obtained, ExprType expected)
+	{
+		super("Expected " + tree + " to be of type " + expected + " was of type " + obtained);
+	}
+
+	public TypeException(ISyntaxTree tree, ExprType obtained)
+	{
+		super("Incorrectly obtained the type of " + tree + " to be " + obtained);
+	}
+}
+
+
+enum ExprType
+{
+	Boolean, Integer, Float, User, Set
+}
 
 
 final class Compiler implements ISyntaxTreeVisitor
@@ -78,7 +105,17 @@ final class Compiler implements ISyntaxTreeVisitor
 			this.id = id; 
 			this.arrid = arrid; 
 		} 
-	} 
+	}
+
+	class FunDetails
+	{ 
+		public final int id; 
+		public final ExprType type; 
+		public FunDetails(int id, ExprType type) { 
+			this.id = id; 
+			this.type = type; 
+		} 
+	}
 
 	private static final HashMap<String, String> setTransBuiltins = new HashMap<String, String>();
 	private static final HashMap<String, String> setBuiltins = new HashMap<String, String>();
@@ -96,11 +133,13 @@ final class Compiler implements ISyntaxTreeVisitor
 		mathBuiltins.put("abs", "_ABS");
 	}
 
-	private final HashMap<String, Integer> functionScope = new HashMap<String, Integer>();
+	private final HashMap<String, FunDetails> functionScope = new HashMap<String, FunDetails>();
 	private final HashMap<String, ArrIds> variableScope = new HashMap<String, ArrIds>();
 	private final HashMap<String, Integer> arrayScope = new HashMap<String, Integer>();
 
 	private int variableId = 0;
+
+	private boolean writtenHalt = false;
 	
 	public Compiler()
 	{
@@ -115,6 +154,7 @@ final class Compiler implements ISyntaxTreeVisitor
 		this.arrayScope.putAll(other.arrayScope);
 		this.functionScope.putAll(other.functionScope);
 		this.variableId = other.variableId;
+		this.writtenHalt = other.writtenHalt;
 	}
 
 	private void write(String code)
@@ -156,6 +196,151 @@ final class Compiler implements ISyntaxTreeVisitor
 	{
 		System.out.println("//" + c);
 	}
+
+
+	private ExprType type(ISyntaxTree tree) throws TypeException
+	{
+		if (tree instanceof NamedValueNode)
+		{
+			return type((NamedValueNode)tree);
+		}
+		else if (tree instanceof LiteralValueNode)
+		{
+			return type((LiteralValueNode)tree);
+		}
+		else if (tree instanceof UnaryOperatorNode)
+		{
+			return type((UnaryOperatorNode)tree);
+		}
+		else if (tree instanceof BinaryOperatorNode)
+		{
+			return type((BinaryOperatorNode)tree);
+		}
+		else if (tree instanceof QuantifierNode)
+		{
+			return type((QuantifierNode)tree);
+		}
+		else if (tree instanceof FuncDecl)
+		{
+			return type((FuncDecl)tree);
+		}
+		else if (tree instanceof UsingDecl)
+		{
+			return null;
+		}
+		else if (tree instanceof FunDefDecl)
+		{
+			return null;
+		}
+		else
+		{
+			// Unknown class
+			//System.err.println("Unknown class " + tree);
+			throw new TypeException();
+		}
+	}
+
+	private ExprType type(NamedValueNode tree) throws TypeException
+	{
+		if (tree.getName().equals("this") || variableScope.containsKey(tree.getName()))
+		{
+			return ExprType.User;
+		}
+		else if (arrayScope.containsKey(tree.getName()))
+		{
+			return ExprType.Set;
+		}
+		else
+		{
+			throw new TypeException();
+		}
+	}
+
+	private ExprType type(LiteralValueNode tree)
+	{
+		return tree.getVal().type();
+	}
+
+	private ExprType type(UnaryOperatorNode tree) throws TypeException
+	{
+		if (type(tree.getChild()) != ExprType.Boolean)
+			throw new TypeException(tree.getChild(), type(tree.getChild()), ExprType.Boolean);
+
+		return ExprType.Boolean;
+	}
+
+	private ExprType type(BinaryOperatorNode tree) throws TypeException
+	{
+		boolean isLogical = tree.getOp().isLogical();
+		boolean isLogicalInput = tree.getOp().isLogicalInput();
+
+		if (isLogical && isLogicalInput)
+		{
+			if (type(tree.getLeft()) != ExprType.Boolean)
+				throw new TypeException(tree.getLeft(), type(tree.getLeft()), ExprType.Boolean);
+
+			if (type(tree.getRight()) != ExprType.Boolean)
+				throw new TypeException(tree.getRight(), type(tree.getRight()), ExprType.Boolean);
+
+			return ExprType.Boolean;
+		}
+		else if (isLogical && !isLogicalInput)
+		{
+			// TODO: check args types
+
+			return ExprType.Boolean;
+		}
+		else
+		{
+			if (type(tree.getLeft()) == ExprType.Integer && type(tree.getRight()) == ExprType.Integer)
+			{
+				return ExprType.Integer;
+			}
+			else if (type(tree.getLeft()) == ExprType.Float || type(tree.getRight()) == ExprType.Float)
+			{
+				return ExprType.Float;
+			}
+			else
+			{
+				throw new TypeException();
+			}
+		}
+	}
+
+	private ExprType type(QuantifierNode tree) throws TypeException
+	{
+		if (type(tree.getPredicate()) != ExprType.Boolean)
+			throw new TypeException();
+
+		return ExprType.Boolean;
+	}
+
+	private ExprType type(FuncDecl tree) throws TypeException
+	{
+		if (functionScope.containsKey(tree.getName()))
+		{
+			// TODO: Check parameter types!!
+
+			return functionScope.get(tree.getName()).type;
+		}
+		else if (setTransBuiltins.containsKey(tree.getName()))
+		{
+			return ExprType.Float;
+		}
+		else if (setBuiltins.containsKey(tree.getName()))
+		{
+			return ExprType.Integer;
+		}
+		else if (mathBuiltins.containsKey(tree.getName()))
+		{
+			return type(tree.getArgs()[0]);
+		}
+		else
+		{
+			throw new TypeException();
+		}
+	}
+
 
 	public void visit(ISyntaxTree tree) throws Exception
 	{
@@ -209,16 +394,52 @@ final class Compiler implements ISyntaxTreeVisitor
 
 			item.getChild().acceptVisit(copy());
 
+			if (type(item.getChild()) != ExprType.Boolean)
+				throw new TypeException(item.getChild(), type(item.getChild()), ExprType.Boolean);
+
 			write(item.getBytecode());
 		}
 		else if (tree instanceof BinaryOperatorNode)
 		{
 			BinaryOperatorNode item = (BinaryOperatorNode)tree;
 
+			ExprType l = type(item.getLeft()), r = type(item.getRight());
+
+			String bytecode = item.getBytecode();
+
+			if (bytecode.startsWith("_"))
+			{
+				if (l == ExprType.Integer && r == ExprType.Integer)
+				{
+					bytecode = bytecode.replace('_', 'I');
+				}
+				else if (l == ExprType.Float || r == ExprType.Float)
+				{
+					bytecode = bytecode.replace('_', 'F');
+				}
+				else
+				{
+					throw new TypeException(item, type(item));
+				}
+			}
+
+			boolean floatResult = bytecode.startsWith("F");
+
 			item.getLeft().acceptVisit(copy());
+
+			if (floatResult && l == ExprType.Integer)
+			{
+				write("ICASTF");
+			}
+
 			item.getRight().acceptVisit(copy());
 
-			write(item.getBytecode());
+			if (floatResult && r == ExprType.Integer)
+			{
+				write("ICASTF");
+			}
+
+			write(bytecode);
 		}
 		else if (tree instanceof QuantifierNode)
 		{
@@ -320,7 +541,25 @@ final class Compiler implements ISyntaxTreeVisitor
 					arg.acceptVisit(copy());
 				}
 
-				write(mathBuiltins.get(item.getName()));
+				String bytecode = mathBuiltins.get(item.getName());
+
+				if (bytecode.startsWith("_"))
+				{
+					if (type(item) == ExprType.Integer)
+					{
+						bytecode = bytecode.replace('_', 'I');
+					}
+					else if (type(item) == ExprType.Float)
+					{
+						bytecode = bytecode.replace('_', 'F');
+					}
+					else
+					{
+						throw new TypeException(item, type(item));
+					}
+				}
+
+				write(bytecode);
 			}
 			else if (setTransBuiltins.keySet().contains(item.getName()))
 			{
@@ -339,7 +578,7 @@ final class Compiler implements ISyntaxTreeVisitor
 					checkIs(functionScope.keySet(), arg2str);
 
 					int varid = arrayScope.get(arg1str);
-					int fnid = functionScope.get(arg2str);
+					int fnid = functionScope.get(arg2str).id;
 
 					write(setTransBuiltins.get(item.getName()), varid, fnid);
 				}
@@ -355,7 +594,7 @@ final class Compiler implements ISyntaxTreeVisitor
 					arg.acceptVisit(copy());
 				}
 
-				int id = functionScope.get(item.getName());
+				int id = functionScope.get(item.getName()).id;
 
 				write("CALL", id);
 			}
@@ -371,12 +610,21 @@ final class Compiler implements ISyntaxTreeVisitor
 			// Make sure not in scope before we add it
 			checkIsNot(arrayScope.keySet(), item.getVariable());
 			arrayScope.put(item.getVariable(), variableId++);
+
+			boolean writeHalt = false;
+			if (!writtenHalt)
+			{
+				writeHalt = writtenHalt = true;
+			}
 			
 			item.getScope().acceptVisit(copy());
 
-			// Write a halt just in case we have a quantifier
-			// that has no operations after it
-			write("HALT");
+			if (writeHalt)
+			{
+				// Write a halt just in case we have a quantifier
+				// that has no operations after it
+				write("HALT");
+			}
 		}
 		else if (tree instanceof FunDefDecl)
 		{
@@ -385,7 +633,7 @@ final class Compiler implements ISyntaxTreeVisitor
 			// Make sure not in scope before we add it
 			checkIsNot(functionScope.keySet(), item.getName());
 
-			functionScope.put(item.getName(), item.getId());
+			functionScope.put(item.getName(), new FunDetails(item.getId(), item.getType()));
 
 			item.getScope().acceptVisit(copy());
 		}
@@ -416,10 +664,11 @@ final class Compiler implements ISyntaxTreeVisitor
 
 
 
-
 interface IValue
 {
 	String toString();
+
+	ExprType type();
 }
 
 final class BooleanValue implements IValue
@@ -443,6 +692,11 @@ final class BooleanValue implements IValue
 	public String toString()
 	{
 		return "B:" + value;
+	}
+
+	public ExprType type()
+	{
+		return ExprType.Boolean;
 	}
 
 	public static BooleanValue assertType(IValue val) throws EvaluationException
@@ -481,6 +735,11 @@ final class IntegerValue implements IValue
 		return "I:" + value;
 	}
 
+	public ExprType type()
+	{
+		return ExprType.Integer;
+	}
+
 	public static IntegerValue assertType(IValue val) throws EvaluationException
 	{
 		if(!(val instanceof IntegerValue))
@@ -515,6 +774,11 @@ final class FloatValue implements IValue
 	public String toString()
 	{
 		return "F:" + value;
+	}
+
+	public ExprType type()
+	{
+		return ExprType.Float;
 	}
 
 	public static FloatValue assertType(IValue val) throws EvaluationException
@@ -672,35 +936,49 @@ class BinaryOperatorNode implements ISyntaxTree
 {
 	public enum Operator
 	{
-		EQUAL("_EQ"),
-		NOT_EQUAL("_NEQ"),
-		LESS_THAN("_LT"),
-		LESS_THAN_EQUAL("_LEQ"),
-		GREATER_THAN("_GT"),
-		GREATER_THAN_EQUAL("_GEQ"),
+		EQUAL("_EQ", true, false),
+		NOT_EQUAL("_NEQ", true, false),
+		LESS_THAN("_LT", true, false),
+		LESS_THAN_EQUAL("_LEQ", true, false),
+		GREATER_THAN("_GT", true, false),
+		GREATER_THAN_EQUAL("_GEQ", true, false),
 		
-		AND("AND"),
-		OR("OR"),
-		XOR("XOR"),
-		IMPLIES("IMPLIES"),
-		EQUIVALENT("EQUIVALENT"),
+		AND("AND", true, true),
+		OR("OR", true, true),
+		XOR("XOR", true, true),
+		IMPLIES("IMPLIES", true, true),
+		EQUIVALENT("EQUIVALENT", true, true),
 
-		PLUS("_ADD"),
-		MINUS("_SUB"),
-		MULTIPLY("_MUL"),
-		DIVIDE("_DIV"),
-		POWER("_POW");
+		PLUS("_ADD", false, false),
+		MINUS("_SUB", false, false),
+		MULTIPLY("_MUL", false, false),
+		DIVIDE("_DIV2", false, false),
+		POWER("_POW", false, false);
 
 		private final String code;
+		private final boolean logical;
+		private final boolean logicalInput;
 
-		private Operator(String code)
+		private Operator(String code, boolean logical, boolean logicalInput)
 		{
 			this.code = code;
+			this.logical = logical;
+			this.logicalInput = logicalInput;
 		}
 
 		public String getBytecode()
 		{
 			return code;
+		}
+
+		public boolean isLogical()
+		{
+			return logical;
+		}
+
+		public boolean isLogicalInput()
+		{
+			return logicalInput;
 		}
 	}
 
@@ -814,7 +1092,7 @@ class QuantifierNode implements ISyntaxTree
 	{
 		return "(" + quantifier.toString() + " " + var + " IN " + set + " DO " + predicate.toString() + ")";
 	}
-	
+
 	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
 	{
 		visitor.visit(this);
@@ -845,7 +1123,7 @@ final class FuncDecl implements ISyntaxTree
 	@Override
 	public String toString()
 	{
-		StringBuilder sb = new StringBuilder();
+		StringBuilder sb = new StringBuilder("(");
 
 		if (args.length > 0)
 		{
@@ -900,7 +1178,7 @@ final class FunDefDecl implements ISyntaxTree
 {
 	private int id = 0;
 	private String name = null;
-	private String type = null;
+	private ExprType type = null;
 	private ISyntaxTree scope = null;
 
 	public String getName() { return name; }
@@ -909,8 +1187,8 @@ final class FunDefDecl implements ISyntaxTree
 	public int getId() { return id; }
 	public void setId(int id) { this.id = id; }
 
-	public String getType() { return type; }
-	public void setType(String type) { this.type = type; }
+	public ExprType getType() { return type; }
+	public void setType(ExprType type) { this.type = type; }
 	
 	public ISyntaxTree getScope() { return scope; }
 	public void setScope(ISyntaxTree scope) { this.scope = scope; }
@@ -1135,7 +1413,13 @@ ISyntaxTree FunctionDefinition() :
 			FunDefDecl decl = new FunDefDecl();
 			decl.setId(Integer.parseInt(id.image));
 			decl.setName(name.image);
-			decl.setType(type.image);
+
+			if (type.image.equals("int"))
+				decl.setType(ExprType.Integer);
+			else if (type.image.equals("float"))
+				decl.setType(ExprType.Float);
+			else
+				throw new ParseException("Unknown function type `" + type.image + "'");
 			
 			if (root == null)
 			{

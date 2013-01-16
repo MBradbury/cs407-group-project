@@ -2,6 +2,7 @@
 
 THISDIR=$(basename "$(pwd)")
 HOPPYDIR="../Hoppy"
+DRAGONDIR="../Dragon"
 
 if [[ $(uname) = "Linux" ]]
 then
@@ -11,10 +12,11 @@ else
 fi
 
 CP="${HOPPYDIR}"
+DRAGONCP="${DRAGONDIR}${CPSEP}${DRAGONDIR}/guava-13.0.1.jar"
 
 # Remove any previous intermediate files
-rm -rf Intermediate Output
-mkdir Intermediate Output
+rm -rf Intermediate Output Dragon-Output
+mkdir Intermediate Output Dragon-Output
 
 rm -f Input/*~
 
@@ -52,12 +54,12 @@ do
 		echo "==================================Test $name Succeeded"
 	fi
 
-
-	#name=$(basename $test)
+	cat "Intermediate/$name" | java -cp "$DRAGONCP" Dragon > "Dragon-Output/$name"
 	
-	#echo "$VMBINARY Intermediate/$name > \"Output/$name\""
 
-	#$VMBINARY Intermediate/$name > "Output/$name"
+	#echo "$VMBINARY \"Dragon-Output/$name\" > \"Output/$name\""
+
+	#$VMBINARY "Dragon-Output/$name" > "Output/$name"
 	
 	# Check that we got the expected result
 	
@@ -70,3 +72,4 @@ do
 	#	echo "==================================Test $name Succeeded"
 	#fi
 done
+

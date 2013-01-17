@@ -92,7 +92,7 @@ class TypeException extends Exception
 
 enum ExprType
 {
-	Boolean, Integer, Float, User, Set
+	Boolean, Integer, Float, User, Set, Function
 }
 
 
@@ -251,9 +251,16 @@ final class Compiler implements ISyntaxTreeVisitor
 		{
 			return ExprType.Set;
 		}
+		else if (functionScope.containsKey(tree.getName()))
+		{
+			return ExprType.Function;
+		}
 		else
 		{
-			throw new TypeException();
+			// Most likely we haven't visited a quantifier node yet
+			// so the variable name is not the the variableScope
+			return ExprType.User;
+			//throw new TypeException("Unsure of type of " + tree);
 		}
 	}
 
@@ -287,7 +294,11 @@ final class Compiler implements ISyntaxTreeVisitor
 		}
 		else if (isLogical && !isLogicalInput)
 		{
-			// TODO: check args types
+			if (type(tree.getLeft()) != ExprType.Integer && type(tree.getLeft()) != ExprType.Float)
+				throw new TypeException();
+
+			if (type(tree.getRight()) != ExprType.Integer && type(tree.getRight()) != ExprType.Float)
+				throw new TypeException();
 
 			return ExprType.Boolean;
 		}
@@ -320,20 +331,33 @@ final class Compiler implements ISyntaxTreeVisitor
 	{
 		if (functionScope.containsKey(tree.getName()))
 		{
-			// TODO: Check parameter types!!
+			if (type(tree.getArgs()[0]) != ExprType.User)
+				throw new TypeException(tree.getArgs()[0], type(tree.getArgs()[0]), ExprType.User);
 
 			return functionScope.get(tree.getName()).type;
 		}
 		else if (setTransBuiltins.containsKey(tree.getName()))
 		{
+			if (type(tree.getArgs()[0]) != ExprType.Set)
+				throw new TypeException(tree.getArgs()[0], type(tree.getArgs()[0]), ExprType.Set);
+
+			if (type(tree.getArgs()[1]) != ExprType.Function)
+				throw new TypeException(tree.getArgs()[1], type(tree.getArgs()[1]), ExprType.Function);
+
 			return ExprType.Float;
 		}
 		else if (setBuiltins.containsKey(tree.getName()))
 		{
+			if (type(tree.getArgs()[0]) != ExprType.Set)
+				throw new TypeException(tree.getArgs()[0], type(tree.getArgs()[0]), ExprType.Set);
+
 			return ExprType.Integer;
 		}
 		else if (mathBuiltins.containsKey(tree.getName()))
 		{
+			if (type(tree.getArgs()[0]) != ExprType.Integer && type(tree.getArgs()[0]) != ExprType.Float)
+				throw new TypeException();
+
 			return type(tree.getArgs()[0]);
 		}
 		else
@@ -387,6 +411,7 @@ final class Compiler implements ISyntaxTreeVisitor
 			}
 			else
 			{
+				throw new CompilationException("Not sure how to generate code for: " + tree);
 			}
 		}
 		else if (tree instanceof UnaryOperatorNode)
@@ -645,7 +670,7 @@ final class Compiler implements ISyntaxTreeVisitor
 		else
 		{
 			// Unknown class
-			//System.err.println("Unknown class " + tree);
+			throw new CompilationException("Unknown class " + tree);
 		}
 	}
 	
@@ -654,13 +679,13 @@ final class Compiler implements ISyntaxTreeVisitor
 		return new Compiler(this);
 	}
 	
-	private void checkIs(Set<String> items, String name) throws NotInScopeException
+	private static void checkIs(Set<String> items, String name) throws NotInScopeException
 	{
 		if (!items.contains(name))
 			throw new NotInScopeException(name);
 	}
 	
-	private void checkIsNot(Set<String> items, String name) throws AlreadyInScopeException
+	private static void checkIsNot(Set<String> items, String name) throws AlreadyInScopeException
 	{
 		if (items.contains(name))
 			throw new AlreadyInScopeException(name);

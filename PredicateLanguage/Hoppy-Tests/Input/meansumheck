@@ -1,0 +1,4 @@
+[all]
+function 2 as temperature returning float in
+	using Neighbours(2) at 254 as twohopn in
+    	sum(twohopn, temperature) / len(twohopn) == mean(twohopn, temperature)

@@ -1,0 +1,7 @@
+//[all] ((I:-1 I:2 MINUS) I:-3 EQUAL)
+//TARGETING all
+IPUSH -1
+IPUSH 2
+ISUB
+IPUSH -3
+IEQ

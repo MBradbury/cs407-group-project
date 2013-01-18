@@ -371,22 +371,7 @@ final class Compiler implements ISyntaxTreeVisitor
 	{
 		if (tree instanceof NamedValueNode)
 		{
-			NamedValueNode item = (NamedValueNode)tree;
-			checkIs(variableScope.keySet(), item.getName());
-
-			comment(item.getName());
-
-			if (item.getName().equals("this"))
-			{
-				write("IPUSH", 0);
-				write("AFETCH", 0);
-			}
-			else
-			{
-				ArrIds id = variableScope.get(item.getName());
-				write("IFETCH", id.id);
-				write("AFETCH", id.arrid);
-			}
+			throw new CompilationException("Cannot call NamedValueNode");
 		}
 		else if (tree instanceof LiteralValueNode)
 		{
@@ -615,14 +600,44 @@ final class Compiler implements ISyntaxTreeVisitor
 			}
 			else if (functionScope.keySet().contains(item.getName()))
 			{
-				for (ISyntaxTree arg : item.getArgs())
+				if (item.getArgs().length != 1)
+					throw new CompilationException("Expected 1 arguments for a function");
+
+				// Can only call these functions on a name
+				// A name can only be used in these cases
+				if (item.getArgs()[0] instanceof NamedValueNode)
 				{
-					arg.acceptVisit(copy());
+					NamedValueNode nvn = (NamedValueNode)item.getArgs()[0];
+
+					checkIs(variableScope.keySet(), nvn.getName());
+
+					comment(nvn.getName());
+
+					int id, arrid;
+
+					if (nvn.getName().equals("this"))
+					{
+						id = arrid = 0;
+					}
+					else
+					{
+						ArrIds vid = variableScope.get(nvn.getName());
+						id = vid.id;
+						arrid = vid.arrid;
+					}
+
+					int fnid = functionScope.get(item.getName()).id;
+
+					// Equivalent to:
+					// IFETCH id
+					// AFETCH arrid
+					// CALL fnid
+					write("VIFAFC", id, arrid, fnid);
 				}
-
-				int id = functionScope.get(item.getName()).id;
-
-				write("CALL", id);
+				else
+				{
+					throw new CompilationException("Expected set function to have a named argument");
+				}
 			}
 			else
 			{

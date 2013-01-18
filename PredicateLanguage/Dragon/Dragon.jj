@@ -33,7 +33,7 @@ public class Dragon
 		
 		transformJumps(opcodes);
 		
-		for (Opcode op : opcodes)
+		/*for (Opcode op : opcodes)
 		{
 			System.err.print(op.getName());
 			
@@ -53,7 +53,7 @@ public class Dragon
 			}
 			
 			System.err.println();
-		}
+		}*/
 		
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
 		
@@ -102,7 +102,7 @@ public class Dragon
 			{
 				int index = getLabelIndex(opcodes, op.getArgs().get(0).toString());
 				
-				System.err.println("Converting label " + op.getArgs().get(0).toString() + " to " + index);
+				//System.err.println("Converting label " + op.getArgs().get(0).toString() + " to " + index);
 				
 				// Update the label name, with the jump position
 				op.getArgs().set(0, new ByteArg(index));

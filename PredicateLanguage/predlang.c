@@ -212,9 +212,20 @@ static variable_reg_t * create_variable(variable_id_t id, variable_type_t type)
 	{
 		if (variable_regs[i].id == id)
 		{
-			error = "Already registered variable with id";
-			DEBUG_PRINT("========%s=====%u===\n", error, id);
-			return NULL;
+			if (variable_regs[i].type == type && variable_regs[i].is_array == false &&
+				variable_regs[i].length == 0 && variable_regs[i].location != NULL)
+			{
+				// Reset variable
+				memset(variable_regs[i].location, 0, variable_type_size(type));
+
+				return &variable_regs[i];
+			}
+			else
+			{
+				error = "Already registered variable with id";
+				DEBUG_PRINT("========%s=====%u===\n", error, id);
+				return NULL;
+			}
 		}
 	}
 
@@ -906,9 +917,9 @@ nbool evaluate(ubyte const * start, nuint program_length)
 			break;
 
 		// Integer operations
-		OPERATION_POP(IADD, +, nint, nint, "%d", 0, 1);
-		OPERATION_POP(ISUB, -, nint, nint, "%d", 0, 1);
-		OPERATION_POP(IMUL, *, nint, nint, "%d", 0, 1);
+		OPERATION_POP(IADD, +, nint, nint, "%d", 1, 0);
+		OPERATION_POP(ISUB, -, nint, nint, "%d", 1, 0);
+		OPERATION_POP(IMUL, *, nint, nint, "%d", 1, 0);
 		OPERATION_POP(IDIV1, /, nint, nint, "%d", 0, 1);
 		OPERATION_POP(IDIV2, /, nint, nint, "%d", 1, 0);
 
@@ -930,31 +941,31 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 			break;
 
-		OPERATION_POP(IEQ, ==, nint, nbool, "%d", 0, 1);
-		OPERATION_POP(INEQ, !=, nint, nbool, "%d", 0, 1);
-		OPERATION_POP(ILT, <, nint, nbool, "%d", 0, 1);
-		OPERATION_POP(ILEQ, <=, nint, nbool, "%d", 0, 1);
-		OPERATION_POP(IGT, >, nint, nbool, "%d", 0, 1);
-		OPERATION_POP(IGEQ, >=, nint, nbool, "%d", 0, 1);
+		OPERATION_POP(IEQ, ==, nint, nbool, "%d", 1, 0);
+		OPERATION_POP(INEQ, !=, nint, nbool, "%d", 1, 0);
+		OPERATION_POP(ILT, <, nint, nbool, "%d", 1, 0);
+		OPERATION_POP(ILEQ, <=, nint, nbool, "%d", 1, 0);
+		OPERATION_POP(IGT, >, nint, nbool, "%d", 1, 0);
+		OPERATION_POP(IGEQ, >=, nint, nbool, "%d", 1, 0);
 
 		// Floating point operations
-		OPERATION_POP(FADD, +, nfloat, nfloat, "%f", 0, 1);
-		OPERATION_POP(FSUB, -, nfloat, nfloat, "%f", 0, 1);
-		OPERATION_POP(FMUL, *, nfloat, nfloat, "%f", 0, 1);
+		OPERATION_POP(FADD, +, nfloat, nfloat, "%f", 1, 0);
+		OPERATION_POP(FSUB, -, nfloat, nfloat, "%f", 1, 0);
+		OPERATION_POP(FMUL, *, nfloat, nfloat, "%f", 1, 0);
 		OPERATION_POP(FDIV1, /, nfloat, nfloat, "%f", 0, 1);
 		OPERATION_POP(FDIV2, /, nfloat, nfloat, "%f", 1, 0);
-		OPERATION_POP(FEQ, ==, nfloat, nbool, "%f", 0, 1);
-		OPERATION_POP(FNEQ, !=, nfloat, nbool, "%f", 0, 1);
-		OPERATION_POP(FLT, <, nfloat, nbool, "%f", 0, 1);
-		OPERATION_POP(FLEQ, <=, nfloat, nbool, "%f", 0, 1);
-		OPERATION_POP(FGT, >, nfloat, nbool, "%f", 0, 1);
-		OPERATION_POP(FGEQ, >=, nfloat, nbool, "%f", 0, 1);
+		OPERATION_POP(FEQ, ==, nfloat, nbool, "%f", 1, 0);
+		OPERATION_POP(FNEQ, !=, nfloat, nbool, "%f", 1, 0);
+		OPERATION_POP(FLT, <, nfloat, nbool, "%f", 1, 0);
+		OPERATION_POP(FLEQ, <=, nfloat, nbool, "%f", 1, 0);
+		OPERATION_POP(FGT, >, nfloat, nbool, "%f", 1, 0);
+		OPERATION_POP(FGEQ, >=, nfloat, nbool, "%f", 1, 0);
 
 		// Logical operations
-		OPERATION_POP(AND, &&, nbool, nbool, "%d", 0, 1);
-		OPERATION_POP(OR, ||, nbool, nbool, "%d", 0, 1);
-		OPERATION_POP(XOR, ^, nbool, nbool, "%d", 0, 1);
-		OPERATION_POP(EQUIVALENT, ==, nbool, nbool, "%d", 0, 1);
+		OPERATION_POP(AND, &&, nbool, nbool, "%d", 1, 0);
+		OPERATION_POP(OR, ||, nbool, nbool, "%d", 1, 0);
+		OPERATION_POP(XOR, ^, nbool, nbool, "%d", 1, 0);
+		OPERATION_POP(EQUIVALENT, ==, nbool, nbool, "%d", 1, 0);
 
 		//#define OPERATION_POP(code, op, type, store_type, format_type, idx1, idx2)
 		case IMPLIES:
@@ -962,7 +973,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				DEBUG_ERR_PRINT("Calling %s on %d and %d\n", opcode_names[*current], ((nbool *)stack_ptr)[0], ((nbool *)stack_ptr)[1]);
 				if (!require_stack_size(sizeof(nbool) * 2))
 					return false;
-				nbool res = !((nbool *)stack_ptr)[0] || ((nbool *)stack_ptr)[1];
+				nbool res = !((nbool *)stack_ptr)[1] || ((nbool *)stack_ptr)[0];
 				if (!pop_stack(sizeof(nbool) * 2))
 					return false;
 				if (!push_stack(&res, sizeof(nbool)))
@@ -1447,7 +1458,9 @@ static bool run_program_from_file(int argc, char ** argv)
 
 	char const * filename = argv[1];
 
+#ifndef NDEBUG
 	fprintf(stderr, "Filename: %s\n", filename);
+#endif
 
 	nint program_size = load_file_to_memory(filename, &program_start);
 
@@ -1511,11 +1524,13 @@ int main(int argc, char * argv[])
 	bind_input(255, data, 10);
 	bind_input(254, data, 20);
 
+#ifndef NDEBUG
 	fprintf(stderr, "sizeof(void *): %u\n", sizeof(void *));
 	fprintf(stderr, "sizeof(int): %u\n", sizeof(nint));
 	fprintf(stderr, "sizeof(float): %u\n", sizeof(nfloat));
 	fprintf(stderr, "sizeof(variable_reg_t): %u\n", sizeof(variable_reg_t));
 	fprintf(stderr, "sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
+#endif
 
 	if (!run_program_from_file(argc, argv))
 	{

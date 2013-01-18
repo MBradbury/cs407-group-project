@@ -49,15 +49,15 @@ do
 	
 	if [[ $? != 0 ]]
 	then
-		echo "==================================Test $name Failed"
+		echo "==================================Test $name Failed (Intermediate)"
 	else
-		echo "==================================Test $name Succeeded"
+		echo "==================================Test $name Succeeded (Intermediate)"
 	fi
 
 	cat "Intermediate/$name" | java -cp "$DRAGONCP" Dragon > "Dragon-Output/$name"
 	
 
-	echo "$VMBINARY \"Dragon-Output/$name\" > \"Output/$name\""
+	#echo "$VMBINARY \"Dragon-Output/$name\" > \"Output/$name\""
 
 	$VMBINARY "Dragon-Output/$name" > "Output/$name"
 	

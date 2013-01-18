@@ -1,7 +1,8 @@
-//[all] (FUNDEF 2 AS temperature RETURNING float IN (N:this F:temperature) F:40.0 LESS_THAN_EQUAL))
+//[all] (FUNDEF 2 AS temperature RETURNING Float IN ((N:this F:temperature) I:40 LESS_THAN_EQUAL))
+//TARGETING all
+//FUNC 2 AS temperature
 //this
-IPUSH 0
-AFETCH 0
-CALL 2
-FPUSH 40.0
+VIFAFC 0 0 2
+IPUSH 40
+ICASTF
 FLEQ

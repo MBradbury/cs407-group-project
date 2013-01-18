@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS= -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wfloat-equal
 CFLAGS += -Os -fno-strict-aliasing -ffunction-sections
 CFLAGS += -I.
-CFLAGS += -DMAIN_FUNC -DENABLE_CODE_GEN
+CFLAGS += -DMAIN_FUNC -DENABLE_CODE_GEN -DNDEBUG
 
 ODIR=obj
 LDIR=lib

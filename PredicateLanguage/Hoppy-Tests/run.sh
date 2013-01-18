@@ -57,19 +57,19 @@ do
 	cat "Intermediate/$name" | java -cp "$DRAGONCP" Dragon > "Dragon-Output/$name"
 	
 
-	#echo "$VMBINARY \"Dragon-Output/$name\" > \"Output/$name\""
+	echo "$VMBINARY \"Dragon-Output/$name\" > \"Output/$name\""
 
-	#$VMBINARY "Dragon-Output/$name" > "Output/$name"
+	$VMBINARY "Dragon-Output/$name" > "Output/$name"
 	
 	# Check that we got the expected result
 	
-	#`cmp -s Output/$name Expected/$name >/dev/null`
+	`cmp -s Output/$name Expected/$name >/dev/null`
 	
-	#if [[ $? != 0 ]]
-	#then
-	#	echo "==================================Test $name Failed"
-	#else
-	#	echo "==================================Test $name Succeeded"
-	#fi
+	if [[ $? != 0 ]]
+	then
+		echo "==================================Test $name Failed"
+	else
+		echo "==================================Test $name Succeeded"
+	fi
 done
 

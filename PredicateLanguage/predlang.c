@@ -22,7 +22,7 @@
 #define STACK_SIZE (1 * 512)
 
 #define MAXIMUM_FUNCTIONS 5
-#define MAXIMUM_VARIABLES 5
+#define MAXIMUM_VARIABLES 10
 
 
 #define THIS_VAR_ID 0
@@ -195,7 +195,7 @@ static nuint variable_type_size(nuint type)
 }
 
 
-static variable_reg_t * variable_regs = NULL;
+static variable_reg_t variable_regs[MAXIMUM_VARIABLES];
 static nuint variable_regs_count = 0;
 
 static variable_reg_t * create_variable(variable_id_t id, variable_type_t type)
@@ -356,7 +356,7 @@ typedef struct
 	variable_type_t type;
 } function_reg_t;
 
-static function_reg_t * functions_regs = NULL;
+static function_reg_t functions_regs[MAXIMUM_FUNCTIONS];
 static nuint function_regs_count = 0;
 
 bool register_function(function_id_t id, data_access_fn fn, variable_type_t type)
@@ -1175,21 +1175,13 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	memset(stack, 0xEE, STACK_SIZE);
 
 
-	// Allocate some space for function registrations
-	functions_regs = (function_reg_t *)heap_alloc(sizeof(function_reg_t) * MAXIMUM_FUNCTIONS);
+	// Reset function and variable records
+	function_regs_count = 0;
+	memset(functions_regs, 0, sizeof(function_reg_t) * MAXIMUM_FUNCTIONS);
 
-	if (functions_regs == NULL)
-	{
-		return false;
-	}
+	variable_regs_count = 0;
+	memset(variable_regs, 0, sizeof(variable_reg_t) * MAXIMUM_VARIABLES);
 
-	// Allocate space for variable registrations
-	variable_regs = (variable_reg_t *)heap_alloc(sizeof(variable_reg_t) * MAXIMUM_VARIABLES);
-
-	if (variable_regs == NULL)
-	{
-		return false;
-	}
 
 	// Put values in the `this' variable
 	variable_reg_t * thisvar = create_variable(THIS_VAR_ID, TYPE_USER);
@@ -1447,6 +1439,12 @@ nint load_file_to_memory(char const * filename, ubyte ** result)
 
 static bool run_program_from_file(int argc, char ** argv)
 {
+	if (argv == NULL || argc != 2)
+	{
+		printf("Invalid arguments\n");
+		return false;
+	}
+
 	char const * filename = argv[1];
 
 	fprintf(stderr, "Filename: %s\n", filename);
@@ -1474,22 +1472,44 @@ int main(int argc, char * argv[])
 	register_function(TEMP_FN_ID, &get_temp_fn, TYPE_FLOATING);
 	register_function(HUMIDITY_FN_ID, &get_humidity_fn, TYPE_FLOATING);
 
-	variable_reg_t * var_array = create_array(255, TYPE_USER, 10);
-	alloc_array(var_array);
+	user_data_t * data = malloc(sizeof(user_data_t) * 20);
 
-	user_data_t * arr = (user_data_t *)var_array->location;
-	set_user_data(&arr[0], 0, 1, 25, 122);
-	set_user_data(&arr[1], 1, 3, 26, 122);
-	set_user_data(&arr[2], 2, 5, 27, 122);
-	set_user_data(&arr[3], 3, 7, 26, 122);
-	set_user_data(&arr[4], 4, 9, 25, 122);
-	set_user_data(&arr[5], 5, 11, 26, 122);
-	set_user_data(&arr[6], 6, 13, 27, 122);
-	set_user_data(&arr[7], 7, 15, 26, 122);
-	set_user_data(&arr[8], 8, 17, 25, 122);
-	set_user_data(&arr[9], 9, 19, 26, 122);
+	// N(1)
+	set_user_data(&data[0], 0, 1, 25, 122);
+	set_user_data(&data[1], 1, 3, 26, 122);
+	set_user_data(&data[2], 2, 5, 27, 122);
+	set_user_data(&data[3], 3, 7, 26, 122);
+	set_user_data(&data[4], 4, 9, 25, 122);
+	set_user_data(&data[5], 5, 11, 26, 122);
+	set_user_data(&data[6], 6, 13, 27, 122);
+	set_user_data(&data[7], 7, 15, 26, 122);
+	set_user_data(&data[8], 8, 17, 25, 122);
+	set_user_data(&data[9], 9, 19, 26, 122);
 
-	fprintf(stderr, "Array length %d\n", var_array->length);
+	// N(2)
+	set_user_data(&data[0], 0, 1, 25, 122);
+	set_user_data(&data[1], 1, 3, 26, 122);
+	set_user_data(&data[2], 2, 5, 27, 122);
+	set_user_data(&data[3], 3, 7, 26, 122);
+	set_user_data(&data[4], 4, 9, 25, 122);
+	set_user_data(&data[5], 5, 11, 26, 122);
+	set_user_data(&data[6], 6, 13, 27, 122);
+	set_user_data(&data[7], 7, 15, 26, 122);
+	set_user_data(&data[8], 8, 17, 25, 122);
+	set_user_data(&data[9], 9, 19, 26, 122);
+	set_user_data(&data[10], 10, 2, 25, 122);
+	set_user_data(&data[11], 11, 4, 26, 122);
+	set_user_data(&data[12], 12, 6, 27, 122);
+	set_user_data(&data[13], 13, 8, 26, 122);
+	set_user_data(&data[14], 14, 10, 25, 122);
+	set_user_data(&data[15], 15, 12, 26, 122);
+	set_user_data(&data[16], 16, 14, 27, 122);
+	set_user_data(&data[17], 17, 16, 26, 122);
+	set_user_data(&data[18], 18, 18, 25, 122);
+	set_user_data(&data[19], 19, 20, 26, 122);
+
+	bind_input(255, data, 10);
+	bind_input(254, data, 20);
 
 	fprintf(stderr, "sizeof(void *): %u\n", sizeof(void *));
 	fprintf(stderr, "sizeof(int): %u\n", sizeof(nint));

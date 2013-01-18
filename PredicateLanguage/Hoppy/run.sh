@@ -1,3 +1,3 @@
 #!/bin/bash
-make; echo -e "[01,00] function 0 as temperature returning float in using Neighbours(2) as twohopn in ! @(x : twohopn ~ temperature(x) + temperature(this) == abs(6 - 9 * 7.0) + len(twohopn) + mean(twohopn, temperature)) <=> 5 == 3" | java -cp . Hoppy
+make; echo -e "[01,00] function 0 as temperature returning float in using Neighbours(2) at 254 as twohopn in ! @(x : twohopn ~ temperature(x) + temperature(this) == abs(6 - 9 * 7.0) + len(twohopn) + mean(twohopn, temperature)) <=> 5 == 3" | java -cp . Hoppy
 

@@ -1543,6 +1543,8 @@ int main(int argc, char * argv[])
 
 	inspect_stack(stdout);
 
+	free(data);
+
 	return 0;
 }
 #endif

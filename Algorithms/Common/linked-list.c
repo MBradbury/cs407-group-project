@@ -8,6 +8,8 @@ static linked_list_elem_t * create_elem(void * data)
 	linked_list_elem_t * e = (linked_list_elem_t *)malloc(sizeof(linked_list_elem_t));
 	e->data = data;
 	e->next = NULL;
+
+	return e;
 }
 
 static linked_list_elem_t * linked_list_last(linked_list_t * list)
@@ -51,7 +53,7 @@ bool linked_list_free(linked_list_t * list)
 		return false;
 	}
 
-	linked_list_elem_t * elem, prev;
+	linked_list_elem_t * elem, * prev;
 	for (elem = list->head; elem != NULL; )
 	{
 		if (list->cleanup != NULL)

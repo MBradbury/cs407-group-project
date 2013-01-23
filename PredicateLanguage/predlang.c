@@ -1,16 +1,15 @@
 #include "predlang.h"
 
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 //#define MAIN_FUNC
 //#define ENABLE_CODE_GEN
 //#define NDEBUG
 
 #ifndef NDEBUG
+#	include <stdio.h>
 #	define DEBUG_PRINT(...) do { printf(__VA_ARGS__); } while(false)
 #	define DEBUG_ERR_PRINT(...) do { fprintf(stderr, __VA_ARGS__); } while(false)
 #else
@@ -1046,7 +1045,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 		case FPOW:
 			{
-				if (!require_stack_size(sizeof(nfloat) * 2))
+				/*if (!require_stack_size(sizeof(nfloat) * 2))
 					return false;
 
 				nfloat res = (nfloat)pow(((nfloat *)stack_ptr)[0], ((nfloat *)stack_ptr)[1]);
@@ -1055,7 +1054,9 @@ nbool evaluate(ubyte const * start, nuint program_length)
 					return false;
 
 				if (!push_stack(&res, sizeof(nfloat)))
-					return false;
+					return false;*/
+
+				return false;
 
 			} break;
 

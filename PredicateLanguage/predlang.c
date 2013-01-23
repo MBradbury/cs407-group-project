@@ -1017,7 +1017,12 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				if (!require_stack_size(sizeof(nfloat)))
 					return false;
 
-				nfloat res = abs(*(nfloat *)stack_ptr);
+				nfloat res = *(nfloat *)stack_ptr;
+
+				if (res < 0)
+				{
+					res = -res;
+				}
 
 				if (!pop_stack(sizeof(nfloat)))
 					return false;

@@ -1,7 +1,13 @@
 #ifndef CS407_ARRAY_LIST
 #define CS407_ARRAY_LIST
 
-#include <stdbool.h>
+#ifndef _MSC_VER
+#	include <stdbool.h>
+#else
+#	define bool int
+#	define true 1
+#	define false 0
+#endif
 
 typedef void (*cleanup_t)(void * data);
 

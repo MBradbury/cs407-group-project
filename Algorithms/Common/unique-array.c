@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-bool unique_array_init(array_list_t * list, equality_t equality, cleanup_t cleanup)
+bool unique_array_init(unique_array_t * list, equality_t equality, cleanup_t cleanup)
 {
 	if (list == NULL || equality == NULL)
 	{
@@ -12,7 +12,7 @@ bool unique_array_init(array_list_t * list, equality_t equality, cleanup_t clean
 
 	list->equality = equality;
 
-	return array_list_init(&list->list, cleanup, equality);
+	return array_list_init(&list->list, cleanup);
 }
 
 // Add / Remove items from list
@@ -25,7 +25,10 @@ bool unique_array_append(unique_array_t * list, void * data)
 	return true;
 }
 
-bool unique_array_clear(unique_array_t * list);
+bool unique_array_clear(unique_array_t * list)
+{
+	return list == NULL ? false : array_list_clear(&list->list);
+}
 
 // Get list length
 unsigned int unique_array_length(unique_array_t const * list)
@@ -56,12 +59,12 @@ bool unique_array_contains(unique_array_t const * list, void const * data)
 }
 
 // List iteration 
-unique_array_elem_t unique_array_first(array_list_t const * list)
+unique_array_elem_t unique_array_first(unique_array_t const * list)
 {
-	return list == NULL ? NULL : array_list_first(&list->list);
+	return 0;
 }
 
-unique_array_elem_t unique_array_next(array_list_elem_t elem)
+unique_array_elem_t unique_array_next(unique_array_elem_t elem)
 {
 	return array_list_next(elem);
 }

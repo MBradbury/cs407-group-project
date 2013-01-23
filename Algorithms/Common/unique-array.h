@@ -3,7 +3,15 @@
 
 #include "array-list.h"
 
-typedef bool (*equality)(void * left, void * right);
+#ifndef _MSC_VER
+#	include <stdbool.h>
+#else
+#	define bool int
+#	define true 1
+#	define false 0
+#endif
+
+typedef bool (*equality_t)(void const *, void const *);
 
 typedef struct unique_array
 {
@@ -15,7 +23,7 @@ typedef struct unique_array
 typedef array_list_elem_t unique_array_elem_t;
 
 // Create the list
-bool unique_array_init(array_list_t * list, equality_t equality, cleanup_t cleanup);
+bool unique_array_init(unique_array_t * list, equality_t equality, cleanup_t cleanup);
 
 // Add / Remove items from list
 bool unique_array_append(unique_array_t * list, void * data);
@@ -28,8 +36,8 @@ bool unique_array_contains(unique_array_t const * list, void const * data);
 unsigned int unique_array_length(unique_array_t const * list);
 
 // List iteration 
-unique_array_elem_t unique_array_first(array_list_t const * list);
-unique_array_elem_t unique_array_next(array_list_elem_t elem);
+unique_array_elem_t unique_array_first(unique_array_t const * list);
+unique_array_elem_t unique_array_next(unique_array_elem_t elem);
 bool unique_array_continue(unique_array_t const * list, unique_array_elem_t elem);
 void * unique_array_data(unique_array_t const * list, unique_array_elem_t elem);
 

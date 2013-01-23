@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 static bool realloc_array_list(array_list_t * list)
 {
@@ -32,7 +33,7 @@ static bool realloc_array_list(array_list_t * list)
 	return true;
 }
 
-bool init_array_list(array_list_t * list, cleanup_t cleanup)
+bool array_list_init(array_list_t * list, cleanup_t cleanup)
 {
 	if (list == NULL)
 	{
@@ -43,6 +44,8 @@ bool init_array_list(array_list_t * list, cleanup_t cleanup)
 	list->count = 0;
 	list->length = 0;
 	list->cleanup = cleanup;
+
+	return true;
 }
 
 bool array_list_clear(array_list_t * list)
@@ -52,23 +55,27 @@ bool array_list_clear(array_list_t * list)
 		return false;
 	}
 
-	void * elem;
+	array_list_elem_t elem;
 	for (elem = array_list_first(list); array_list_continue(list, elem); elem = array_list_next(elem))
 	{
+		void * data = array_list_data(list, elem);
+
 		if (list->cleanup != NULL)
 		{
-			list->cleanup(elem);
+			list->cleanup(data);
 		}
 	}
 
 	free(list->data);
 	list->length = 0;
 	list->count = 0;
+
+	return true;
 }
 
 bool array_list_append(array_list_t * list, void * data)
 {
-	if (list = NULL || data == NULL)
+	if (list == NULL || data == NULL)
 	{
 		return false;
 	}
@@ -80,7 +87,7 @@ bool array_list_append(array_list_t * list, void * data)
 	}
 
 	// Add item
-	list->data[count++] = data;
+	list->data[list->count++] = data;
 
 	return true;
 }

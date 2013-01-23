@@ -4,12 +4,11 @@
 #include <stddef.h>
 #include <stdio.h>
 
-static linked_list_elem_t * create_elem(void * data)
+static linked_list_elem_t create_elem(void * data)
 {
 	linked_list_elem_t e = (linked_list_elem_t)malloc(sizeof(linked_list_elem_t));
 	e->data = data;
 	e->next = NULL;
-
 	return e;
 }
 
@@ -89,6 +88,12 @@ bool linked_list_append(linked_list_t * list, void * data)
 	}
 
 	linked_list_elem_t last = linked_list_last(list);
+
+	if (last == NULL)
+	{
+		return false;
+	}
+
 	last->next = create_elem(data);
 
 	return true;

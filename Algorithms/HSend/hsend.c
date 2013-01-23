@@ -29,8 +29,8 @@ typedef struct
 // Struct for the list elements, used to hold the variable names and their bytecode symbols
 typedef struct var_elem
 {
-	int hops;
-	char * var_id;
+	unsigned char hops;
+	unsigned char var_id;
 } var_elem_t;
 
 typedef struct values_list_elem
@@ -122,12 +122,11 @@ static rimeaddr_t baseStationAddr;
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
 
-PROCESS(mainProcess, "MAIN Process");
 PROCESS(hsendProcess, "HSEND Process");
 
 //Rime adress of target node (or null for everyone)
 //binary bytecode for the VM
-void trickle_rcv(struct trickle_conn * c)
+static void trickle_rcv(struct trickle_conn * c)
 {
 	//might have to copy out packet, if recieving two messages at once
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
@@ -136,13 +135,14 @@ void trickle_rcv(struct trickle_conn * c)
 	{
 		// Start HSEND
 		// TODO: pass arguments from trickle message to HSEND
-		process_start(&hsendProcess, msg);
+		process_start(&hsendProcess, &msg);
 	}
 }
 
 static const struct trickle_callbacks callbacks = {trickle_rcv};
 
 
+PROCESS(mainProcess, "MAIN Process");
 
 AUTOSTART_PROCESSES(&mainProcess);
 
@@ -201,7 +201,6 @@ PROCESS_THREAD(hsendProcess, ev, d)
 
 	eval_pred_req_t * msg = (eval_pred_req_t *)d;
 
-
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
@@ -219,18 +218,18 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	char const * ptr = ((char const *)msg) + sizeof(eval_pred_req_t); 
 	int max_hops = 0;
 	int i;
-	for (i = 0; i < &msg->num_of_bytecode_var; i++)
+	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
 		//create temporary elements
 		var_elem_t * tmp = (var_elem_t *) malloc(sizeof(var_elem_t));
 		
 		//populate the struct
-		tmp->hops = &ptr[(2 * i)];
-		tmp->var_id = &ptr[(2 * i)+1];
+		tmp->hops = ptr[(2 * i)];
+		tmp->var_id = ptr[(2 * i)+1];
 
-		if (&tmp->hops > max_hops)
+		if (tmp->hops > max_hops)
 		{
-			max_hops = &tmp->hops;
+			max_hops = tmp->hops;
 		}
 
 		//insert into the array
@@ -246,7 +245,7 @@ PROCESS_THREAD(hsendProcess, ev, d)
 
 	// TODO:
 	// Work out how many hops of information is being requested
-	unsigned int hops = 2;
+	uint8_t hops = 2;
 
 	printf("Sending pred req\n");
 

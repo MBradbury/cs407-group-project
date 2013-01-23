@@ -1,13 +1,14 @@
 #ifndef CS407_PRED_LANG_H
 #define CS407_PRED_LANG_H
 
-#include <stdint.h>
-
 #ifndef _MSC_VER
 #	include <stdbool.h>
 #else
 #	define snprintf _snprintf
+#	define _CRT_SECURE_NO_WARNINGS
 #endif
+#include <stdint.h>
+
 
 typedef enum
 {

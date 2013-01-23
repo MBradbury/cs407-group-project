@@ -1485,7 +1485,7 @@ int main(int argc, char * argv[])
 	register_function(TEMP_FN_ID, &get_temp_fn, TYPE_FLOATING);
 	register_function(HUMIDITY_FN_ID, &get_humidity_fn, TYPE_FLOATING);
 
-	user_data_t * data = malloc(sizeof(user_data_t) * 20);
+	user_data_t * data = (user_data_t *)malloc(sizeof(user_data_t) * 20);
 
 	// N(1)
 	set_user_data(&data[0], 0, 1, 25, 122);

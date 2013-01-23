@@ -20,8 +20,14 @@ mkdir Intermediate Output Dragon-Output
 
 rm -f Input/*~
 
-# Make the Dragon assembler
+# Make Hoppy compiler
 cd $HOPPYDIR
+make
+cd ../$THISDIR
+
+
+# Make the Dragon assembler
+cd $DRAGONDIR
 make
 cd ../$THISDIR
 

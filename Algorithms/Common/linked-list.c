@@ -1,5 +1,8 @@
 #include "linked-list.h"
 
+#include <stdlib.h>
+#include <stddef.h>
+
 static linked_list_elem_t * create_elem(void * data)
 {
 	linked_list_elem_t * e = (linked_list_elem_t *)malloc(sizeof(linked_list_elem_t));
@@ -85,6 +88,8 @@ bool linked_list_append(linked_list_t * list, void * data)
 
 	linked_list_elem_t * last = linked_list_last(list);
 	last->next = create_elem(data);
+
+	return true;
 }
 
 bool linked_list_clear(linked_list_t * list)

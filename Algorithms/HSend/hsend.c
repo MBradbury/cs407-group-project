@@ -18,6 +18,7 @@
 
 #include "sensor-converter.h"
 #include "debug-helper.h"
+#include "linked-list.h"
 
 typedef struct
 {
@@ -33,12 +34,6 @@ typedef struct var_elem
 	unsigned char var_id;
 } var_elem_t;
 
-typedef struct values_list_elem
-{
-	struct values_list_elem * next;
-	node_data_t data;
-} values_list_elem_t;
-
 //struct recieved from a trickle message
 typedef struct 
 {
@@ -50,7 +45,8 @@ typedef struct
 
 
 var_elem_t * variables = NULL; //array of the variables from bytecode
-values_list_elem_t * hops_data = NULL;
+linked_list_t * hops_data = NULL;
+int max_size = 0; //Count the number of elements added to the list
 
 static void node_data(void * data)
 {
@@ -87,7 +83,8 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, node_data_t co
 		hops,
 		(int)nd->temp, (int)nd->humidity);
 
-	list_push(&hops_data[hops-1], nd);
+	linked_list_append(&hops_data[hops-1], nd);
+	max_size++;
 }
 
 static void const * get_addr_fn(void const * ptr)
@@ -216,7 +213,7 @@ PROCESS_THREAD(hsendProcess, ev, d)
 
 	//pointer for bytecode variables
 	char const * ptr = ((char const *)msg) + sizeof(eval_pred_req_t); 
-	int max_hops = 0;
+	uint8_t max_hops = 0;
 	int i;
 	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
@@ -237,19 +234,15 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	}
 
 
-	hops_data = (values_list_elem_t *) malloc(sizeof(values_list_elem_t) * max_hops);
+	hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
 	for (i = 0; i < max_hops; i++)
 	{
-		list_init(&hops_data[i]);
+		linked_list_init(&hops_data[i], NULL);
 	}
-
-	// TODO:
-	// Work out how many hops of information is being requested
-	uint8_t hops = 2;
 
 	printf("Sending pred req\n");
 
-	hsend_request_info(&hc, hops);
+	hsend_request_info(&hc, max_hops);
 
 	// Get as much information as possible within a given time bound
 	etimer_set(&et, 60 * CLOCK_SECOND);
@@ -258,10 +251,32 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	// Set up the predicate language VM
 	init();
 
-	// TODO:
-	// - Feed N-Hop neighbourhood info into predicate evualuator
-	//   If predicate failed inform sink
+	//Generate array of all the data
+	node_data_t vm_hop_data = (node_data_t * )malloc(sizeof(node_data_t)  * max_size);
+	int locations[max_hops]; 
+	int count = 0; //position in vm_hop_data
 	
+	for (i = 0; i < max_hops; i++)
+	{
+		linked_list_elem_t * elem;
+		for (elem = linked_list_first(&hops_data[i]); 
+			linked_list_continue(&list, elem); 
+			elem = linked_list_next(elem))
+		{
+			memcpy(vm_hop_data[count], elem->data);
+			count++;
+		}
+
+		locations[i] = count - 1;
+
+		linked_list_clear(hops_data[i]);
+	}
+
+	//register functions for the VM to access data
+
+	// TODO: Feed N-Hop neighbourhood info into predicate evualuator
+	// TODO: If predicate failed inform sink
+	// TODO: Send data back to sink
 
 exit:
 	printf("Exiting HSEND Process...\n");

@@ -157,12 +157,11 @@ PROCESS_THREAD(mainProcess, ev, data)
 	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
 	{
 		printf("Is the base station!\n");
-		eval_pred_req_t *msg = malloc(sizeof(eval_pred_req_t));
-		msg->bytecode_length = 3;
-		msg->num_of_bytecode_var = 0;
-		rimeaddr_copy(&msg->target,&rimeaddr_node_addr);
+		
+		//char * bytecode_instructions = (((char  *)vars + ((sizeof(char)) * 4)));
+		//bytecode_instructions = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 
-		process_start(&hsendProcess, msg);
+		process_start(&hsendProcess, NULL);
 
 		leds_on(LEDS_BLUE);
 
@@ -191,7 +190,7 @@ exit:
 }
 
 
-PROCESS_THREAD(hsendProcess, ev, d)
+PROCESS_THREAD(hsendProcess, ev, data)
 {
 	static struct etimer et;
 
@@ -203,7 +202,17 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-	eval_pred_req_t * msg = (eval_pred_req_t *)d; //type cast the data
+	eval_pred_req_t * msg = malloc(sizeof(eval_pred_req_t) + (sizeof(uint8_t)*2*2));
+		msg->bytecode_length = 50;
+		msg->num_of_bytecode_var = 2;
+		rimeaddr_copy(&msg->target,&rimeaddr_node_addr);
+
+		uint8_t  * vars = (uint8_t *)((char *)msg+sizeof(eval_pred_req_t));
+		vars[0] = 2;
+		vars[1] = 255;
+		vars[2] = 1;
+		vars[3] = 254;
+
 
 	//Create a pointer to the bytecode instructions stored in the message.
 	char const * bytecode_instructions = ((char const *)msg) + 
@@ -214,15 +223,15 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	variables = (var_elem_t *) malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
 
 	//pointer for bytecode variables
-	char const * ptr = ((char const *)msg) + sizeof(eval_pred_req_t); 
+	uint8_t  * ptr = (uint8_t *)((char *)msg+sizeof(eval_pred_req_t));
 	uint8_t max_hops = 0;
+	printf("%d\n",msg->num_of_bytecode_var);
 
 	int i;
 	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
 		//create temporary elements
-		var_elem_t * tmp = (var_elem_t *) malloc(sizeof(var_elem_t));
-		
+		var_elem_t * tmp = malloc(sizeof(var_elem_t));
 		//populate the struct
 		tmp->hops = ptr[(2 * i)];
 		tmp->var_id = ptr[(2 * i)+1];
@@ -231,18 +240,19 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		{
 			max_hops = tmp->hops;
 		}
-
 		//insert into the array
-		variables[i] = *tmp;
+		variables[i] = * tmp;
 	}
+		printf("1bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
 
 	for (i = 0; i < max_hops + 1; i++)
 	{
-		printf("%d\n", linked_list_init(&hops_data[i], NULL)); ;
+		printf("%s\n", linked_list_init(&hops_data[i], NULL) ? "Init": "Failed init"); ;
 	}
 
+	printf("2bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	printf("Sending pred req\n");
 
@@ -251,9 +261,10 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		hsend_request_info(&hc, max_hops);
 	
 		// Get as much information as possible within a given time bound
-		etimer_set(&et, 60 * CLOCK_SECOND);
+		etimer_set(&et, 30 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 	}
+	printf("3bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	//Generate array of all the data
 	node_data_t * vm_hop_data = (node_data_t * )malloc(sizeof(node_data_t) * max_size);
@@ -277,6 +288,7 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		printf("%s\n",linked_list_clear(&hops_data[i]) ? "Cleared": "Not" );;
 	}
 
+	printf("4bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	// Set up the predicate language VM
 	init_pred_lang(&node_data, sizeof(node_data_t));
@@ -286,13 +298,16 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	register_function(1, &get_temp, TYPE_FLOATING);
 	register_function(2, &get_humidity, TYPE_FLOATING);
 
+	printf("binding\n");
+	printf("bytecode vars: %d\n",msg->num_of_bytecode_var );
 	//Bind the variables to the VM
-	for (i = 0; i < msg->num_of_bytecode_var; ++i)
+	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
+		printf("var_id: %d locaton: %d\n",variables[i].var_id,locations[variables[i].hops]-1);
 		bind_input(variables[i].var_id, &vm_hop_data, locations[variables[i].hops]-1);
 	}
-	
 
+	//temporary bytecode for evaulation
 	ubyte code[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 
 	nbool evaluation = evaluate(code, msg->bytecode_length);
@@ -305,7 +320,7 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	}
 	else
 	{
-		printf("%s\n","failed");
+		printf("%s\n","Pred: FAILED");
 	}
 
 	free(locations);

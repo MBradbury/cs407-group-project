@@ -25,7 +25,7 @@ import java.util.*;
 
 public class Hoppy
 {
-	public static void main(String args[]) throws Exception, ParseException, EvaluationException
+	public static void main(String args[]) throws Exception, ParseException, CompilationException, TypeException
 	{
 		Hoppy parser = new Hoppy(System.in);
 		Program program = parser.Input();
@@ -747,11 +747,11 @@ final class BooleanValue implements IValue
 		return ExprType.Boolean;
 	}
 
-	public static BooleanValue assertType(IValue val) throws EvaluationException
+	public static BooleanValue assertType(IValue val) throws TypeException
 	{
 		if(!(val instanceof BooleanValue))
 		{
-			throw new EvaluationException("Value type not boolean.");
+			throw new TypeException("Value type not boolean.");
 		}
 		else
 		{
@@ -788,11 +788,11 @@ final class IntegerValue implements IValue
 		return ExprType.Integer;
 	}
 
-	public static IntegerValue assertType(IValue val) throws EvaluationException
+	public static IntegerValue assertType(IValue val) throws TypeException
 	{
 		if(!(val instanceof IntegerValue))
 		{
-			throw new EvaluationException("Value type not integer.");
+			throw new TypeException("Value type not integer.");
 		}
 		else
 		{
@@ -829,11 +829,11 @@ final class FloatValue implements IValue
 		return ExprType.Float;
 	}
 
-	public static FloatValue assertType(IValue val) throws EvaluationException
+	public static FloatValue assertType(IValue val) throws TypeException
 	{
 		if(!(val instanceof FloatValue))
 		{
-			throw new EvaluationException("Value type not float.");
+			throw new TypeException("Value type not float.");
 		}
 		else
 		{

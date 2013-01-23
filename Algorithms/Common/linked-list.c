@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdio.h>
 
 static linked_list_elem_t * create_elem(void * data)
 {
@@ -35,7 +36,7 @@ static linked_list_elem_t linked_list_last(linked_list_t const * list)
 
 bool linked_list_init(linked_list_t * list, cleanup_t cleanup)
 {
-	if (list == NULL || cleanup == NULL)
+	if (list == NULL)
 	{
 		return false;
 	}
@@ -54,7 +55,7 @@ bool linked_list_clear(linked_list_t * list)
 	}
 
 	linked_list_elem_t elem, prev;
-	for (elem = linked_list_first(list); linked_list_continue(list, elem); )
+	for (elem = linked_list_first(list); linked_list_continue(list, elem);)
 	{
 		if (list->cleanup != NULL)
 		{

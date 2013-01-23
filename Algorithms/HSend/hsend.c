@@ -236,11 +236,11 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		variables[i] = *tmp;
 	}
 
-	hops_data = (linked_list_t *) malloc(1 + (sizeof(linked_list_t) * max_hops));
+	hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
 
 	for (i = 0; i < max_hops + 1; i++)
 	{
-		linked_list_init(&hops_data[i], NULL);
+		printf("%d\n", linked_list_init(&hops_data[i], NULL)); ;
 	}
 
 
@@ -256,23 +256,12 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	}
 
 	//Generate array of all the data
-	node_data_t * vm_hop_data = (node_data_t * )malloc(1 + (sizeof(node_data_t) * max_size));
+	node_data_t * vm_hop_data = (node_data_t * )malloc(sizeof(node_data_t) * max_size);
 
-	int * locations = malloc(1 + (sizeof(int) * max_hops)); 
+	int * locations = malloc(sizeof(int) * max_hops); 
 	int count = 0; //position in vm_hop_data
 
-	//TODO: get actual values
-	//Put self into the list, at 0 hops
-	node_data_t * self = malloc(sizeof(node_data_t));
-	self->temp = 10.0;
-	self->humidity = 10.0;
-	rimeaddr_copy(&self->addr, &rimeaddr_node_addr);
-
-	linked_list_append(&hops_data[0], self);
-	printf("Append\n");
-	max_size++;
-
-	for (i = 0; i < max_hops + 1; i++)
+	for (i = 0; i < max_hops ; i++)
 	{
 		linked_list_elem_t * elem;
 		for (elem = linked_list_first(&hops_data[i]); 
@@ -285,13 +274,12 @@ PROCESS_THREAD(hsendProcess, ev, d)
 
 		locations[i] = count - 1;
 
-		linked_list_clear(&hops_data[i]);
+		printf("%s\n",linked_list_clear(&hops_data[i]) ? "Cleared": "Not" );;
 	}
-		printf("Hello\n");
 
 
 	// Set up the predicate language VM
-	init_pred_lang(&vm_hop_data, sizeof(node_data_t));
+	init_pred_lang(&node_data, sizeof(node_data_t));
 
 	// Register the data functions 
 	register_function(0, &get_addr, TYPE_INTEGER);
@@ -320,7 +308,6 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		printf("%s\n","failed");
 	}
 
-	free(self);
 	free(locations);
 
 exit:

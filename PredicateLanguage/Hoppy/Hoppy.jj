@@ -139,6 +139,7 @@ final class Compiler implements ISyntaxTreeVisitor
 	private final HashMap<String, Integer> arrayScope = new HashMap<String, Integer>();
 
 	private int variableId = 0;
+	private int arrVariableId = 255;
 
 	private boolean writtenHalt = false;
 	
@@ -648,11 +649,13 @@ final class Compiler implements ISyntaxTreeVisitor
 		{
 			UsingDecl item = (UsingDecl)tree;
 
+			int location = arrVariableId--;
+
 			comment("STORING " + item.getNeighbourCount() + " IN " + item.getVariable());
 			
 			// Make sure not in scope before we add it
 			checkIsNot(arrayScope.keySet(), item.getVariable());
-			arrayScope.put(item.getVariable(), item.getLocation());
+			arrayScope.put(item.getVariable(), location);
 
 			boolean writeHalt = false;
 			if (!writtenHalt)
@@ -1197,7 +1200,6 @@ final class UsingDecl implements ISyntaxTree
 	private int neighbourCount = 0;
 	private String variable = null;
 	private ISyntaxTree scope = null;
-	private int location = 0;
 
 	public String getVariable() { return variable; }
 	public void setVariable(String variable) { this.variable = variable; }
@@ -1208,13 +1210,10 @@ final class UsingDecl implements ISyntaxTree
 	public ISyntaxTree getScope() { return scope; }
 	public void setScope(ISyntaxTree scope) { this.scope = scope; }
 
-	public int getLocation() { return location; }
-	public void setLocation(int location) { this.location = location; }
-
 	@Override
 	public String toString()
 	{
-		return "(USING " + neighbourCount + " AT " + location + " AS " + variable + " IN " + scope.toString() + ")";
+		return "(USING " + neighbourCount + " AS " + variable + " IN " + scope.toString() + ")";
 	}
 	
 	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
@@ -1299,7 +1298,6 @@ TOKEN : {
 	// Keywords
 	  < USING : "using" >
 	| < AS :	"as" >
-	| < AT :	"at" >
 	| < IN : 	"in" >
 	| < THIS : 	"this" >
 	| < ALL : 	"all" >
@@ -1514,10 +1512,6 @@ ISyntaxTree Using() :
 			(
 				count = Neighbours()
 			)
-			<AT>
-			(
-				location = <NUMBER>
-			)
 			<AS>
 			(
 				fnAlias = <NAME>
@@ -1528,7 +1522,6 @@ ISyntaxTree Using() :
 			UsingDecl usingdecl = new UsingDecl();
 			usingdecl.setNeighbourCount(count);
 			usingdecl.setVariable(fnAlias.image);
-			usingdecl.setLocation(Integer.parseInt(location.image));
 			
 			if (root == null)
 			{

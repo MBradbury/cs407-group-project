@@ -146,9 +146,10 @@ static inline bool pop_stack(nuint size)
 	return true;
 }
 
+#ifndef NDEGBUG
 static void inspect_stack(FILE * f)
 {
-#ifndef NDEGBUG
+
 	fprintf(f, "Stack values:\n");
 	ubyte * max = stack + STACK_SIZE;
 	ubyte * ptr;
@@ -156,8 +157,10 @@ static void inspect_stack(FILE * f)
 	{
 		fprintf(f, "\tStack %d %d\n", max - ptr, *ptr);
 	}
-#endif
 }
+#else
+#	define inspect_stack(f)
+#endif
 
 /****************************************************
  ** MEMORY MANAGEMENT
@@ -1500,16 +1503,6 @@ int main(int argc, char * argv[])
 	set_user_data(&data[9], 9, 19, 26, 122);
 
 	// N(2)
-	set_user_data(&data[0], 0, 1, 25, 122);
-	set_user_data(&data[1], 1, 3, 26, 122);
-	set_user_data(&data[2], 2, 5, 27, 122);
-	set_user_data(&data[3], 3, 7, 26, 122);
-	set_user_data(&data[4], 4, 9, 25, 122);
-	set_user_data(&data[5], 5, 11, 26, 122);
-	set_user_data(&data[6], 6, 13, 27, 122);
-	set_user_data(&data[7], 7, 15, 26, 122);
-	set_user_data(&data[8], 8, 17, 25, 122);
-	set_user_data(&data[9], 9, 19, 26, 122);
 	set_user_data(&data[10], 10, 2, 25, 122);
 	set_user_data(&data[11], 11, 4, 26, 122);
 	set_user_data(&data[12], 12, 6, 27, 122);

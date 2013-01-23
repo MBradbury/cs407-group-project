@@ -29,13 +29,13 @@ linked_list_elem_t * linked_list_first(linked_list_t * list);
 linked_list_elem_t * linked_list_last(linked_list_t * list);
 
 linked_list_elem_t * linked_list_next(linked_list_elem_t * elem);
-bool linked_list_continue(linked_list_elem_t * elem);
+bool linked_list_continue(linked_list_t * list, linked_list_elem_t * elem);
 
 
 // Iteration example:
 // linked_list_t list;
 // linked_list_elem_t * elem;
-// for (elem = linked_list_first(&list); linked_list_continue(elem); elem = linked_list_next(elem))
+// for (elem = linked_list_first(&list); linked_list_continue(&list, elem); elem = linked_list_next(elem))
 // {
 // }
 

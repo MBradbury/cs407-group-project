@@ -25,7 +25,7 @@ import java.util.*;
 
 public class Hoppy
 {
-	public static void main(String args[]) throws Exception, ParseException, EvaluationException
+	public static void main(String args[]) throws Exception, ParseException, CompilationException, TypeException
 	{
 		Hoppy parser = new Hoppy(System.in);
 		Program program = parser.Input();
@@ -129,7 +129,7 @@ final class Compiler implements ISyntaxTreeVisitor
 		setTransBuiltins.put("max", "AMAX");
 		setTransBuiltins.put("min", "AMIN");
 
-		setBuiltins.put("len", "AMIN");
+		setBuiltins.put("len", "ALEN");
 
 		mathBuiltins.put("abs", "_ABS");
 	}
@@ -139,6 +139,7 @@ final class Compiler implements ISyntaxTreeVisitor
 	private final HashMap<String, Integer> arrayScope = new HashMap<String, Integer>();
 
 	private int variableId = 0;
+	private int arrVariableId = 255;
 
 	private boolean writtenHalt = false;
 	
@@ -648,11 +649,13 @@ final class Compiler implements ISyntaxTreeVisitor
 		{
 			UsingDecl item = (UsingDecl)tree;
 
+			int location = arrVariableId--;
+
 			comment("STORING " + item.getNeighbourCount() + " IN " + item.getVariable());
 			
 			// Make sure not in scope before we add it
 			checkIsNot(arrayScope.keySet(), item.getVariable());
-			arrayScope.put(item.getVariable(), item.getLocation());
+			arrayScope.put(item.getVariable(), location);
 
 			boolean writeHalt = false;
 			if (!writtenHalt)
@@ -744,11 +747,11 @@ final class BooleanValue implements IValue
 		return ExprType.Boolean;
 	}
 
-	public static BooleanValue assertType(IValue val) throws EvaluationException
+	public static BooleanValue assertType(IValue val) throws TypeException
 	{
 		if(!(val instanceof BooleanValue))
 		{
-			throw new EvaluationException("Value type not boolean.");
+			throw new TypeException("Value type not boolean.");
 		}
 		else
 		{
@@ -785,11 +788,11 @@ final class IntegerValue implements IValue
 		return ExprType.Integer;
 	}
 
-	public static IntegerValue assertType(IValue val) throws EvaluationException
+	public static IntegerValue assertType(IValue val) throws TypeException
 	{
 		if(!(val instanceof IntegerValue))
 		{
-			throw new EvaluationException("Value type not integer.");
+			throw new TypeException("Value type not integer.");
 		}
 		else
 		{
@@ -826,11 +829,11 @@ final class FloatValue implements IValue
 		return ExprType.Float;
 	}
 
-	public static FloatValue assertType(IValue val) throws EvaluationException
+	public static FloatValue assertType(IValue val) throws TypeException
 	{
 		if(!(val instanceof FloatValue))
 		{
-			throw new EvaluationException("Value type not float.");
+			throw new TypeException("Value type not float.");
 		}
 		else
 		{
@@ -1197,7 +1200,6 @@ final class UsingDecl implements ISyntaxTree
 	private int neighbourCount = 0;
 	private String variable = null;
 	private ISyntaxTree scope = null;
-	private int location = 0;
 
 	public String getVariable() { return variable; }
 	public void setVariable(String variable) { this.variable = variable; }
@@ -1208,13 +1210,10 @@ final class UsingDecl implements ISyntaxTree
 	public ISyntaxTree getScope() { return scope; }
 	public void setScope(ISyntaxTree scope) { this.scope = scope; }
 
-	public int getLocation() { return location; }
-	public void setLocation(int location) { this.location = location; }
-
 	@Override
 	public String toString()
 	{
-		return "(USING " + neighbourCount + " AT " + location + " AS " + variable + " IN " + scope.toString() + ")";
+		return "(USING " + neighbourCount + " AS " + variable + " IN " + scope.toString() + ")";
 	}
 	
 	public void acceptVisit(ISyntaxTreeVisitor visitor) throws Exception
@@ -1299,7 +1298,6 @@ TOKEN : {
 	// Keywords
 	  < USING : "using" >
 	| < AS :	"as" >
-	| < AT :	"at" >
 	| < IN : 	"in" >
 	| < THIS : 	"this" >
 	| < ALL : 	"all" >
@@ -1348,6 +1346,14 @@ TOKEN : {
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
 	| <#LETTER :	["A"-"Z", "a"-"z"] >
 	| <#DIGIT :		["0"-"9"] >
+
+	| < LB :	"(" >
+	| < RB :	")" >
+
+	| < SLB :	"[" >
+	| < SRB :	"]" >
+
+	| < COMMA :	"," >
 }
 
 SKIP : {
@@ -1366,11 +1372,11 @@ Program Input() :
 	ISyntaxTree tree;
 }
 {
-	"[" 
+	<SLB>
 	(
 		target = Target()
 	)
-	"]"
+	<SRB>
 	(
 		tree = FunctionDefinition()
 	)
@@ -1394,7 +1400,7 @@ PredicateTarget Target() :
 		|
 		(
 			// Specific node targeting.
-			(a = UnsignedCharNumber() "," b = UnsignedCharNumber())
+			(a = UnsignedCharNumber() <COMMA> b = UnsignedCharNumber())
 		)
 		{
 			addr = new int[] { a, b };
@@ -1514,10 +1520,6 @@ ISyntaxTree Using() :
 			(
 				count = Neighbours()
 			)
-			<AT>
-			(
-				location = <NUMBER>
-			)
 			<AS>
 			(
 				fnAlias = <NAME>
@@ -1528,7 +1530,6 @@ ISyntaxTree Using() :
 			UsingDecl usingdecl = new UsingDecl();
 			usingdecl.setNeighbourCount(count);
 			usingdecl.setVariable(fnAlias.image);
-			usingdecl.setLocation(Integer.parseInt(location.image));
 			
 			if (root == null)
 			{
@@ -1563,7 +1564,7 @@ int Neighbours() :
 	Token argToken;
 }
 {
-	<NEIGHBOURS> "(" (argToken = <NUMBER>) ")"
+	<NEIGHBOURS> <LB> (argToken = <NUMBER>) <RB>
 	{
 		return Integer.parseInt(argToken.image);
 	}
@@ -1586,13 +1587,13 @@ ISyntaxTree QuantifierExpr() :
 }
 {
 	quantifier = <QUANTIFIER>
-	"("
+	<LB>
 	var = <NAME>
 	<COLON>
 	set = <NAME>
 	<TILDE>
 	left = Predicate()
-	")"
+	<RB>
 	{
 		return new QuantifierNode(quantifier.image, var.image, set.image, left);
 	}
@@ -1699,7 +1700,7 @@ ISyntaxTree MathBinaryExprThird() :
 	//A logical comparison between two arithmetic expressions.
 	(left = VariableExpr())
 	(
-		(op = <MATH_OP_1>) (right = MathBinaryExprThird())
+		(op = <MATH_OP_1>) (right = VariableExpr())
 		{
 			left = new BinaryOperatorNode(op.image, left, right);
 		}
@@ -1795,7 +1796,7 @@ ISyntaxTree LogicalBinaryExprFifth() :
 	//A conjunction or disjunction on two predicates.
 	(left = LogicalBinaryExprEnd())
 	(
-		(op = <LOGICAL_BIN_OP_1>) (right = LogicalBinaryExprFifth())
+		(op = <LOGICAL_BIN_OP_1>) (right = LogicalBinaryExprEnd())
 		{
 			left = new BinaryOperatorNode(op.image, left, right);
 		}
@@ -1824,7 +1825,7 @@ ISyntaxTree VariableExpr() :
 	ISyntaxTree node;
 }
 {
-	node = VariableNameOrFunctionLiteral() { return node; }
+	node = FunctionLiteral() { return node; }
 	|
 	node = ArithmeticLiteral() { return node; }
 	|
@@ -1833,29 +1834,22 @@ ISyntaxTree VariableExpr() :
 	node = SetFunction() { return node; }
 }
 
-ISyntaxTree VariableNameOrFunctionLiteral() :
+ISyntaxTree FunctionLiteral() :
 {
-	Token varname, varargs = null;
+	Token varname, varargs;
 }
 {
 	// A name (either a variable, or if arguments are supplied, a function).
 	varname = <NAME>
 	(
-		"("
+		<LB>
 		(
 			(varargs = <THIS>) | (varargs = <NAME>)
 		)
-		")"
-	)?
+		<RB>
+	)
 	{
-		if (varargs != null)
-		{
-			return new FuncDecl(varname.image, new ISyntaxTree[] { new NamedValueNode(varargs.image) });
-		}
-		else
-		{
-			return new NamedValueNode(varname.image);
-		}
+		return new FuncDecl(varname.image, new ISyntaxTree[] { new NamedValueNode(varargs.image) });
 	}
 }
 
@@ -1890,7 +1884,7 @@ ISyntaxTree MathFunction() :
 }
 {
 	(
-		varname = <VAR_FNS> "(" expr = MathBinaryExprFirst() ")"
+		varname = <VAR_FNS> <LB> expr = MathBinaryExprFirst() <RB>
 		{
 			return new FuncDecl(varname.image, new ISyntaxTree[] { expr });
 		}
@@ -1904,14 +1898,14 @@ ISyntaxTree SetFunction() :
 }
 {
 	(
-		setfnname = <SET_FNS> "(" varname = <NAME> ")"
+		setfnname = <SET_FNS> <LB> varname = <NAME> <RB>
 		{
 			return new FuncDecl(setfnname.image, new ISyntaxTree[] { new NamedValueNode(varname.image) });
 		}
 	)
 	|
 	(
-		setfnname = <SET_TRANS_FNS> "(" varname = <NAME> "," fnname = <NAME> ")"
+		setfnname = <SET_TRANS_FNS> <LB> varname = <NAME> <COMMA> fnname = <NAME> <RB>
 		{
 			return new FuncDecl(setfnname.image, new ISyntaxTree[] { new NamedValueNode(varname.image), new NamedValueNode(fnname.image) });
 		}

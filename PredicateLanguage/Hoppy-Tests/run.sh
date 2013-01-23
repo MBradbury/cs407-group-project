@@ -4,7 +4,7 @@ THISDIR=$(basename "$(pwd)")
 HOPPYDIR="../Hoppy"
 DRAGONDIR="../Dragon"
 
-if [[ $(uname) = "Linux" ]]
+if [[ $(uname) = "Linux" || $(uname) = "Darwin" ]]
 then
 	CPSEP=":"
 else
@@ -33,7 +33,7 @@ cd ../$THISDIR
 
 
 
-if [[ $(uname) = "Linux" ]]
+if [[ $(uname) = "Linux" || $(uname) = "Darwin" ]]
 then
 	cd ../
 	make

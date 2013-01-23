@@ -1,5 +1,6 @@
 [all]
 function 2 as temperature returning float in
-	using Neighbours(2) at 254 as twohopn in
+	using Neighbours(1) as onehopn in
+	using Neighbours(2) as twohopn in
     	abs(temperature(this) - mean(twohopn, temperature)) <= 10
 

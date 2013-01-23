@@ -14,7 +14,6 @@ typedef struct linked_list_elem
 typedef struct linked_list
 {
 	linked_list_elem_t * head;
-	unsigned int length;
 	cleanup_t cleanup;
 } linked_list_t;
 
@@ -28,5 +27,16 @@ unsigned int linked_list_length(linked_list_t * list);
 
 linked_list_elem_t * linked_list_first(linked_list_t * list);
 linked_list_elem_t * linked_list_last(linked_list_t * list);
+
+linked_list_elem_t * linked_list_next(linked_list_elem_t * elem);
+bool linked_list_continue(linked_list_elem_t * elem);
+
+
+// Iteration example:
+// linked_list_t list;
+// linked_list_elem_t * elem;
+// for (elem = linked_list_first(&list); linked_list_continue(elem); elem = linked_list_next(elem))
+// {
+// }
 
 #endif

@@ -16,7 +16,6 @@ bool init_linked_list(linked_list_t * list, cleanup_t cleanup)
 	}
 
 	list->head = NULL;
-	list->length = 0;
 	list->cleanup = cleanup;
 
 	return true;
@@ -122,5 +121,16 @@ linked_list_elem_t * linked_list_last(linked_list_t * list)
 		return NULL;
 	}
 }
+
+linked_list_elem_t * linked_list_next(linked_list_elem_t * elem)
+{
+	return elem == NULL ? NULL : elem->next;
+}
+
+bool linked_list_continue(linked_list_elem_t * elem)
+{
+	return elem != NULL;
+}
+
 
 

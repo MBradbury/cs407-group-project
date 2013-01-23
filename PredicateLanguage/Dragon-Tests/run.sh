@@ -3,7 +3,7 @@
 THISDIR=$(basename "$(pwd)")
 DRAGONDIR="../Dragon"
 
-if [[ $(uname) = "Linux" ]]
+if [[ $(uname) = "Linux" || $(uname) = "Darwin" ]]
 then
 	CPSEP=":"
 else

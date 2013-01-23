@@ -7,6 +7,9 @@ DRAGONDIR="../Dragon"
 if [[ $(uname) = "Linux" ]]
 then
 	CPSEP=":"
+elif [[ $(uname) = "Darwin" ]]
+then
+	CPSEP=":"
 else
 	CPSEP=";"
 fi

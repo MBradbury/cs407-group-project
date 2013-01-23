@@ -3,13 +3,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 //#define MAIN_FUNC
 //#define ENABLE_CODE_GEN
 //#define NDEBUG
 
 #ifndef NDEBUG
-#	include <stdio.h>
 #	define DEBUG_PRINT(...) do { printf(__VA_ARGS__); } while(false)
 #	define DEBUG_ERR_PRINT(...) do { fprintf(stderr, __VA_ARGS__); } while(false)
 #else

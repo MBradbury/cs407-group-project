@@ -8,7 +8,6 @@ ODIR=obj
 LDIR=lib
 
 LDFLAGS= -B -Felf -lm
-LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
 _DEPS = 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
@@ -16,6 +15,7 @@ DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 _OBJ = predlang.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
+all: directories predlang
 
 $(ODIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
@@ -23,7 +23,11 @@ $(ODIR)/%.o: %.c $(DEPS)
 predlang: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
-.PHONY: clean
+.PHONY: clean directories
+
+directories:
+	rm -rf $(ODIR) $(LDIR)
+	mkdir $(ODIR) $(LDIR)
 
 clean:
 	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~

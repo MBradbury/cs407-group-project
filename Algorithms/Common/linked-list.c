@@ -7,8 +7,28 @@ static linked_list_elem_t * create_elem(void * data)
 	e->next = NULL;
 }
 
+static linked_list_elem_t * linked_list_last(linked_list_t * list)
+{
+	if (list == NULL)
+	{
+		return NULL;
+	}
+	else
+	{
+		linked_list_elem_t * elem;
+		for (elem = list->head; elem != NULL; elem = elem->next)
+		{
+			if (elem->next == NULL)
+			{
+				return elem;
+			}
+		}
 
-bool init_linked_list(linked_list_t * list, cleanup_t cleanup)
+		return NULL;
+	}
+}
+
+bool linked_list_init(linked_list_t * list, cleanup_t cleanup)
 {
 	if (list == NULL || cleanup == NULL)
 	{
@@ -21,7 +41,7 @@ bool init_linked_list(linked_list_t * list, cleanup_t cleanup)
 	return true;
 }
 
-bool free_linked_list(linked_list_t * list)
+bool linked_list_free(linked_list_t * list)
 {
 	if (list == NULL)
 	{
@@ -101,33 +121,12 @@ linked_list_elem_t * linked_list_first(linked_list_t * list)
 	return list == NULL ? NULL : list->head;
 }
 
-linked_list_elem_t * linked_list_last(linked_list_t * list)
-{
-	if (list == NULL)
-	{
-		return NULL;
-	}
-	else
-	{
-		linked_list_elem_t * elem;
-		for (elem = list->head; elem != NULL; elem = elem->next)
-		{
-			if (elem->next == NULL)
-			{
-				return elem;
-			}
-		}
-
-		return NULL;
-	}
-}
-
 linked_list_elem_t * linked_list_next(linked_list_elem_t * elem)
 {
 	return elem == NULL ? NULL : elem->next;
 }
 
-bool linked_list_continue(linked_list_t * list, linked_list_elem_t * elem)
+bool linked_list_continue(linked_list_t const * list, linked_list_elem_t const * elem)
 {
 	return elem != NULL;
 }

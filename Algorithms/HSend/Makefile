@@ -11,7 +11,8 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \
 -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code \
 -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror-implicit-function-declaration \
--Wunused -Wno-unused-value -Wreturn-type
+-Wunused -Wno-unused-value -Wreturn-type\
+-DNDEBUG
 
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include

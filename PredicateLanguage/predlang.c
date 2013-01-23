@@ -146,7 +146,7 @@ static inline bool pop_stack(nuint size)
 	return true;
 }
 
-#ifndef NDEGBUG
+#ifndef NDEBUG
 static void inspect_stack(FILE * f)
 {
 

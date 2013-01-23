@@ -6,7 +6,6 @@
 #include <stdio.h>
 
 //#define MAIN_FUNC
-//#define ENABLE_CODE_GEN
 //#define NDEBUG
 
 #ifndef NDEBUG
@@ -145,21 +144,16 @@ static inline bool pop_stack(nuint size)
 	return true;
 }
 
-#ifndef NDEBUG
-static void inspect_stack(FILE * f)
+static void inspect_stack(void)
 {
-
-	fprintf(f, "Stack values:\n");
+	printf("Stack values:\n");
 	ubyte * max = stack + STACK_SIZE;
 	ubyte * ptr;
 	for (ptr = stack_ptr; ptr < max; ++ptr)
 	{
-		fprintf(f, "\tStack %d %d\n", max - ptr, *ptr);
+		printf("\tStack %d %d\n", max - ptr, *ptr);
 	}
 }
-#else
-#	define inspect_stack(f)
-#endif
 
 /****************************************************
  ** MEMORY MANAGEMENT
@@ -331,7 +325,7 @@ static variable_reg_t * get_variable(variable_id_t id)
 		}
 	}
 
-	error = "No variable with the given name exists";
+	error = "No variable with the given id exists";
 	DEBUG_PRINT("========%s=====%u===\n", error, id);
 
 	return NULL;
@@ -443,77 +437,6 @@ static void const * call_function(function_id_t id, void * data, variable_type_t
 /****************************************************
  ** FUNCTION MANAGEMENT END
  ***************************************************/
-
-#ifdef ENABLE_CODE_GEN
-/****************************************************
- ** CODE GEN
- ***************************************************/
-
-typedef ubyte jmp_loc_t;
-typedef jmp_loc_t * jmp_loc_ptr_t;
-typedef ubyte * jmp_label_t;
-
-static ubyte * program_start;
-static ubyte * program_end;
-
-static inline ubyte * start_gen(void)
-{
-	return program_start = heap_ptr;
-}
-
-static inline jmp_label_t gen_op(ubyte op)
-{
-	ubyte * pos = heap_ptr;
-
-	*heap_ptr = op;
-	heap_ptr += sizeof(ubyte);
-
-	return pos;
-}
-
-static inline void gen_ubyte(ubyte i)
-{
-	*(ubyte *)heap_ptr = i;
-	heap_ptr += sizeof(ubyte);
-}
-
-static inline void gen_int(nint i)
-{
-	*(nint *)heap_ptr = i;
-	heap_ptr += sizeof(nint);
-}
-
-static inline void gen_float(nfloat f)
-{
-	*(nfloat *)heap_ptr = f;
-	heap_ptr += sizeof(nfloat);
-}
-
-static inline jmp_loc_ptr_t gen_jmp(void)
-{
-	jmp_loc_ptr_t pos = (jmp_loc_ptr_t)heap_ptr;
-
-	*pos = 0;
-
-	heap_ptr += sizeof(jmp_loc_t);
-
-	return pos;
-}
-
-static inline void alloc_jmp(jmp_loc_ptr_t jmp, jmp_label_t label)
-{
-	*jmp = label - program_start;
-}
-
-static inline ubyte * stop_gen(void)
-{
-	return program_end = heap_ptr;
-}
-
-/****************************************************
- ** CODE GEN
- ***************************************************/
-#endif
 
 
 /****************************************************
@@ -795,6 +718,9 @@ nbool evaluate(ubyte const * start, nuint program_length)
 					return false;
 
 				variable_reg_t * var = get_variable(*(variable_id_t const *)(current + 1));
+
+				if (var == NULL)
+					return false;
 
 				nint i = ((nint *)stack_ptr)[0];
 
@@ -1145,8 +1071,6 @@ nbool evaluate(ubyte const * start, nuint program_length)
 			break;
 		}
 
-		//inspect_stack(stderr);
-
 		++current;
 	}
 
@@ -1296,117 +1220,6 @@ static void const * get_humidity_fn(void const * ptr)
 }
 #endif
 
-#ifdef ENABLE_CODE_GEN
-static void gen_example1(void)
-{
-	variable_id_t result_id = 2;
-
-	start_gen();
-
-	gen_op(IVAR); gen_ubyte(result_id);
-
-	gen_op(IPUSH); gen_int(2);
-	gen_op(ISTORE); gen_ubyte(result_id);
-	gen_op(IPOP);
-
-	gen_op(IPUSH); gen_int(2);
-	gen_op(IPUSH); gen_int(3);
-	gen_op(IADD);
-
-	gen_op(IFETCH); gen_ubyte(result_id);
-	gen_op(IADD);
-
-	gen_op(ICASTF);
-
-	gen_op(FPUSH); gen_float(7.5);
-
-	gen_op(FGT);
-
-	gen_op(NOT);
-
-	stop_gen();
-}
-
-static void gen_example_array_op(opcode arrayop)
-{
-	variable_id_t n1_id = 255;
-
-	start_gen();
-
-	gen_op(arrayop); gen_ubyte(n1_id); gen_ubyte(ID_FN_ID);
-
-	//gen_op(ALEN); gen_ubyte(n1_id);
-
-	//gen_op(ICASTF);
-
-	//gen_op(FDIV2);
-
-	stop_gen();
-}
-
-static void gen_example_for_loop(void)
-{
-	variable_id_t n1_id = 255;
-	variable_id_t i_id = 2;
-
-	start_gen();
-
-	// Initial Code
-	gen_op(IVAR); gen_ubyte(i_id);
-
-	gen_op(FPUSH); gen_float(0);
-
-	// Initalise loop counter
-	gen_op(IPUSH); gen_int(0);
-	gen_op(ISTORE); gen_ubyte(i_id);
-
-	// Perform loop termination check
-	jmp_label_t label1 = 
-	gen_op(ALEN); gen_ubyte(n1_id);
-
-	gen_op(INEQ);
-	gen_op(JZ); jmp_loc_ptr_t jmp1 = gen_jmp();
-
-
-	// Perform body operations
-	gen_op(IFETCH); gen_ubyte(i_id);
-
-	gen_op(AFETCH); gen_ubyte(n1_id);
-	gen_op(CALL); gen_ubyte(SLOT_FN_ID);
-	gen_op(ICASTF);
-
-	gen_op(FADD);
-
-	gen_op(FPUSH); gen_float(2);
-
-	gen_op(FDIV2);
-
-	// Increment loop counter
-	gen_op(IFETCH); gen_ubyte(i_id);
-	gen_op(IINC);
-	gen_op(ISTORE); gen_ubyte(i_id);
-
-
-	// Jump to start of loop
-	gen_op(JMP); jmp_loc_ptr_t jmp2 = gen_jmp();
-
-
-	// Program termination
-	ubyte * last = gen_op(HALT);
-
-
-	// Set jump locations
-	// We do this here because when we add
-	// the jump in the code we may not know whereresolve (jump);
-	// we are jumping to because the destination
-	// may be after the current jump is added.
-	alloc_jmp(jmp1, last);
-	alloc_jmp(jmp2, label1);
-
-	stop_gen();
-}
-#endif
-
 #ifdef MAIN_FUNC
 // FROM: http://www.anyexample.com/programming/c/how_to_load_file_into_memory_using_plain_ansi_c_language.xml
 nint load_file_to_memory(char const * filename, ubyte ** result) 
@@ -1430,7 +1243,7 @@ nint load_file_to_memory(char const * filename, ubyte ** result)
 	nint size = ftell(f);
 	fseek(f, 0, SEEK_SET);
 
-	if (size == 0)
+	if (size <= 0)
 	{
 		printf("File size is zero\n");
 		fclose(f);
@@ -1457,9 +1270,9 @@ nint load_file_to_memory(char const * filename, ubyte ** result)
 	return size;
 }
 
-static bool run_program_from_file(int argc, char ** argv)
+static bool run_program_from_file(int argc, char ** argv, ubyte ** program_start, ubyte ** program_end)
 {
-	if (argv == NULL || argc != 2)
+	if (argv == NULL || argc != 2 || program_start == NULL || program_end == NULL)
 	{
 		printf("Invalid arguments\n");
 		return false;
@@ -1471,7 +1284,7 @@ static bool run_program_from_file(int argc, char ** argv)
 	fprintf(stderr, "Filename: %s\n", filename);
 #endif
 
-	nint program_size = load_file_to_memory(filename, &program_start);
+	nint program_size = load_file_to_memory(filename, program_start);
 
 	if (program_size <= 0)
 	{
@@ -1479,7 +1292,7 @@ static bool run_program_from_file(int argc, char ** argv)
 		return false;
 	}
 
-	program_end = program_start + program_size;
+	*program_end = *program_start + program_size;
 
 	return true;
 }
@@ -1531,7 +1344,10 @@ int main(int argc, char * argv[])
 	fprintf(stderr, "sizeof(function_reg_t): %u\n", sizeof(function_reg_t));
 #endif
 
-	if (!run_program_from_file(argc, argv))
+	ubyte * program_start = NULL;
+	ubyte * program_end = NULL;
+
+	if (!run_program_from_file(argc, argv, &program_start, &program_end))
 	{
 		return 1;
 	}
@@ -1555,7 +1371,7 @@ int main(int argc, char * argv[])
 
 	printf("Result: %d\n", result);
 
-	inspect_stack(stdout);
+	inspect_stack();
 
 	free(data);
 

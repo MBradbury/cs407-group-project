@@ -27,10 +27,10 @@ bool linked_list_append(linked_list_t * list, void * data);
 bool linked_list_clear(linked_list_t * list);
 
 // Get list length
-unsigned int linked_list_length(linked_list_t * list);
+unsigned int linked_list_length(linked_list_t const * list);
 
 // List iteration 
-linked_list_elem_t linked_list_first(linked_list_t * list);
+linked_list_elem_t linked_list_first(linked_list_t const * list);
 linked_list_elem_t linked_list_next(linked_list_elem_t elem);
 bool linked_list_continue(linked_list_t const * list, linked_list_elem_t elem);
 void * linked_list_data(linked_list_t const * list, linked_list_elem_t elem);

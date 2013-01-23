@@ -85,12 +85,12 @@ bool array_list_append(array_list_t * list, void * data)
 	return true;
 }
 
-unsigned int array_list_length(array_list_t * list)
+unsigned int array_list_length(array_list_t const * list)
 {
 	return list == NULL ? 0 : list->count;
 }
 
-array_list_elem_t array_list_first(array_list_t * list)
+array_list_elem_t array_list_first(array_list_t const * list)
 {
 	return 0;
 }

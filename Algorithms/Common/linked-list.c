@@ -46,7 +46,7 @@ bool linked_list_init(linked_list_t * list, cleanup_t cleanup)
 	return true;
 }
 
-bool linked_list_free(linked_list_t * list)
+bool linked_list_clear(linked_list_t * list)
 {
 	if (list == NULL)
 	{
@@ -69,7 +69,6 @@ bool linked_list_free(linked_list_t * list)
 	}
 
 	list->head = NULL;
-	list->length = 0;
 
 	return true;
 }
@@ -90,16 +89,6 @@ bool linked_list_append(linked_list_t * list, void * data)
 
 	linked_list_elem_t * last = linked_list_last(list);
 	last->next = create_elem(data);
-
-	return true;
-}
-
-bool linked_list_clear(linked_list_t * list)
-{
-	if (list == NULL)
-	{
-		return false;
-	}
 
 	return true;
 }

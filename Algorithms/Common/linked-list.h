@@ -19,7 +19,6 @@ typedef struct linked_list
 
 // Create and destroy the list
 bool linked_list_init(linked_list_t * list, cleanup_t cleanup);
-bool linked_list_free(linked_list_t * list);
 
 // Add / Remove items from list
 bool linked_list_append(linked_list_t * list, void * data);

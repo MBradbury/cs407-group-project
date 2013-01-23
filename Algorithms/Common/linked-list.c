@@ -112,20 +112,24 @@ unsigned int linked_list_length(linked_list_t * list)
 }
 
 
-linked_list_elem_t * linked_list_first(linked_list_t * list)
+linked_list_elem_t linked_list_first(linked_list_t * list)
 {
 	return list == NULL ? NULL : list->head;
 }
 
-linked_list_elem_t * linked_list_next(linked_list_elem_t * elem)
+linked_list_elem_t linked_list_next(linked_list_elem_t elem)
 {
 	return elem == NULL ? NULL : elem->next;
 }
 
-bool linked_list_continue(linked_list_t const * list, linked_list_elem_t const * elem)
+bool linked_list_continue(linked_list_t const * list, linked_list_elem_t elem)
 {
 	return elem != NULL;
 }
 
+void * linked_list_data(linked_list_t const * list, linked_list_elem_t elem)
+{
+	return elem == NULL ? NULL : elem->data;
+}
 
 

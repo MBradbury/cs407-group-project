@@ -2,6 +2,8 @@ UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
 	CPSEP=":"
+else ifeq ($(UNAME), Darwin)
+	CPSEP=":"
 else
 	CPSEP=";"
 endif

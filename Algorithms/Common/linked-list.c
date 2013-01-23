@@ -12,7 +12,7 @@ static linked_list_elem_t * create_elem(void * data)
 	return e;
 }
 
-static linked_list_elem_t linked_list_last(linked_list_t * list)
+static linked_list_elem_t linked_list_last(linked_list_t const * list)
 {
 	if (list == NULL)
 	{
@@ -21,7 +21,7 @@ static linked_list_elem_t linked_list_last(linked_list_t * list)
 	else
 	{
 		linked_list_elem_t elem;
-		for (elem = list->head; elem != NULL; elem = elem->next)
+		for (elem = linked_list_first(list); linked_list_continue(list, elem); elem = linked_list_next(elem))
 		{
 			if (elem->next == NULL)
 			{
@@ -54,7 +54,7 @@ bool linked_list_clear(linked_list_t * list)
 	}
 
 	linked_list_elem_t elem, prev;
-	for (elem = list->head; elem != NULL; )
+	for (elem = linked_list_first(list); linked_list_continue(list, elem); )
 	{
 		if (list->cleanup != NULL)
 		{
@@ -63,7 +63,7 @@ bool linked_list_clear(linked_list_t * list)
 
 		prev = elem;
 
-		elem = elem->next;
+		elem = linked_list_next(elem);
 
 		free(prev);
 	}
@@ -93,7 +93,7 @@ bool linked_list_append(linked_list_t * list, void * data)
 	return true;
 }
 
-unsigned int linked_list_length(linked_list_t * list)
+unsigned int linked_list_length(linked_list_t const * list)
 {
 	if (list == NULL)
 	{
@@ -103,7 +103,7 @@ unsigned int linked_list_length(linked_list_t * list)
 	unsigned int length = 0;
 
 	linked_list_elem_t elem;
-	for (elem = list->head; elem != NULL; elem = elem->next)
+	for (elem = linked_list_first(list); linked_list_continue(list, elem); elem = linked_list_next(elem))
 	{
 		++length;
 	}
@@ -112,7 +112,7 @@ unsigned int linked_list_length(linked_list_t * list)
 }
 
 
-linked_list_elem_t linked_list_first(linked_list_t * list)
+linked_list_elem_t linked_list_first(linked_list_t const * list)
 {
 	return list == NULL ? NULL : list->head;
 }

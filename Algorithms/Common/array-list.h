@@ -29,10 +29,10 @@ bool array_list_append(array_list_t * list, void * data);
 bool array_list_clear(array_list_t * list);
 
 // Get list length
-unsigned int array_list_length(array_list_t * list);
+unsigned int array_list_length(array_list_t const * list);
 
 // List iteration 
-array_list_elem_t array_list_first(array_list_t * list);
+array_list_elem_t array_list_first(array_list_t const * list);
 array_list_elem_t array_list_next(array_list_elem_t elem);
 bool array_list_continue(array_list_t const * list, array_list_elem_t elem);
 void * array_list_data(array_list_t const * list, array_list_elem_t elem);

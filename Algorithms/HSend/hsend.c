@@ -20,28 +20,32 @@
 #include "debug-helper.h"
 #include "linked-list.h"
 
+#define ID_FN_ID 0
+#define SLOT_FN_ID 1
+#define TEMP_FN_ID 2
+#define HUMIDITY_FN_ID 3
+
 typedef struct
 {
 	rimeaddr_t addr;
-	double temp;
-	double humidity;
+	nfloat temp;
+	nfloat humidity;
 } node_data_t;
 
 // Struct for the list elements, used to hold the variable names and their bytecode symbols
 typedef struct var_elem
 {
-	unsigned char hops;
-	unsigned char var_id;
+	uint8_t hops;
+	uint8_t var_id;
 } var_elem_t;
 
 //struct recieved from a trickle message
 typedef struct 
 {
 	rimeaddr_t target;
-	int bytecode_length; //length of the bytecode, located after the struct
-	int num_of_bytecode_var; //number of variables after the struct
+	uint8_t bytecode_length; //length of the bytecode, located after the struct
+	uint8_t num_of_bytecode_var; //number of variables after the struct
 } eval_pred_req_t;
-
 
 
 var_elem_t * variables = NULL; //array of the variables from bytecode
@@ -87,29 +91,19 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, node_data_t co
 	max_size++;
 }
 
-static void const * get_addr_fn(void const * ptr)
+static void const * get_addr(void const * ptr)
 {
 	return &((node_data_t const *)ptr)->addr;
 }
 
-static void const * get_temp_fn(void const * ptr)
+static void const * get_temp(void const * ptr)
 {
 	return &((node_data_t const *)ptr)->temp;
 }
 
-static void const * get_humidity_fn(void const * ptr)
+static void const * get_humidity(void const * ptr)
 {
 	return &((node_data_t const *)ptr)->humidity;
-}
-
-static void init(void)
-{
-	init_pred_lang(&node_data, sizeof(node_data_t));
-
-	// Register the data functions 
-	register_function(0, &get_addr_fn, TYPE_INTEGER);
-	register_function(1, &get_temp_fn, TYPE_FLOATING);
-	register_function(2, &get_humidity_fn, TYPE_FLOATING);
 }
 
 static hsend_conn_t hc;
@@ -125,13 +119,12 @@ PROCESS(hsendProcess, "HSEND Process");
 //binary bytecode for the VM
 static void trickle_rcv(struct trickle_conn * c)
 {
-	//might have to copy out packet, if recieving two messages at once
+	//TODO: might have to copy out packet, if recieving two messages at once
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
 	if (&msg->target == NULL || rimeaddr_cmp(&msg->target, &rimeaddr_node_addr)) // Sink
 	{
 		// Start HSEND
-		// TODO: pass arguments from trickle message to HSEND
 		process_start(&hsendProcess, &msg);
 	}
 }
@@ -164,6 +157,12 @@ PROCESS_THREAD(mainProcess, ev, data)
 	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
 	{
 		printf("Is the base station!\n");
+		eval_pred_req_t *msg = malloc(sizeof(eval_pred_req_t));
+		msg->bytecode_length = 3;
+		msg->num_of_bytecode_var = 0;
+		rimeaddr_copy(&msg->target,&rimeaddr_node_addr);
+
+		process_start(&hsendProcess, msg);
 
 		leds_on(LEDS_BLUE);
 
@@ -191,19 +190,27 @@ exit:
 	PROCESS_END();
 }
 
+void tmp_fn(void *p)
+{
+	node_data_t *tmp = (node_data_t *)p;
+
+	tmp->temp = 10.0;
+	tmp->humidity = 10.0;
+	rimeaddr_copy(&tmp->addr,&rimeaddr_node_addr);
+}
 
 PROCESS_THREAD(hsendProcess, ev, d)
 {
 	static struct etimer et;
 
-	eval_pred_req_t * msg = (eval_pred_req_t *)d;
-
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
-
+	printf("HSEND Process Stared\n");
 	// 10 second timer
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	eval_pred_req_t * msg = (eval_pred_req_t *)d;
 
 	char const * bytecode = ((char const *)msg) + 
 							sizeof(eval_pred_req_t) + 
@@ -233,50 +240,79 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		variables[i] = *tmp;
 	}
 
-
-	hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
-	for (i = 0; i < max_hops; i++)
+	if(max_hops != 0) //can't malloc with size of 0
 	{
-		linked_list_init(&hops_data[i], NULL);
+		hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
+		for (i = 0; i < max_hops; i++)
+		{
+			linked_list_init(&hops_data[i], NULL);
+		}
+	
+
+		printf("Sending pred req\n");
+
+		hsend_request_info(&hc, max_hops);
+	
+		// Get as much information as possible within a given time bound
+		etimer_set(&et, 60 * CLOCK_SECOND);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+
+		//Generate array of all the data
+		node_data_t * vm_hop_data = (node_data_t * )malloc(sizeof(node_data_t) * max_size);
+		int * locations = malloc(sizeof(int) * max_hops); 
+		int count = 0; //position in vm_hop_data
+		
+		for (i = 0; i < max_hops; i++)
+		{
+			linked_list_elem_t * elem;
+			for (elem = linked_list_first(&hops_data[i]); 
+				linked_list_continue(&hops_data[i], elem); 
+				elem = linked_list_next(elem))
+			{
+				memcpy(&vm_hop_data[count], linked_list_data(&hops_data[i], elem), sizeof(node_data_t));
+				count++;
+			}
+
+			locations[i] = count - 1;
+
+			linked_list_clear(&hops_data[i]);
+		}
 	}
-
-	printf("Sending pred req\n");
-
-	hsend_request_info(&hc, max_hops);
-
-	// Get as much information as possible within a given time bound
-	etimer_set(&et, 60 * CLOCK_SECOND);
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	// Set up the predicate language VM
-	init();
+	//init_pred_lang(&vm_hop_data, sizeof(node_data_t));
+	init_pred_lang(&tmp_fn, sizeof(node_data_t));
 
-	//Generate array of all the data
-	node_data_t vm_hop_data = (node_data_t * )malloc(sizeof(node_data_t)  * max_size);
-	int locations[max_hops]; 
-	int count = 0; //position in vm_hop_data
-	
-	for (i = 0; i < max_hops; i++)
+	// Register the data functions 
+	register_function(0, &get_addr, TYPE_INTEGER);
+	register_function(1, &get_temp, TYPE_FLOATING);
+	register_function(2, &get_humidity, TYPE_FLOATING);
+/*
+	//Bind the variables to the VM
+	for (i = 0; i < msg->num_of_bytecode_var; ++i)
 	{
-		linked_list_elem_t * elem;
-		for (elem = linked_list_first(&hops_data[i]); 
-			linked_list_continue(&list, elem); 
-			elem = linked_list_next(elem))
-		{
-			memcpy(vm_hop_data[count], elem->data);
-			count++;
-		}
-
-		locations[i] = count - 1;
-
-		linked_list_clear(hops_data[i]);
+		bind_input(variables[i].var_id, &vm_hop_data, locations[variables[i].hops]-1);
 	}
+	*/
+	ubyte code[3] = {1,0,0};
 
-	//register functions for the VM to access data
+	//nbool evaluation = evaluate(bytecode, msg->bytecode_length);
+	nbool evaluation = evaluate(code, 3);
 
-	// TODO: Feed N-Hop neighbourhood info into predicate evualuator
 	// TODO: If predicate failed inform sink
 	// TODO: Send data back to sink
+	if (evaluation != 0)
+	{
+		printf("%s\n","Pred: TRUE" );
+	}
+	else
+	{
+		printf("%s\n","failed");
+	}
+
+
+	//free(locations);
 
 exit:
 	printf("Exiting HSEND Process...\n");

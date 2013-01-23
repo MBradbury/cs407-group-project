@@ -1,11 +1,12 @@
 
-/Report/Report.toc
-/Report/Report.synctex.gz
-/Report/Report.out
-/Report/*.log
-/Report/Report.blg
-/Report/Report.bbl
-/Report/Report.aux
+*.toc
+*.synctex.gz
+*.out
+*.log
+*.blg
+*.bbl
+*.aux
+*.toc
 /Report/Report.pdf
 /Specification/Specification.pdf
 /Report/the_warwick_uni_blue.pdf
@@ -14,13 +15,6 @@
 *.fdb_latexmk
 /References/references.bib.bak
 *~
-/Specification/Specification.aux
-/Specification/Specification.bbl
-/Specification/Specification.blg
-/Specification/*.log
-/Specification/Specification.out
-/Specification/Specification.synctex.gz
-/Specification/Specification.toc
 *.sky
 obj_sky
 *.a
@@ -28,7 +22,6 @@ obj_sky
 symbols.c
 symbols.h
 /Report/the_warwick_uni_blue-eps-converted-to.pdf
-*.aux
 *.sublime-project
 *.sublime-workspace
 *-converted-to.pdf
@@ -55,5 +48,5 @@ VarDepthClustering
 /PredicateLanguage/Hoppy-Tests/Intermediate
 /PredicateLanguage/Hoppy-Tests/Output
 /PredicateLanguage/predlang
-
-/Tests/Debug/*.pdb
+/Tests/Debug
+/Tests/Release

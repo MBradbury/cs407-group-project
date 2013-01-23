@@ -4,18 +4,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "net/rime.h"
 #include "contiki.h"
 
 #include "dev/leds.h"
-
-#include "lib/sensors.h"
 #include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
+#include "lib/sensors.h"
+#include "net/rime.h"
 
 #include "nhopreq.h"
 #include "predlang.h"
-
 #include "sensor-converter.h"
 #include "debug-helper.h"
 #include "linked-list.h"
@@ -25,6 +23,7 @@
 #define TEMP_FN_ID 2
 #define HUMIDITY_FN_ID 3
 
+// Struct for the list of node_data. It contains owner_addr, temperature and humidity. 
 typedef struct
 {
 	rimeaddr_t addr;
@@ -32,21 +31,36 @@ typedef struct
 	nfloat humidity;
 } node_data_t;
 
-// Struct for the list elements, used to hold the variable names and their bytecode symbols
+// Struct for the list of bytecode_variables. It contains the variable_id and hop count.
 typedef struct var_elem
 {
 	uint8_t hops;
 	uint8_t var_id;
 } var_elem_t;
 
-//struct recieved from a trickle message
+//Struct recieved from base station that contains a predicate to be evaluated by this node.
 typedef struct 
 {
 	rimeaddr_t target;
-	uint8_t bytecode_length; //length of the bytecode, located after the struct
+	uint8_t bytecode_length; //length of the bytecode_instructions, located after the struct
 	uint8_t num_of_bytecode_var; //number of variables after the struct
 } eval_pred_req_t;
 
+//VM Accessor functions.
+static void const * get_addr(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->addr;
+}
+
+static void const * get_temp(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->temp;
+}
+
+static void const * get_humidity(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->humidity;
+}
 
 var_elem_t * variables = NULL; //array of the variables from bytecode
 linked_list_t * hops_data = NULL;
@@ -91,20 +105,7 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, node_data_t co
 	max_size++;
 }
 
-static void const * get_addr(void const * ptr)
-{
-	return &((node_data_t const *)ptr)->addr;
-}
 
-static void const * get_temp(void const * ptr)
-{
-	return &((node_data_t const *)ptr)->temp;
-}
-
-static void const * get_humidity(void const * ptr)
-{
-	return &((node_data_t const *)ptr)->humidity;
-}
 
 static hsend_conn_t hc;
 static struct trickle_conn tc;
@@ -130,7 +131,6 @@ static void trickle_rcv(struct trickle_conn * c)
 }
 
 static const struct trickle_callbacks callbacks = {trickle_rcv};
-
 
 PROCESS(mainProcess, "MAIN Process");
 
@@ -206,16 +206,19 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	printf("HSEND Process Stared\n");
-	// 10 second timer
+
+	//Wait for other nodes to initialize.
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	eval_pred_req_t * msg = (eval_pred_req_t *)d;
 
-	char const * bytecode = ((char const *)msg) + 
+	//Create a pointer to the bytecode instructions stored in the message.
+	char const * bytecode_instructions = ((char const *)msg) + 
 							sizeof(eval_pred_req_t) + 
-							((msg->num_of_bytecode_var * sizeof(unsigned char)) * 2) ;
+							((msg->num_of_bytecode_var * sizeof(unsigned char)) * 2);
 
+	//Create an array to store the bytecode variables in.
 	variables = (var_elem_t *) malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
 
 	//pointer for bytecode variables
@@ -297,7 +300,7 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	*/
 	ubyte code[3] = {1,0,0};
 
-	//nbool evaluation = evaluate(bytecode, msg->bytecode_length);
+	//nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);
 	nbool evaluation = evaluate(code, 3);
 
 	// TODO: If predicate failed inform sink

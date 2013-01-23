@@ -27,7 +27,7 @@ cd ../$THISDIR
 
 
 
-if [[ $(uname) = "Linux" ]]
+if [[ $(uname) = "Linux" || $(uname) = "Darwin" ]]
 then
 	cd ../
 	make

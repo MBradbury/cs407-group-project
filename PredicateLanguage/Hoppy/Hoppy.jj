@@ -129,7 +129,7 @@ final class Compiler implements ISyntaxTreeVisitor
 		setTransBuiltins.put("max", "AMAX");
 		setTransBuiltins.put("min", "AMIN");
 
-		setBuiltins.put("len", "AMIN");
+		setBuiltins.put("len", "ALEN");
 
 		mathBuiltins.put("abs", "_ABS");
 	}
@@ -1346,6 +1346,14 @@ TOKEN : {
 	| < ALPHANUM : 	<LETTER> | <DIGIT> >
 	| <#LETTER :	["A"-"Z", "a"-"z"] >
 	| <#DIGIT :		["0"-"9"] >
+
+	| < LB :	"(" >
+	| < RB :	")" >
+
+	| < SLB :	"[" >
+	| < SRB :	"]" >
+
+	| < COMMA :	"," >
 }
 
 SKIP : {
@@ -1364,11 +1372,11 @@ Program Input() :
 	ISyntaxTree tree;
 }
 {
-	"[" 
+	<SLB>
 	(
 		target = Target()
 	)
-	"]"
+	<SRB>
 	(
 		tree = FunctionDefinition()
 	)
@@ -1392,7 +1400,7 @@ PredicateTarget Target() :
 		|
 		(
 			// Specific node targeting.
-			(a = UnsignedCharNumber() "," b = UnsignedCharNumber())
+			(a = UnsignedCharNumber() <COMMA> b = UnsignedCharNumber())
 		)
 		{
 			addr = new int[] { a, b };
@@ -1556,7 +1564,7 @@ int Neighbours() :
 	Token argToken;
 }
 {
-	<NEIGHBOURS> "(" (argToken = <NUMBER>) ")"
+	<NEIGHBOURS> <LB> (argToken = <NUMBER>) <RB>
 	{
 		return Integer.parseInt(argToken.image);
 	}
@@ -1579,13 +1587,13 @@ ISyntaxTree QuantifierExpr() :
 }
 {
 	quantifier = <QUANTIFIER>
-	"("
+	<LB>
 	var = <NAME>
 	<COLON>
 	set = <NAME>
 	<TILDE>
 	left = Predicate()
-	")"
+	<RB>
 	{
 		return new QuantifierNode(quantifier.image, var.image, set.image, left);
 	}
@@ -1692,7 +1700,7 @@ ISyntaxTree MathBinaryExprThird() :
 	//A logical comparison between two arithmetic expressions.
 	(left = VariableExpr())
 	(
-		(op = <MATH_OP_1>) (right = MathBinaryExprThird())
+		(op = <MATH_OP_1>) (right = VariableExpr())
 		{
 			left = new BinaryOperatorNode(op.image, left, right);
 		}
@@ -1788,7 +1796,7 @@ ISyntaxTree LogicalBinaryExprFifth() :
 	//A conjunction or disjunction on two predicates.
 	(left = LogicalBinaryExprEnd())
 	(
-		(op = <LOGICAL_BIN_OP_1>) (right = LogicalBinaryExprFifth())
+		(op = <LOGICAL_BIN_OP_1>) (right = LogicalBinaryExprEnd())
 		{
 			left = new BinaryOperatorNode(op.image, left, right);
 		}
@@ -1817,7 +1825,7 @@ ISyntaxTree VariableExpr() :
 	ISyntaxTree node;
 }
 {
-	node = VariableNameOrFunctionLiteral() { return node; }
+	node = FunctionLiteral() { return node; }
 	|
 	node = ArithmeticLiteral() { return node; }
 	|
@@ -1826,29 +1834,22 @@ ISyntaxTree VariableExpr() :
 	node = SetFunction() { return node; }
 }
 
-ISyntaxTree VariableNameOrFunctionLiteral() :
+ISyntaxTree FunctionLiteral() :
 {
-	Token varname, varargs = null;
+	Token varname, varargs;
 }
 {
 	// A name (either a variable, or if arguments are supplied, a function).
 	varname = <NAME>
 	(
-		"("
+		<LB>
 		(
 			(varargs = <THIS>) | (varargs = <NAME>)
 		)
-		")"
-	)?
+		<RB>
+	)
 	{
-		if (varargs != null)
-		{
-			return new FuncDecl(varname.image, new ISyntaxTree[] { new NamedValueNode(varargs.image) });
-		}
-		else
-		{
-			return new NamedValueNode(varname.image);
-		}
+		return new FuncDecl(varname.image, new ISyntaxTree[] { new NamedValueNode(varargs.image) });
 	}
 }
 
@@ -1883,7 +1884,7 @@ ISyntaxTree MathFunction() :
 }
 {
 	(
-		varname = <VAR_FNS> "(" expr = MathBinaryExprFirst() ")"
+		varname = <VAR_FNS> <LB> expr = MathBinaryExprFirst() <RB>
 		{
 			return new FuncDecl(varname.image, new ISyntaxTree[] { expr });
 		}
@@ -1897,14 +1898,14 @@ ISyntaxTree SetFunction() :
 }
 {
 	(
-		setfnname = <SET_FNS> "(" varname = <NAME> ")"
+		setfnname = <SET_FNS> <LB> varname = <NAME> <RB>
 		{
 			return new FuncDecl(setfnname.image, new ISyntaxTree[] { new NamedValueNode(varname.image) });
 		}
 	)
 	|
 	(
-		setfnname = <SET_TRANS_FNS> "(" varname = <NAME> "," fnname = <NAME> ")"
+		setfnname = <SET_TRANS_FNS> <LB> varname = <NAME> <COMMA> fnname = <NAME> <RB>
 		{
 			return new FuncDecl(setfnname.image, new ISyntaxTree[] { new NamedValueNode(varname.image), new NamedValueNode(fnname.image) });
 		}

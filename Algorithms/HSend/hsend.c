@@ -101,7 +101,7 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, node_data_t co
 		hops,
 		(int)nd->temp, (int)nd->humidity);
 
-	linked_list_append(&hops_data[hops-1], nd);
+	linked_list_append(&hops_data[hops], nd);
 	max_size++;
 }
 
@@ -190,14 +190,6 @@ exit:
 	PROCESS_END();
 }
 
-void tmp_fn(void *p)
-{
-	node_data_t *tmp = (node_data_t *)p;
-
-	tmp->temp = 10.0;
-	tmp->humidity = 10.0;
-	rimeaddr_copy(&tmp->addr,&rimeaddr_node_addr);
-}
 
 PROCESS_THREAD(hsendProcess, ev, d)
 {
@@ -211,7 +203,7 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-	eval_pred_req_t * msg = (eval_pred_req_t *)d;
+	eval_pred_req_t * msg = (eval_pred_req_t *)d; //type cast the data
 
 	//Create a pointer to the bytecode instructions stored in the message.
 	char const * bytecode_instructions = ((char const *)msg) + 
@@ -224,6 +216,7 @@ PROCESS_THREAD(hsendProcess, ev, d)
 	//pointer for bytecode variables
 	char const * ptr = ((char const *)msg) + sizeof(eval_pred_req_t); 
 	uint8_t max_hops = 0;
+
 	int i;
 	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
@@ -243,65 +236,78 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		variables[i] = *tmp;
 	}
 
-	if(max_hops != 0) //can't malloc with size of 0
+	hops_data = (linked_list_t *) malloc(1 + (sizeof(linked_list_t) * max_hops));
+
+	for (i = 0; i < max_hops + 1; i++)
 	{
-		hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
-		for (i = 0; i < max_hops; i++)
-		{
-			linked_list_init(&hops_data[i], NULL);
-		}
-	
+		linked_list_init(&hops_data[i], NULL);
+	}
 
-		printf("Sending pred req\n");
 
+	printf("Sending pred req\n");
+
+	if (max_hops != 0)
+	{
 		hsend_request_info(&hc, max_hops);
 	
 		// Get as much information as possible within a given time bound
 		etimer_set(&et, 60 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-
-		//Generate array of all the data
-		node_data_t * vm_hop_data = (node_data_t * )malloc(sizeof(node_data_t) * max_size);
-		int * locations = malloc(sizeof(int) * max_hops); 
-		int count = 0; //position in vm_hop_data
-		
-		for (i = 0; i < max_hops; i++)
-		{
-			linked_list_elem_t * elem;
-			for (elem = linked_list_first(&hops_data[i]); 
-				linked_list_continue(&hops_data[i], elem); 
-				elem = linked_list_next(elem))
-			{
-				memcpy(&vm_hop_data[count], linked_list_data(&hops_data[i], elem), sizeof(node_data_t));
-				count++;
-			}
-
-			locations[i] = count - 1;
-
-			linked_list_clear(&hops_data[i]);
-		}
 	}
 
+	//Generate array of all the data
+	node_data_t * vm_hop_data = (node_data_t * )malloc(1 + (sizeof(node_data_t) * max_size));
+
+	int * locations = malloc(1 + (sizeof(int) * max_hops)); 
+	int count = 0; //position in vm_hop_data
+
+	//TODO: get actual values
+	//Put self into the list, at 0 hops
+	node_data_t * self = malloc(sizeof(node_data_t));
+	self->temp = 10.0;
+	self->humidity = 10.0;
+	rimeaddr_copy(&self->addr, &rimeaddr_node_addr);
+
+	linked_list_append(&hops_data[0], self);
+	printf("Append\n");
+	max_size++;
+
+	for (i = 0; i < max_hops + 1; i++)
+	{
+		linked_list_elem_t * elem;
+		for (elem = linked_list_first(&hops_data[i]); 
+			linked_list_continue(&hops_data[i], elem); 
+			elem = linked_list_next(elem))
+		{
+			memcpy(&vm_hop_data[count], linked_list_data(&hops_data[i], elem), sizeof(node_data_t));
+			count++;
+		}
+
+		locations[i] = count - 1;
+
+		linked_list_clear(&hops_data[i]);
+	}
+		printf("Hello\n");
+
+
 	// Set up the predicate language VM
-	//init_pred_lang(&vm_hop_data, sizeof(node_data_t));
-	init_pred_lang(&tmp_fn, sizeof(node_data_t));
+	init_pred_lang(&vm_hop_data, sizeof(node_data_t));
 
 	// Register the data functions 
 	register_function(0, &get_addr, TYPE_INTEGER);
 	register_function(1, &get_temp, TYPE_FLOATING);
 	register_function(2, &get_humidity, TYPE_FLOATING);
-/*
+
 	//Bind the variables to the VM
 	for (i = 0; i < msg->num_of_bytecode_var; ++i)
 	{
 		bind_input(variables[i].var_id, &vm_hop_data, locations[variables[i].hops]-1);
 	}
-	*/
-	ubyte code[3] = {1,0,0};
+	
 
-	//nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);
-	nbool evaluation = evaluate(code, 3);
+	ubyte code[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
+
+	nbool evaluation = evaluate(code, msg->bytecode_length);
 
 	// TODO: If predicate failed inform sink
 	// TODO: Send data back to sink
@@ -314,8 +320,8 @@ PROCESS_THREAD(hsendProcess, ev, d)
 		printf("%s\n","failed");
 	}
 
-
-	//free(locations);
+	free(self);
+	free(locations);
 
 exit:
 	printf("Exiting HSEND Process...\n");

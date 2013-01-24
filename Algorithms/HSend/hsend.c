@@ -126,7 +126,7 @@ static void trickle_rcv(struct trickle_conn * c)
 	if (&msg->target == NULL || rimeaddr_cmp(&msg->target, &rimeaddr_node_addr)) // Sink
 	{
 		// Start HSEND
-		process_start(&hsendProcess, &msg);
+		process_start(&hsendProcess, msg);
 	}
 }
 
@@ -202,36 +202,35 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-	eval_pred_req_t * msg = malloc(sizeof(eval_pred_req_t) + (sizeof(uint8_t)*2*2));
+	eval_pred_req_t * const msg = malloc(sizeof(eval_pred_req_t) + (sizeof(uint8_t)*2*2));
 		msg->bytecode_length = 50;
 		msg->num_of_bytecode_var = 2;
 		rimeaddr_copy(&msg->target,&rimeaddr_node_addr);
 
-		uint8_t  * vars = (uint8_t *)((char *)msg+sizeof(eval_pred_req_t));
-		vars[0] = 2;
-		vars[1] = 255;
-		vars[2] = 1;
-		vars[3] = 254;
+	uint8_t * vars = (uint8_t *)((char *)msg+sizeof(eval_pred_req_t));
+	vars[0] = 2;
+	vars[1] = 255;
+	vars[2] = 1;
+	vars[3] = 254;
 
 
 	//Create a pointer to the bytecode instructions stored in the message.
-	char const * bytecode_instructions = ((char const *)msg) + 
+	/*ubyte const * bytecode_instructions = ((char const *)msg) + 
 							sizeof(eval_pred_req_t) + 
 							((msg->num_of_bytecode_var * sizeof(unsigned char)) * 2);
-
+*/
 	//Create an array to store the bytecode variables in.
 	variables = (var_elem_t *) malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
 
 	//pointer for bytecode variables
 	uint8_t  * ptr = (uint8_t *)((char *)msg+sizeof(eval_pred_req_t));
 	uint8_t max_hops = 0;
-	printf("%d\n",msg->num_of_bytecode_var);
 
 	int i;
 	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
 		//create temporary elements
-		var_elem_t * tmp = malloc(sizeof(var_elem_t));
+		var_elem_t * tmp = &variables[i];
 		//populate the struct
 		tmp->hops = ptr[(2 * i)];
 		tmp->var_id = ptr[(2 * i)+1];
@@ -240,19 +239,14 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		{
 			max_hops = tmp->hops;
 		}
-		//insert into the array
-		variables[i] = * tmp;
 	}
-		printf("1bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
 
-	for (i = 0; i < max_hops + 1; i++)
+	for (i = 0; i < max_hops; i++)
 	{
 		printf("%s\n", linked_list_init(&hops_data[i], NULL) ? "Init": "Failed init"); ;
 	}
-
-	printf("2bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	printf("Sending pred req\n");
 
@@ -264,7 +258,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		etimer_set(&et, 30 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 	}
-	printf("3bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	//Generate array of all the data
 	node_data_t * vm_hop_data = (node_data_t * )malloc(sizeof(node_data_t) * max_size);
@@ -274,7 +267,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	for (i = 0; i < max_hops ; i++)
 	{
-		linked_list_elem_t * elem;
+		linked_list_elem_t elem;
 		for (elem = linked_list_first(&hops_data[i]); 
 			linked_list_continue(&hops_data[i], elem); 
 			elem = linked_list_next(elem))
@@ -283,23 +276,22 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			count++;
 		}
 
+
 		locations[i] = count - 1;
 
-		printf("%s\n",linked_list_clear(&hops_data[i]) ? "Cleared": "Not" );;
+		printf("%s, location: %d Count:%d\n",linked_list_clear(&hops_data[i]) ? "Cleared": "Not",locations[i],count);;
 	}
-
-	printf("4bytecode vars: %d\n",msg->num_of_bytecode_var );
 
 	// Set up the predicate language VM
 	init_pred_lang(&node_data, sizeof(node_data_t));
 
 	// Register the data functions 
 	register_function(0, &get_addr, TYPE_INTEGER);
-	register_function(1, &get_temp, TYPE_FLOATING);
-	register_function(2, &get_humidity, TYPE_FLOATING);
+	register_function(2, &get_temp, TYPE_FLOATING);
+	register_function(3, &get_humidity, TYPE_FLOATING);
+
 
 	printf("binding\n");
-	printf("bytecode vars: %d\n",msg->num_of_bytecode_var );
 	//Bind the variables to the VM
 	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
@@ -320,7 +312,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	}
 	else
 	{
-		printf("%s\n","Pred: FAILED");
+		printf("%s\n%s","Pred: FAILED", error_message());
 	}
 
 	free(locations);

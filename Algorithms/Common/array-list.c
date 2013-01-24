@@ -121,7 +121,7 @@ bool array_list_continue(array_list_t const * list, array_list_elem_t elem)
 
 void * array_list_data(array_list_t const * list, array_list_elem_t elem)
 {
-	return list == NULL ? NULL : list->data[elem]; 
+	return list == NULL || elem >= list->count ? NULL : list->data[elem];
 }
 
 

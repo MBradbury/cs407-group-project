@@ -987,6 +987,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				if (!push_stack(&res, sizeof(nfloat)))
 					return false;*/
 
+				error = "POW DISABLED";
 				return false;
 
 			} break;
@@ -1074,7 +1075,8 @@ nbool evaluate(ubyte const * start, nuint program_length)
 		++current;
 	}
 
-	require_stack_size(sizeof(nbool));
+	if (!require_stack_size(sizeof(nbool)))
+		return false;
 
 	return *(nbool *)stack_ptr;
 }
@@ -1093,6 +1095,9 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 {
+	// Reset the error message variable
+	error = NULL;
+
 	// Make sure wqe are given valid functions
 	if (given_data_fn == NULL)
 	{
@@ -1129,10 +1134,11 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 
 	// Put values in the `this' variable
 	variable_reg_t * thisvar = create_variable(THIS_VAR_ID, TYPE_USER);
-	given_data_fn(thisvar->location);
 
-	// Reset the error message variable
-	error = NULL;
+	if (thisvar == NULL)
+		return false;
+
+	given_data_fn(thisvar->location);
 
 	return true;
 }
@@ -1370,6 +1376,9 @@ int main(int argc, char * argv[])
 	);
 
 	printf("Result: %d\n", result);
+
+	if (error != NULL)
+		printf("Error: %s\n", error);
 
 	inspect_stack();
 

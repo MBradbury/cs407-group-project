@@ -94,6 +94,17 @@ static char const * array_list_test(void)
 
 	if (i != 9) return "Failed: Length Check";
 
+
+	// Test reallocation
+	int values2[] = { 7, 8, 5, 8, 9, 4, 5, 3, 5, 4, 3, 2, 1, 6, 8, 9 };
+	for (i = 0; i != 16; ++i)
+	{
+		if (array_list_length(&list) != i + 9) return "Failed: Realloc Append Length";
+
+		if (!array_list_append(&list, &values2[i])) return "Failed: Realloc Append";
+	}
+	
+
 	if (!array_list_clear(&list)) return "Failed: Clear";
 
 	return "Succeeded";

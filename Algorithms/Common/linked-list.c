@@ -6,7 +6,7 @@
 
 static linked_list_elem_t create_elem(void * data)
 {
-	linked_list_elem_t e = (linked_list_elem_t)malloc(sizeof(linked_list_elem_t));
+	linked_list_elem_t e = (linked_list_elem_t)malloc(sizeof(struct linked_list_elem));
 	e->data = data;
 	e->next = NULL;
 	return e;
@@ -33,7 +33,7 @@ static linked_list_elem_t linked_list_last(linked_list_t const * list)
 	}
 }
 
-bool linked_list_init(linked_list_t * list, cleanup_t cleanup)
+bool linked_list_init(linked_list_t * list, linked_list_cleanup_t cleanup)
 {
 	if (list == NULL)
 	{

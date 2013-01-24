@@ -9,7 +9,7 @@
 #	define false 0
 #endif
 
-typedef void (*cleanup_t)(void * data);
+typedef void (*array_list_cleanup_t)(void * data);
 
 typedef unsigned int array_list_elem_t;
 
@@ -24,11 +24,11 @@ typedef struct array_list
 	// Number of elements in list
 	unsigned int count;
 
-	cleanup_t cleanup;
+	array_list_cleanup_t cleanup;
 } array_list_t;
 
 // Create the list
-bool array_list_init(array_list_t * list, cleanup_t cleanup);
+bool array_list_init(array_list_t * list, array_list_cleanup_t cleanup);
 
 // Add / Remove items from list
 bool array_list_append(array_list_t * list, void * data);

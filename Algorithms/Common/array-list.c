@@ -33,7 +33,7 @@ static bool realloc_array_list(array_list_t * list)
 	return true;
 }
 
-bool array_list_init(array_list_t * list, cleanup_t cleanup)
+bool array_list_init(array_list_t * list, array_list_cleanup_t cleanup)
 {
 	if (list == NULL)
 	{
@@ -67,6 +67,8 @@ bool array_list_clear(array_list_t * list)
 	}
 
 	free(list->data);
+
+	list->data = NULL;
 	list->length = 0;
 	list->count = 0;
 
@@ -87,7 +89,9 @@ bool array_list_append(array_list_t * list, void * data)
 	}
 
 	// Add item
-	list->data[list->count++] = data;
+	list->data[list->count] = data;
+
+	list->count += 1;
 
 	return true;
 }
@@ -109,7 +113,7 @@ array_list_elem_t array_list_next(array_list_elem_t elem)
 
 bool array_list_continue(array_list_t const * list, array_list_elem_t elem)
 {
-	if (list == NULL || elem == NULL)
+	if (list == NULL)
 		return false;
 
 	return elem < list->count;

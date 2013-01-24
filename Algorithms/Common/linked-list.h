@@ -9,7 +9,7 @@
 #	define false 0
 #endif
 
-typedef void (*cleanup_t)(void * data);
+typedef void (*linked_list_cleanup_t)(void * data);
 
 struct linked_list_elem
 {
@@ -22,11 +22,11 @@ typedef struct linked_list_elem * linked_list_elem_t;
 typedef struct linked_list
 {
 	linked_list_elem_t head;
-	cleanup_t cleanup;
+	linked_list_cleanup_t cleanup;
 } linked_list_t;
 
 // Create the list
-bool linked_list_init(linked_list_t * list, cleanup_t cleanup);
+bool linked_list_init(linked_list_t * list, linked_list_cleanup_t cleanup);
 
 // Add / Remove items from list
 bool linked_list_append(linked_list_t * list, void * data);

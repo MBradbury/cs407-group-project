@@ -11,19 +11,19 @@
 #	define false 0
 #endif
 
-typedef bool (*equality_t)(void const *, void const *);
+typedef bool (*unique_array_equality_t)(void const *, void const *);
 
 typedef struct unique_array
 {
 	array_list_t list;
 
-	equality_t equality;
+	unique_array_equality_t equality;
 } unique_array_t;
 
 typedef array_list_elem_t unique_array_elem_t;
 
 // Create the list
-bool unique_array_init(unique_array_t * list, equality_t equality, cleanup_t cleanup);
+bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, array_list_cleanup_t cleanup);
 
 // Add / Remove items from list
 bool unique_array_append(unique_array_t * list, void * data);

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-bool unique_array_init(unique_array_t * list, equality_t equality, cleanup_t cleanup)
+bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, array_list_cleanup_t cleanup)
 {
 	if (list == NULL || equality == NULL)
 	{
@@ -22,6 +22,8 @@ bool unique_array_append(unique_array_t * list, void * data)
 	{
 		return array_list_append(&list->list, data);
 	}
+
+	// Already in list, so succeeded
 	return true;
 }
 
@@ -47,7 +49,7 @@ bool unique_array_contains(unique_array_t const * list, void const * data)
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(list); unique_array_continue(list, elem); elem = unique_array_next(elem))
 	{
-		void * item = unique_array_data(list, elem);
+		void const * item = unique_array_data(list, elem);
 
 		if (list->equality(data, item))
 		{

@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS= -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wfloat-equal
-CFLAGS += -Os -fno-strict-aliasing -ffunction-sections
-CFLAGS += -I. -I../Common/
+CFLAGS += -g
+CFLAGS += -I. -I../Algorithms/Common/
 
 ODIR=obj
 LDIR=lib
@@ -11,16 +11,16 @@ LDFLAGS= -B -Felf
 _DEPS = 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o ../Common/array-list.o ../Common/linked-list.o ../Common/unique-array.o
+_OBJ = main.o ../Algorithms/Common/array-list.o ../Algorithms/Common/linked-list.o ../Algorithms/Common/unique-array.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-all: directories build
+all: directories tests
 
 $(ODIR)/%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $(patsubst %,$(ODIR)/%,$(notdir $@)) $< $(CFLAGS)
 
-build: $(OBJ)
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+tests: $(OBJ)
+	$(CC) -o $@ $(patsubst %,$(ODIR)/%,$(notdir $^)) $(CFLAGS) $(LDFLAGS)
 
 .PHONY: clean directories
 
@@ -30,3 +30,4 @@ directories:
 
 clean:
 	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~
+

@@ -48,8 +48,8 @@ static bool rimeaddr_pair_equality(void const * left, void const * right)
 	rimeaddr_pair_t const * rp = (rimeaddr_pair_t const *)right;
 
 	return
-		(rimeaddr_cmp(&lp->first, &rp->first) == 0 && rimeaddr_cmp(&lp->second, &rp->second) == 0) ||
-		(rimeaddr_cmp(&lp->second, &rp->first) == 0 && rimeaddr_cmp(&lp->first, &rp->second) == 0);
+		(rimeaddr_cmp(&lp->first, &rp->first) && rimeaddr_cmp(&lp->second, &rp->second)) ||
+		(rimeaddr_cmp(&lp->second, &rp->first) && rimeaddr_cmp(&lp->first, &rp->second));
 }
 
 

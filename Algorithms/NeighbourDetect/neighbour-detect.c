@@ -15,8 +15,11 @@ static unique_array_t * results_ptr = NULL;
 
 static bool rimeaddr_equality(void const * left, void const * right)
 {
-	return left != NULL && right != NULL &&
-		rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right) == 0;
+	if (left == NULL || right == NULL)
+		return false;
+
+	return
+		rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
 }
 
 static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr_t const * from, uint16_t val)
@@ -53,8 +56,8 @@ void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 	neighbor_discovery_open(
         &nd,
         channel, 
-        10 * CLOCK_SECOND, 
-        10 * CLOCK_SECOND, 
+        5 * CLOCK_SECOND, 
+        5 * CLOCK_SECOND, 
         120 * CLOCK_SECOND,
         &neighbor_discovery_callbacks
 	);

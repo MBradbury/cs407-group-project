@@ -57,14 +57,19 @@ static void print_ua_rimeaddr_pair(unique_array_t * data)
 {
 	printf("{");
 
+	char firstaddr[RIMEADDR_STRING_LENGTH];
+	char secondaddr[RIMEADDR_STRING_LENGTH];
+
 	unique_array_elem_t elem;
 
 	for (elem = unique_array_first(data); unique_array_continue(data, elem); elem = unique_array_next(elem))
 	{
 		rimeaddr_pair_t * pair = (rimeaddr_pair_t *) unique_array_data(data, elem);
 
-		printf("(%s, ", addr2str(&pair->first));
-		printf("%s) ", addr2str(&pair->second));
+		printf("(%s, %s) ",
+			addr2str_r(&pair->first, firstaddr, RIMEADDR_STRING_LENGTH),
+			addr2str_r(&pair->second, secondaddr, RIMEADDR_STRING_LENGTH)
+		);
 	}
 
 	printf("}\n");

@@ -24,12 +24,12 @@
 
 
 
-static tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
+static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
 {
 	return (tree_agg_conn_t *)conn;
 }
 
-static tree_agg_conn_t * conncvt_unicast(struct unicast_conn * conn)
+static inline tree_agg_conn_t * conncvt_unicast(struct unicast_conn * conn)
 {
 	return (tree_agg_conn_t *)
 		(((char *)conn) - sizeof(struct stbroadcast_conn));
@@ -37,7 +37,7 @@ static tree_agg_conn_t * conncvt_unicast(struct unicast_conn * conn)
 
 
 
-static bool is_sink(tree_agg_conn_t * conn)
+static inline bool is_sink(tree_agg_conn_t * conn)
 {
 	return rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr) != 0;
 }
@@ -49,11 +49,11 @@ static const int MAX_RUNICAST_RETX = 5;
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
-static const clock_time_t STUBBORN_INTERVAL = 5 * CLOCK_SECOND;
+static const clock_time_t STUBBORN_INTERVAL = 3 * CLOCK_SECOND;
 static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
 // Time to gather aggregations over
-static const clock_time_t AGGREGATION_WAIT = 20 * CLOCK_SECOND;
+static const clock_time_t AGGREGATION_WAIT = 25 * CLOCK_SECOND;
 
 // Time to wait to detect parents
 static const clock_time_t PARENT_DETECT_WAIT = 15 * CLOCK_SECOND;
@@ -64,6 +64,18 @@ static void stbroadcast_cancel_void(void * ptr)
 	stbroadcast_cancel(&conncvt_stbcast((struct stbroadcast_conn *)ptr)->bc);
 
 	printf("Stubborn bcast canceled\n");
+}
+
+static void stbroadcast_cancel_void_and_callback(void * ptr)
+{
+	tree_agg_conn_t * conn = conncvt_stbcast((struct stbroadcast_conn *)ptr);
+
+	stbroadcast_cancel(&conn->bc);
+
+	printf("Stubborn bcast canceled\n");
+
+	// Start the data generation process
+	(*conn->callbacks.setup_complete)(conn);
 }
 
 typedef struct
@@ -110,11 +122,9 @@ static void parent_detect_finished(void * ptr)
 	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
 
 	// Wait for a bit to allow a few messages to be sent
+	// Then close the connection and tell user that we are done
 	static struct ctimer ct;
-	ctimer_set(&ct, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
-
-	// Start the data generation process
-	(*conn->callbacks.setup_complete)(conn);
+	ctimer_set(&ct, STUBBORN_WAIT, &stbroadcast_cancel_void_and_callback, conn);
 }
 
 
@@ -180,7 +190,7 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 
 static void unicast_sent(struct unicast_conn *c, int status, int num_tx)
 {
-	printf("unicast sent\n");
+	printf("unicast sent status:%d numtx:%d\n", status, num_tx);
 }
 
 /** The function that will be executed when a message is received */
@@ -234,7 +244,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	
 	// If the parent of the node that sent this message is this node,
 	// then we are not a leaf
-	if (conn->is_leaf_node && rimeaddr_cmp(&msg->parent, &rimeaddr_node_addr) != 0)
+	if (conn->is_leaf_node && rimeaddr_cmp(&msg->parent, &rimeaddr_node_addr))
 	{
 		printf("Node (%s) is our child, we are not a leaf.\n",
 			addr2str(&msg->source));

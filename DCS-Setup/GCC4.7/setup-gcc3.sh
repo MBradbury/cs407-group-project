@@ -3,10 +3,6 @@
 INSTALL_PREFIX="/var/tmp/mspgcc"
 cd /tmp/mspgcc4.7
 
-# 3) Creating new directories
-mkdir binutils-2.22-msp430
-mkdir gcc-4.7.0-msp430
-
 # 4) installing binutils in INSTALL_PREFIX
 cd binutils-2.22-msp430/
 ../binutils-2.22/configure --target=msp430 --program-prefix="msp430-" --prefix=$INSTALL_PREFIX

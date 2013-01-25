@@ -20,6 +20,10 @@ typedef struct
 	void (* aggregate_update)(void * data, void const * to_apply);
 
 	void (* aggregate_own)(void * data);
+
+	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
+
+	void (* write_data_to_packet)(struct tree_agg_conn * conn);
 } tree_agg_callbacks_t;
 
 typedef struct tree_agg_conn

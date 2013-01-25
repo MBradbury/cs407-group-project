@@ -10,7 +10,7 @@ PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/TreeAggregat
 PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c tree-aggregator.c neighbour-detect.c
+CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c tree-aggregator.c neighbour-detect.c unique-array.c array-list.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

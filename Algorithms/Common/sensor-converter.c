@@ -1,6 +1,6 @@
 #include "sensor-converter.h"
 
-double sht11_relative_humidity(unsigned raw)
+double sht11_relative_humidity(int raw)
 {
 	// FROM:
 	// http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/Humidity/Sensirion_Humidity_SHT1x_Datasheet_V5.pdf
@@ -21,7 +21,7 @@ double sht11_relative_humidity(unsigned raw)
 	return c1 + c2 * raw + c3 * raw * raw;
 }
 
-double sht11_relative_humidity_compensated(unsigned raw, double temperature)
+double sht11_relative_humidity_compensated(int raw, double temperature)
 {
 	// 12-bit
 	static const double t1 = 0.01;
@@ -43,7 +43,7 @@ double sht11_relative_humidity_compensated(unsigned raw, double temperature)
 }
 
 /** Output temperature in degrees Celcius */
-double sht11_temperature(unsigned raw)
+double sht11_temperature(int raw)
 {
 	//static const double d1 = -40.1; // 5V
 	//static const double d1 = -39.8; // 4V
@@ -58,7 +58,7 @@ double sht11_temperature(unsigned raw)
 }
 
 /** From: www.scribd.com/doc/73156710/Contiki-1 */
-double battery_voltage(unsigned raw)
+double battery_voltage(int raw)
 {
 	return (raw * 2.500 * 2.0) / 4096;
 }

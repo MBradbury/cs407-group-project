@@ -1,27 +1,12 @@
-#include "contiki.h"
+#ifndef CS407_NEIGHBOUR_DETECT
+#define CS407_NEIGHBOUR_DETECT
 
-#include "dev/leds.h"
-#include "lib/list.h"
+#include "unique-array.h"
 
-#include "net/rime.h"
-#include "net/rime/neighbor-discovery.h"
+#include <stdint.h>
 
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
+void start_neighbour_detect(unique_array_t * results, uint16_t channel);
+void stop_neighbour_detect(void);
 
-#include "debug-helper.h"
-
-struct neighbor_list_item
-{
-        struct neighbor_list_item *next;
-        rimeaddr_t neighbor_rimeaddr;
-};
-
-static rimeaddr_t base_station_rimeaddr; //address of the base station
-static struct neighbor_discovery_conn neighbor_discovery; //Neighbour Discovery Protocol Connection
-
-static void start_neighbour_detect(struct neighbor_list_item * list_ptr);
-
+#endif CS407_NEIGHBOUR_DETECT
 

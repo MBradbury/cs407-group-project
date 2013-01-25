@@ -1,78 +1,70 @@
 #include "neighbour-detect.h"
 
-LIST(neighbor_list); //create neighbor list
+#include "contiki.h"
+#include "net/rime.h"
+#include "net/rime/neighbor-discovery.h"
 
-static void
-neighbor_discovery_recv(struct neighbor_discovery_conn * c, const rimeaddr_t * from, uint16_t val)
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "debug-helper.h"
+
+static struct neighbor_discovery_conn nd;
+static unique_array_t * results_ptr = NULL;
+
+static bool rimeaddr_equality(void const * left, void const * right)
 {
-        struct neighbor_list_item * list_iterator = NULL;
-        for ( list_iterator = (struct neighbor_list_item *)list_head(neighbor_list);
-                  list_iterator != NULL;
-                  list_iterator = (struct neighbor_list_item *)list_item_next(list_iterator)
-                )
-        {
-                // Neighbour has been discovered before;
-                //printf("%s ", addr2str(from));
-                //printf("%s\n", addr2str(&list_iterator->neighbor_rimeaddr));
-                if (rimeaddr_cmp(&list_iterator->neighbor_rimeaddr, from))
-                {
-                        break;
-                }
-
-        }
-        // End of List and neighbor has not been discovered before
-        if (list_iterator == NULL)
-        {
-                struct neighbor_list_item * neighbor_to_store = (struct neighbor_list_item *)malloc(sizeof(struct neighbor_list_item));
-                rimeaddr_copy(&neighbor_to_store->neighbor_rimeaddr, from);
-                list_push(neighbor_list, neighbor_to_store);            
-                printf("Mote With Address: %s is my Neighbour.\n", addr2str(from));
-        }
+	return left != NULL && right != NULL &&
+		rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right) == 0;
 }
 
-static void
-neighbor_discovery_sent(struct neighbor_discovery_conn * c)
+static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr_t const * from, uint16_t val)
 {
+	//printf("Mote With Address: %s is my Neighbour ", addr2str(from));
+	//printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
 
+	if (results_ptr != NULL)
+	{
+		if (!unique_array_contains(results_ptr, from))
+		{
+			rimeaddr_t * store = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
+			rimeaddr_copy(store, from);
+			unique_array_append(results_ptr, store);
+
+			printf("Recording Address: %s", addr2str(from));
+			printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
+		}
+	}
 }
 
-static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks = {neighbor_discovery_recv, neighbor_discovery_sent};
-
-PROCESS(main_process, "Main Neighbour Detection Process");
-
-static void start_neighbour_detect(struct neighbor_list_item* list_ptr)
+static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 {
-	process_start(&main_process, (void*)list_ptr);
 }
 
-PROCESS_THREAD(main_process, ev, data)
+static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks = { &neighbor_discovery_recv, &neighbor_discovery_sent };
+
+void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 {
-        static struct etimer et;
-        
-        PROCESS_EXITHANDLER(goto exit;)
-        PROCESS_BEGIN();
-		
-		struct neighbor_list_item* list_ptr = (struct neighbor_list_item *)data;
+	unique_array_init(results, &rimeaddr_equality, &free);
 
-        neighbor_discovery_open(
-                &neighbor_discovery,
-                5, 
-                10 * CLOCK_SECOND, 
-                10 * CLOCK_SECOND, 
-                60 * CLOCK_SECOND,
-                &neighbor_discovery_callbacks);
+	results_ptr = results;
 
-        neighbor_discovery_start(&neighbor_discovery, 5);
+	neighbor_discovery_open(
+        &nd,
+        channel, 
+        10 * CLOCK_SECOND, 
+        10 * CLOCK_SECOND, 
+        120 * CLOCK_SECOND,
+        &neighbor_discovery_callbacks
+	);
 
-        while(true)
-        {
-                etimer_set(&et, 10 * CLOCK_SECOND); //10 second timer
-
-                PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-        }
-
-exit:
-        printf("Exiting Process...\n");
-        neighbor_discovery_close(&neighbor_discovery);
-        PROCESS_END();
+    neighbor_discovery_start(&nd, 1);
 }
+
+void stop_neighbour_detect(void)
+{
+	neighbor_discovery_close(&nd);
+	results_ptr = NULL;
+}
+

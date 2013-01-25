@@ -124,12 +124,8 @@ static void finish_aggregate_collect(void * ptr)
 
 	(*conn->callbacks.aggregate_own)(conn->data);
 
-	packetbuf_clear();
-	packetbuf_set_datalen(conn->data_length);
-	debug_packet_size(conn->data_length);
-
 	// Copy aggregation data into the packet
-	memcpy(packetbuf_dataptr(), conn->data, conn->data_length);
+	(*conn->callbacks.write_data_to_packet)(conn);
 
 	unicast_send(&conn->uc, &conn->best_parent);
 
@@ -148,6 +144,7 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 	tree_agg_conn_t * conn = conncvt_unicast(ptr);
 
 	void const * msg = packetbuf_dataptr();
+	unsigned int length = packetbuf_datalen();
 
 	if (is_sink(conn))
 	{
@@ -169,7 +166,7 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 
 			// We need to copy the users data into our memory,
 			// So we can apply future aggregtions to it.
-			memcpy(conn->data, msg, conn->data_length);
+			(*conn->callbacks.store_packet)(conn, msg, length);
 
 			// We have started collection
 			conn->is_collecting = true;
@@ -292,7 +289,8 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 {
 	if (conn != NULL && sink != NULL && callbacks != NULL &&
 		callbacks->recv != NULL && callbacks->setup_complete != NULL &&
-		callbacks->aggregate_update != NULL && callbacks->aggregate_own != NULL)
+		callbacks->aggregate_update != NULL && callbacks->aggregate_own != NULL &&
+		callbacks->store_packet != NULL)
 	{
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
 		unicast_open(&conn->uc, ch2, &callbacks_aggregate);
@@ -332,10 +330,8 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 
 		return true;
 	}
-	else
-	{
-		return false;
-	}
+	
+	return false;
 }
 
 void tree_agg_close(tree_agg_conn_t * conn)
@@ -424,8 +420,8 @@ static void tree_aggregate_own(void * ptr)
 	collect_msg_t data;
 
 	SENSORS_ACTIVATE(sht11_sensor);
-	unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-	unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+	int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+	int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 	SENSORS_DEACTIVATE(sht11_sensor);
 
 	data.temperature = sht11_temperature(raw_temperature);
@@ -434,9 +430,24 @@ static void tree_aggregate_own(void * ptr)
 	tree_aggregate_update(ptr, &data);
 }
 
+static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
+{
+	memcpy(conn->data, packet, length);
+}
+
+static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
+{
+	packetbuf_clear();
+	packetbuf_set_datalen(conn->data_length);
+	debug_packet_size(conn->data_length);
+	memcpy(packetbuf_dataptr(), conn->data, conn->data_length);
+}
+
 static tree_agg_conn_t conn;
-static tree_agg_callbacks_t callbacks =
-	{ &tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update, &tree_aggregate_own };
+static tree_agg_callbacks_t callbacks = {
+	&tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update,
+	&tree_aggregate_own, &tree_agg_store_packet, &tree_agg_write_data_to_packet
+};
 
 PROCESS_THREAD(startup_process, ev, data)
 {

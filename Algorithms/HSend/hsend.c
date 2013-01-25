@@ -71,8 +71,8 @@ static void node_data(void * data)
 		rimeaddr_copy(&nd->addr, &rimeaddr_node_addr);
 
 		SENSORS_ACTIVATE(sht11_sensor);
-		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
 		nd->temp = sht11_temperature(raw_temperature);
@@ -191,7 +191,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	static struct etimer et;
 	static eval_pred_req_t msg;
 	static uint8_t vars[4];
-	static int max_hops = 0;
+	static unsigned int max_hops = 0;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -223,7 +223,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Pointer for bytecode variables
 	//uint8_t * ptr = (uint8_t *)((char *)msg + sizeof(eval_pred_req_t));
 
-	int i;
+	unsigned int i;
 	for (i = 0; i < msg.num_of_bytecode_var; i++)
 	{
 		// Create temporary elements
@@ -238,7 +238,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			max_hops = tmp->hops;
 		}
 
-//		printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
+		//printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
 	}
 
 	hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);

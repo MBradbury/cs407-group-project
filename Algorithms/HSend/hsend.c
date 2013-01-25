@@ -316,6 +316,8 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	free(locations);
 	free(vm_hop_data);
+	free(hops_data);
+	free(variables);
 
 exit:
 	printf("Exiting HSEND Process...\n");

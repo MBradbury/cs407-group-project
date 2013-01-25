@@ -37,6 +37,10 @@ echo The installatoin prefix:$INSTALL_PREFIX
 mkdir /tmp/mspgcc4.7
 cd /tmp/mspgcc4.7
 
+# 3) Creating new directories
+mkdir binutils-2.22-msp430
+mkdir gcc-4.7.0-msp430
+
 # Getting
 wget http://sourceforge.net/projects/mspgcc/files/mspgcc/DEVEL-4.7.x/mspgcc-20120911.tar.bz2
 wget http://sourceforge.net/projects/mspgcc/files/msp430mcu/msp430mcu-20120716.tar.bz2
@@ -59,14 +63,8 @@ cd ..
 # 2) Incorporating the changes contained in the patch delievered in mspgcc-20120911
 cd gcc-4.7.0
 patch -p1<../mspgcc-20120911/msp430-gcc-4.7.0-20120911.patch
-cd ..
-
-# 3) Creating new directories
-mkdir binutils-2.22-msp430
-mkdir gcc-4.7.0-msp430
 
 # 5) Download the prerequisites
-cd ../gcc-4.7.0
 ./contrib/download_prerequisites
 
 

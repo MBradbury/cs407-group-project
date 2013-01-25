@@ -5,7 +5,7 @@
 #include "net/rime/stbroadcast.h"
 #include "net/rime/runicast.h"
 
-#include "lib/list.h"
+#include "array-list.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -27,21 +27,21 @@ typedef struct
 	data_generation_fn data_fn;
 	data_receive_fn receive_fn;
 
-	LIST_STRUCT(message_list);
+	array_list_t message_list;
 
-} hsend_conn_t;
+} nhopreq_conn_t;
 
-bool is_base(hsend_conn_t const * conn);
+bool is_base(nhopreq_conn_t const * conn);
 
 // Initialise multi-hop predicate checking
-bool hsend_start(
-	hsend_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * baseStationAddr,
+bool nhopreq_start(
+	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * baseStationAddr,
 	data_generation_fn data_fn, unsigned int data_size, data_receive_fn receive_fn);
 
 // Shutdown multi-hop predicate checking
-bool hsend_end(hsend_conn_t * conn);
+bool nhopreq_end(nhopreq_conn_t * conn);
 
-void hsend_request_info(hsend_conn_t * conn, uint8_t hops);
+void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops);
 
 #endif /*CS407_NHOPREQ_H*/
 

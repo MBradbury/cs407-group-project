@@ -102,7 +102,7 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, node_data_t co
 
 
 
-static hsend_conn_t hc;
+static nhopreq_conn_t hc;
 static struct trickle_conn tc;
 static rimeaddr_t baseStationAddr;
 
@@ -145,12 +145,12 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	trickle_open(&tc, trickle_interval, 121, &callbacks);
 
-	if (!hsend_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
+	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
 	{
-		printf("hsend start function failed\n");
+		printf("nhopreq start function failed\n");
 	}
 
-	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr) != 0) // Sink
+	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr)) // Sink
 	{
 		printf("Is the base station!\n");
 		
@@ -180,7 +180,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 exit:
 	printf("Exiting MAIN Process...\n");
-	hsend_end(&hc);
+	nhopreq_end(&hc);
 	trickle_close(&tc);
 	PROCESS_END();
 }
@@ -250,7 +250,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	if (max_hops != 0)
 	{
-		hsend_request_info(&hc, max_hops);
+		nhopreq_request_info(&hc, max_hops);
 	
 		// Get as much information as possible within a given time bound
 		etimer_set(&et, 30 * CLOCK_SECOND);
@@ -323,3 +323,4 @@ exit:
 	printf("Exiting HSEND Process...\n");
 	PROCESS_END();
 }
+

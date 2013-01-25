@@ -302,6 +302,7 @@ PROCESS_THREAD(neighbour_agg_send_data_process, ev, data)
 
 	etimer_reset(&et);
 
+	//unique_array_clear(&one_hop_neighbours);
 	//tree_agg_close(&aggconn);
 	PROCESS_END();
 }

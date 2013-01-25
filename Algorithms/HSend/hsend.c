@@ -59,7 +59,7 @@ static void const * get_humidity(void const * ptr)
 
 static var_elem_t * variables = NULL; //array of the variables from bytecode
 static linked_list_t * hops_data = NULL;
-static int max_size = 0; //Count the number of elements added to the list
+static unsigned int max_size = 0; //Count the number of elements added to the list
 
 static void node_data(void * data)
 {

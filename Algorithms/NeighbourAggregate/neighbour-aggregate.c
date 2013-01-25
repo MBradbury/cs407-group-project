@@ -75,7 +75,7 @@ static void print_ua_rimeaddr_pair(unique_array_t * data)
 // Data is a list of rimeaddr_t
 static void list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 {
-	rimeaddr_t * addr_arr = (rimeaddr_t *)(msg + 1);
+	rimeaddr_pair_t * addr_arr = (rimeaddr_pair_t *)(msg + 1);
 
 	msg->length = unique_array_length(data);
 	
@@ -85,32 +85,13 @@ static void list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 	for (elem = unique_array_first(data); unique_array_continue(data, elem); elem = unique_array_next(elem))
 	{
 		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(data, elem);
-		rimeaddr_copy(&addr_arr[i], addr);
-		i += 1;
+		
+		rimeaddr_copy(&addr_arr[i].first, &rimeaddr_node_addr);
+		rimeaddr_copy(&addr_arr[i].second, addr);
+		
+		++i;
 	}
 }
-
-// Data is a list of rimeaddr_pair_t
-static void list_to_array_pair(unique_array_t * data, collect_msg_t * msg)
-{
-	rimeaddr_t * addr_arr = (rimeaddr_t *)(msg + 1);
-
-	msg->length = unique_array_length(data);
-	
-	size_t i = 0;
-	unique_array_elem_t elem;
-
-	for (elem = unique_array_first(data); unique_array_continue(data, elem); elem = unique_array_next(elem))
-	{
-		rimeaddr_pair_t * pair = (rimeaddr_pair_t *) unique_array_data(data, elem);
-
-		rimeaddr_copy(&addr_arr[i], &pair->first);
-		rimeaddr_copy(&addr_arr[i+1], &pair->second);
-		i += 2;
-	}
-}
-
-
 
 
 PROCESS(neighbour_agg_process, "Neighbour Agg process");
@@ -241,7 +222,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(data_array); unique_array_continue(data_array, elem); elem = unique_array_next(elem))
 	{
-		rimeaddr_pair_t * to = (rimeaddr_t *) unique_array_data(data_array, elem);
+		rimeaddr_pair_t * to = (rimeaddr_pair_t *) unique_array_data(data_array, elem);
 
 		rimeaddr_copy(&msgpairs[i].first, &to->first);
 		rimeaddr_copy(&msgpairs[i].second, &to->second);

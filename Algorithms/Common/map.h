@@ -34,5 +34,36 @@ void * map_data(map_t const * map, map_elem_t elem);
 //     void * data = map_data(&map, elem);
 // }
 
+// Recommended way to add data:
+#if 0
+typedef struct { int key; int data; } my_map_data_t;
+
+bool map_add(map_t * map, my_map_data_t * data)
+{
+	if (map == NULL || data == NULL)
+		return false;
+
+	my_map_data_t * stored = (my_map_data_t *)map_get(map, &data->key);
+
+	if (stored)
+	{
+		// Update data
+		stored->data = data->data;
+
+		return true;
+	}
+	else
+	{
+		// Allocate memory for the data
+		my_map_data_t * tostore = malloc(sizeof(my_map_data_t));
+		*tostore = *data;
+
+		// Put data in the map
+		return map_put(map, data);
+	}
+}
+
+#endif
+
 #endif
 

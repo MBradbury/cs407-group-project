@@ -36,6 +36,7 @@ typedef struct
 //Struct recieved from base station that contains a predicate to be evaluated by this node.
 typedef struct 
 {
+	uint8_t predicate_id;
 	rimeaddr_t target;
 	uint8_t bytecode_length; //length of the bytecode_instructions, located after the struct
 	uint8_t num_of_bytecode_var; //number of variables after the struct
@@ -81,10 +82,55 @@ static void node_data(void * data)
 /// End VM Helper Functions
 ///
 
-static map_t * hops_data = NULL;
+// An array_list_t of map_t of node_data_t
+static array_list_t hops_data;
 
 // Count the number of elements added to each of the lists
 static unsigned int max_size = 0;
+
+static bool rimeaddr_equal_node_data(void const * left, void const * right)
+{
+	if (left == NULL || right == NULL)
+		return false;
+
+	node_data_t const * l = (node_data_t const *)left;
+	node_data_t const * r = (node_data_t const *)right;
+
+	return rimeaddr_cmp(&l->addr, &r->addr);
+}
+
+static map_t * get_hop_map(uint8_t hop)
+{
+	if (hop == 0)
+		return NULL;
+
+	unsigned int length = array_list_length(&hops_data);
+
+	// Map doesn't exist so create it
+	if (length < hop)
+	{
+		unsigned int to_add = hop - length;
+
+		while (to_add > 0)
+		{
+			map_t * map = (map_t *)malloc(sizeof(map_t));
+			map_init(map, &rimeaddr_equal_node_data, &free);
+
+			array_list_append(&hops_data, map);
+	
+			--to_add;
+		}
+	}
+
+	return (map_t *)array_list_data(&hops_data, hop - 1);
+}
+
+static void free_hops_data(void * voiddata)
+{
+	map_t * data = (map_t *)voiddata;
+	map_clear(data);
+	free(data);
+}
 
 
 static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
@@ -101,7 +147,7 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 		(int)nd->temp, (int)nd->humidity);
 
 
-	map_t * map = &hops_data[hops - 1];
+	map_t * map = get_hop_map(hops);
 
 	// Check that we have not previously received data from this node before
 	node_data_t * stored = (node_data_t *)map_get(map, from);
@@ -169,6 +215,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
+	array_list_init(&hops_data, &free_hops_data);
+
 	// Set the address of the base station
 	baseStationAddr.u8[0] = 1;
 	baseStationAddr.u8[1] = 0;
@@ -202,6 +250,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 		eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
 		memset(msg, 0, packet_size);
 
+		msg->predicate_id = 0;
 		rimeaddr_copy(&msg->target, &destination);
 		msg->bytecode_length = bytecode_length;
 		msg->num_of_bytecode_var = var_details;
@@ -250,23 +299,66 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 exit:
 	printf("Exiting MAIN Process...\n");
+	array_list_clear(&hops_data);
 	nhopreq_end(&hc);
 	trickle_close(&tc);
 	PROCESS_END();
 }
 
 
-static bool rimeaddr_equal_node_data(void const * left, void const * right)
+
+static bool evaluate_predicate(
+	ubyte const * program, unsigned int program_length,
+	node_data_t const * all_neighbour_data,
+	var_elem_t const * variables, unsigned int variables_length)
 {
-	if (left == NULL || right == NULL)
-		return false;
+	// Set up the predicate language VM
+	init_pred_lang(&node_data, sizeof(node_data_t));
 
-	node_data_t const * l = (node_data_t const *)left;
-	node_data_t const * r = (node_data_t const *)right;
+	// Register the data functions 
+	register_function(0, &get_addr, TYPE_INTEGER);
+	register_function(2, &get_temp, TYPE_FLOATING);
+	register_function(3, &get_humidity, TYPE_FLOATING);
 
-	return rimeaddr_cmp(&l->addr, &r->addr);
+	printf("Binding variables using %p\n", all_neighbour_data);
+
+	// Bind the variables to the VM
+	unsigned int i;
+	for (i = 0; i < variables_length; ++i)
+	{
+		// Get the length of this hop's data
+		// including all of the closer hop's data length
+		unsigned int length = 0;
+		unsigned int j;
+		for (j = 1; j <= variables[i].hops; ++j)
+		{
+			length += map_length(get_hop_map(j));
+		}
+
+		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		bind_input(variables[i].var_id, all_neighbour_data, length);
+	}
+
+	return evaluate(program, program_length);
 }
 
+static unsigned int maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
+{
+	unsigned int max_hops = 0;
+
+	unsigned int i;
+	for (i = 0; i < length; ++i)
+	{
+		if (variables[i].hops > max_hops)
+		{
+			max_hops = variables[i].hops;
+		}
+
+		//printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
+	}
+
+	return max_hops;
+}
 
 PROCESS_THREAD(hsendProcess, ev, data)
 {
@@ -277,7 +369,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	static unsigned int max_hops = 0;
 
 	static node_data_t * all_neighbour_data = NULL;
-	static unsigned int count = 0;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -298,27 +389,12 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Create a pointer to the bytecode instructions stored in the message.
 	bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
 
-	unsigned int i;
-	for (i = 0; i < msg->num_of_bytecode_var; i++)
-	{
-		if (variables[i].hops > max_hops)
-		{
-			max_hops = variables[i].hops;
-		}
+	max_hops = maximum_hop_data_request(variables, msg->num_of_bytecode_var);
 
-		//printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
-	}
-
+	
 	// Only ask for data if the predicate needs it
 	if (max_hops != 0)
 	{
-		hops_data = (map_t *) malloc(sizeof(map_t) * max_hops);
-
-		for (i = 0; i < max_hops; i++)
-		{
-			map_init(&hops_data[i], &rimeaddr_equal_node_data, &free);
-		}
-	
 		printf("Starting request for %d hops of data...\n", max_hops);
 
 		nhopreq_request_info(&hc, max_hops);
@@ -333,22 +409,24 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		// Generate array of all the data
 		all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-		count = 0; // position in all_neighbour_data
-
-		for (i = 0; i < max_hops ; i++)
+		unsigned int i;
+		for (i = 1; i <= max_hops ; ++i)
 		{
-			unsigned int length = map_length(&hops_data[i]);
+			map_t * hop_map = get_hop_map(i);
+
+			unsigned int length = map_length(hop_map);
+
+			// position in all_neighbour_data
+			unsigned int count = 0;
 
 			if (length > 0)
 			{
 				map_elem_t elem;
-				for (elem = map_first(&hops_data[i]); 
-					map_continue(&hops_data[i], elem); 
-					elem = map_next(elem))
+				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 				{
-					node_data_t * mapdata = (node_data_t *)map_data(&hops_data[i], elem);
+					node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
 					memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
-					count++;
+					++count;
 				}
 			}
 
@@ -358,38 +436,16 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	printf("Starting predicate evaluation with code length: %d.\n", msg->bytecode_length);
 
-	// Set up the predicate language VM
-	init_pred_lang(&node_data, sizeof(node_data_t));
+	
+	bool evaluation_result = evaluate_predicate(
+		bytecode_instructions, msg->bytecode_length,
+		all_neighbour_data,
+		variables, msg->num_of_bytecode_var);
 
-	// Register the data functions 
-	register_function(0, &get_addr, TYPE_INTEGER);
-	register_function(2, &get_temp, TYPE_FLOATING);
-	register_function(3, &get_humidity, TYPE_FLOATING);
-
-
-	printf("Binding variables using %p\n", all_neighbour_data);
-
-	// Bind the variables to the VM
-	for (i = 0; i < msg->num_of_bytecode_var; ++i)
-	{
-		// Get the length of this hop's data
-		// including all of the closer hop's data length
-		unsigned int length = 0;
-		unsigned int j;
-		for (j = 0; j < variables[i].hops; ++j)
-		{
-			length += map_length(&hops_data[j]);
-		}
-
-		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
-		bind_input(variables[i].var_id, all_neighbour_data, length);
-	}
-
-	nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);
 
 	// TODO: If predicate failed inform sink
 	// TODO: Send data back to sink
-	if (evaluation)
+	if (evaluation_result)
 	{
 		printf("Pred: TRUE\n");
 	}
@@ -398,20 +454,13 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		printf("Pred: FAILED due to error: %s\n", error_message());
 	}
 
-	free(msg);
-	
-	// Free all the lists
-	for (i = 0; i < max_hops; i++)
-	{
-		map_clear(&hops_data[i]);
-	}
-
 	free(all_neighbour_data);
-	free(hops_data);
-	free(variables);
+	free(msg);
 
 exit:
 	printf("Exiting HSEND Process...\n");
 	PROCESS_END();
 }
+
+
 

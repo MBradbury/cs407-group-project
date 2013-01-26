@@ -131,21 +131,26 @@ static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
 PROCESS(hsendProcess, "HSEND Process");
 
+static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
+
+
 // Rime address of target node (or rimeaddr_null for everyone)
 // binary bytecode for the VM
 static void trickle_rcv(struct trickle_conn * c)
 {
 	// Copy out packet, allows handling multiple evals at once
-	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
-	eval_pred_req_t * msgcopy = (eval_pred_req_t *)malloc(packetbuf_datalen());
-	memcpy(msgcopy, msg, packetbuf_datalen());
-
-	if (rimeaddr_cmp(&msgcopy->target, &rimeaddr_null) ||		// Send to all
-		rimeaddr_cmp(&msgcopy->target, &rimeaddr_node_addr)) 	// We are the target
+	//printf("Rcv packet length %d\n", packetbuf_datalen());
+		
+	if (rimeaddr_cmp(&msg->target, &rimeaddr_null) ||		// Send to all
+		rimeaddr_cmp(&msg->target, &rimeaddr_node_addr)) 	// We are the target
 	{
-		printf("Got message, starting eval!\n");
+		eval_pred_req_t * msgcopy = (eval_pred_req_t *)malloc(packetbuf_datalen());
+		memcpy(msgcopy, msg, packetbuf_datalen());
+
 		// Start HSEND
+		printf("Got message, starting evaluation!\n");
 		process_start(&hsendProcess, msgcopy);
 	}
 }
@@ -185,9 +190,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 		// Send the request message
 		
-		static ubyte const bytecode_instructions[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
-
-		unsigned int bytecode_length = sizeof(bytecode_instructions)/sizeof(bytecode_instructions[0]);
+		
+		unsigned int bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
 		unsigned int var_details = 2;
 		
 		unsigned int packet_size = sizeof(eval_pred_req_t) + bytecode_length + sizeof(var_elem_t) * var_details;
@@ -211,7 +215,9 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 		ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details * sizeof(var_elem_t));
 
-		memcpy(msg_bytecode, bytecode_instructions, bytecode_length);
+		memcpy(msg_bytecode, program_bytecode, bytecode_length);
+
+		//printf("Sent packet length %d\n", packet_size);
 
 		trickle_send(&tc);
 
@@ -333,8 +339,8 @@ PROCESS_THREAD(hsendProcess, ev, data)
 					map_continue(&hops_data[i], elem); 
 					elem = map_next(elem))
 				{
-					node_data_t * data = (node_data_t *)map_data(&hops_data[i], elem);
-					memcpy(&vm_hop_data[count], data, sizeof(node_data_t));
+					node_data_t * mapdata = (node_data_t *)map_data(&hops_data[i], elem);
+					memcpy(&vm_hop_data[count], mapdata, sizeof(node_data_t));
 					count++;
 				}
 			}
@@ -371,6 +377,13 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, vm_hop_data, length);
 	}
+
+#if 1
+	if (memcmp(program_bytecode, bytecode_instructions, msg->bytecode_length) != 0)
+	{
+		printf("FML program bytecode got corrupted :(\n");
+	}
+#endif
 
 	nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);
 

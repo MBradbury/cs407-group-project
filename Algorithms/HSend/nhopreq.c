@@ -244,7 +244,7 @@ static const struct stbroadcast_callbacks stbroadcastCallbacks =
 // Methods
 static void delayed_reply_data(void * ptr)
 {
-	printf("Starting delayed send of evaluated predicate\n");
+	printf("Starting delayed send of node data\n");
 
 	delayed_reply_data_params_t * p =
 		(delayed_reply_data_params_t *)ptr;

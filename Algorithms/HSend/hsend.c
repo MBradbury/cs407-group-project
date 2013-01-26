@@ -312,7 +312,13 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 				locations[i] = count - 1;
 
-				printf("%s, locations: %d Count:%d\n", array_list_clear(&hops_data[i]) ? "Cleared": "Not", locations[i], count);
+				printf("%s Cleared Array, i=%d locations=%d Count=%d\n",
+					array_list_clear(&hops_data[i]) ? "Successfully": "Failed to",
+					i, locations[i], count);
+			}
+			else
+			{
+				printf("Skipping array %d\n", i);
 			}
 		}
 	}
@@ -328,11 +334,13 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	register_function(3, &get_humidity, TYPE_FLOATING);
 
 
+	printf("Binding variables using %p\n", vm_hop_data);
+
 	// Bind the variables to the VM
 	for (i = 0; i < msg->num_of_bytecode_var; ++i)
 	{
-		printf("Binding variables: var_id=%d locaton=%d\n",variables[i].var_id,locations[variables[i].hops-1]);
-		bind_input(variables[i].var_id, &vm_hop_data, locations[variables[i].hops - 1]);
+		printf("Binding variables: var_id=%d locaton=%d\n", variables[i].var_id, locations[variables[i].hops - 1]);
+		bind_input(variables[i].var_id, vm_hop_data, locations[variables[i].hops - 1]);
 	}
 
 	nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);

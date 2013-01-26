@@ -1149,10 +1149,18 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 bool bind_input(variable_id_t id, void * data, unsigned int length)
 {
 	if (data == NULL)
+	{
+		snprintf(error, ERROR_MESSAGE_LENGTH, "Cannot bind input when no data provided");
+		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
+	}
 
 	if (length == 0)
+	{
+		snprintf(error, ERROR_MESSAGE_LENGTH, "Cannot bind input of length 0");
+		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
+	}
 
 	variable_reg_t * var_array = create_array(id, TYPE_USER, length);
 

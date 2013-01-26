@@ -237,7 +237,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	static unsigned int max_hops = 0;
 
 	static node_data_t * vm_hop_data = NULL;
-	static unsigned int * locations = NULL;
 	static unsigned int count = 0;
 
 	PROCESS_EXITHANDLER(goto exit;)
@@ -294,7 +293,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		// Generate array of all the data
 		vm_hop_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-		locations = malloc(sizeof(unsigned int) * max_hops); 
 		count = 0; // position in vm_hop_data
 
 		for (i = 0; i < max_hops ; i++)
@@ -303,8 +301,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 			if (length > 0)
 			{
-				locations[i] = count;
-
 				array_list_elem_t elem;
 				for (elem = array_list_first(&hops_data[i]); 
 					array_list_continue(&hops_data[i], elem); 
@@ -316,7 +312,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 				}
 			}
 
-			printf("i=%d locations=%d Count=%d length=%d\n", i, locations[i], count, length);
+			printf("i=%d Count=%d length=%d\n", i, count, length);
 		}
 	}
 
@@ -336,11 +332,17 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Bind the variables to the VM
 	for (i = 0; i < msg->num_of_bytecode_var; ++i)
 	{
-		unsigned int location = locations[variables[i].hops - 1];
-		unsigned int length = array_list_length(&hops_data[variables[i].hops - 1]);
+		// Get the length of this hop's data
+		// including all of the closer hop's data length
+		unsigned int length = 0;
+		unsigned int j;
+		for (j = 0; j < variables[i].hops; ++j)
+		{
+			length += array_list_length(&hops_data[j]);
+		}
 
-		printf("Binding variables: var_id=%d locaton=%d length=%d\n", variables[i].var_id, location, length);
-		bind_input(variables[i].var_id, vm_hop_data + location, length);
+		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		bind_input(variables[i].var_id, vm_hop_data, length);
 	}
 
 	nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);
@@ -364,7 +366,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		array_list_clear(&hops_data[i]);
 	}
 
-	free(locations);
 	free(vm_hop_data);
 	free(hops_data);
 	free(variables);

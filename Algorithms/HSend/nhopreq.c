@@ -56,7 +56,7 @@ typedef struct
 {
 	nhopreq_conn_t * conn;
 	uint8_t message_id;
-} delayed_send_evaluated_predicate_params_t;
+} delayed_reply_data_params_t;
 
 typedef struct
 {
@@ -66,13 +66,13 @@ typedef struct
 
 
 // Prototypes
-static void delayed_send_evaluated_predicate(void * ptr);
+static void delayed_reply_data(void * ptr);
 
-static void send_n_hop_predicate_check(
-	nhopreq_conn_t * conn, rimeaddr_t const *originator,
+static void send_n_hop_data_request(
+	nhopreq_conn_t * conn, rimeaddr_t const * originator,
 	uint8_t message_id_to_send, uint8_t hop_limit);
 
-static void send_evaluated_predicate(
+static void send_reply(
 	nhopreq_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_receiver,
 	uint8_t message_id, void const * data);
 
@@ -141,22 +141,22 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	if (deliver_msg)
 	{
 		// Send predicate value back to originator
-		delayed_send_evaluated_predicate_params_t * p =
-			(delayed_send_evaluated_predicate_params_t *)
-				malloc(sizeof(delayed_send_evaluated_predicate_params_t));
+		delayed_reply_data_params_t * p =
+			(delayed_reply_data_params_t *)
+				malloc(sizeof(delayed_reply_data_params_t));
 
 		p->conn = hc;
 		p->message_id = msg->message_id;
 
 		static struct ctimer runicast_timer;
 		ctimer_set(&runicast_timer, 21 * CLOCK_SECOND,
-			&delayed_send_evaluated_predicate, p);
+			&delayed_reply_data, p);
 
 		// Rebroadcast Message If Hop Count Is Greater Than 1
 		if (msg->hop_limit > 1) // last node
 		{
 			// Broadcast Message On
-			send_n_hop_predicate_check(
+			send_n_hop_data_request(
 				hc, &rimeaddr_node_addr,
 				msg->message_id, msg->hop_limit - 1);
 		}
@@ -216,12 +216,13 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 				printf("Trying to forward evaluated predicate to: %s\n",
 					addr2str(&data->originator));
 
-				send_evaluated_predicate(conn,
-										 &msg->sender, // Source
-										 &data->originator, // Destination
-										 data->message_id,
-										 msgdata
-										);
+				send_reply(
+					conn,
+					&msg->sender, // Source
+					&data->originator, // Destination
+					data->message_id,
+					msgdata
+				);
 			}
 			break;
 		}
@@ -248,12 +249,12 @@ static const struct stbroadcast_callbacks stbroadcastCallbacks =
 
 
 // Methods
-static void delayed_send_evaluated_predicate(void * ptr)
+static void delayed_reply_data(void * ptr)
 {
 	printf("Starting delayed send of evaluated predicate\n");
 
-	delayed_send_evaluated_predicate_params_t * p =
-		(delayed_send_evaluated_predicate_params_t *)ptr;
+	delayed_reply_data_params_t * p =
+		(delayed_reply_data_params_t *)ptr;
 
 	array_list_elem_t elem;
 	for (elem = array_list_first(&p->conn->message_list); array_list_continue(&p->conn->message_list, elem); elem = array_list_next(elem))
@@ -262,12 +263,13 @@ static void delayed_send_evaluated_predicate(void * ptr)
 
 		if (data->message_id == p->message_id)
 		{
-			send_evaluated_predicate(p->conn,
-									 &rimeaddr_node_addr, // Source
-									 &data->originator, // Destination
-									 data->message_id,
-									 NULL
-									);
+			send_reply(
+				p->conn,
+				&rimeaddr_node_addr, // Source
+				&data->originator, // Destination
+				data->message_id,
+				NULL
+			);
 
 			// TODO: remove item from the list
 			break;
@@ -286,7 +288,7 @@ delayed_forward_evaluated_predicate(void * ptr)
 
 	void const * data_dest = (void *)(p + 1);
 
-	send_evaluated_predicate(p->conn,
+	send_reply(p->conn,
 		&p->msg.sender, &p->msg.target_receiver,
 		p->msg.message_id, data_dest);
 
@@ -295,7 +297,7 @@ delayed_forward_evaluated_predicate(void * ptr)
 }
 
 static void
-send_evaluated_predicate(
+send_reply(
 	nhopreq_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_receiver,
 	uint8_t message_id, void const * data)
 {
@@ -363,7 +365,7 @@ send_evaluated_predicate(
 
 
 static void
-send_n_hop_predicate_check(
+send_n_hop_data_request(
 	nhopreq_conn_t * conn, rimeaddr_t const * originator,
 	uint8_t message_id_to_send, uint8_t hop_limit)
 {
@@ -455,7 +457,7 @@ void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops)
 
 	array_list_append(&conn->message_list, delivered_msg);
 
-	send_n_hop_predicate_check(
+	send_n_hop_data_request(
 		conn, &rimeaddr_node_addr,
 		delivered_msg->message_id, delivered_msg->hops);
 }

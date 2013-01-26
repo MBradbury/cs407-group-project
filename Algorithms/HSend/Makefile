@@ -5,7 +5,7 @@ PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/PredicateLanguage
 PROJECT_SOURCEFILES = 
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c nhopreq.c predlang.c linked-list.c array-list.c
+CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c nhopreq.c predlang.c array-list.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

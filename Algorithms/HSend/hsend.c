@@ -16,7 +16,7 @@
 #include "predlang.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-#include "linked-list.h"
+#include "array-list.h"
 
 // Struct for the list of node_data. It contains owner_addr, temperature and humidity. 
 typedef struct
@@ -41,7 +41,9 @@ typedef struct
 	uint8_t num_of_bytecode_var; //number of variables after the struct
 } eval_pred_req_t;
 
-//VM Accessor functions.
+///
+/// Start VM Helper Functions
+///
 static void const * get_addr(void const * ptr)
 {
 	return &((node_data_t const *)ptr)->addr;
@@ -56,11 +58,6 @@ static void const * get_humidity(void const * ptr)
 {
 	return &((node_data_t const *)ptr)->humidity;
 }
-
-static linked_list_t * hops_data = NULL;
-
-// Count the number of elements added to each of the lists
-static unsigned int max_size = 0;
 
 static void node_data(void * data)
 {
@@ -80,6 +77,15 @@ static void node_data(void * data)
 		nd->humidity = sht11_relative_humidity_compensated(raw_humidity, nd->temp);
 	}
 }
+///
+/// End VM Helper Functions
+///
+
+static array_list_t * hops_data = NULL;
+
+// Count the number of elements added to each of the lists
+static unsigned int max_size = 0;
+
 
 static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
 {
@@ -95,7 +101,7 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 		hops,
 		(int)nd->temp, (int)nd->humidity);
 
-	linked_list_append(&hops_data[hops - 1], nd);
+	array_list_append(&hops_data[hops - 1], nd);
 	max_size++;
 }
 
@@ -270,11 +276,11 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		//printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
 	}
 
-	hops_data = (linked_list_t *) malloc(sizeof(linked_list_t) * max_hops);
+	hops_data = (array_list_t *) malloc(sizeof(array_list_t) * max_hops);
 
 	for (i = 0; i < max_hops; i++)
 	{
-		linked_list_init(&hops_data[i], &free);
+		array_list_init(&hops_data[i], &free);
 	}
 
 	// Only ask for data if the predicate needs it
@@ -299,20 +305,20 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	for (i = 0; i < max_hops ; i++)
 	{
-		if (linked_list_length(&hops_data[i]) > 0)
+		if (array_list_length(&hops_data[i]) > 0)
 		{
-			linked_list_elem_t elem;
-			for (elem = linked_list_first(&hops_data[i]); 
-				linked_list_continue(&hops_data[i], elem); 
-				elem = linked_list_next(elem))
+			array_list_elem_t elem;
+			for (elem = array_list_first(&hops_data[i]); 
+				array_list_continue(&hops_data[i], elem); 
+				elem = array_list_next(elem))
 			{
-				memcpy(&vm_hop_data[count], linked_list_data(&hops_data[i], elem), sizeof(node_data_t));
+				memcpy(&vm_hop_data[count], array_list_data(&hops_data[i], elem), sizeof(node_data_t));
 				count++;
 			}
 
 			locations[i] = count - 1;
 
-			printf("%s, locations: %d Count:%d\n", linked_list_clear(&hops_data[i]) ? "Cleared": "Not", locations[i], count);
+			printf("%s, locations: %d Count:%d\n", array_list_clear(&hops_data[i]) ? "Cleared": "Not", locations[i], count);
 		}
 	}
 
@@ -352,7 +358,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Free all the lists
 	for (i = 0; i < max_hops; i++)
 	{
-		linked_list_clear(&hops_data[i]);
+		array_list_clear(&hops_data[i]);
 	}
 
 	free(locations);

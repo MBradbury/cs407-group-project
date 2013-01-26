@@ -34,6 +34,7 @@ typedef struct
 typedef struct
 {
 	uint8_t message_id;
+	uint8_t hops;
 	rimeaddr_t sender;
 	rimeaddr_t target_receiver;
 	// After this point the user generated data will be contained
@@ -63,7 +64,7 @@ typedef struct
 {
 	nhopreq_conn_t * conn;
 	return_data_msg_t msg;
-} delayed_forward_evaluated_predicate_params_t;
+} delayed_forward_reply_params_t;
 
 
 // Prototypes
@@ -75,7 +76,7 @@ static void send_n_hop_data_request(
 
 static void send_reply(
 	nhopreq_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_receiver,
-	uint8_t message_id, void const * data);
+	uint8_t message_id, uint8_t hops, void const * data);
 
 static uint8_t get_message_id(nhopreq_conn_t * conn);
 
@@ -202,11 +203,11 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 		{
 			// The target node has received the required data,
 			// so provide it to the upper layer
-			(*conn->receive_fn)(&msg->sender, data->hops, msgdata);
+			(*conn->receive_fn)(&msg->sender, msg->hops + 1, msgdata);
 		}
 		else
 		{
-			printf("Trying to forward evaluated predicate to: %s\n",
+			printf("Trying to forward data to: %s\n",
 				addr2str(&data->originator));
 
 			send_reply(
@@ -214,6 +215,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 				&msg->sender, // Source
 				&data->originator, // Destination
 				data->message_id,
+				msg->hops + 1,
 				msgdata
 			);
 		}
@@ -256,6 +258,7 @@ static void delayed_reply_data(void * ptr)
 			&rimeaddr_node_addr, // Source
 			&data->originator, // Destination
 			data->message_id,
+			0,
 			NULL
 		);
 
@@ -267,16 +270,16 @@ static void delayed_reply_data(void * ptr)
 }
 
 static void
-delayed_forward_evaluated_predicate(void * ptr)
+delayed_forward_reply(void * ptr)
 {
-	delayed_forward_evaluated_predicate_params_t * p =
-		(delayed_forward_evaluated_predicate_params_t *)ptr;
+	delayed_forward_reply_params_t * p =
+		(delayed_forward_reply_params_t *)ptr;
 
 	void const * data_dest = (void *)(p + 1);
 
 	send_reply(p->conn,
 		&p->msg.sender, &p->msg.target_receiver,
-		p->msg.message_id, data_dest);
+		p->msg.message_id, p->msg.hops, data_dest);
 
 	// Need to free allocated parameter struct
 	free(ptr);
@@ -285,19 +288,20 @@ delayed_forward_evaluated_predicate(void * ptr)
 static void
 send_reply(
 	nhopreq_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_receiver,
-	uint8_t message_id, void const * data)
+	uint8_t message_id, uint8_t hops, void const * data)
 {
 	if (runicast_is_transmitting(&hc->ru))
 	{
 		printf("runicast is already transmitting, trying again in a few seconds\n");
 
-		delayed_forward_evaluated_predicate_params_t * p =
-			(delayed_forward_evaluated_predicate_params_t *)
-				malloc(sizeof(delayed_forward_evaluated_predicate_params_t) + hc->data_size);
+		delayed_forward_reply_params_t * p =
+			(delayed_forward_reply_params_t *)
+				malloc(sizeof(delayed_forward_reply_params_t) + hc->data_size);
 
 		rimeaddr_copy(&p->msg.sender, sender);
 		rimeaddr_copy(&p->msg.target_receiver, target_receiver);
 		p->msg.message_id = message_id;
+		p->msg.hops = hops;
 
 		p->conn = hc;
 
@@ -315,7 +319,7 @@ send_reply(
 		}
 
 		static struct ctimer forward_timer;
-		ctimer_set(&forward_timer, 5 * CLOCK_SECOND, &delayed_forward_evaluated_predicate, p);
+		ctimer_set(&forward_timer, 3 * CLOCK_SECOND, &delayed_forward_reply, p);
 	}
 	else
 	{
@@ -330,6 +334,7 @@ send_reply(
 		rimeaddr_copy(&msg->sender, sender);
 		rimeaddr_copy(&msg->target_receiver, target_receiver);
 		msg->message_id = message_id;
+		msg->hops = hops;
 
 		void * data_dest = (void *)(msg + 1);
 

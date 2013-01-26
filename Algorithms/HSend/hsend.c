@@ -57,9 +57,10 @@ static void const * get_humidity(void const * ptr)
 	return &((node_data_t const *)ptr)->humidity;
 }
 
-static var_elem_t * variables = NULL; //array of the variables from bytecode
 static linked_list_t * hops_data = NULL;
-static unsigned int max_size = 0; //Count the number of elements added to the list
+
+// Count the number of elements added to each of the lists
+static unsigned int max_size = 0;
 
 static void node_data(void * data)
 {
@@ -80,12 +81,10 @@ static void node_data(void * data)
 	}
 }
 
-static void receieved_data(rimeaddr_t const * from, uint8_t hops, node_data_t const * data)
+static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
 {
-	node_data_t * nd = malloc(sizeof(node_data_t));
-	nd->humidity = data->humidity;
-	nd->temp = data->temp;
-	rimeaddr_copy(&nd->addr,&data->addr);
+	node_data_t * nd = (node_data_t *)malloc(sizeof(node_data_t));
+	memcpy(nd, data, sizeof(node_data_t));
 
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
@@ -115,18 +114,22 @@ PROCESS(hsendProcess, "HSEND Process");
 // binary bytecode for the VM
 static void trickle_rcv(struct trickle_conn * c)
 {
-	//TODO: might have to copy out packet, if recieving two messages at once
+	// TODO: might have to copy out packet, if recieving two messages at once
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
-	if (rimeaddr_cmp(&msg->target, &rimeaddr_null) ||		// Send to all
-		rimeaddr_cmp(&msg->target, &rimeaddr_node_addr)) 	// We are the target
+	eval_pred_req_t * msgcopy = (eval_pred_req_t *)malloc(packetbuf_datalen());
+	memcpy(msgcopy, msg, packetbuf_datalen());
+
+	if (rimeaddr_cmp(&msgcopy->target, &rimeaddr_null) ||		// Send to all
+		rimeaddr_cmp(&msgcopy->target, &rimeaddr_node_addr)) 	// We are the target
 	{
+		printf("Got message, starting eval!\n");
 		// Start HSEND
-		process_start(&hsendProcess, msg);
+		process_start(&hsendProcess, msgcopy);
 	}
 }
 
-static const struct trickle_callbacks callbacks = {trickle_rcv};
+static const struct trickle_callbacks callbacks = { &trickle_rcv };
 
 PROCESS(mainProcess, "MAIN Process");
 
@@ -135,6 +138,7 @@ AUTOSTART_PROCESSES(&mainProcess);
 PROCESS_THREAD(mainProcess, ev, data)
 {
 	static struct etimer et;
+	static rimeaddr_t destination;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -142,6 +146,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 	// Set the address of the base station
 	baseStationAddr.u8[0] = 1;
 	baseStationAddr.u8[1] = 0;
+
+	// Set the predicate evaluation target
+	destination.u8[0] = 10;
+	destination.u8[1] = 0;
 
 	trickle_open(&tc, trickle_interval, 121, &callbacks);
 
@@ -154,16 +162,45 @@ PROCESS_THREAD(mainProcess, ev, data)
 	{
 		printf("Is the base station!\n");
 		
-		//char * bytecode_instructions = (((char  *)vars + ((sizeof(char)) * 4)));
-		//bytecode_instructions = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
+		static ubyte const bytecode_instructions[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 
-		process_start(&hsendProcess, NULL);
+		unsigned int bytecode_length = sizeof(bytecode_instructions)/sizeof(bytecode_instructions[0]);
+		unsigned int var_details = 2;
+
+		//process_start(&hsendProcess, NULL);
 
 		leds_on(LEDS_BLUE);
 
 		while (true)
 		{
-			etimer_set(&et, 10 * CLOCK_SECOND);
+			// Send the request message
+			
+			unsigned int packet_size = sizeof(eval_pred_req_t) + bytecode_length + sizeof(var_elem_t) * var_details;
+
+			packetbuf_clear();
+			packetbuf_set_datalen(packet_size);
+			debug_packet_size(packet_size);
+			eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+			memset(msg, 0, packet_size);
+
+			rimeaddr_copy(&msg->target, &destination);
+			msg->bytecode_length = bytecode_length;
+			msg->num_of_bytecode_var = var_details;
+
+			var_elem_t * msg_vars = (var_elem_t *)(msg + 1);
+
+			msg_vars[0].hops = 2;
+			msg_vars[0].var_id = 255;
+			msg_vars[1].hops = 1;
+			msg_vars[1].var_id = 254;
+
+			ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details * sizeof(var_elem_t));
+
+			memcpy(msg_bytecode, bytecode_instructions, bytecode_length);
+
+			trickle_send(&tc);
+
+			etimer_set(&et, 10 * 60 * CLOCK_SECOND);
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
 	}
@@ -189,53 +226,45 @@ exit:
 PROCESS_THREAD(hsendProcess, ev, data)
 {
 	static struct etimer et;
-	static eval_pred_req_t msg;
-	static uint8_t vars[4];
+	static eval_pred_req_t const * msg;
+	static var_elem_t const * variables;
+	static ubyte const * bytecode_instructions;
 	static unsigned int max_hops = 0;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
+
+	msg = (eval_pred_req_t const *)data;
 	
-	printf("HSEND Process Stared\n");
+	printf("HSEND Process Started\n");
 
 	//Wait for other nodes to initialize.
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-	msg.bytecode_length = 50;
-	msg.num_of_bytecode_var = 2;
-	rimeaddr_copy(&msg.target, &rimeaddr_node_addr);
+	printf("Wait finished\n");
 
-	vars[0] = 2;
-	vars[1] = 255;
-	vars[2] = 1;
-	vars[3] = 254;
+	//msg.bytecode_length = 50;
+	//msg.num_of_bytecode_var = 2;
+	//rimeaddr_copy(&msg.target, &rimeaddr_node_addr);
 
-	//Create a pointer to the bytecode instructions stored in the message.
-	/*ubyte const * bytecode_instructions = ((char const *)msg) + 
-							sizeof(eval_pred_req_t) + 
-							((msg->num_of_bytecode_var * sizeof(unsigned char)) * 2);
-	*/
-
-	//Create an array to store the bytecode variables in.
-	variables = (var_elem_t *) malloc(sizeof(var_elem_t) * msg.num_of_bytecode_var);
+	//vars[0] = 2;
+	//vars[1] = 255;
+	//vars[2] = 1;
+	//vars[3] = 254;
 
 	// Pointer for bytecode variables
-	//uint8_t * ptr = (uint8_t *)((char *)msg + sizeof(eval_pred_req_t));
+	variables = (var_elem_t const *)(msg + 1);
+
+	//Create a pointer to the bytecode instructions stored in the message.
+	bytecode_instructions = (ubyte const *)(variables + (msg->num_of_bytecode_var * sizeof(var_elem_t)));
 
 	unsigned int i;
-	for (i = 0; i < msg.num_of_bytecode_var; i++)
+	for (i = 0; i < msg->num_of_bytecode_var; i++)
 	{
-		// Create temporary elements
-		var_elem_t * tmp = &variables[i];
-
-		// Populate the struct
-		tmp->hops = vars[(2 * i)];
-		tmp->var_id = vars[(2 * i)+1];
-
-		if (tmp->hops > max_hops)
+		if (variables[i].hops > max_hops)
 		{
-			max_hops = tmp->hops;
+			max_hops = variables[i].hops;
 		}
 
 		//printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
@@ -245,23 +274,28 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	for (i = 0; i < max_hops; i++)
 	{
-		printf("%s\n", linked_list_init(&hops_data[i], NULL) ? "Init": "Failed init");
+		linked_list_init(&hops_data[i], &free);
 	}
 
+	// Only ask for data if the predicate needs it
 	if (max_hops != 0)
 	{
+		printf("Starting request for %d hops of data...\n", max_hops);
+
 		nhopreq_request_info(&hc, max_hops);
 	
 		// Get as much information as possible within a given time bound
-		etimer_set(&et, 30 * CLOCK_SECOND);
+		etimer_set(&et, 45 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+		printf("Finished collecting hop data.\n");
 	}
 
-	//Generate array of all the data
+	// Generate array of all the data
 	node_data_t * vm_hop_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-	int * locations = malloc(sizeof(int) * max_hops); 
-	int count = 0; //position in vm_hop_data
+	unsigned int * locations = malloc(sizeof(unsigned int) * max_hops); 
+	unsigned int count = 0; // position in vm_hop_data
 
 	for (i = 0; i < max_hops ; i++)
 	{
@@ -282,6 +316,8 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		}
 	}
 
+	printf("Starting predicate evaluation with code length: %d.\n", msg->bytecode_length);
+
 	// Set up the predicate language VM
 	init_pred_lang(&node_data, sizeof(node_data_t));
 
@@ -292,26 +328,31 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 
 	// Bind the variables to the VM
-	for (i = 0; i < msg.num_of_bytecode_var; i++)
+	for (i = 0; i < msg->num_of_bytecode_var; ++i)
 	{
 		//printf("var_id: %d locaton: %d\n",variables[i].var_id,locations[variables[i].hops-1]);
-		bind_input(variables[i].var_id, &vm_hop_data, locations[variables[i].hops-1]);
+		bind_input(variables[i].var_id, &vm_hop_data, locations[variables[i].hops - 1]);
 	}
 
-	// Temporary bytecode for evaulation
-	ubyte const code[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
-
-	nbool evaluation = evaluate(code, msg.bytecode_length);
+	nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);
 
 	// TODO: If predicate failed inform sink
 	// TODO: Send data back to sink
-	if (evaluation != 0)
+	if (evaluation)
 	{
 		printf("%s\n", "Pred: TRUE");
 	}
 	else
 	{
 		printf("%s\n%s\n", "Pred: FAILED", error_message());
+	}
+
+	free(msg);
+	
+	// Free all the lists
+	for (i = 0; i < max_hops; i++)
+	{
+		linked_list_clear(&hops_data[i]);
 	}
 
 	free(locations);

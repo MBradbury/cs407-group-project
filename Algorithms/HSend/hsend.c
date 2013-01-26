@@ -299,27 +299,24 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 		for (i = 0; i < max_hops ; i++)
 		{
-			if (array_list_length(&hops_data[i]) > 0)
+			unsigned int length = array_list_length(&hops_data[i]);
+
+			if (length > 0)
 			{
+				locations[i] = count;
+
 				array_list_elem_t elem;
 				for (elem = array_list_first(&hops_data[i]); 
 					array_list_continue(&hops_data[i], elem); 
 					elem = array_list_next(elem))
 				{
-					memcpy(&vm_hop_data[count], array_list_data(&hops_data[i], elem), sizeof(node_data_t));
+					node_data_t * data = (node_data_t *)array_list_data(&hops_data[i], elem);
+					memcpy(&vm_hop_data[count], data, sizeof(node_data_t));
 					count++;
 				}
-
-				locations[i] = count - 1;
-
-				printf("%s Cleared Array, i=%d locations=%d Count=%d\n",
-					array_list_clear(&hops_data[i]) ? "Successfully": "Failed to",
-					i, locations[i], count);
 			}
-			else
-			{
-				printf("Skipping array %d\n", i);
-			}
+
+			printf("i=%d locations=%d Count=%d length=%d\n", i, locations[i], count, length);
 		}
 	}
 
@@ -339,8 +336,11 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Bind the variables to the VM
 	for (i = 0; i < msg->num_of_bytecode_var; ++i)
 	{
-		printf("Binding variables: var_id=%d locaton=%d\n", variables[i].var_id, locations[variables[i].hops - 1]);
-		bind_input(variables[i].var_id, vm_hop_data, locations[variables[i].hops - 1]);
+		unsigned int location = locations[variables[i].hops - 1];
+		unsigned int length = array_list_length(&hops_data[variables[i].hops - 1]);
+
+		printf("Binding variables: var_id=%d locaton=%d length=%d\n", variables[i].var_id, location, length);
+		bind_input(variables[i].var_id, vm_hop_data + location, length);
 	}
 
 	nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);

@@ -191,10 +191,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 		// Send the request message
 		
 		
-		unsigned int bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
-		unsigned int var_details = 2;
+		uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+		uint8_t var_details = 2;
 		
-		unsigned int packet_size = sizeof(eval_pred_req_t) + bytecode_length + sizeof(var_elem_t) * var_details;
+		unsigned int packet_size = sizeof(eval_pred_req_t) + bytecode_length + (sizeof(var_elem_t) * var_details);
 
 		packetbuf_clear();
 		packetbuf_set_datalen(packet_size);
@@ -213,7 +213,14 @@ PROCESS_THREAD(mainProcess, ev, data)
 		msg_vars[1].hops = 1;
 		msg_vars[1].var_id = 254;
 
-		ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details * sizeof(var_elem_t));
+		ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details);
+
+		if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
+		{
+			printf("Failed to copy data correctly got=%d expected=%d!\n",
+				(void *)(msg_bytecode + bytecode_length) - (void *)msg,
+				packet_size);
+		}
 
 		memcpy(msg_bytecode, program_bytecode, bytecode_length);
 
@@ -269,7 +276,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	static ubyte const * bytecode_instructions;
 	static unsigned int max_hops = 0;
 
-	static node_data_t * vm_hop_data = NULL;
+	static node_data_t * all_neighbour_data = NULL;
 	static unsigned int count = 0;
 
 	PROCESS_EXITHANDLER(goto exit;)
@@ -288,8 +295,8 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Pointer for bytecode variables
 	variables = (var_elem_t const *)(msg + 1);
 
-	//Create a pointer to the bytecode instructions stored in the message.
-	bytecode_instructions = (ubyte const *)(variables + (msg->num_of_bytecode_var * sizeof(var_elem_t)));
+	// Create a pointer to the bytecode instructions stored in the message.
+	bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
 
 	unsigned int i;
 	for (i = 0; i < msg->num_of_bytecode_var; i++)
@@ -324,9 +331,9 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 
 		// Generate array of all the data
-		vm_hop_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
+		all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-		count = 0; // position in vm_hop_data
+		count = 0; // position in all_neighbour_data
 
 		for (i = 0; i < max_hops ; i++)
 		{
@@ -340,7 +347,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 					elem = map_next(elem))
 				{
 					node_data_t * mapdata = (node_data_t *)map_data(&hops_data[i], elem);
-					memcpy(&vm_hop_data[count], mapdata, sizeof(node_data_t));
+					memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
 					count++;
 				}
 			}
@@ -360,7 +367,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	register_function(3, &get_humidity, TYPE_FLOATING);
 
 
-	printf("Binding variables using %p\n", vm_hop_data);
+	printf("Binding variables using %p\n", all_neighbour_data);
 
 	// Bind the variables to the VM
 	for (i = 0; i < msg->num_of_bytecode_var; ++i)
@@ -375,15 +382,8 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		}
 
 		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
-		bind_input(variables[i].var_id, vm_hop_data, length);
+		bind_input(variables[i].var_id, all_neighbour_data, length);
 	}
-
-#if 1
-	if (memcmp(program_bytecode, bytecode_instructions, msg->bytecode_length) != 0)
-	{
-		printf("FML program bytecode got corrupted :(\n");
-	}
-#endif
 
 	nbool evaluation = evaluate(bytecode_instructions, msg->bytecode_length);
 
@@ -406,7 +406,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		map_clear(&hops_data[i]);
 	}
 
-	free(vm_hop_data);
+	free(all_neighbour_data);
 	free(hops_data);
 	free(variables);
 

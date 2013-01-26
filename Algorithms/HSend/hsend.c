@@ -120,7 +120,7 @@ PROCESS(hsendProcess, "HSEND Process");
 // binary bytecode for the VM
 static void trickle_rcv(struct trickle_conn * c)
 {
-	// TODO: might have to copy out packet, if recieving two messages at once
+	// Copy out packet, allows handling multiple evals at once
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
 	eval_pred_req_t * msgcopy = (eval_pred_req_t *)malloc(packetbuf_datalen());
@@ -236,6 +236,10 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	static ubyte const * bytecode_instructions;
 	static unsigned int max_hops = 0;
 
+	static node_data_t * vm_hop_data = NULL;
+	static unsigned int * locations = NULL;
+	static unsigned int count = 0;
+
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
@@ -248,15 +252,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	printf("Wait finished\n");
-
-	//msg.bytecode_length = 50;
-	//msg.num_of_bytecode_var = 2;
-	//rimeaddr_copy(&msg.target, &rimeaddr_node_addr);
-
-	//vars[0] = 2;
-	//vars[1] = 255;
-	//vars[2] = 1;
-	//vars[3] = 254;
 
 	// Pointer for bytecode variables
 	variables = (var_elem_t const *)(msg + 1);
@@ -275,16 +270,16 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		//printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
 	}
 
-	hops_data = (array_list_t *) malloc(sizeof(array_list_t) * max_hops);
-
-	for (i = 0; i < max_hops; i++)
-	{
-		array_list_init(&hops_data[i], &free);
-	}
-
 	// Only ask for data if the predicate needs it
 	if (max_hops != 0)
 	{
+		hops_data = (array_list_t *) malloc(sizeof(array_list_t) * max_hops);
+
+		for (i = 0; i < max_hops; i++)
+		{
+			array_list_init(&hops_data[i], &free);
+		}
+	
 		printf("Starting request for %d hops of data...\n", max_hops);
 
 		nhopreq_request_info(&hc, max_hops);
@@ -294,30 +289,31 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		printf("Finished collecting hop data.\n");
-	}
 
-	// Generate array of all the data
-	node_data_t * vm_hop_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-	unsigned int * locations = malloc(sizeof(unsigned int) * max_hops); 
-	unsigned int count = 0; // position in vm_hop_data
+		// Generate array of all the data
+		vm_hop_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-	for (i = 0; i < max_hops ; i++)
-	{
-		if (array_list_length(&hops_data[i]) > 0)
+		locations = malloc(sizeof(unsigned int) * max_hops); 
+		count = 0; // position in vm_hop_data
+
+		for (i = 0; i < max_hops ; i++)
 		{
-			array_list_elem_t elem;
-			for (elem = array_list_first(&hops_data[i]); 
-				array_list_continue(&hops_data[i], elem); 
-				elem = array_list_next(elem))
+			if (array_list_length(&hops_data[i]) > 0)
 			{
-				memcpy(&vm_hop_data[count], array_list_data(&hops_data[i], elem), sizeof(node_data_t));
-				count++;
+				array_list_elem_t elem;
+				for (elem = array_list_first(&hops_data[i]); 
+					array_list_continue(&hops_data[i], elem); 
+					elem = array_list_next(elem))
+				{
+					memcpy(&vm_hop_data[count], array_list_data(&hops_data[i], elem), sizeof(node_data_t));
+					count++;
+				}
+
+				locations[i] = count - 1;
+
+				printf("%s, locations: %d Count:%d\n", array_list_clear(&hops_data[i]) ? "Cleared": "Not", locations[i], count);
 			}
-
-			locations[i] = count - 1;
-
-			printf("%s, locations: %d Count:%d\n", array_list_clear(&hops_data[i]) ? "Cleared": "Not", locations[i], count);
 		}
 	}
 
@@ -335,7 +331,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Bind the variables to the VM
 	for (i = 0; i < msg->num_of_bytecode_var; ++i)
 	{
-		//printf("var_id: %d locaton: %d\n",variables[i].var_id,locations[variables[i].hops-1]);
+		printf("Binding variables: var_id=%d locaton=%d\n",variables[i].var_id,locations[variables[i].hops-1]);
 		bind_input(variables[i].var_id, &vm_hop_data, locations[variables[i].hops - 1]);
 	}
 
@@ -345,11 +341,11 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// TODO: Send data back to sink
 	if (evaluation)
 	{
-		printf("%s\n", "Pred: TRUE");
+		printf("Pred: TRUE\n");
 	}
 	else
 	{
-		printf("%s\n%s\n", "Pred: FAILED", error_message());
+		printf("Pred: FAILED due to error: %s\n", error_message());
 	}
 
 	free(msg);

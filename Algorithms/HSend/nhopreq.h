@@ -5,7 +5,7 @@
 #include "net/rime/stbroadcast.h"
 #include "net/rime/runicast.h"
 
-#include "array-list.h"
+#include "map.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -27,7 +27,7 @@ typedef struct
 	data_generation_fn data_fn;
 	data_receive_fn receive_fn;
 
-	array_list_t message_list;
+	map_t messages;
 
 } nhopreq_conn_t;
 

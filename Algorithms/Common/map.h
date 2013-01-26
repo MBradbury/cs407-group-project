@@ -26,6 +26,10 @@ map_elem_t map_next(map_elem_t elem);
 bool map_continue(map_t const * map, map_elem_t elem);
 void * map_data(map_t const * map, map_elem_t elem);
 
+// It is recommended that the data structure being used has the key
+// as the first item. This allows using map_get with the key directly
+// rather than needed to create a temporary key object first.
+
 // Iteration example:
 // map_t map;
 // map_elem_t elem;

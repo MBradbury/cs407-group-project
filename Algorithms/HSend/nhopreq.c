@@ -16,25 +16,26 @@
 // Struct for the list elements, used to see if messages have already been sent
 typedef struct
 {
-	rimeaddr_t originator;
 	uint8_t message_id;
 	uint8_t hops;
+	rimeaddr_t originator;
+	
 } list_elem_t;
 
 // Struct used to ask other nodes for predicate values
 typedef struct
 {
-	rimeaddr_t originator;
 	uint8_t message_id;
 	uint8_t hop_limit;
+	rimeaddr_t originator;
 } req_data_msg_t;
 
 // Struct to send back to the originator with the value of a predicate
 typedef struct
 {
+	uint8_t message_id;
 	rimeaddr_t sender;
 	rimeaddr_t target_receiver;
-	uint8_t message_id;
 	// After this point the user generated data will be contained
 } return_data_msg_t;
 
@@ -99,8 +100,7 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	bool respond = false;
 
 	// Check message has not been received before
-	list_elem_t key; key.message_id = msg->message_id;
-	list_elem_t * data = (list_elem_t *)map_get(&hc->messages, &key);
+	list_elem_t * data = (list_elem_t *)map_get(&hc->messages, &msg->message_id);
 
 	// Message has been delivered before
 	if (data != NULL)
@@ -193,8 +193,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	return_data_msg_t * msg = (return_data_msg_t *)tmpBuffer;
 	void * msgdata = (void *)(msg + 1);
 
-	list_elem_t key; key.message_id = msg->message_id;
-	list_elem_t * data = (list_elem_t *)map_get(&conn->messages, &key);
+	list_elem_t * data = (list_elem_t *)map_get(&conn->messages, &msg->message_id);
 
 	if (data != NULL)
 	{
@@ -248,8 +247,7 @@ static void delayed_reply_data(void * ptr)
 	delayed_reply_data_params_t * p =
 		(delayed_reply_data_params_t *)ptr;
 
-	list_elem_t key; key.message_id = p->message_id;
-	list_elem_t * data = (list_elem_t *)map_get(&p->conn->messages, &key);
+	list_elem_t * data = (list_elem_t *)map_get(&p->conn->messages, &p->message_id);
 
 	if (data != NULL)
 	{

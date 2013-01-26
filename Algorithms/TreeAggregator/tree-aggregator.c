@@ -36,10 +36,10 @@ static inline tree_agg_conn_t * conncvt_unicast(struct unicast_conn * conn)
 }
 
 
-
-static inline bool is_sink(tree_agg_conn_t * conn)
+static inline bool is_sink(tree_agg_conn_t const * conn)
 {
-	return rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr) != 0;
+	return conn != NULL &&
+		rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr);
 }
 
 
@@ -166,13 +166,13 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 		// Apply some aggregation function
 		if (tree_agg_is_collecting(conn))
 		{
-			printf("Cont Agg With:%s\n", addr2str(originator));
+			printf("Cont Agg With: %s\n", addr2str(originator));
 
 			(*conn->callbacks.aggregate_update)(conn->data, msg);
 		}
 		else
 		{
-			printf("Star Agg Addr:%s\n", addr2str(originator));
+			printf("Start Agg Addr: %s\n", addr2str(originator));
 
 			// We need to copy the users data into our memory,
 			// So we can apply future aggregtions to it.
@@ -188,7 +188,7 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 	}
 }
 
-static void unicast_sent(struct unicast_conn *c, int status, int num_tx)
+static void unicast_sent(struct unicast_conn * c, int status, int num_tx)
 {
 	printf("unicast sent status:%d numtx:%d\n", status, num_tx);
 }
@@ -231,9 +231,12 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	// it came from, if it is closer to the sink.
 	if (msg->hop_count < conn->collecting_best_hop)
 	{
+		char firstaddr[RIMEADDR_STRING_LENGTH];
+		char secondaddr[RIMEADDR_STRING_LENGTH];
+
 		printf("Updating to a better parent (%s H:%u) was:(%s H:%u)\n",
-			addr2str(&msg->source), msg->hop_count,
-			addr2str(&conn->collecting_best_parent), conn->collecting_best_hop
+			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), msg->hop_count,
+			addr2str_r(&conn->collecting_best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->collecting_best_hop
 		);
 
 		// Set the best parent, and the hop count of that node
@@ -497,8 +500,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 		// Read the data from the temp and humidity sensors
 		SENSORS_ACTIVATE(sht11_sensor);
-		unsigned raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-		unsigned raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
 

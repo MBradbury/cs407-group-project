@@ -45,7 +45,8 @@ static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 {
 }
 
-static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks = { &neighbor_discovery_recv, &neighbor_discovery_sent };
+static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
+	{ &neighbor_discovery_recv, &neighbor_discovery_sent };
 
 void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 {

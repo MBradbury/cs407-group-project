@@ -167,46 +167,45 @@ PROCESS_THREAD(mainProcess, ev, data)
 	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr)) // Sink
 	{
 		printf("Is the base station!\n");
+
+		// Send the request message
 		
 		static ubyte const bytecode_instructions[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 
 		unsigned int bytecode_length = sizeof(bytecode_instructions)/sizeof(bytecode_instructions[0]);
 		unsigned int var_details = 2;
+		
+		unsigned int packet_size = sizeof(eval_pred_req_t) + bytecode_length + sizeof(var_elem_t) * var_details;
 
-		//process_start(&hsendProcess, NULL);
+		packetbuf_clear();
+		packetbuf_set_datalen(packet_size);
+		debug_packet_size(packet_size);
+		eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+		memset(msg, 0, packet_size);
+
+		rimeaddr_copy(&msg->target, &destination);
+		msg->bytecode_length = bytecode_length;
+		msg->num_of_bytecode_var = var_details;
+
+		var_elem_t * msg_vars = (var_elem_t *)(msg + 1);
+
+		msg_vars[0].hops = 2;
+		msg_vars[0].var_id = 255;
+		msg_vars[1].hops = 1;
+		msg_vars[1].var_id = 254;
+
+		ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details * sizeof(var_elem_t));
+
+		memcpy(msg_bytecode, bytecode_instructions, bytecode_length);
+
+		trickle_send(&tc);
+
 
 		leds_on(LEDS_BLUE);
 
 		while (true)
 		{
-			// Send the request message
-			
-			unsigned int packet_size = sizeof(eval_pred_req_t) + bytecode_length + sizeof(var_elem_t) * var_details;
-
-			packetbuf_clear();
-			packetbuf_set_datalen(packet_size);
-			debug_packet_size(packet_size);
-			eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
-			memset(msg, 0, packet_size);
-
-			rimeaddr_copy(&msg->target, &destination);
-			msg->bytecode_length = bytecode_length;
-			msg->num_of_bytecode_var = var_details;
-
-			var_elem_t * msg_vars = (var_elem_t *)(msg + 1);
-
-			msg_vars[0].hops = 2;
-			msg_vars[0].var_id = 255;
-			msg_vars[1].hops = 1;
-			msg_vars[1].var_id = 254;
-
-			ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details * sizeof(var_elem_t));
-
-			memcpy(msg_bytecode, bytecode_instructions, bytecode_length);
-
-			trickle_send(&tc);
-
-			etimer_set(&et, 10 * 60 * CLOCK_SECOND);
+			etimer_set(&et, 10 * CLOCK_SECOND);
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		}
 	}

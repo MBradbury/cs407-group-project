@@ -86,7 +86,6 @@ static void list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 	
 	size_t i = 0;
 	unique_array_elem_t elem;
-
 	for (elem = unique_array_first(data); unique_array_continue(data, elem); elem = unique_array_next(elem))
 	{
 		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(data, elem);
@@ -144,9 +143,12 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
 	
 	rimeaddr_t const * ap = (rimeaddr_t const *)(data_to_apply + 1);
+
 	unsigned int i;
 	for (i = 0; i < data_to_apply->length; i += 2)
 	{
+		// Check if the address pair is the the array before
+		// allocating memory
 		if (!unique_array_contains(data, &ap[i]))
 		{
 			rimeaddr_pair_t * pair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
@@ -168,6 +170,8 @@ static void tree_aggregate_own(void * ptr)
 	{
 		rimeaddr_t * to = (rimeaddr_t *) unique_array_data(&one_hop_neighbours, elem);
 
+		// Allocate a static pair to avoid doing malloc
+		// if the pair is already in the list
 		rimeaddr_pair_t pair;
 		rimeaddr_copy(&pair.first, &rimeaddr_node_addr);
 		rimeaddr_copy(&pair.second, to);
@@ -206,7 +210,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 {
-	unique_array_t * data_array = (unique_array_t *)conn->data;
+	unique_array_t const * data_array = (unique_array_t *)conn->data;
 
 	printf("Writing: ");
 	print_ua_rimeaddr_pair(data_array);
@@ -227,7 +231,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(data_array); unique_array_continue(data_array, elem); elem = unique_array_next(elem))
 	{
-		rimeaddr_pair_t * to = (rimeaddr_pair_t *) unique_array_data(data_array, elem);
+		rimeaddr_pair_t const * to = (rimeaddr_pair_t *)unique_array_data(data_array, elem);
 
 		rimeaddr_copy(&msgpairs[i].first, &to->first);
 		rimeaddr_copy(&msgpairs[i].second, &to->second);
@@ -259,8 +263,8 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 	
 	start_neighbour_detect(&one_hop_neighbours, 150);
 	
-	// Wait 2 minutes to collects neighbour info
-	etimer_set(&et, 120 * CLOCK_SECOND);
+	// Wait 3 minutes to collects neighbour info
+	etimer_set(&et, 3 * 60 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	stop_neighbour_detect();
@@ -274,7 +278,6 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 
 PROCESS_THREAD(neighbour_agg_send_data_process, ev, data)
 {
-	static rimeaddr_t sink;
 	static struct etimer et;
 
 	PROCESS_BEGIN();

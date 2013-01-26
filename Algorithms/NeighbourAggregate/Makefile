@@ -6,7 +6,7 @@ all: $(CONTIKI_PROJECT)
 
 TARGET = sky
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourDetect
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/TreeAggregator
 PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=

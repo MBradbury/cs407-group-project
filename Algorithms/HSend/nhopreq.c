@@ -84,9 +84,11 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	nhopreq_conn_t * hc = conncvt_stbcast(c);
 
 	// Copy Packet Buffer To Memory
+	// We need a copy as later on we will be sending a message
+	// which will overwrite the packetbuf which we still need.
 	char tmpBuffer[PACKETBUF_SIZE];
 	packetbuf_copyto(tmpBuffer);
-	req_data_msg_t * msg = (req_data_msg_t *)tmpBuffer;
+	req_data_msg_t const * msg = (req_data_msg_t *)tmpBuffer;
 
 	//  printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n",
 	//	  addr2str(&msg->originator),
@@ -166,7 +168,7 @@ static void stbroadcast_sent(struct stbroadcast_conn *c)
 	//printf("I've sent!\n");
 }
 
-static void stbroadcast_callback_cancel(void *ptr)
+static void stbroadcast_callback_cancel(void * ptr)
 {
 	nhopreq_conn_t * conn = (nhopreq_conn_t *)ptr;
 
@@ -190,6 +192,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	char tmpBuffer[PACKETBUF_SIZE];
 	packetbuf_copyto(tmpBuffer);
 	return_data_msg_t * msg = (return_data_msg_t *)tmpBuffer;
+	void * msgdata = (void *)(msg + 1);
 
 	array_list_elem_t elem;
 	for (elem = array_list_first(&conn->message_list); array_list_continue(&conn->message_list, elem); elem = array_list_next(elem))
@@ -205,7 +208,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 				// so provide it to the upper layer
 				(*conn->receive_fn)(
 					&msg->sender, data->hops,
-					((char *)msg) + sizeof(return_data_msg_t)
+					msgdata
 				);
 			}
 			else
@@ -217,7 +220,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 										 &msg->sender, // Source
 										 &data->originator, // Destination
 										 data->message_id,
-										 ((char *)msg) + sizeof(return_data_msg_t)
+										 msgdata
 										);
 			}
 			break;
@@ -281,7 +284,7 @@ delayed_forward_evaluated_predicate(void * ptr)
 	delayed_forward_evaluated_predicate_params_t * p =
 		(delayed_forward_evaluated_predicate_params_t *)ptr;
 
-	void * data_dest = ((char *)p) + sizeof(delayed_forward_evaluated_predicate_params_t);
+	void const * data_dest = (void *)(p + 1);
 
 	send_evaluated_predicate(p->conn,
 		&p->msg.sender, &p->msg.target_receiver,
@@ -310,7 +313,7 @@ send_evaluated_predicate(
 
 		p->conn = hc;
 
-		void * data_dest = ((char *)p) + sizeof(delayed_forward_evaluated_predicate_params_t);
+		void * data_dest = (void *)(p + 1);
 
 		if (data == NULL)
 		{
@@ -340,7 +343,7 @@ send_evaluated_predicate(
 		rimeaddr_copy(&msg->target_receiver, target_receiver);
 		msg->message_id = message_id;
 
-		void * data_dest = ((char *)msg) + sizeof(return_data_msg_t);
+		void * data_dest = (void *)(msg + 1);
 
 		if (data == NULL)
 		{

@@ -16,7 +16,7 @@
 #include "predlang.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-#include "array-list.h"
+#include "map.h"
 
 // Struct for the list of node_data. It contains owner_addr, temperature and humidity. 
 typedef struct
@@ -81,7 +81,7 @@ static void node_data(void * data)
 /// End VM Helper Functions
 ///
 
-static array_list_t * hops_data = NULL;
+static map_t * hops_data = NULL;
 
 // Count the number of elements added to each of the lists
 static unsigned int max_size = 0;
@@ -89,8 +89,7 @@ static unsigned int max_size = 0;
 
 static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
 {
-	node_data_t * nd = (node_data_t *)malloc(sizeof(node_data_t));
-	memcpy(nd, data, sizeof(node_data_t));
+	node_data_t const * nd = (node_data_t const *)data;
 
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
@@ -101,8 +100,24 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 		hops,
 		(int)nd->temp, (int)nd->humidity);
 
-	array_list_append(&hops_data[hops - 1], nd);
-	max_size++;
+
+	map_t * map = &hops_data[hops - 1];
+
+	// Check that we have not previously received data from this node before
+	node_data_t * stored = (node_data_t *)map_get(map, from);
+	
+	if (stored != NULL)
+	{
+		memcpy(stored, nd, sizeof(node_data_t));
+	}
+	else
+	{
+		stored = (node_data_t *)malloc(sizeof(node_data_t));
+		memcpy(stored, nd, sizeof(node_data_t));
+
+		map_put(map, stored);
+		max_size++;
+	}
 }
 
 
@@ -228,6 +243,18 @@ exit:
 }
 
 
+static bool rimeaddr_equal_node_data(void const * left, void const * right)
+{
+	if (left == NULL || right == NULL)
+		return false;
+
+	node_data_t const * l = (node_data_t const *)left;
+	node_data_t const * r = (node_data_t const *)right;
+
+	return rimeaddr_cmp(&l->addr, &r->addr);
+}
+
+
 PROCESS_THREAD(hsendProcess, ev, data)
 {
 	static struct etimer et;
@@ -272,11 +299,11 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Only ask for data if the predicate needs it
 	if (max_hops != 0)
 	{
-		hops_data = (array_list_t *) malloc(sizeof(array_list_t) * max_hops);
+		hops_data = (map_t *) malloc(sizeof(map_t) * max_hops);
 
 		for (i = 0; i < max_hops; i++)
 		{
-			array_list_init(&hops_data[i], &free);
+			map_init(&hops_data[i], &rimeaddr_equal_node_data, &free);
 		}
 	
 		printf("Starting request for %d hops of data...\n", max_hops);
@@ -297,16 +324,16 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 		for (i = 0; i < max_hops ; i++)
 		{
-			unsigned int length = array_list_length(&hops_data[i]);
+			unsigned int length = map_length(&hops_data[i]);
 
 			if (length > 0)
 			{
-				array_list_elem_t elem;
-				for (elem = array_list_first(&hops_data[i]); 
-					array_list_continue(&hops_data[i], elem); 
-					elem = array_list_next(elem))
+				map_elem_t elem;
+				for (elem = map_first(&hops_data[i]); 
+					map_continue(&hops_data[i], elem); 
+					elem = map_next(elem))
 				{
-					node_data_t * data = (node_data_t *)array_list_data(&hops_data[i], elem);
+					node_data_t * data = (node_data_t *)map_data(&hops_data[i], elem);
 					memcpy(&vm_hop_data[count], data, sizeof(node_data_t));
 					count++;
 				}
@@ -338,7 +365,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		unsigned int j;
 		for (j = 0; j < variables[i].hops; ++j)
 		{
-			length += array_list_length(&hops_data[j]);
+			length += map_length(&hops_data[j]);
 		}
 
 		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
@@ -363,7 +390,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	// Free all the lists
 	for (i = 0; i < max_hops; i++)
 	{
-		array_list_clear(&hops_data[i]);
+		map_clear(&hops_data[i]);
 	}
 
 	free(vm_hop_data);

@@ -327,7 +327,7 @@ static variable_reg_t * get_variable(variable_id_t id)
 		}
 	}
 
-	snprintf(error, ERROR_MESSAGE_LENGTH, "No variable with the given id exists");
+	snprintf(error, ERROR_MESSAGE_LENGTH, "No variable with the given id=%u exists", id);
 	DEBUG_PRINT("========%s=====%u===\n", error, id);
 
 	return NULL;

@@ -15,6 +15,7 @@
 #include "dev/sht11-sensor.h"
 
 #include "dev/leds.h"
+#include "dev/cc2420.h"
 
 #include "tree-aggregator.h"
 #include "neighbour-detect.h"
@@ -258,11 +259,15 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 
 	PROCESS_BEGIN();
 
+	cc2420_set_txpower(2);
+
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 	
 	start_neighbour_detect(&one_hop_neighbours, 150);
 	
+	//rimeaddr_set_node_addr(&sink);
+
 	// Wait 3 minutes to collects neighbour info
 	etimer_set(&et, 3 * 60 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

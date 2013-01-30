@@ -107,6 +107,8 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
+	printf("Tree Agg: Recv\n");
+
 	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
 
 	unsigned int length = msg->length;
@@ -132,8 +134,12 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 {
+	printf("Tree Agg: Setup finsihed\n");
+
 	if (tree_agg_is_leaf(conn))
 	{
+		printf("Tree Agg: Is leaf starting data aggregation\n");
+
 		process_start(&neighbour_agg_send_data_process, NULL);
 	}
 }
@@ -141,6 +147,8 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 static void tree_aggregate_update(void * voiddata, void const * to_apply)
 {
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
+
+	printf("Tree Agg: Update local data\n");
 
 	unique_array_t * data = (unique_array_t *)voiddata;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
@@ -166,6 +174,8 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 // Add our own one hop data to the list
 static void tree_aggregate_own(void * ptr)
 {
+	printf("Tree Agg: Update local data with own data\n");
+
 	unique_array_t * conn_list = (unique_array_t *)ptr;
 
 	unique_array_elem_t elem;
@@ -191,6 +201,8 @@ static void tree_aggregate_own(void * ptr)
 
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
+	printf("Tree Agg: Store packet\n");
+
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 	
 	rimeaddr_pair_t const * neighbours = (rimeaddr_pair_t const *)(msg + 1);

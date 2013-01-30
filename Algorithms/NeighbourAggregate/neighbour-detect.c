@@ -41,11 +41,14 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 		}
 	}
 
+	printf("Neighbour Discovery: got addr seen before from: %s\n", addr2str(from));
+
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 }
 
 static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 {
+	printf("Neighbour Discovery: sent message\n");
 }
 
 static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
@@ -53,6 +56,8 @@ static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
 
 void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 {
+	printf("Neighbour Discovery: Started!\n");
+
 	unique_array_init(results, &rimeaddr_equality, &free);
 
 	results_ptr = results;
@@ -73,6 +78,8 @@ void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 
 void stop_neighbour_detect(void)
 {
+	printf("Neighbour Discovery: Stopped!\n");
+
 	neighbor_discovery_close(&nd);
 	results_ptr = NULL;
 

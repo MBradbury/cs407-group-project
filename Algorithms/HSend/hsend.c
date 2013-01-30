@@ -195,6 +195,8 @@ static void trickle_rcv(struct trickle_conn * c)
 		eval_pred_req_t * msgcopy = (eval_pred_req_t *)malloc(packetbuf_datalen());
 		memcpy(msgcopy, msg, packetbuf_datalen());
 
+		leds_on(LEDS_RED);
+		leds_off(LEDS_GREEN);
 		// Start HSEND
 		printf("Got message, starting evaluation!\n");
 		process_start(&hsendProcess, msgcopy);
@@ -221,9 +223,12 @@ PROCESS_THREAD(mainProcess, ev, data)
 	baseStationAddr.u8[0] = 1;
 	baseStationAddr.u8[1] = 0;
 
+
 	// Set the predicate evaluation target
 	destination.u8[0] = 10;
 	destination.u8[1] = 0;
+
+	rimeaddr_set_node_addr(&destination);
 
 	trickle_open(&tc, trickle_interval, 121, &callbacks);
 
@@ -237,8 +242,6 @@ PROCESS_THREAD(mainProcess, ev, data)
 		printf("Is the base station!\n");
 
 		// Send the request message
-		
-		
 		uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
 		uint8_t var_details = 2;
 		
@@ -375,10 +378,10 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	msg = (eval_pred_req_t const *)data;
 	
-	printf("HSEND Process Started\n");
+	printf("HSEND Process Started. Waiting.\n");
 
 	//Wait for other nodes to initialize.
-	etimer_set(&et, 10 * CLOCK_SECOND);
+	etimer_set(&et, 20 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	printf("Wait finished\n");
@@ -400,7 +403,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		nhopreq_request_info(&hc, max_hops);
 	
 		// Get as much information as possible within a given time bound
-		etimer_set(&et, 45 * CLOCK_SECOND);
+		etimer_set(&et, 120 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		printf("Finished collecting hop data.\n");

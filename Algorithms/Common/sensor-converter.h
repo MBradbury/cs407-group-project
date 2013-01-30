@@ -7,5 +7,11 @@ double sht11_temperature(int raw);
 
 double battery_voltage(int raw);
 
+/* Photosynthetically Active Radiation in Lux. */
+double s1087_light1(int raw);
+
+/* Total Solar Radiation in Lux. */
+double s1087_light2(int raw);
+
 #endif
 

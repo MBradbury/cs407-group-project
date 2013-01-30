@@ -1,5 +1,7 @@
 #include "sensor-converter.h"
 
+#include <stdint.h>
+
 double sht11_relative_humidity(int raw)
 {
 	// FROM:
@@ -62,4 +64,24 @@ double battery_voltage(int raw)
 {
 	return (raw * 2.500 * 2.0) / 4096;
 }
+
+
+/* Photosynthetically Active Radiation in Lux units. */
+/** From: https://github.com/ibr-alg/wiselib/blob/master/wiselib.testing/external_interface/contiki/contiki_sky_light_sensor.h */
+double s1087_light1(int raw)
+{
+	uint32_t temp = (uint32_t)raw;
+	temp = (temp * 3125) >> 9; 
+	return (uint16_t)(temp & 0xFFFF);
+}
+
+/* Total Solar Radiation in Lux */
+double s1087_light2(int raw)
+{
+	uint32_t temp = (uint32_t)raw;
+	temp = (temp * 625) >> 10; 
+	return (uint16_t)(temp & 0xFFFF);
+}
+
+
 

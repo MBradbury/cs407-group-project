@@ -6,11 +6,11 @@
 
 #include "contiki.h"
 
-#include "dev/leds.h"
-#include "dev/sht11.h"
-#include "dev/sht11-sensor.h"
-#include "lib/sensors.h"
 #include "net/rime.h"
+
+#include "dev/leds.h"
+#include "dev/sht11-sensor.h"
+#include "dev/light-sensor.h"
 
 #include "nhopreq.h"
 #include "predlang.h"
@@ -31,6 +31,8 @@ typedef struct
 	rimeaddr_t addr;
 	nfloat temp;
 	nfloat humidity;
+	nfloat light1;
+	nfloat light2;
 } node_data_t;
 
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
@@ -82,6 +84,14 @@ static void node_data(void * data)
 
 		nd->temp = sht11_temperature(raw_temperature);
 		nd->humidity = sht11_relative_humidity_compensated(raw_humidity, nd->temp);
+
+		SENSORS_ACTIVATE(light_sensor);
+		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+		SENSORS_DEACTIVATE(sht11_sensor);
+
+		nd->light1 = s1087_light1(raw_light1);
+		nd->light2 = s1087_light1(raw_light2);
 	}
 }
 ///
@@ -479,6 +489,4 @@ exit:
 	printf("Exiting HSEND Process...\n");
 	PROCESS_END();
 }
-
-
 

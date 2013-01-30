@@ -5,9 +5,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "lib/sensors.h"
-#include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
+#include "dev/light-sensor.h"
 
 #include "net/netstack.h"
 #include "net/rime.h"
@@ -20,7 +19,6 @@
 #include "debug-helper.h"
 
 #include "tree-aggregator.h"
-
 
 
 static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
@@ -402,6 +400,8 @@ typedef struct
 {
 	double temperature;
 	double humidity;
+	double light1;
+	double light2;
 } collect_msg_t;
 
 
@@ -415,9 +415,9 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
 	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
 
-	printf("Tree Agg: Sink rcv: Src:%s Temp:%d Hudmid:%d%%\n",
+	printf("Tree Agg: Sink rcv: Src:%s Temp:%d Hudmid:%d%% Light1:%d Light2:%d\n",
 			addr2str(source),
-			(int)msg->temperature, (int)msg->humidity
+			(int)msg->temperature, (int)msg->humidity, (int)msg->light1, (int)msg->light2
 	);
 }
 
@@ -439,6 +439,12 @@ static void tree_aggregate_update(void * data, void const * to_apply)
 
 	our_data->temperature /= 2.0;
 	our_data->humidity /= 2.0;
+
+	our_data->light1 += data_to_apply->light1;
+	our_data->light2 += data_to_apply->light2;
+
+	our_data->light1 /= 2.0;
+	our_data->light2 /= 2.0;
 }
 
 static void tree_aggregate_own(void * ptr)
@@ -452,6 +458,14 @@ static void tree_aggregate_own(void * ptr)
 
 	data.temperature = sht11_temperature(raw_temperature);
 	data.humidity = sht11_relative_humidity_compensated(raw_humidity, data.temperature);
+
+	SENSORS_ACTIVATE(light_sensor);
+	int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+	int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+	SENSORS_DEACTIVATE(sht11_sensor);
+
+	data.light1 = s1087_light1(raw_light1);
+	data.light2 = s1087_light1(raw_light2);
 
 	tree_aggregate_update(ptr, &data);
 }
@@ -519,6 +533,10 @@ PROCESS_THREAD(send_data_process, ev, data)
 		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
+		SENSORS_ACTIVATE(light_sensor);
+		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+		SENSORS_DEACTIVATE(sht11_sensor);
 
 		// Create the data message that we are going to send
 		packetbuf_clear();
@@ -529,6 +547,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
+		msg->light1 = s1087_light1(raw_light1);
+		msg->light2 = s1087_light1(raw_light2);
 		
 		tree_agg_send(&conn);
 

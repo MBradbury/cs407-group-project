@@ -3,7 +3,6 @@
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
-#include "net/rime/unicast.h"
 #include "contiki-net.h"
 
 #include <stdio.h>

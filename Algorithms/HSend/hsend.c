@@ -228,7 +228,9 @@ PROCESS_THREAD(mainProcess, ev, data)
 	destination.u8[0] = 10;
 	destination.u8[1] = 0;
 
+#ifdef IS_DESTINATION
 	rimeaddr_set_node_addr(&destination);
+#endif
 
 	trickle_open(&tc, trickle_interval, 121, &callbacks);
 

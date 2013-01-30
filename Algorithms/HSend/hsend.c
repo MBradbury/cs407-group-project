@@ -18,6 +18,13 @@
 #include "debug-helper.h"
 #include "map.h"
 
+// The custom trickle header we use
+static const struct packetbuf_attrlist trickle_attributes[] = {
+	{ PACKETBUF_ADDR_ERECEIVER, PACKETBUF_ADDRSIZE },
+	TRICKLE_ATTRIBUTES
+    PACKETBUF_ATTR_LAST
+};
+
 // Struct for the list of node_data. It contains owner_addr, temperature and humidity. 
 typedef struct
 {
@@ -37,9 +44,8 @@ typedef struct
 typedef struct 
 {
 	uint8_t predicate_id;
-	rimeaddr_t target;
-	uint8_t bytecode_length; //length of the bytecode_instructions, located after the struct
-	uint8_t num_of_bytecode_var; //number of variables after the struct
+	uint8_t bytecode_length; // length of the bytecode_instructions, located after the struct
+	uint8_t num_of_bytecode_var; // number of variables after the struct
 } eval_pred_req_t;
 
 ///
@@ -187,10 +193,13 @@ static void trickle_rcv(struct trickle_conn * c)
 	// Copy out packet, allows handling multiple evals at once
 	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
+	// Get eventual destination from header
+	rimeaddr_t const * target = packetbuf_addr(PACKETBUF_ADDR_ERECEIVER);
+
 	//printf("Rcv packet length %d\n", packetbuf_datalen());
 		
-	if (rimeaddr_cmp(&msg->target, &rimeaddr_null) ||		// Send to all
-		rimeaddr_cmp(&msg->target, &rimeaddr_node_addr)) 	// We are the target
+	if (rimeaddr_cmp(target, &rimeaddr_null) ||		// Send to all
+		rimeaddr_cmp(target, &rimeaddr_node_addr)) 	// We are the target
 	{
 		eval_pred_req_t * msgcopy = (eval_pred_req_t *)malloc(packetbuf_datalen());
 		memcpy(msgcopy, msg, packetbuf_datalen());
@@ -223,7 +232,6 @@ PROCESS_THREAD(mainProcess, ev, data)
 	baseStationAddr.u8[0] = 1;
 	baseStationAddr.u8[1] = 0;
 
-
 	// Set the predicate evaluation target
 	destination.u8[0] = 10;
 	destination.u8[1] = 0;
@@ -233,6 +241,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 #endif
 
 	trickle_open(&tc, trickle_interval, 121, &callbacks);
+	channel_set_attributes(121, trickle_attributes);
 
 	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
 	{
@@ -255,8 +264,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 		eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
 		memset(msg, 0, packet_size);
 
+		// Set eventual destination in header
+		packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, &destination);
+
 		msg->predicate_id = 0;
-		rimeaddr_copy(&msg->target, &destination);
 		msg->bytecode_length = bytecode_length;
 		msg->num_of_bytecode_var = var_details;
 

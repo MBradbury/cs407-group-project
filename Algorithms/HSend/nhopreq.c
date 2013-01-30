@@ -92,11 +92,11 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	packetbuf_copyto(tmpBuffer);
 	req_data_msg_t const * msg = (req_data_msg_t *)tmpBuffer;
 
-	//  printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n",
-	//	  addr2str(&msg->originator),
-	//	  msg->predicate_to_check,
-	//	  msg->hop_limit,
-	//	  msg->message_id);
+	printf("I just recieved a Stubborn Broadcast Message! Originator: %s Message: %s Hop: %d Message ID: %d\n",
+		addr2str(&msg->originator),
+		msg->predicate_to_check,
+		msg->hop_limit,
+		msg->message_id);
 
 	bool respond = false;
 
@@ -106,7 +106,7 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	// Message has been delivered before
 	if (data != NULL)
 	{
-		//printf("Seen message with %d before.\n", msg->message_id);
+		printf("Seen message with %d before.\n", msg->message_id);
 
 		// If the new message has a higher hop count
 		if (msg->hop_limit > data->hops)
@@ -124,7 +124,7 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	// Message has NOT been delivered before
 	else
 	{
-		//printf("Not seen message with %d before.\n", msg->message_id);
+		printf("Not seen message with %d before.\n", msg->message_id);
 
 		data = (list_elem_t *)malloc(sizeof(list_elem_t));
 
@@ -183,7 +183,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 {
 	nhopreq_conn_t * conn = conncvt_runicast(c);
 
-	//printf("runicast received from %s\n", addr2str(from));
+	printf("runicast received from %s\n", addr2str(from));
 
 	// When recieve message, forward the message on to the originator
 	// if the final originator, do something with the value

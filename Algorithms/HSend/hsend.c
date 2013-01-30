@@ -206,6 +206,7 @@ static void trickle_rcv(struct trickle_conn * c)
 
 		leds_on(LEDS_RED);
 		leds_off(LEDS_GREEN);
+
 		// Start HSEND
 		printf("Got message, starting evaluation!\n");
 		process_start(&hsendProcess, msgcopy);
@@ -280,6 +281,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 		ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details);
 
+		// Debug check to make sure that we have done sane things!
 		if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
 		{
 			printf("Failed to copy data correctly got=%d expected=%d!\n",

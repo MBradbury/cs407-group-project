@@ -39,6 +39,8 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 			printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
 		}
 	}
+
+	leds_toggle(LEDS_BLUE);
 }
 
 static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
@@ -64,11 +66,15 @@ void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 	);
 
     neighbor_discovery_start(&nd, 1);
+
+	leds_on(LEDS_BLUE);
 }
 
 void stop_neighbour_detect(void)
 {
 	neighbor_discovery_close(&nd);
 	results_ptr = NULL;
+
+	leds_off(LEDS_BLUE);
 }
 

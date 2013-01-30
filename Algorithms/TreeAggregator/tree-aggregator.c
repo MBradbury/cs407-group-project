@@ -196,6 +196,8 @@ static void unicast_sent(struct unicast_conn * c, int status, int num_tx)
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
 {
+	leds_toggle(LEDS_BLUE);
+
 	tree_agg_conn_t * conn = conncvt_stbcast(ptr);
 
 	setup_tree_msg_t const * msg = (setup_tree_msg_t const *)packetbuf_dataptr();
@@ -270,7 +272,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 {
 	tree_agg_conn_t * conn = (tree_agg_conn_t *)ptr;
 
-	leds_on(LEDS_YELLOW);
+	leds_on(LEDS_BLUE);
 
 	// Send the first message that will be used to set up the
 	// aggregation tree
@@ -496,6 +498,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 	// Only leaf nodes send these messages
 	while (tree_agg_is_leaf(&conn))
 	{
+		leds_on(LEDS_BLUE);
+
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		// Read the data from the temp and humidity sensors
@@ -518,6 +522,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 		tree_agg_send(&conn);
 
 		etimer_reset(&et);
+
+		leds_off(LEDS_BLUE);
 	}
 
 	PROCESS_END();

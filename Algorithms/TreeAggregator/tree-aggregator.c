@@ -9,14 +9,13 @@
 #include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
 
-#include "dev/leds.h"
-
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
 #include "net/rime/unicast.h"
 #include "contiki-net.h"
 
+#include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
@@ -196,7 +195,7 @@ static void unicast_sent(struct unicast_conn * c, int status, int num_tx)
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
 {
-	leds_toggle(LEDS_BLUE);
+	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
 	tree_agg_conn_t * conn = conncvt_stbcast(ptr);
 

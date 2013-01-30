@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "led-helper.h"
 #include "debug-helper.h"
 
 static struct neighbor_discovery_conn nd;
@@ -40,7 +41,7 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 		}
 	}
 
-	leds_toggle(LEDS_BLUE);
+	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 }
 
 static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)

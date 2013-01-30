@@ -14,11 +14,10 @@
 #include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
 
-#include "dev/leds.h"
-
 #include "tree-aggregator.h"
 #include "neighbour-detect.h"
 
+#include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
 #include "unique-array.h"
@@ -53,7 +52,7 @@ static bool rimeaddr_pair_equality(void const * left, void const * right)
 }
 
 
-static void print_ua_rimeaddr_pair(unique_array_t * data)
+static void print_ua_rimeaddr_pair(unique_array_t const * data)
 {
 	printf("{");
 
@@ -106,6 +105,8 @@ AUTOSTART_PROCESSES(&neighbour_agg_process);
 
 static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
+	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
+
 	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
 
 	unsigned int length = msg->length;
@@ -139,6 +140,8 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 
 static void tree_aggregate_update(void * voiddata, void const * to_apply)
 {
+	toggle_led_for(LEDS_RED, CLOCK_SECOND);
+
 	unique_array_t * data = (unique_array_t *)voiddata;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
 	
@@ -210,6 +213,8 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 {
+	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
+
 	unique_array_t const * data_array = (unique_array_t *)conn->data;
 
 	printf("Writing: ");

@@ -369,13 +369,13 @@ send_n_hop_data_request(
 	msg->message_id = message_id_to_send;
 	msg->hop_limit = hop_limit;
 
-	random_init(rimeaddr_node_addr.u8[0] + 2);
-	unsigned int random = (random_rand() % 5);
-	if (random <= 1) random++;
+	// Generate a random number between 2 and 4 to determine how
+	// often we send messages
+	double random = 0.1 * ((random_rand() % 20) + 40);
 
 	printf("Starting sbcast every %d second(s) for %d seconds\n", random, 20);
 
-	stbroadcast_send_stubborn(&conn->bc, random * CLOCK_SECOND);
+	stbroadcast_send_stubborn(&conn->bc, (clock_time_t)(random * CLOCK_SECOND));
 
 	static struct ctimer datareq_stbroadcast_stop_timer;
 	ctimer_set(&datareq_stbroadcast_stop_timer, 20 * CLOCK_SECOND, &datareq_stbroadcast_callback_cancel, conn);
@@ -407,6 +407,9 @@ bool nhopreq_start(
 		printf("nhopreq_start failed!\n");
 		return false;
 	}
+
+	// We need to set the random number generator here
+	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
 	stbroadcast_open(&conn->bc, ch1, &datareq_stbroadcastCallbacks);
 	runicast_open(&conn->ru, ch2, &runicastCallbacks);

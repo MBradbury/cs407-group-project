@@ -46,7 +46,7 @@ static inline nhopreq_conn_t * conncvt_runicast(struct runicast_conn * conn)
 	return (nhopreq_conn_t *)conn;
 }
 
-static inline nhopreq_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
+static inline nhopreq_conn_t * conncvt_datareq_bcast(struct stbroadcast_conn * conn)
 {
 	return (nhopreq_conn_t *)
 		(((char *)conn) - sizeof(struct runicast_conn));
@@ -81,9 +81,9 @@ static void send_reply(
 static uint8_t get_message_id(nhopreq_conn_t * conn);
 
 // STUBBORN BROADCAST
-static void stbroadcast_recv(struct stbroadcast_conn * c)
+static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 {
-	nhopreq_conn_t * hc = conncvt_stbcast(c);
+	nhopreq_conn_t * hc = conncvt_datareq_bcast(c);
 
 	// Copy Packet Buffer To Memory
 	// We need a copy as later on we will be sending a message
@@ -162,12 +162,12 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	}
 }
 
-static void stbroadcast_sent(struct stbroadcast_conn *c)
+static void datareq_stbroadcast_sent(struct stbroadcast_conn *c)
 {
 	//printf("I've sent!\n");
 }
 
-static void stbroadcast_callback_cancel(void * ptr)
+static void datareq_stbroadcast_callback_cancel(void * ptr)
 {
 	nhopreq_conn_t * conn = (nhopreq_conn_t *)ptr;
 
@@ -236,8 +236,8 @@ static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, u
 static const struct runicast_callbacks runicastCallbacks =
 	{ &runicast_recv, &runicast_sent, &runicast_timedout };
 
-static const struct stbroadcast_callbacks stbroadcastCallbacks =
-	{ &stbroadcast_recv, &stbroadcast_sent };
+static const struct stbroadcast_callbacks datareq_stbroadcastCallbacks =
+	{ &datareq_stbroadcast_recv, &datareq_stbroadcast_sent };
 
 
 // Methods
@@ -377,8 +377,8 @@ send_n_hop_data_request(
 
 	stbroadcast_send_stubborn(&conn->bc, random * CLOCK_SECOND);
 
-	static struct ctimer stbroadcast_stop_timer;
-	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &stbroadcast_callback_cancel, conn);
+	static struct ctimer datareq_stbroadcast_stop_timer;
+	ctimer_set(&datareq_stbroadcast_stop_timer, 20 * CLOCK_SECOND, &datareq_stbroadcast_callback_cancel, conn);
 }
 
 
@@ -407,7 +407,7 @@ bool nhopreq_start(
 		return false;
 	}
 
-	stbroadcast_open(&conn->bc, ch1, &stbroadcastCallbacks);
+	stbroadcast_open(&conn->bc, ch1, &datareq_stbroadcastCallbacks);
 	runicast_open(&conn->ru, ch2, &runicastCallbacks);
 
 	rimeaddr_copy(&conn->baseStationAddr, baseStationAddr);

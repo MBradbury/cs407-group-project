@@ -167,7 +167,7 @@ static void datareq_stbroadcast_sent(struct stbroadcast_conn *c)
 	//printf("I've sent!\n");
 }
 
-static void stbroadcast_callback_cancel(void * ptr)
+static void datareq_stbroadcast_callback_cancel(void * ptr)
 {
 	nhopreq_conn_t * conn = (nhopreq_conn_t *)ptr;
 
@@ -236,7 +236,7 @@ static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, u
 static const struct runicast_callbacks runicastCallbacks =
 	{ &runicast_recv, &runicast_sent, &runicast_timedout };
 
-static const struct stbroadcast_callbacks stbroadcastCallbacks =
+static const struct stbroadcast_callbacks datareq_stbroadcastCallbacks =
 	{ &datareq_stbroadcast_recv, &datareq_stbroadcast_sent };
 
 
@@ -377,8 +377,8 @@ send_n_hop_data_request(
 
 	stbroadcast_send_stubborn(&conn->bc, random * CLOCK_SECOND);
 
-	static struct ctimer stbroadcast_stop_timer;
-	ctimer_set(&stbroadcast_stop_timer, 20 * CLOCK_SECOND, &stbroadcast_callback_cancel, conn);
+	static struct ctimer datareq_stbroadcast_stop_timer;
+	ctimer_set(&datareq_stbroadcast_stop_timer, 20 * CLOCK_SECOND, &datareq_stbroadcast_callback_cancel, conn);
 }
 
 
@@ -407,7 +407,7 @@ bool nhopreq_start(
 		return false;
 	}
 
-	stbroadcast_open(&conn->bc, ch1, &stbroadcastCallbacks);
+	stbroadcast_open(&conn->bc, ch1, &datareq_stbroadcastCallbacks);
 	runicast_open(&conn->ru, ch2, &runicastCallbacks);
 
 	rimeaddr_copy(&conn->baseStationAddr, baseStationAddr);

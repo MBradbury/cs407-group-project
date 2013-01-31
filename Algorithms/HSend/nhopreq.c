@@ -89,7 +89,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	// We need a copy as later on we will be sending a message
 	// which will overwrite the packetbuf which we still need.
 	char tmpBuffer[PACKETBUF_SIZE];
-	packetbuf_copyto(tmpBuffer);
+	memcpy(tmpBuffer, packetbuf_dataptr(), packetbuf_datalen());
 	req_data_msg_t const * msg = (req_data_msg_t *)tmpBuffer;
 
 	printf("I just recieved a Stubborn Broadcast Message! Originator: %s Hop: %d Message ID: %d\n",
@@ -184,12 +184,12 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 
 	printf("runicast received from %s\n", addr2str(from));
 
-	// When recieve message, forward the message on to the originator
+	// When receive message, forward the message on to the originator
 	// if the final originator, do something with the value
 
-	// Copy Packet Buffer To Memory
 	char tmpBuffer[PACKETBUF_SIZE];
-	packetbuf_copyto(tmpBuffer);
+	memcpy(tmpBuffer, packetbuf_dataptr(), packetbuf_datalen());
+
 	return_data_msg_t * msg = (return_data_msg_t *)tmpBuffer;
 	void * msgdata = (void *)(msg + 1);
 
@@ -404,6 +404,7 @@ bool nhopreq_start(
 		data_fn == NULL || ch1 == ch2 || data_size == 0 ||
 		receive_fn == NULL)
 	{
+		printf("nhopreq_start failed!\n");
 		return false;
 	}
 

@@ -46,7 +46,7 @@ static inline nhopreq_conn_t * conncvt_runicast(struct runicast_conn * conn)
 	return (nhopreq_conn_t *)conn;
 }
 
-static inline nhopreq_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
+static inline nhopreq_conn_t * conncvt_datareq_bcast(struct stbroadcast_conn * conn)
 {
 	return (nhopreq_conn_t *)
 		(((char *)conn) - sizeof(struct runicast_conn));
@@ -81,9 +81,9 @@ static void send_reply(
 static uint8_t get_message_id(nhopreq_conn_t * conn);
 
 // STUBBORN BROADCAST
-static void stbroadcast_recv(struct stbroadcast_conn * c)
+static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 {
-	nhopreq_conn_t * hc = conncvt_stbcast(c);
+	nhopreq_conn_t * hc = conncvt_datareq_bcast(c);
 
 	// Copy Packet Buffer To Memory
 	// We need a copy as later on we will be sending a message
@@ -162,7 +162,7 @@ static void stbroadcast_recv(struct stbroadcast_conn * c)
 	}
 }
 
-static void stbroadcast_sent(struct stbroadcast_conn *c)
+static void datareq_stbroadcast_sent(struct stbroadcast_conn *c)
 {
 	//printf("I've sent!\n");
 }
@@ -237,7 +237,7 @@ static const struct runicast_callbacks runicastCallbacks =
 	{ &runicast_recv, &runicast_sent, &runicast_timedout };
 
 static const struct stbroadcast_callbacks stbroadcastCallbacks =
-	{ &stbroadcast_recv, &stbroadcast_sent };
+	{ &datareq_stbroadcast_recv, &datareq_stbroadcast_sent };
 
 
 // Methods

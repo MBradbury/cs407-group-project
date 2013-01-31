@@ -4,6 +4,6 @@
 #include "clock.h"
 #include "dev/leds.h"
 
-void toggle_led_for(int led, clock_time_t time);
+void toggle_led_for(unsigned char led, clock_time_t time);
 
 #endif

@@ -247,7 +247,13 @@ PROCESS_THREAD(mainProcess, ev, data)
 	destination.u8[0] = 10;
 	destination.u8[1] = 0;
 
+#ifdef IS_SINK
+	printf("Set address to be sink.\n");
+	rimeaddr_set_node_addr(&baseStationAddr);
+#endif
+
 #ifdef IS_DESTINATION
+	printf("Set address to be destination.\n");
 	rimeaddr_set_node_addr(&destination);
 #endif
 

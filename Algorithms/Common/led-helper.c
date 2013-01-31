@@ -17,7 +17,7 @@ static void toggle_callback(void * data)
 	free(data);
 }
 
-void toggle_led_for(int led, clock_time_t time)
+void toggle_led_for(unsigned char led, clock_time_t time)
 {
 	leds_toggle(led);
 

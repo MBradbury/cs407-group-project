@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include "lib/sensors.h"
+#include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
-#include "dev/light-sensor.h"
 
 #include "net/netstack.h"
 #include "net/rime.h"
@@ -18,13 +19,8 @@
 #include "debug-helper.h"
 
 #include "tree-aggregator.h"
+#include "multipacket.h"
 
-// The custom broadcast header we use
-static const struct packetbuf_attrlist broadcast_attributes[] = {
-	{ PACKETBUF_ADDR_RECEIVER, PACKETBUF_ADDRSIZE },
-	BROADCAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
-};
 
 
 static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
@@ -32,12 +28,11 @@ static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
 	return (tree_agg_conn_t *)conn;
 }
 
-static inline tree_agg_conn_t * conncvt_broadcast(struct broadcast_conn * conn)
+static inline tree_agg_conn_t * conncvt_multipacket(struct multipacket_conn * conn)
 {
 	return (tree_agg_conn_t *)
 		(((char *)conn) - sizeof(struct stbroadcast_conn));
 }
-
 
 static inline bool is_sink(tree_agg_conn_t const * conn)
 {
@@ -45,6 +40,10 @@ static inline bool is_sink(tree_agg_conn_t const * conn)
 		rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr);
 }
 
+
+// The maximum number of times the reliable unicast
+// will attempt to resend a message.
+static const int MAX_RUNICAST_RETX = 5;
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
@@ -136,8 +135,7 @@ static void finish_aggregate_collect(void * ptr)
 	// Copy aggregation data into the packet
 	(*conn->callbacks.write_data_to_packet)(conn);
 
-	packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &conn->best_parent);
-	broadcast_send(&conn->uc);
+	multipacket_send(&conn->mc, &conn->best_parent);
 
 	printf("Tree Agg: Send Agg\n");
 
@@ -149,9 +147,9 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct broadcast_conn * ptr, const rimeaddr_t * originator)
+static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator)
 {
-	tree_agg_conn_t * conn = conncvt_broadcast(ptr);
+	tree_agg_conn_t * conn = conncvt_multipacket(ptr);
 
 	void const * msg = packetbuf_dataptr();
 	unsigned int length = packetbuf_datalen();
@@ -190,11 +188,10 @@ static void recv_aggregate(struct broadcast_conn * ptr, const rimeaddr_t * origi
 	}
 }
 
-static void broadcast_sent(struct broadcast_conn * c, int status, int num_tx)
+static void multipacket_sent(struct multipacket_conn * c, int status, int num_tx)
 {
-	printf("Tree Agg: broadcast sent status:%d numtx:%d\n", status, num_tx);
+	printf("Tree Agg: runicast sent status:%d numtx:%d\n", status, num_tx);
 }
-
 
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
@@ -267,8 +264,8 @@ static void sent_stbroadcast(struct stbroadcast_conn * c) { }
 static const struct stbroadcast_callbacks callbacks_setup =
 	{ &recv_setup, &sent_stbroadcast };
 
-static const struct broadcast_callbacks callbacks_aggregate =
-	{ &recv_aggregate, &broadcast_sent };
+static const struct multipacket_callbacks callbacks_aggregate =
+	{ &recv_aggregate, &multipacket_sent };
 
 
 void tree_agg_setup_wait_finished(void * ptr)
@@ -313,9 +310,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		printf("Tree Agg: Starting...\n");
 
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
-
-		broadcast_open(&conn->uc, ch2, &callbacks_aggregate);
-		channel_set_attributes(ch2, broadcast_attributes);
+		multipacket_open(&conn->mc, ch2, &callbacks_aggregate);
 
 		conn->has_seen_setup = false;
 		conn->is_collecting = false;
@@ -367,7 +362,7 @@ void tree_agg_close(tree_agg_conn_t * conn)
 	if (conn != NULL)
 	{
 		stbroadcast_close(&conn->bc);
-		broadcast_close(&conn->uc);
+		multipacket_close(&conn->mc);
 
 		if (conn->data != NULL)
 		{
@@ -381,10 +376,9 @@ void tree_agg_send(tree_agg_conn_t * conn)
 {
 	if (conn != NULL)
 	{
+		multipacket_send(&conn->mc, &conn->best_parent);
 		printf("Tree Agg: Sending data to best parent %s\n", addr2str(&conn->best_parent));
 
-		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &conn->best_parent);
-		broadcast_send(&conn->uc);
 	}
 }
 
@@ -407,8 +401,6 @@ typedef struct
 {
 	double temperature;
 	double humidity;
-	double light1;
-	double light2;
 } collect_msg_t;
 
 
@@ -422,9 +414,9 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
 	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
 
-	printf("Tree Agg: Sink rcv: Src:%s Temp:%d Hudmid:%d%% Light1:%d Light2:%d\n",
+	printf("Tree Agg: Sink rcv: Src:%s Temp:%d Hudmid:%d%%\n",
 			addr2str(source),
-			(int)msg->temperature, (int)msg->humidity, (int)msg->light1, (int)msg->light2
+			(int)msg->temperature, (int)msg->humidity
 	);
 }
 
@@ -446,12 +438,6 @@ static void tree_aggregate_update(void * data, void const * to_apply)
 
 	our_data->temperature /= 2.0;
 	our_data->humidity /= 2.0;
-
-	our_data->light1 += data_to_apply->light1;
-	our_data->light2 += data_to_apply->light2;
-
-	our_data->light1 /= 2.0;
-	our_data->light2 /= 2.0;
 }
 
 static void tree_aggregate_own(void * ptr)
@@ -465,14 +451,6 @@ static void tree_aggregate_own(void * ptr)
 
 	data.temperature = sht11_temperature(raw_temperature);
 	data.humidity = sht11_relative_humidity_compensated(raw_humidity, data.temperature);
-
-	SENSORS_ACTIVATE(light_sensor);
-	int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
-	int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-	SENSORS_DEACTIVATE(sht11_sensor);
-
-	data.light1 = s1087_light1(raw_light1);
-	data.light2 = s1087_light1(raw_light2);
 
 	tree_aggregate_update(ptr, &data);
 }
@@ -540,10 +518,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
-		SENSORS_ACTIVATE(light_sensor);
-		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
-		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-		SENSORS_DEACTIVATE(sht11_sensor);
 
 		// Create the data message that we are going to send
 		packetbuf_clear();
@@ -554,8 +528,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
-		msg->light1 = s1087_light1(raw_light1);
-		msg->light2 = s1087_light1(raw_light2);
 		
 		tree_agg_send(&conn);
 

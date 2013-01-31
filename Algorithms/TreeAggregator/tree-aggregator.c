@@ -11,7 +11,6 @@
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
-#include "net/rime/unicast.h"
 #include "contiki-net.h"
 
 #include "led-helper.h"
@@ -20,13 +19,20 @@
 
 #include "tree-aggregator.h"
 
+// The custom broadcast header we use
+static const struct packetbuf_attrlist broadcast_attributes[] = {
+	{ PACKETBUF_ADDR_RECEIVER, PACKETBUF_ADDRSIZE },
+	BROADCAST_ATTRIBUTES
+    PACKETBUF_ATTR_LAST
+};
+
 
 static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
 {
 	return (tree_agg_conn_t *)conn;
 }
 
-static inline tree_agg_conn_t * conncvt_unicast(struct unicast_conn * conn)
+static inline tree_agg_conn_t * conncvt_broadcast(struct broadcast_conn * conn)
 {
 	return (tree_agg_conn_t *)
 		(((char *)conn) - sizeof(struct stbroadcast_conn));
@@ -39,10 +45,6 @@ static inline bool is_sink(tree_agg_conn_t const * conn)
 		rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr);
 }
 
-
-// The maximum number of times the reliable unicast
-// will attempt to resend a message.
-static const int MAX_RUNICAST_RETX = 5;
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
@@ -134,7 +136,8 @@ static void finish_aggregate_collect(void * ptr)
 	// Copy aggregation data into the packet
 	(*conn->callbacks.write_data_to_packet)(conn);
 
-	unicast_send(&conn->uc, &conn->best_parent);
+	packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &conn->best_parent);
+	broadcast_send(&conn->uc);
 
 	printf("Tree Agg: Send Agg\n");
 
@@ -146,9 +149,9 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * originator)
+static void recv_aggregate(struct broadcast_conn * ptr, const rimeaddr_t * originator)
 {
-	tree_agg_conn_t * conn = conncvt_unicast(ptr);
+	tree_agg_conn_t * conn = conncvt_broadcast(ptr);
 
 	void const * msg = packetbuf_dataptr();
 	unsigned int length = packetbuf_datalen();
@@ -187,10 +190,11 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 	}
 }
 
-static void unicast_sent(struct unicast_conn * c, int status, int num_tx)
+static void broadcast_sent(struct broadcast_conn * c, int status, int num_tx)
 {
-	printf("Tree Agg: unicast sent status:%d numtx:%d\n", status, num_tx);
+	printf("Tree Agg: broadcast sent status:%d numtx:%d\n", status, num_tx);
 }
+
 
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
@@ -263,8 +267,8 @@ static void sent_stbroadcast(struct stbroadcast_conn * c) { }
 static const struct stbroadcast_callbacks callbacks_setup =
 	{ &recv_setup, &sent_stbroadcast };
 
-static const struct unicast_callbacks callbacks_aggregate =
-	{ &recv_aggregate, &unicast_sent };
+static const struct broadcast_callbacks callbacks_aggregate =
+	{ &recv_aggregate, &broadcast_sent };
 
 
 void tree_agg_setup_wait_finished(void * ptr)
@@ -309,7 +313,9 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		printf("Tree Agg: Starting...\n");
 
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
-		unicast_open(&conn->uc, ch2, &callbacks_aggregate);
+
+		broadcast_open(&conn->uc, ch2, &callbacks_aggregate);
+		channel_set_attributes(ch2, broadcast_attributes);
 
 		conn->has_seen_setup = false;
 		conn->is_collecting = false;
@@ -361,7 +367,7 @@ void tree_agg_close(tree_agg_conn_t * conn)
 	if (conn != NULL)
 	{
 		stbroadcast_close(&conn->bc);
-		unicast_close(&conn->uc);
+		broadcast_close(&conn->uc);
 
 		if (conn->data != NULL)
 		{
@@ -377,7 +383,8 @@ void tree_agg_send(tree_agg_conn_t * conn)
 	{
 		printf("Tree Agg: Sending data to best parent %s\n", addr2str(&conn->best_parent));
 
-		unicast_send(&conn->uc, &conn->best_parent);
+		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &conn->best_parent);
+		broadcast_send(&conn->uc);
 	}
 }
 

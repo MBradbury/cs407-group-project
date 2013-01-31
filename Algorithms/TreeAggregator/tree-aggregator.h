@@ -4,7 +4,6 @@
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
-#include "net/rime/unicast.h"
 
 struct tree_agg_conn;
 
@@ -30,7 +29,7 @@ typedef struct tree_agg_conn
 {
 	// DO NOT CHANGE CONNECTION ORDER!!!
 	struct stbroadcast_conn bc;
-	struct unicast_conn uc;
+	struct broadcast_conn uc;
 
 	bool has_seen_setup;
 	bool is_collecting;

@@ -237,6 +237,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
+#ifdef POWER_LEVEL
+	cc2420_set_txpower(POWER_LEVEL);
+#endif
+
 	array_list_init(&hops_data, &free_hops_data);
 
 	// Set the address of the base station

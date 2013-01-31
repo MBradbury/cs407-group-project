@@ -277,7 +277,9 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 
 	PROCESS_BEGIN();
 
-	cc2420_set_txpower(2);
+#ifdef POWER_LEVEL
+	cc2420_set_txpower(POWER_LEVEL);
+#endif
 
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;

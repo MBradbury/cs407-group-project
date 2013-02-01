@@ -398,8 +398,6 @@ PROCESS_THREAD(mainProcess, ev, data)
 		printf("Is the base station!\n");
 
 		send_example_predicate(&destination,0);
-		etimer_set(&et, 20 * CLOCK_SECOND);
-		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		send_example_predicate(&destination,1);
 
 		leds_on(LEDS_BLUE);

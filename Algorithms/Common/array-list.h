@@ -34,6 +34,8 @@ bool array_list_init(array_list_t * list, array_list_cleanup_t cleanup);
 bool array_list_append(array_list_t * list, void * data);
 bool array_list_clear(array_list_t * list);
 
+bool array_list_remove(array_list_t * list, array_list_elem_t elem);
+
 // Get list length
 unsigned int array_list_length(array_list_t const * list);
 

@@ -11,8 +11,11 @@ bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_clea
 
 // Add / Remove items from list
 // data should contain the key and the value
-bool map_put(map_t * map, void * data);
+bool map_put(map_t * map, void * keyanddata);
 bool map_clear(map_t * map);
+
+// data should point to the key
+bool map_remove(map_t * map, void * key);
 
 // Get data
 void * map_get(map_t const * map, void const * key);

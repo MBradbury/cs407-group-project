@@ -96,6 +96,24 @@ bool array_list_append(array_list_t * list, void * data)
 	return true;
 }
 
+bool array_list_remove(array_list_t * list, array_list_elem_t elem)
+{
+	if (list == NULL || elem >= list->count)
+	{
+		return false;
+	}
+
+	void ** item = list->data + elem;
+	void ** next = item + 1;
+
+	// Use memmove to handle overlapping data
+	memmove(item, next, (list->count - elem - 1) * sizeof(void **));
+
+	list->count -= 1;
+
+	return true;
+}
+
 unsigned int array_list_length(array_list_t const * list)
 {
 	return list == NULL ? 0 : list->count;

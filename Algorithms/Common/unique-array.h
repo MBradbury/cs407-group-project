@@ -29,6 +29,8 @@ bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, 
 bool unique_array_append(unique_array_t * list, void * data);
 bool unique_array_clear(unique_array_t * list);
 
+bool unique_array_remove(unique_array_t * list, unique_array_elem_t elem);
+
 // Check if data is in list
 bool unique_array_contains(unique_array_t const * list, void const * data);
 

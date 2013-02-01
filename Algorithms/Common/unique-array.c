@@ -27,9 +27,14 @@ bool unique_array_append(unique_array_t * list, void * data)
 	return true;
 }
 
+bool unique_array_remove(unique_array_t * list, unique_array_elem_t elem)
+{
+	return list != NULL && array_list_remove(&list->list, elem);
+}
+
 bool unique_array_clear(unique_array_t * list)
 {
-	return list == NULL ? false : array_list_clear(&list->list);
+	return list != NULL && array_list_clear(&list->list);
 }
 
 // Get list length

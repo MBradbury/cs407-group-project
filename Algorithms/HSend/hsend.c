@@ -589,6 +589,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 		// Free the allocated neighbour data
 		free(all_neighbour_data);
+		all_neighbour_data = NULL;
 	}
 
 exit:

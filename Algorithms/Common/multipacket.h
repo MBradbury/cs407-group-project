@@ -19,10 +19,6 @@ struct runicast_callbacks {
 struct multipacket_conn {
 	struct runicast_conn c;
 	const struct multipacket_callbacks *u;
-	uint8_t sndnxt;
-	uint8_t is_tx;
-	uint8_t rxmit;
-	uint8_t max_rxmit;
 };
 
 void multipacket_open(struct multipacket_conn *c, uint16_t channel,

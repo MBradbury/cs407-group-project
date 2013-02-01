@@ -18,12 +18,13 @@
 #include "debug-helper.h"
 #include "map.h"
 
-// The custom trickle header we use
+// The custom headers we use
 static const struct packetbuf_attrlist trickle_attributes[] = {
 	{ PACKETBUF_ADDR_ERECEIVER, PACKETBUF_ADDRSIZE },
 	TRICKLE_ATTRIBUTES
     PACKETBUF_ATTR_LAST
 };
+
 
 // Struct for the list of node_data. It contains owner_addr, temperature and humidity. 
 typedef struct
@@ -185,7 +186,8 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 
 
 static nhopreq_conn_t hc;
-static struct trickle_conn tc;
+static struct trickle_conn tcsender;
+static struct mesh_conn meshreceiver;
 static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
@@ -228,7 +230,7 @@ static map_t predicate_map;
 
 // Rime address of target node (or rimeaddr_null for everyone)
 // binary bytecode for the VM
-static void trickle_rcv(struct trickle_conn * c)
+static void trickle_send_rcv(struct trickle_conn * c)
 {
 	// Copy out packet, allows handling multiple evals at once
 	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
@@ -295,7 +297,27 @@ static void trickle_rcv(struct trickle_conn * c)
 	}
 }
 
-static const struct trickle_callbacks callbacks = { &trickle_rcv };
+// Used to handle receiving predicate failure messages
+static void mesh_receiver_rcv(struct mesh_conn *c, rimeaddr_t const * from, uint8_t hops)
+{
+	printf("Response received from %s: %.*s\n",
+         addr2str(from),
+         packetbuf_datalen(), (char *)packetbuf_dataptr());
+}
+
+static void mesh_receiver_sent(struct mesh_conn * c)
+{
+}
+
+static void mesh_receiver_timeout(struct mesh_conn * c)
+{
+	// We timedout, so start sending again
+	mesh_send(&meshreceiver, &baseStationAddr);
+}
+
+static const struct trickle_callbacks tcsender_callbacks = { &trickle_send_rcv };
+
+static const struct mesh_callbacks meshreceiver_callbacks = { &mesh_receiver_rcv, &mesh_receiver_sent, &mesh_receiver_timeout };
 
 PROCESS(mainProcess, "MAIN Process");
 PROCESS(hsendProcess, "HSEND Process");
@@ -348,7 +370,7 @@ static void send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 
 	//printf("Sent packet length %d\n", packet_size);
 
-	trickle_send(&tc);
+	trickle_send(&tcsender);
 }
 
 PROCESS_THREAD(mainProcess, ev, data)
@@ -385,8 +407,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 	rimeaddr_set_node_addr(&destination);
 #endif
 
-	trickle_open(&tc, trickle_interval, 121, &callbacks);
+	trickle_open(&tcsender, trickle_interval, 121, &tcsender_callbacks);
 	channel_set_attributes(121, trickle_attributes);
+
+	mesh_open(&meshreceiver, 126, &meshreceiver_callbacks);
 
 	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
 	{
@@ -423,7 +447,8 @@ exit:
 	printf("Exiting MAIN Process...\n");
 	array_list_clear(&hops_data);
 	nhopreq_end(&hc);
-	trickle_close(&tc);
+	trickle_close(&tcsender);
+	mesh_close(&meshreceiver);
 	PROCESS_END();
 }
 
@@ -574,16 +599,19 @@ PROCESS_THREAD(hsendProcess, ev, data)
 				all_neighbour_data,
 				pe->variables_details, pe->variables_details_length);
 
-
-			// TODO: If predicate failed inform sink
-			// TODO: Send data back to sink
 			if (evaluation_result)
 			{
 				printf("Pred: TRUE\n");
+
+				packetbuf_copyfrom("Pred: TRUE", strlen("Pred: TRUE"));
+				mesh_send(&meshreceiver, &baseStationAddr);
 			}
 			else
 			{
 				printf("Pred: FAILED due to error: %s\n", error_message());
+
+				packetbuf_copyfrom(error_message(), strlen(error_message()));
+				mesh_send(&meshreceiver, &baseStationAddr);
 			}
 		}
 

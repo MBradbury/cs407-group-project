@@ -272,6 +272,7 @@ static void trickle_rcv(struct trickle_conn * c)
 			// Allocate memory for the data
 			stored = malloc(sizeof(predicate_detail_entry_t));
 
+			stored->id = msg->predicate_id; //set the key
 			stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
 			stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
 
@@ -302,7 +303,7 @@ PROCESS(hsendProcess, "HSEND Process");
 AUTOSTART_PROCESSES(&mainProcess, &hsendProcess);
 
 
-static void send_example_predicate(rimeaddr_t const * destination)
+static void send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 {
 	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 
@@ -322,7 +323,7 @@ static void send_example_predicate(rimeaddr_t const * destination)
 	// Set eventual destination in header
 	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
 
-	msg->predicate_id = 0;
+	msg->predicate_id = id;
 	msg->bytecode_length = bytecode_length;
 	msg->num_of_bytecode_var = var_details;
 
@@ -396,7 +397,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 	{
 		printf("Is the base station!\n");
 
-		send_example_predicate(&destination);
+		send_example_predicate(&destination,0);
+		etimer_set(&et, 20 * CLOCK_SECOND);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+		send_example_predicate(&destination,1);
 
 		leds_on(LEDS_BLUE);
 
@@ -499,7 +503,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	{
 		printf("HSEND: Starting long wait...\n");
 
-		etimer_set(&et, 10 * 60 * CLOCK_SECOND);
+		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		printf("HSEND: Wait finished! About to ask for data!\n");

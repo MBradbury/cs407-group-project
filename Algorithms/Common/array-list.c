@@ -104,6 +104,13 @@ bool array_list_remove(array_list_t * list, array_list_elem_t elem)
 	}
 
 	void ** item = list->data + elem;
+
+	// Free memory of item
+	if (list->cleanup != NULL)
+	{
+		list->cleanup(*item);
+	}
+
 	void ** next = item + 1;
 
 	// Use memmove to handle overlapping data

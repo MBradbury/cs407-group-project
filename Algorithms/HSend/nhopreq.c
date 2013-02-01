@@ -80,6 +80,14 @@ static void send_reply(
 
 static uint8_t get_message_id(nhopreq_conn_t * conn);
 
+// Utility function
+static clock_time_t random_time(unsigned int from, unsigned int to, double granularity)
+{
+	double random = granularity * ((random_rand() % (unsigned int)(from / granularity)) + (unsigned int)(to / granularity));
+
+	return (clock_time_t)(random * CLOCK_SECOND);
+}
+
 // STUBBORN BROADCAST
 static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 {
@@ -318,7 +326,7 @@ send_reply(
 		}
 
 		static struct ctimer forward_timer;
-		ctimer_set(&forward_timer, 3 * CLOCK_SECOND, &delayed_forward_reply, p);
+		ctimer_set(&forward_timer, random_time(2, 4, 0.1), &delayed_forward_reply, p);
 	}
 	else
 	{
@@ -371,11 +379,11 @@ send_n_hop_data_request(
 
 	// Generate a random number between 2 and 4 to determine how
 	// often we send messages
-	double random = 0.1 * ((random_rand() % 20) + 40);
+	clock_time_t random_send_time = random_time(2, 4, 0.1);
 
-	printf("Starting sbcast every %d second(s) for %d seconds\n", random, 20);
+	printf("Starting sbcast every %d second(s) for %d seconds\n", random_send_time, 20);
 
-	stbroadcast_send_stubborn(&conn->bc, (clock_time_t)(random * CLOCK_SECOND));
+	stbroadcast_send_stubborn(&conn->bc, random_send_time);
 
 	static struct ctimer datareq_stbroadcast_stop_timer;
 	ctimer_set(&datareq_stbroadcast_stop_timer, 20 * CLOCK_SECOND, &datareq_stbroadcast_callback_cancel, conn);

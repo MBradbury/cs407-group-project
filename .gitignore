@@ -50,3 +50,6 @@ VarDepthClustering
 /PredicateLanguage/predlang
 /Tests/Debug
 /Tests/Release
+*.ihex
+*.target
+*.z1

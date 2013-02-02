@@ -15,14 +15,14 @@
 
 typedef uint32_t message_id_t;
 
-// Struct for the list elements, used to see if messages have already been sent
+// Struct for the map elements, used to see if messages have already been sent
 typedef struct
 {
 	message_id_t message_id;
 	uint8_t hops;
 	rimeaddr_t originator;
 	
-} list_elem_t;
+} sent_elem_t;
 
 // Struct used to ask other nodes for predicate values
 typedef struct
@@ -110,7 +110,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	bool respond = false;
 
 	// Check message has not been received before
-	list_elem_t * data = (list_elem_t *)map_get(&hc->messages, &msg->message_id);
+	sent_elem_t * data = (sent_elem_t *)map_get(&hc->messages, &msg->message_id);
 
 	// Message has been delivered before
 	if (data != NULL)
@@ -135,7 +135,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	{
 		printf("Not seen message with %d before.\n", msg->message_id);
 
-		data = (list_elem_t *)malloc(sizeof(list_elem_t));
+		data = (sent_elem_t *)malloc(sizeof(sent_elem_t));
 
 		rimeaddr_copy(&data->originator, &msg->originator);
 		data->message_id = msg->message_id;
@@ -203,7 +203,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	return_data_msg_t * msg = (return_data_msg_t *)tmpBuffer;
 	void * msgdata = (void *)(msg + 1);
 
-	list_elem_t * data = (list_elem_t *)map_get(&conn->messages, &msg->message_id);
+	sent_elem_t * data = (sent_elem_t *)map_get(&conn->messages, &msg->message_id);
 
 	if (data != NULL)
 	{
@@ -216,8 +216,8 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 		}
 		else
 		{
-			printf("Trying to forward data to: %s\n",
-				addr2str(&data->originator));
+			printf("Trying to forward data to: %s of id %d\n",
+				addr2str(&data->originator), data->message_id);
 
 			send_reply(
 				conn,
@@ -258,10 +258,12 @@ static void delayed_reply_data(void * ptr)
 	delayed_reply_data_params_t * p =
 		(delayed_reply_data_params_t *)ptr;
 
-	list_elem_t * data = (list_elem_t *)map_get(&p->conn->messages, &p->message_id);
+	sent_elem_t * data = (sent_elem_t *)map_get(&p->conn->messages, &p->message_id);
 
 	if (data != NULL)
 	{
+		printf("Found data with id %lu, forwarding on message\n", p->message_id);
+
 		send_reply(
 			p->conn,
 			&rimeaddr_node_addr, // Source
@@ -271,7 +273,9 @@ static void delayed_reply_data(void * ptr)
 			NULL
 		);
 
-		// TODO: remove item from the list
+		// WATCH OUT: removing here prevents 2-hop-n and greater info discovery!!
+		// TODO: Remove item from the list
+		//map_remove(&p->conn->messages, &p->message_id);
 	}
 
 	// Need to free allocated parameter struct
@@ -358,7 +362,7 @@ send_reply(
 			memcpy(data_dest, data, hc->data_size);
 		}
 
-		runicast_send(&hc->ru, target_receiver, 10);
+		runicast_send(&hc->ru, target_receiver, 5);
 	}
 }
 
@@ -383,7 +387,7 @@ send_n_hop_data_request(
 	// often we send messages
 	clock_time_t random_send_time = random_time(2, 4, 0.1);
 
-	printf("Starting sbcast every %d second(s) for %d seconds\n", random_send_time, 20);
+	printf("Starting sbcast every %u second(s) for %u seconds\n", random_send_time, 20);
 
 	stbroadcast_send_stubborn(&conn->bc, random_send_time);
 
@@ -394,13 +398,13 @@ send_n_hop_data_request(
 
 // Library Functions
 
-static bool list_elem_key_equal(void const * left, void const * right)
+static bool map_elem_key_equal(void const * left, void const * right)
 {
 	if (left == NULL || right == NULL)
 		return false;
 
-	list_elem_t const * l = (list_elem_t const *)left;
-	list_elem_t const * r = (list_elem_t const *)right;
+	sent_elem_t const * l = (sent_elem_t const *)left;
+	sent_elem_t const * r = (sent_elem_t const *)right;
 
 	return l->message_id == r->message_id;
 }
@@ -432,7 +436,7 @@ bool nhopreq_start(
 	conn->data_size = data_size;
 	conn->receive_fn = receive_fn;
 
-	map_init(&conn->messages, &list_elem_key_equal, &free);
+	map_init(&conn->messages, &map_elem_key_equal, &free);
 
 	return true;
 }
@@ -462,7 +466,7 @@ bool is_base(nhopreq_conn_t const * conn)
 
 void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops)
 {
-	list_elem_t * delivered_msg = (list_elem_t *)malloc(sizeof(list_elem_t));
+	sent_elem_t * delivered_msg = (sent_elem_t *)malloc(sizeof(sent_elem_t));
 
 	delivered_msg->message_id = get_message_id(conn);
 	delivered_msg->hops = hops;

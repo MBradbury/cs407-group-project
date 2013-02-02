@@ -25,7 +25,7 @@ static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
 	return (tree_agg_conn_t *)conn;
 }
 
-static inline tree_agg_conn_t * conncvt_unicast(struct unicast_conn * conn)
+static inline tree_agg_conn_t * conncvt_runicast(struct runicast_conn * conn)
 {
 	return (tree_agg_conn_t *)
 		(((char *)conn) - sizeof(struct stbroadcast_conn));
@@ -49,6 +49,8 @@ static const clock_time_t AGGREGATION_WAIT = 25 * CLOCK_SECOND;
 
 // Time to wait to detect parents
 static const clock_time_t PARENT_DETECT_WAIT = 15 * CLOCK_SECOND;
+
+static const uint8_t RUNICAST_MAX_RETX = 3;
 
 
 static void stbroadcast_cancel_void(void * ptr)
@@ -129,7 +131,7 @@ static void finish_aggregate_collect(void * ptr)
 	// Copy aggregation data into the packet
 	(*conn->callbacks.write_data_to_packet)(conn);
 
-	unicast_send(&conn->uc, &conn->best_parent);
+	runicast_send(&conn->uc, &conn->best_parent, RUNICAST_MAX_RETX);
 
 	printf("Tree Agg: Send Agg\n");
 
@@ -143,9 +145,9 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct unicast_conn * ptr, const rimeaddr_t * originator)
+static void recv_aggregate(struct runicast_conn * ptr, const rimeaddr_t * originator, uint8_t seqno)
 {
-	tree_agg_conn_t * conn = conncvt_unicast(ptr);
+	tree_agg_conn_t * conn = conncvt_runicast(ptr);
 
 	void const * msg = packetbuf_dataptr();
 	unsigned int length = packetbuf_datalen();
@@ -184,9 +186,14 @@ static void recv_aggregate(struct unicast_conn * ptr, const rimeaddr_t * origina
 	}
 }
 
-static void unicast_sent(struct unicast_conn * c, int status, int num_tx)
+static void runicast_sent(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
-	printf("Tree Agg: unicast sent status:%d numtx:%d\n", status, num_tx);
+	printf("Tree Agg: runicast sent to %s numtx:%d\n", addr2str(to), retransmissions);
+}
+
+static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
+{
+	printf("Tree Agg: runicast timedout to %s numtx:%d\n", addr2str(to), retransmissions);
 }
 
 
@@ -261,8 +268,8 @@ static void sent_stbroadcast(struct stbroadcast_conn * c) { }
 static const struct stbroadcast_callbacks callbacks_setup =
 	{ &recv_setup, &sent_stbroadcast };
 
-static const struct unicast_callbacks callbacks_aggregate =
-	{ &recv_aggregate, &unicast_sent };
+static const struct runicast_callbacks callbacks_aggregate =
+	{ &recv_aggregate, &runicast_sent, &runicast_timedout };
 
 
 void tree_agg_setup_wait_finished(void * ptr)
@@ -308,7 +315,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
 
-		unicast_open(&conn->uc, ch2, &callbacks_aggregate);
+		runicast_open(&conn->uc, ch2, &callbacks_aggregate);
 
 		conn->has_seen_setup = false;
 		conn->is_collecting = false;
@@ -360,7 +367,7 @@ void tree_agg_close(tree_agg_conn_t * conn)
 	if (conn != NULL)
 	{
 		stbroadcast_close(&conn->bc);
-		unicast_close(&conn->uc);
+		runicast_close(&conn->uc);
 
 		if (conn->data != NULL)
 		{
@@ -376,7 +383,7 @@ void tree_agg_send(tree_agg_conn_t * conn)
 	{
 		printf("Tree Agg: Sending data to best parent %s\n", addr2str(&conn->best_parent));
 
-		unicast_send(&conn->uc, &conn->best_parent);
+		runicast_send(&conn->uc, &conn->best_parent, RUNICAST_MAX_RETX);
 	}
 }
 

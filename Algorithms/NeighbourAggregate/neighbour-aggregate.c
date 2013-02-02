@@ -277,6 +277,10 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 
 	PROCESS_BEGIN();
 
+#ifdef NODE_ID
+	node_id_burn(NODE_ID)
+#endif
+
 #ifdef POWER_LEVEL
 	cc2420_set_txpower(POWER_LEVEL);
 #endif

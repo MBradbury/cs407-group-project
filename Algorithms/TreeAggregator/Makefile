@@ -10,7 +10,7 @@ PROJECTDIRS := $(CS407DIR)/Algorithms/Common
 PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c
+CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c led-helper.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

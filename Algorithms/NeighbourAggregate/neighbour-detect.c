@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "led-helper.h"
 #include "debug-helper.h"
 
 static struct neighbor_discovery_conn nd;
@@ -18,8 +19,7 @@ static bool rimeaddr_equality(void const * left, void const * right)
 	if (left == NULL || right == NULL)
 		return false;
 
-	return
-		rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
+	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
 }
 
 static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr_t const * from, uint16_t val)
@@ -39,10 +39,15 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 			printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
 		}
 	}
+
+	printf("Neighbour Discovery: got addr seen before from: %s\n", addr2str(from));
+
+	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 }
 
 static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 {
+	printf("Neighbour Discovery: sent message\n");
 }
 
 static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
@@ -50,6 +55,8 @@ static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
 
 void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 {
+	printf("Neighbour Discovery: Started!\n");
+
 	unique_array_init(results, &rimeaddr_equality, &free);
 
 	results_ptr = results;
@@ -64,11 +71,17 @@ void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 	);
 
     neighbor_discovery_start(&nd, 1);
+
+	leds_on(LEDS_BLUE);
 }
 
 void stop_neighbour_detect(void)
 {
+	printf("Neighbour Discovery: Stopped!\n");
+
 	neighbor_discovery_close(&nd);
 	results_ptr = NULL;
+
+	leds_off(LEDS_BLUE);
 }
 

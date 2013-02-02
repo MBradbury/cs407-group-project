@@ -1,7 +1,6 @@
 #ifndef CS407_TREE_AGGREGATOR_H
 #define CS407_TREE_AGGREGATOR_H
 
-#include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
 #include "net/rime/unicast.h"

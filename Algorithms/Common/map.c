@@ -1,6 +1,9 @@
 #include "map.h"
 
-bool map_init(map_t * map, unique_array_elem_t key_equality, array_list_cleanup_t cleanup)
+#include <stddef.h>
+#include <stdlib.h>
+
+bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_cleanup_t cleanup)
 {
 	if (map == NULL)
 		return false;
@@ -9,9 +12,9 @@ bool map_init(map_t * map, unique_array_elem_t key_equality, array_list_cleanup_
 }
 
 // Add / Remove items from list
-bool map_put(map_t * map, void * data)
+bool map_put(map_t * map, void * keyanddata)
 {
-	return unique_array_append(map, data);
+	return unique_array_append(map, keyanddata);
 }
 
 bool map_clear(map_t * map)
@@ -19,10 +22,31 @@ bool map_clear(map_t * map)
 	return unique_array_clear(map);
 }
 
+bool map_remove(map_t * map, void const * key)
+{
+	if (map == NULL || key == NULL)
+	{
+		return false;
+	}
+
+	map_elem_t elem;
+	for (elem = map_first(map); map_continue(map, elem); elem = map_next(elem))
+	{
+		void * item = map_data(map, elem);
+
+		if (map->equality(key, item))
+		{
+			return unique_array_remove(map, elem);
+		}
+	}
+	
+	return true;
+}
+
 // Get data
 void * map_get(map_t const * map, void const * key)
 {
-	if (list == NULL || key == NULL)
+	if (map == NULL || key == NULL)
 	{
 		return NULL;
 	}
@@ -30,7 +54,7 @@ void * map_get(map_t const * map, void const * key)
 	map_elem_t elem;
 	for (elem = map_first(map); map_continue(map, elem); elem = map_next(elem))
 	{
-		void const * item = map_data(map, elem);
+		void * item = map_data(map, elem);
 
 		if (map->equality(key, item))
 		{
@@ -65,7 +89,7 @@ bool map_continue(map_t const * map, map_elem_t elem)
 
 void * map_data(map_t const * map, map_elem_t elem)
 {
-	return unique_array_continue(map, elem);
+	return unique_array_data(map, elem);
 }
 
 

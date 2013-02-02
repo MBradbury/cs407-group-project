@@ -7,12 +7,15 @@ typedef unique_array_t map_t;
 typedef unique_array_elem_t map_elem_t;
 
 // Create the list
-bool map_init(map_t * map, unique_array_elem_t key_equality, array_list_cleanup_t cleanup);
+bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_cleanup_t cleanup);
 
 // Add / Remove items from list
 // data should contain the key and the value
-bool map_put(map_t * map, void * data);
+bool map_put(map_t * map, void * keyanddata);
 bool map_clear(map_t * map);
+
+// data should point to the key
+bool map_remove(map_t * map, void const * key);
 
 // Get data
 void * map_get(map_t const * map, void const * key);
@@ -25,6 +28,10 @@ map_elem_t map_first(map_t const * map);
 map_elem_t map_next(map_elem_t elem);
 bool map_continue(map_t const * map, map_elem_t elem);
 void * map_data(map_t const * map, map_elem_t elem);
+
+// It is recommended that the data structure being used has the key
+// as the first item. This allows using map_get with the key directly
+// rather than needed to create a temporary key object first.
 
 // Iteration example:
 // map_t map;

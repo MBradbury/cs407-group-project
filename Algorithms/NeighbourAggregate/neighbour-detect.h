@@ -8,4 +8,4 @@
 void start_neighbour_detect(unique_array_t * results, uint16_t channel);
 void stop_neighbour_detect(void);
 
-#endif CS407_NEIGHBOUR_DETECT
+#endif /*CS407_NEIGHBOUR_DETECT*/

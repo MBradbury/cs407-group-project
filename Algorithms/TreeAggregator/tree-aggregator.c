@@ -5,23 +5,19 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "lib/sensors.h"
-#include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
-
-#include "dev/leds.h"
+#include "dev/light-sensor.h"
 
 #include "net/netstack.h"
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
-#include "net/rime/unicast.h"
 #include "contiki-net.h"
 
+#include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
 #include "tree-aggregator.h"
-
 
 
 static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
@@ -43,10 +39,6 @@ static inline bool is_sink(tree_agg_conn_t const * conn)
 }
 
 
-// The maximum number of times the reliable unicast
-// will attempt to resend a message.
-static const int MAX_RUNICAST_RETX = 5;
-
 // The times stubborn broadcasting will use
 // to intersperse message resends
 static const clock_time_t STUBBORN_INTERVAL = 3 * CLOCK_SECOND;
@@ -63,7 +55,7 @@ static void stbroadcast_cancel_void(void * ptr)
 {
 	stbroadcast_cancel(&conncvt_stbcast((struct stbroadcast_conn *)ptr)->bc);
 
-	printf("Stubborn bcast canceled\n");
+	printf("Tree Agg: Stubborn bcast canceled\n");
 }
 
 static void stbroadcast_cancel_void_and_callback(void * ptr)
@@ -72,7 +64,7 @@ static void stbroadcast_cancel_void_and_callback(void * ptr)
 
 	stbroadcast_cancel(&conn->bc);
 
-	printf("Stubborn bcast canceled\n");
+	printf("Tree Agg: Stubborn bcast canceled, setup complete\n");
 
 	// Start the data generation process
 	(*conn->callbacks.setup_complete)(conn);
@@ -95,14 +87,14 @@ static void parent_detect_finished(void * ptr)
 	// indicate so through the LEDs
 	leds_off(LEDS_RED);
 
-	printf("Timer on %s expired\n",
+	printf("Tree Agg: Timer on %s expired\n",
 		addr2str(&rimeaddr_node_addr));
 
 	// Set the best values
 	conn->best_parent = conn->collecting_best_parent;
 	conn->best_hop = conn->collecting_best_hop;
 
-	printf("Found: Parent:%s Hop:%u\n",
+	printf("Tree Agg: Found Parent:%s Hop:%u\n",
 		addr2str(&conn->best_parent), conn->best_hop);
 
 	// Send a message that is to be received by the children
@@ -139,7 +131,9 @@ static void finish_aggregate_collect(void * ptr)
 
 	unicast_send(&conn->uc, &conn->best_parent);
 
-	printf("Send Agg\n");
+	printf("Tree Agg: Send Agg\n");
+
+	toggle_led_for(LEDS_GREEN, 1 * CLOCK_SECOND);
 
 	// We are no longer collecting aggregation data
 	conn->is_collecting = false;
@@ -149,7 +143,7 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * originator)
+static void recv_aggregate(struct unicast_conn * ptr, const rimeaddr_t * originator)
 {
 	tree_agg_conn_t * conn = conncvt_unicast(ptr);
 
@@ -158,6 +152,8 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 
 	if (is_sink(conn))
 	{
+		printf("Tree Agg: We're sink, got message, sending to user\n");
+
 		// Pass this messge up to the user
 		(*conn->callbacks.recv)(conn, originator);
 	}
@@ -166,13 +162,13 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 		// Apply some aggregation function
 		if (tree_agg_is_collecting(conn))
 		{
-			printf("Cont Agg With: %s\n", addr2str(originator));
+			printf("Tree Agg: Cont Agg With: %s\n", addr2str(originator));
 
 			(*conn->callbacks.aggregate_update)(conn->data, msg);
 		}
 		else
 		{
-			printf("Start Agg Addr: %s\n", addr2str(originator));
+			printf("Tree Agg: Start Agg Addr: %s\n", addr2str(originator));
 
 			// We need to copy the users data into our memory,
 			// So we can apply future aggregtions to it.
@@ -190,23 +186,26 @@ static void recv_aggregate(struct unicast_conn * ptr, rimeaddr_t const * origina
 
 static void unicast_sent(struct unicast_conn * c, int status, int num_tx)
 {
-	printf("unicast sent status:%d numtx:%d\n", status, num_tx);
+	printf("Tree Agg: unicast sent status:%d numtx:%d\n", status, num_tx);
 }
+
 
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
 {
+	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
+
 	tree_agg_conn_t * conn = conncvt_stbcast(ptr);
 
 	setup_tree_msg_t const * msg = (setup_tree_msg_t const *)packetbuf_dataptr();
 
-	printf("Got setup message from %s\n", addr2str(&msg->source));
+	printf("Tree Agg: Got setup message from %s\n", addr2str(&msg->source));
 
 	// If the sink received a setup message, then do nothing
 	// it doesn't need a parent as it is the root.
 	if (is_sink(conn))
 	{
-		printf("We are the sink node, so should not listen for parents.\n");
+		printf("Tree Agg: We are the sink node, so should not listen for parents.\n");
 		return;
 	}
 
@@ -224,7 +223,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 		static struct ctimer ct;
 		ctimer_set(&ct, PARENT_DETECT_WAIT, &parent_detect_finished, conn);
 
-		printf("Not seen setup message before, so setting timer...\n");
+		printf("Tree Agg: Not seen setup message before, so setting timer...\n");
 	}
 
 	// As we have received a message we need to record the node
@@ -234,7 +233,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 		char firstaddr[RIMEADDR_STRING_LENGTH];
 		char secondaddr[RIMEADDR_STRING_LENGTH];
 
-		printf("Updating to a better parent (%s H:%u) was:(%s H:%u)\n",
+		printf("Tree Agg: Updating to a better parent (%s H:%u) was:(%s H:%u)\n",
 			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), msg->hop_count,
 			addr2str_r(&conn->collecting_best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->collecting_best_hop
 		);
@@ -249,7 +248,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	// then we are not a leaf
 	if (conn->is_leaf_node && rimeaddr_cmp(&msg->parent, &rimeaddr_node_addr))
 	{
-		printf("Node (%s) is our child, we are not a leaf.\n",
+		printf("Tree Agg: Node (%s) is our child, we are not a leaf.\n",
 			addr2str(&msg->source));
 
 		conn->is_leaf_node = false;
@@ -270,7 +269,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 {
 	tree_agg_conn_t * conn = (tree_agg_conn_t *)ptr;
 
-	leds_on(LEDS_YELLOW);
+	leds_on(LEDS_BLUE);
 
 	// Send the first message that will be used to set up the
 	// aggregation tree
@@ -286,7 +285,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 
 	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
 
-	printf("IsSink, sending initial message...\n");
+	printf("Tree Agg: IsSink, sending initial message...\n");
 
 	// Wait for a bit to allow a few messages to be sent
 	static struct ctimer ct;
@@ -305,7 +304,10 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		callbacks->aggregate_update != NULL && callbacks->aggregate_own != NULL &&
 		callbacks->store_packet != NULL)
 	{
+		printf("Tree Agg: Starting...\n");
+
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
+
 		unicast_open(&conn->uc, ch2, &callbacks_aggregate);
 
 		conn->has_seen_setup = false;
@@ -325,6 +327,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		// Make sure memory allocation was successful
 		if (conn->data == NULL)
 		{
+			printf("Tree Agg: Starting Failed: Memory allocation!\n");
 			return false;
 		}
 
@@ -334,21 +337,26 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 
 		if (is_sink(conn))
 		{
-			printf("Starting aggregation tree setup...\n");
+			printf("Tree Agg: Starting aggregation tree setup...\n");
 
 			// Wait a bit to allow processes to start up
 			static struct ctimer ct;
 			ctimer_set(&ct, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
 		}
 
+		printf("Tree Agg: Starting Succeeded!\n");
+
 		return true;
 	}
 	
+	printf("Tree Agg: Starting Failed: Parameters Invalid!\n");
 	return false;
 }
 
 void tree_agg_close(tree_agg_conn_t * conn)
 {
+	printf("Tree Agg: Closing connection.\n");
+
 	if (conn != NULL)
 	{
 		stbroadcast_close(&conn->bc);
@@ -366,6 +374,8 @@ void tree_agg_send(tree_agg_conn_t * conn)
 {
 	if (conn != NULL)
 	{
+		printf("Tree Agg: Sending data to best parent %s\n", addr2str(&conn->best_parent));
+
 		unicast_send(&conn->uc, &conn->best_parent);
 	}
 }
@@ -389,6 +399,8 @@ typedef struct
 {
 	double temperature;
 	double humidity;
+	double light1;
+	double light2;
 } collect_msg_t;
 
 
@@ -402,9 +414,9 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
 	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
 
-	printf("Sink rcv: Src:%s Temp:%d Hudmid:%d%%\n",
+	printf("Tree Agg: Sink rcv: Src:%s Temp:%d Hudmid:%d%% Light1:%d Light2:%d\n",
 			addr2str(source),
-			(int)msg->temperature, (int)msg->humidity
+			(int)msg->temperature, (int)msg->humidity, (int)msg->light1, (int)msg->light2
 	);
 }
 
@@ -426,6 +438,12 @@ static void tree_aggregate_update(void * data, void const * to_apply)
 
 	our_data->temperature /= 2.0;
 	our_data->humidity /= 2.0;
+
+	our_data->light1 += data_to_apply->light1;
+	our_data->light2 += data_to_apply->light2;
+
+	our_data->light1 /= 2.0;
+	our_data->light2 /= 2.0;
 }
 
 static void tree_aggregate_own(void * ptr)
@@ -439,6 +457,14 @@ static void tree_aggregate_own(void * ptr)
 
 	data.temperature = sht11_temperature(raw_temperature);
 	data.humidity = sht11_relative_humidity_compensated(raw_humidity, data.temperature);
+
+	SENSORS_ACTIVATE(light_sensor);
+	int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+	int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+	SENSORS_DEACTIVATE(sht11_sensor);
+
+	data.light1 = s1087_light1(raw_light1);
+	data.light2 = s1087_light1(raw_light2);
 
 	tree_aggregate_update(ptr, &data);
 }
@@ -483,7 +509,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	PROCESS_BEGIN();
 
-	printf("Starting data generation process\n");
+	printf("Tree Agg: Starting data generation process\n");
 
 	leds_on(LEDS_GREEN);
 
@@ -496,6 +522,8 @@ PROCESS_THREAD(send_data_process, ev, data)
 	// Only leaf nodes send these messages
 	while (tree_agg_is_leaf(&conn))
 	{
+		leds_on(LEDS_BLUE);
+
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		// Read the data from the temp and humidity sensors
@@ -504,6 +532,10 @@ PROCESS_THREAD(send_data_process, ev, data)
 		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 		SENSORS_DEACTIVATE(sht11_sensor);
 
+		SENSORS_ACTIVATE(light_sensor);
+		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+		SENSORS_DEACTIVATE(sht11_sensor);
 
 		// Create the data message that we are going to send
 		packetbuf_clear();
@@ -514,10 +546,14 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
+		msg->light1 = s1087_light1(raw_light1);
+		msg->light2 = s1087_light1(raw_light2);
 		
 		tree_agg_send(&conn);
 
 		etimer_reset(&et);
+
+		leds_off(LEDS_BLUE);
 	}
 
 	PROCESS_END();

@@ -87,7 +87,7 @@ static char const * array_list_test(void)
 
 		int value = *(int *)data;
 
-		if (value != expected[i]) return "Failed: Data Expected";
+		if (value != expected[i]) return "Failed: Data not as Expected 1";
 
 		++i;
 	}
@@ -103,6 +103,48 @@ static char const * array_list_test(void)
 
 		if (!array_list_append(&list, &values2[i])) return "Failed: Realloc Append";
 	}
+
+	int expected3[] = { 1, 1, 2, 3, 4, 5, 9, 2, 3, 7, 8, 5, 8, 9, 4, 5, 3, 5, 4, 3, 2, 1, 6, 8, 9 };
+
+	i = 0;
+	for (elem = array_list_first(&list); array_list_continue(&list, elem); elem = array_list_next(elem))
+	{
+		void * data = array_list_data(&list, elem);
+
+		if (data == NULL) return "Failed: Data Non-NULL";
+
+		int value = *(int *)data;
+
+		if (value != expected3[i]) return "Failed: Data not as Expected 3";
+
+		++i;
+	}
+
+	if (i != sizeof(expected3) / sizeof(*expected3)) return "Failed: Length Check 3";
+
+
+	if (!array_list_remove(&list, 0)) return "Failed: Remove0";
+	if (!array_list_remove(&list, 7)) return "Failed: Remove1";
+
+	int expected2[] = { 1, 2, 3, 4, 5, 9, 2, 7, 8, 5, 8, 9, 4, 5, 3, 5, 4, 3, 2, 1, 6, 8, 9 };
+
+	i = 0;
+	for (elem = array_list_first(&list); array_list_continue(&list, elem); elem = array_list_next(elem))
+	{
+		void * data = array_list_data(&list, elem);
+
+		if (data == NULL) return "Failed: Data Non-NULL";
+
+		int value = *(int *)data;
+
+		//printf("%d: (%d, %d)\n", i, value, expected2[i]);
+
+		if (value != expected2[i]) return "Failed: Data not as Expected 2";
+
+		++i;
+	}
+
+	if (i != sizeof(expected2) / sizeof(*expected2)) return "Failed: Length Check 2";
 	
 
 	if (!array_list_clear(&list)) return "Failed: Clear";

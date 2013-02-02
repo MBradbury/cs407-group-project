@@ -201,7 +201,7 @@ typedef struct
 	uint8_t bytecode_length;
 
 	var_elem_t * variables_details;
-	ubyte const * bytecode;
+	ubyte * bytecode;
 
 } predicate_detail_entry_t;
 
@@ -246,54 +246,65 @@ static void trickle_send_rcv(struct trickle_conn * c)
 		leds_on(LEDS_RED);
 		leds_off(LEDS_GREEN);
 
-		// Add or update entry
-		predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&predicate_map, &msg->predicate_id);
-
-		if (stored)
+		if (msg->bytecode_length == 0)
 		{
-			printf("Updating predicate with id %d.\n", msg->predicate_id);
+			// There is no bytecode, so interpret this as a request to stop
+			// evaluating this predicate
+			map_remove(&predicate_map, &msg->predicate_id);
 
-			// Re-allocate data structures if needed
-
-			if (msg->bytecode_length != stored->bytecode_length)
-			{
-				free(stored->bytecode);
-				stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
-			}
-
-			if (msg->num_of_bytecode_var != stored->variables_details_length)
-			{
-				free(stored->variables_details);
-				stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
-			}
+			printf("Removed predicate with id %d\n", msg->predicate_id);
 		}
 		else
 		{
-			printf("Creating predicate with id %d.\n", msg->predicate_id);
+			// Add or update entry
+			predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&predicate_map, &msg->predicate_id);
 
-			// Allocate memory for the data
-			stored = malloc(sizeof(predicate_detail_entry_t));
+			if (stored)
+			{
+				printf("Updating predicate with id %d.\n", msg->predicate_id);
 
-			stored->id = msg->predicate_id; //set the key
-			stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
-			stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
+				// Re-allocate data structures if needed
 
-			// Put data in the map
-			map_put(&predicate_map, stored);
+				if (msg->bytecode_length != stored->bytecode_length)
+				{
+					free(stored->bytecode);
+					stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
+				}
+
+				if (msg->num_of_bytecode_var != stored->variables_details_length)
+				{
+					free(stored->variables_details);
+					stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
+				}
+			}
+			else
+			{
+				printf("Creating predicate with id %d.\n", msg->predicate_id);
+
+				// Allocate memory for the data
+				stored = malloc(sizeof(predicate_detail_entry_t));
+
+				stored->id = msg->predicate_id; //set the key
+				stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
+				stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
+
+				// Put data in the map
+				map_put(&predicate_map, stored);
+			}
+
+			// Pointer for bytecode variables
+			var_elem_t const * variables = (var_elem_t const *)(msg + 1);
+
+			// Create a pointer to the bytecode instructions stored in the message.
+			ubyte const * bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
+
+			// Update data
+			stored->bytecode_length = msg->bytecode_length;
+			stored->variables_details_length = msg->num_of_bytecode_var;
+
+			memcpy(stored->bytecode, bytecode_instructions, sizeof(ubyte) * stored->bytecode_length);
+			memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
 		}
-
-		// Pointer for bytecode variables
-		var_elem_t const * variables = (var_elem_t const *)(msg + 1);
-
-		// Create a pointer to the bytecode instructions stored in the message.
-		ubyte const * bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
-
-		// Update data
-		stored->bytecode_length = msg->bytecode_length;
-		stored->variables_details_length = msg->num_of_bytecode_var;
-
-		memcpy(stored->bytecode, bytecode_instructions, sizeof(ubyte) * stored->bytecode_length);
-		memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
 	}
 }
 
@@ -325,8 +336,11 @@ PROCESS(hsendProcess, "HSEND Process");
 AUTOSTART_PROCESSES(&mainProcess, &hsendProcess);
 
 
-static void send_example_predicate(rimeaddr_t const * destination, uint8_t id)
+static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 {
+	if (destination == NULL)
+		return false;
+
 	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 
 	// Send the request message
@@ -371,6 +385,35 @@ static void send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 	//printf("Sent packet length %d\n", packet_size);
 
 	trickle_send(&tcsender);
+
+	return true;
+}
+
+static bool send_cancel_predicate(rimeaddr_t const * destination, uint8_t id)
+{
+	if (destination == NULL)
+		return false;
+
+	unsigned int packet_size = sizeof(eval_pred_req_t);
+
+	packetbuf_clear();
+	packetbuf_set_datalen(packet_size);
+	debug_packet_size(packet_size);
+	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+	memset(msg, 0, packet_size);
+
+	// Set eventual destination in header
+	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
+
+	msg->predicate_id = id;
+
+	// Setting bytecode length to 0 indicates that this predicate should be removed
+	msg->bytecode_length = 0;
+	msg->num_of_bytecode_var = 0;
+
+	trickle_send(&tcsender);
+
+	return true;
 }
 
 PROCESS_THREAD(mainProcess, ev, data)
@@ -476,7 +519,7 @@ static bool evaluate_predicate(
 		// Get the length of this hop's data
 		// including all of the closer hop's data length
 		unsigned int length = 0;
-		unsigned int j;
+		uint8_t j;
 		for (j = 1; j <= variables[i].hops; ++j)
 		{
 			length += map_length(get_hop_map(j));
@@ -489,9 +532,9 @@ static bool evaluate_predicate(
 	return evaluate(program, program_length);
 }
 
-static unsigned int maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
+static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
 {
-	unsigned int max_hops = 0;
+	uint8_t max_hops = 0;
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -501,7 +544,7 @@ static unsigned int maximum_hop_data_request(var_elem_t const * variables, unsig
 			max_hops = variables[i].hops;
 		}
 
-		//printf("variables added: %d %d\n",variables[i].hops,variables[i].var_id);
+		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
 	}
 
 	return max_hops;
@@ -510,7 +553,7 @@ static unsigned int maximum_hop_data_request(var_elem_t const * variables, unsig
 PROCESS_THREAD(hsendProcess, ev, data)
 {
 	static struct etimer et;
-	static unsigned int max_hops = 0;
+	static uint8_t max_hops = 0;
 	static node_data_t * all_neighbour_data = NULL;
 
 	PROCESS_EXITHANDLER(goto exit;)
@@ -538,7 +581,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		{
 			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&predicate_map, elem);
 
-			unsigned int local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
+			uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
 
 			if (local_max_hops > max_hops)
 			{
@@ -564,7 +607,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			// Generate array of all the data
 			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-			unsigned int i;
+			uint8_t i;
 			for (i = 1; i <= max_hops; ++i)
 			{
 				map_t * hop_map = get_hop_map(i);
@@ -618,6 +661,12 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		// Free the allocated neighbour data
 		free(all_neighbour_data);
 		all_neighbour_data = NULL;
+
+		// We want to remove all the data we gathered,
+		// this is important to do so as if a node dies
+		// we do not want to keep using its last piece of data
+		// we want that lack of data to be picked up on.
+		array_list_clear(&hops_data);
 	}
 
 exit:

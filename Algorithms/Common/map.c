@@ -22,7 +22,7 @@ bool map_clear(map_t * map)
 	return unique_array_clear(map);
 }
 
-bool map_remove(map_t * map, void * key)
+bool map_remove(map_t * map, void const * key)
 {
 	if (map == NULL || key == NULL)
 	{

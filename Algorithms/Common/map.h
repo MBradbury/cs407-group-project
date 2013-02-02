@@ -15,7 +15,7 @@ bool map_put(map_t * map, void * keyanddata);
 bool map_clear(map_t * map);
 
 // data should point to the key
-bool map_remove(map_t * map, void * key);
+bool map_remove(map_t * map, void const * key);
 
 // Get data
 void * map_get(map_t const * map, void const * key);

@@ -142,6 +142,8 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 	{
 		printf("Tree Agg: Is leaf starting data aggregation\n");
 
+		leds_on(LEDS_RED);
+
 		process_start(&neighbour_agg_send_data_process, NULL);
 	}
 }

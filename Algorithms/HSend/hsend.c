@@ -423,6 +423,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
+#ifdef NODE_ID
+node_id_burn(NODE_ID)
+#endif
+
 #ifdef POWER_LEVEL
 	cc2420_set_txpower(POWER_LEVEL);
 #endif

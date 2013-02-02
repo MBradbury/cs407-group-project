@@ -5,7 +5,7 @@
 
 static struct linked_list_t recvd_packets;
 static int total_size = 0;
-typedef struct { int seqno, void * data } list_packet;
+typedef struct { int seqno, void * data } list_packet_t;
 static void * reconstructed;		//Need some way to get this back to the calling app
 
 static const struct packetbuf_attrlist multipacket_attributes[] = {
@@ -17,14 +17,14 @@ static const struct packetbuf_attrlist multipacket_attributes[] = {
 static void recv_from_runicast(struct runicast_conn *runicast, const rimeaddr_t *from)
 {
 	multipacket_conn * multipacket = (multipacket_conn *) runicast;
+	multipacket->c = *runicast;
 	int packet = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
 	int packets = packetbuf_attr(PACKETBUF_ATTR_EPACKET_TYPE);
 	printf("Received runicast from %d.%d; packet no. %d of %d\n", from->u8[0], from->u8[0], packet, packets);
 	
-	void * data;
-	memcpy(data, packetbuf_dataptr(), packetbuf_datalen());
+	void * data = memcpy(data, packetbuf_dataptr(), packetbuf_datalen());
 	
-	struct list_packet * new_elem;
+	struct list_packet_t * new_elem;
 	new_elem->seqno = packet;
 	new_elem->data = data;
 	
@@ -40,7 +40,7 @@ static void recv_from_runicast(struct runicast_conn *runicast, const rimeaddr_t 
 			linked_list_elem_t elem;
 			for (elem = linked_list_first(&recvd_packets); linked_list_continue(&recvd_packets, elem); elem = linked_list_next(elem))
 			{
-				struct list_packet * data = (list_packet *)linked_list_data(&list, elem);
+				struct list_packet_t * data = (list_packet_t *)linked_list_data(&list, elem);
 				if (data->seqno==i)
 				{
 					memcpy(reconstructed+(i-1)*PACKETBUF_SIZE,data->data);
@@ -49,6 +49,8 @@ static void recv_from_runicast(struct runicast_conn *runicast, const rimeaddr_t 
 			}
 			i++;
 		}
+		multipacket->reconstructed_data = reconstructed;
+		(*multipacket->callbacks.recv)(multipacket, originator);
 	}
 }
 
@@ -84,8 +86,7 @@ uint8_t multipacket_is_transmitting(struct multipacket_conn *c)
 
 int multipacket_send(struct multipacket_conn *c, const rimeaddr_t *receiver, uint8_t max_rexmits)
 {
-	void * ptr malloc(packetbuf_datalen());	//Use this until we figure out where the data is coming from
-	ptr = memcpy(ptr, packetbuf_dataptr());
+	void * ptr  = c->original_data;
 	
 	int size = packetbuf_datalen();
 	int packets = size/PACKETBUF_SIZE;
@@ -116,8 +117,8 @@ int multipacket_send(struct multipacket_conn *c, const rimeaddr_t *receiver, uin
 			packetbuf_clear();
 			packetbuf_set_datalen(size % PACKETBUF_SIZE);
 			debug_packet_size(size % PACKETBUF_SIZE);
-			packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, packet);
-			packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_TYPE, packets);
+			packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, packet);		//Set seqno in header
+			packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_TYPE, packets);	//Set total no. packets in header
 			void * msg = packetbuf_dataptr();
 			memcpy(msg, ptr, size % PACKETBUF_SIZE);
 			runicast_send(c->c, receiver, max_rexmits);

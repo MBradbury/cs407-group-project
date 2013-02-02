@@ -5,20 +5,20 @@
 
 struct multipacket_conn;
 
-#define RUNICAST_PACKET_ID_BITS 2
-
-#define RUNICAST_ATTRIBUTES { PACKETBUF_ATTR_PACKET_TYPE, PACKETBUF_ATTR_BIT }, \
-							{ PACKETBUF_ATTR_PACKET_ID, PACKETBUF_ATTR_BIT * RUNICAST_PACKET_ID_BITS }, \
-							STUNICAST_ATTRIBUTES
-struct runicast_callbacks {
-	void (* recv)(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno);
-	void (* sent)(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
-	void (* timedout)(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
-};
+typedef struct {
+	void (* recv)(struct multipacket_conn *c, const rimeaddr_t *from);
+	void (* sent)(struct multipacket_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
+	void (* timedout)(struct multipacket_conn *c, const rimeaddr_t *to, uint8_t retransmissions);
+} multipacket_callbacks_t;
 
 struct multipacket_conn {
 	struct runicast_conn c;
-	const struct multipacket_callbacks *u;
+	
+	void * original_data;
+	void * reconstructed_data;
+	size_t length;
+	
+	multipacket_callbacks_t callbacks;
 };
 
 void multipacket_open(struct multipacket_conn *c, uint16_t channel,

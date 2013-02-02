@@ -319,7 +319,7 @@ static void mesh_receiver_sent(struct mesh_conn * c)
 
 static void mesh_receiver_timeout(struct mesh_conn * c)
 {
-	print("Mesh timedout, so start sending again\n");
+	printf("Mesh timedout, so start sending again\n");
 	// We timedout, so start sending again
 	mesh_send(&meshreceiver, &baseStationAddr);
 }

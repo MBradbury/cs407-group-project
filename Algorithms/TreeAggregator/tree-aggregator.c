@@ -92,10 +92,6 @@ static void parent_detect_finished(void * ptr)
 	printf("Tree Agg: Timer on %s expired\n",
 		addr2str(&rimeaddr_node_addr));
 
-	// Set the best values
-	conn->best_parent = conn->collecting_best_parent;
-	conn->best_hop = conn->collecting_best_hop;
-
 	printf("Tree Agg: Found Parent:%s Hop:%u\n",
 		addr2str(&conn->best_parent), conn->best_hop);
 
@@ -235,19 +231,19 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 
 	// As we have received a message we need to record the node
 	// it came from, if it is closer to the sink.
-	if (msg->hop_count < conn->collecting_best_hop)
+	if (msg->hop_count < conn->best_hop)
 	{
 		char firstaddr[RIMEADDR_STRING_LENGTH];
 		char secondaddr[RIMEADDR_STRING_LENGTH];
 
 		printf("Tree Agg: Updating to a better parent (%s H:%u) was:(%s H:%u)\n",
 			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), msg->hop_count,
-			addr2str_r(&conn->collecting_best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->collecting_best_hop
+			addr2str_r(&conn->best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->best_hop
 		);
 
 		// Set the best parent, and the hop count of that node
-		rimeaddr_copy(&conn->collecting_best_parent, &msg->source);
-		conn->collecting_best_hop = msg->hop_count;
+		rimeaddr_copy(&conn->best_parent, &msg->source);
+		conn->best_hop = msg->hop_count;
 	}
 
 	
@@ -322,12 +318,10 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		conn->is_leaf_node = true;
 
 		rimeaddr_copy(&conn->best_parent, &rimeaddr_null);
-		rimeaddr_copy(&conn->collecting_best_parent, &rimeaddr_null);
 
 		rimeaddr_copy(&conn->sink, sink);
 
 		conn->best_hop = UINT_MAX;
-		conn->collecting_best_hop = UINT_MAX;
 
 		conn->data = malloc(data_size);
 

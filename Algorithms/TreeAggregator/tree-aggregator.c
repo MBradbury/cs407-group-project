@@ -393,6 +393,8 @@ bool tree_agg_is_collecting(tree_agg_conn_t const * conn)
 	return conn != NULL && conn->is_collecting;
 }
 
+#ifdef BUILDING_TREE_AGGREGATION_APP
+
 /********************************************
  ********* APPLICATION BEGINS HERE **********
  *******************************************/
@@ -564,4 +566,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 	PROCESS_END();
 }
+
+#endif
+
 

@@ -251,6 +251,15 @@ using Neighbours(1) as onehopn in
 \end{figure}
 
 
+\begin{figure}[H]
+\begin{verbatim}
+using Neighbours(1) as onehopn in
+    base-station-distance(this) == min(base-station-distance, onehopn) + 1
+\end{verbatim}
+\caption{We are one hop further from the base station than the closest of our neighbours}
+\end{figure}
+
+
 \subsection{Virtual Machine}
 
 \subsubsection{Opcodes}

@@ -21,7 +21,7 @@ typedef struct
 
 	rimeaddr_t baseStationAddr;
 
-	uint8_t message_id;
+	uint16_t message_id;
 
 	unsigned int data_size;
 	data_generation_fn data_fn;

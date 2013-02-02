@@ -13,10 +13,12 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+typedef uint32_t message_id_t;
+
 // Struct for the list elements, used to see if messages have already been sent
 typedef struct
 {
-	uint8_t message_id;
+	message_id_t message_id;
 	uint8_t hops;
 	rimeaddr_t originator;
 	
@@ -25,7 +27,7 @@ typedef struct
 // Struct used to ask other nodes for predicate values
 typedef struct
 {
-	uint8_t message_id;
+	message_id_t message_id;
 	uint8_t hop_limit;
 	rimeaddr_t originator;
 } req_data_msg_t;
@@ -33,7 +35,7 @@ typedef struct
 // Struct to send back to the originator with the value of a predicate
 typedef struct
 {
-	uint8_t message_id;
+	message_id_t message_id;
 	uint8_t hops;
 	rimeaddr_t sender;
 	rimeaddr_t target_receiver;
@@ -57,7 +59,7 @@ static inline nhopreq_conn_t * conncvt_datareq_bcast(struct stbroadcast_conn * c
 typedef struct
 {
 	nhopreq_conn_t * conn;
-	uint8_t message_id;
+	message_id_t message_id;
 } delayed_reply_data_params_t;
 
 typedef struct
@@ -72,13 +74,13 @@ static void delayed_reply_data(void * ptr);
 
 static void send_n_hop_data_request(
 	nhopreq_conn_t * conn, rimeaddr_t const * originator,
-	uint8_t message_id_to_send, uint8_t hop_limit);
+	message_id_t message_id_to_send, uint8_t hop_limit);
 
 static void send_reply(
 	nhopreq_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_receiver,
-	uint8_t message_id, uint8_t hops, void const * data);
+	message_id_t message_id, uint8_t hops, void const * data);
 
-static uint8_t get_message_id(nhopreq_conn_t * conn);
+static message_id_t get_message_id(nhopreq_conn_t * conn);
 
 // Utility function
 static clock_time_t random_time(unsigned int from, unsigned int to, double granularity)
@@ -295,7 +297,7 @@ delayed_forward_reply(void * ptr)
 static void
 send_reply(
 	nhopreq_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_receiver,
-	uint8_t message_id, uint8_t hops, void const * data)
+	message_id_t message_id, uint8_t hops, void const * data)
 {
 	if (runicast_is_transmitting(&hc->ru))
 	{
@@ -365,7 +367,7 @@ send_reply(
 static void
 send_n_hop_data_request(
 	nhopreq_conn_t * conn, rimeaddr_t const * originator,
-	uint8_t message_id_to_send, uint8_t hop_limit)
+	message_id_t message_id_to_send, uint8_t hop_limit)
 {
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(req_data_msg_t));
@@ -475,11 +477,17 @@ void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops)
 		delivered_msg->message_id, delivered_msg->hops);
 }
 
-static uint8_t get_message_id(nhopreq_conn_t * conn)
+// Get an id that contains the address of the node sending
+// the message and the number of messages that node has sent.
+static message_id_t get_message_id(nhopreq_conn_t * conn)
 {
-	uint8_t returnvalue = conn->message_id++;
-	returnvalue *= 100;
-	returnvalue += rimeaddr_node_addr.u8[0];
-	return returnvalue;
+	message_id_t id;
+
+	uint16_t * idcomponents = (uint16_t *)&id;
+
+	idcomponents[0] = *(uint16_t *)(&rimeaddr_node_addr);
+	idcomponents[1] = conn->message_id++;
+
+	return id;
 }
 

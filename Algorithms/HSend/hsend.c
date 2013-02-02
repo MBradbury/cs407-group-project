@@ -126,16 +126,13 @@ static map_t * get_hop_map(uint8_t hop)
 	// Map doesn't exist so create it
 	if (length < hop)
 	{
-		unsigned int to_add = hop - length;
-
-		while (to_add > 0)
+		unsigned int to_add;
+		for (to_add = hop - length; to_add > 0; --to_add)
 		{
 			map_t * map = (map_t *)malloc(sizeof(map_t));
 			map_init(map, &rimeaddr_equal_node_data, &free);
 
 			array_list_append(&hops_data, map);
-	
-			--to_add;
 		}
 	}
 
@@ -322,6 +319,7 @@ static void mesh_receiver_sent(struct mesh_conn * c)
 
 static void mesh_receiver_timeout(struct mesh_conn * c)
 {
+	print("Mesh timedout, so start sending again\n");
 	// We timedout, so start sending again
 	mesh_send(&meshreceiver, &baseStationAddr);
 }
@@ -635,7 +633,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		{
 			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&predicate_map, elem);
 
-			printf("Starting predicate evaluation with code length: %d.\n", pe->bytecode_length);
+			printf("Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 	
 			bool evaluation_result = evaluate_predicate(
 				pe->bytecode, pe->bytecode_length,

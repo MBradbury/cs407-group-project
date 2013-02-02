@@ -133,6 +133,8 @@ static void finish_aggregate_collect(void * ptr)
 
 	printf("Tree Agg: Send Agg\n");
 
+	toggle_led_for(LEDS_GREEN, 1 * CLOCK_SECOND);
+
 	// We are no longer collecting aggregation data
 	conn->is_collecting = false;
 

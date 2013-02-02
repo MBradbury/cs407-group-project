@@ -10,6 +10,7 @@
 
 #include "lib/random.h"
 
+#include "random-range.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
@@ -82,13 +83,6 @@ static void send_reply(
 
 static message_id_t get_message_id(nhopreq_conn_t * conn);
 
-// Utility function
-static clock_time_t random_time(unsigned int from, unsigned int to, double granularity)
-{
-	double random = granularity * ((random_rand() % (unsigned int)(from / granularity)) + (unsigned int)(to / granularity));
-
-	return (clock_time_t)(random * CLOCK_SECOND);
-}
 
 // STUBBORN BROADCAST
 static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)

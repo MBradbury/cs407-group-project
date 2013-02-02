@@ -13,6 +13,9 @@
 #include "net/rime/stbroadcast.h"
 #include "contiki-net.h"
 
+#include "lib/random.h"
+
+#include "random-range.h"
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
@@ -41,14 +44,13 @@ static inline bool is_sink(tree_agg_conn_t const * conn)
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
-static const clock_time_t STUBBORN_INTERVAL = 3 * CLOCK_SECOND;
 static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
 // Time to gather aggregations over
-static const clock_time_t AGGREGATION_WAIT = 25 * CLOCK_SECOND;
+static const clock_time_t AGGREGATION_WAIT = 45 * CLOCK_SECOND;
 
 // Time to wait to detect parents
-static const clock_time_t PARENT_DETECT_WAIT = 15 * CLOCK_SECOND;
+static const clock_time_t PARENT_DETECT_WAIT = 22 * CLOCK_SECOND;
 
 static const uint8_t RUNICAST_MAX_RETX = 3;
 
@@ -109,7 +111,7 @@ static void parent_detect_finished(void * ptr)
 	rimeaddr_copy(&msg->parent, &conn->best_parent);
 	msg->hop_count = conn->best_hop + 1;
 
-	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
+	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
 
 	// Wait for a bit to allow a few messages to be sent
 	// Then close the connection and tell user that we are done
@@ -286,7 +288,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	rimeaddr_copy(&msg->parent, &rimeaddr_null);
 	msg->hop_count = 0;
 
-	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
+	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
 
 	printf("Tree Agg: IsSink, sending initial message...\n");
 
@@ -497,6 +499,9 @@ PROCESS_THREAD(startup_process, ev, data)
 
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
+
+	// We need to set the random number generator here
+	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
 	tree_agg_open(&conn, &sink, 118, 132, sizeof(collect_msg_t), &callbacks);
 

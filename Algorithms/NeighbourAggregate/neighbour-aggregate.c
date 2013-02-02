@@ -13,6 +13,8 @@
 #include "dev/sht11.h"
 #include "dev/sht11-sensor.h"
 
+#include "lib/random.h"
+
 #include "dev/leds.h"
 #include "dev/cc2420.h"
 
@@ -210,7 +212,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 	
 	rimeaddr_pair_t const * neighbours = (rimeaddr_pair_t const *)(msg + 1);
-	unsigned int neighbours_count = (length - sizeof(collect_msg_t)) / 2;
+	unsigned int neighbours_count = (length - sizeof(collect_msg_t)) / sizeof(rimeaddr_pair_t);
 
 	unique_array_t * conn_list = (unique_array_t *)conn->data;
 
@@ -219,6 +221,9 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	unsigned int i;
 	for (i = 0; i < neighbours_count; ++i)
 	{
+		// Allocate memory for this pair
+		// As we expect the data we received to be free of duplicates
+		// We will not perform duplicate checks here.
 		rimeaddr_pair_t * pair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
 		rimeaddr_copy(&pair->first, &neighbours[i].first);
 		rimeaddr_copy(&pair->second, &neighbours[i].second);
@@ -280,7 +285,7 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 	PROCESS_BEGIN();
 
 #ifdef NODE_ID
-	node_id_burn(NODE_ID)
+	node_id_burn(NODE_ID);
 #endif
 
 #ifdef POWER_LEVEL
@@ -294,6 +299,9 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 	printf("Setting address so we are sink node.\n");
 	rimeaddr_set_node_addr(&sink);
 #endif
+
+	// We need to set the random number generator here
+	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
 	start_neighbour_detect(&one_hop_neighbours, 150);
 	

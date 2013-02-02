@@ -64,9 +64,9 @@ void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 	neighbor_discovery_open(
         &nd,
         channel, 
-        5 * CLOCK_SECOND, 
-        5 * CLOCK_SECOND, 
-        120 * CLOCK_SECOND,
+        5 * CLOCK_SECOND,	// Initial interval
+        5 * CLOCK_SECOND, 	// Min interval
+        120 * CLOCK_SECOND,	// Max interval
         &neighbor_discovery_callbacks
 	);
 

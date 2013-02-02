@@ -231,7 +231,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 {
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
-	unique_array_t const * data_array = (unique_array_t *)conn->data;
+	unique_array_t * data_array = (unique_array_t *)conn->data;
 
 	printf("Writing: ");
 	print_ua_rimeaddr_pair(data_array);
@@ -260,8 +260,8 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 		++i;
 	}
 
-	// Should we free data here?
-	//unique_array_clear(data_array);
+	// Free the data here
+	unique_array_clear(data_array);
 }
 
 

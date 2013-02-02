@@ -36,12 +36,10 @@ typedef struct tree_agg_conn
 	bool is_leaf_node;
 
 	rimeaddr_t best_parent;
-	rimeaddr_t collecting_best_parent;
 
 	rimeaddr_t sink;
 
 	unsigned int best_hop;
-	unsigned int collecting_best_hop;
 
 	void * data;
 	size_t data_length;

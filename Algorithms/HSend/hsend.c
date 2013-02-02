@@ -154,11 +154,12 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
 
-	printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%%\n",
+	printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",
 		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
 		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
 		hops,
-		(int)nd->temp, (int)nd->humidity);
+		(int)nd->temp, (int)nd->humidity,
+		(int)nd->light1, (int)nd->light2);
 
 
 	map_t * map = get_hop_map(hops);

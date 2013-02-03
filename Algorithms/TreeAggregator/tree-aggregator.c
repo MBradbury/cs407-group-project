@@ -194,6 +194,10 @@ static void runicast_sent(struct runicast_conn * c, rimeaddr_t const * to, uint8
 static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
 	printf("Tree Agg: runicast timedout to %s numtx:%d\n", addr2str(to), retransmissions);
+
+	// TODO: If we are getting a lot of these, then it may be the case
+	// that our target node has been lost.
+	// We may wish to consider other neighbours
 }
 
 

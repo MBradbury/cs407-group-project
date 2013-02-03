@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "map.h"
+
 #include "led-helper.h"
 #include "debug-helper.h"
 
@@ -21,10 +23,52 @@ static unique_array_t * results_ptr = NULL;
 static struct ctimer round_timer;
 #define ROUND_TIME (MAX_INTERVAL * 2)
 static uint16_t round_count = 0;
+#define MISSED_ROUND_THRESHOLD 3
+
+
+static bool rimeaddr_equality(void const * left, void const * right)
+{
+	if (left == NULL || right == NULL)
+		return false;
+
+	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
+}
+
+typedef struct
+{
+	rimeaddr_t node;
+	uint16_t round_last_seen;
+} round_map_elem_t;
+
+static map_t round_map;
 
 
 static void round_complete(void * ptr)
 {
+	// We want to remove any nodes we haven't seen in a while
+
+	unique_array_elem_t elem;
+	for (elem = unique_array_first(results_ptr); unique_array_continue(results_ptr, elem); )
+	{
+		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(results_ptr, elem);
+
+		round_map_elem_t * stored = (round_map_elem_t *)map_get(&round_map, addr);
+
+		if (round_count - stored->round_last_seen >= MISSED_ROUND_THRESHOLD)
+		{
+			printf("Detected that %s is no longer in our neighbourhood, so removing it\n", addr2str(addr));
+
+			// We haven't seen this node for a while, so need to remove it
+			// from both the results and our local map
+			map_remove(&round_map, addr);
+			unique_array_remove(results_ptr, elem);
+		}
+		else
+		{
+			elem = unique_array_next(elem);
+		}
+	}
+
 	++round_count;
 
 	neighbor_discovery_set_val(&nd, round_count);
@@ -34,7 +78,7 @@ static void round_complete(void * ptr)
 }
 
 
-static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr_t const * from, uint16_t val)
+static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr_t const * from, uint16_t value)
 {
 	//printf("Mote With Address: %s is my Neighbour ", addr2str(from));
 	//printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
@@ -50,6 +94,28 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 			printf("Recording Address: %s", addr2str(from));
 			printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
 		}
+	}
+
+	// Update round map
+	round_map_elem_t * stored = (round_map_elem_t *)map_get(&round_map, from);
+
+	if (stored)
+	{
+		// Update data
+		if (value > stored->round_last_seen)
+		{
+			stored->round_last_seen = value;
+		}
+	}
+	else
+	{
+		// Allocate memory for the data
+		stored = malloc(sizeof(round_map_elem_t));
+		rimeaddr_copy(&stored->node, from);
+		stored->round_last_seen = value;
+
+		// Put data in the map
+		map_put(&round_map, stored);
 	}
 
 	printf("Neighbour Discovery: got addr seen before from: %s\n", addr2str(from));
@@ -68,6 +134,8 @@ static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
 void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 {
 	printf("Neighbour Discovery: Started!\n");
+
+	map_init(&round_map, &rimeaddr_equality, &free);
 
 	results_ptr = results;
 
@@ -95,6 +163,8 @@ void stop_neighbour_detect(void)
 	results_ptr = NULL;
 
 	ctimer_stop(&round_timer);
+
+	map_clear(&round_map);
 
 	leds_off(LEDS_BLUE);
 }

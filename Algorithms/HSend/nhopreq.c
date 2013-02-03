@@ -405,10 +405,10 @@ static bool map_elem_key_equal(void const * left, void const * right)
 
 // Initialise multi-hop predicate checking
 bool nhopreq_start(
-	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * baseStationAddr,
+	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * base_station_addr,
 	data_generation_fn data_fn, unsigned int data_size, data_receive_fn receive_fn)
 {
-	if (conn == NULL || baseStationAddr == NULL ||
+	if (conn == NULL || base_station_addr == NULL ||
 		data_fn == NULL || ch1 == ch2 || data_size == 0 ||
 		receive_fn == NULL)
 	{
@@ -422,7 +422,7 @@ bool nhopreq_start(
 	stbroadcast_open(&conn->bc, ch1, &datareq_stbroadcastCallbacks);
 	runicast_open(&conn->ru, ch2, &runicastCallbacks);
 
-	rimeaddr_copy(&conn->baseStationAddr, baseStationAddr);
+	rimeaddr_copy(&conn->base_station_addr, base_station_addr);
 
 	conn->message_id = 1;
 
@@ -453,9 +453,9 @@ bool nhopreq_end(nhopreq_conn_t * conn)
 }
 
 
-bool is_base(nhopreq_conn_t const * conn)
+bool is_base_station(nhopreq_conn_t const * conn)
 {
-	return conn != NULL && rimeaddr_cmp(&rimeaddr_node_addr, &conn->baseStationAddr);
+	return conn != NULL && rimeaddr_cmp(&rimeaddr_node_addr, &conn->base_station_addr);
 }
 
 void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops)

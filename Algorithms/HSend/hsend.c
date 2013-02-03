@@ -89,7 +89,7 @@ static void node_data(void * data)
 		SENSORS_ACTIVATE(light_sensor);
 		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
 		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-		SENSORS_DEACTIVATE(sht11_sensor);
+		SENSORS_DEACTIVATE(light_sensor);
 
 		nd->light1 = s1087_light1(raw_light1);
 		nd->light2 = s1087_light1(raw_light2);
@@ -194,7 +194,7 @@ static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
 typedef struct
 {
-	uint8_t id; // Keep id as the first variable in the struct then
+	uint8_t id; // Keep id as the first variable in the struct
 	uint8_t variables_details_length;
 	uint8_t bytecode_length;
 
@@ -374,7 +374,7 @@ static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 	// Debug check to make sure that we have done sane things!
 	if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
 	{
-		printf("Failed to copy data correctly got=%d expected=%d!\n",
+		printf("Failed to copy data correctly got=%d expected=%u!\n",
 			(void *)(msg_bytecode + bytecode_length) - (void *)msg,
 			packet_size);
 	}
@@ -467,8 +467,8 @@ node_id_burn(NODE_ID)
 	{
 		printf("Is the base station!\n");
 
-		send_example_predicate(&destination,0);
-		send_example_predicate(&destination,1);
+		send_example_predicate(&destination, 0);
+		send_example_predicate(&destination, 1);
 
 		leds_on(LEDS_BLUE);
 

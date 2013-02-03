@@ -19,7 +19,7 @@ typedef struct
 	struct runicast_conn ru;
 	struct stbroadcast_conn bc;
 
-	rimeaddr_t baseStationAddr;
+	rimeaddr_t base_station_addr;
 
 	uint16_t message_id;
 
@@ -31,7 +31,7 @@ typedef struct
 
 } nhopreq_conn_t;
 
-bool is_base(nhopreq_conn_t const * conn);
+bool is_base_station(nhopreq_conn_t const * conn);
 
 // Initialise multi-hop predicate checking
 bool nhopreq_start(

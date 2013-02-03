@@ -31,9 +31,9 @@ typedef struct
 {
 	rimeaddr_t addr;
 	nfloat temp;
-	nfloat humidity;
-	nfloat light1;
-	nfloat light2;
+	nint humidity;
+	//nint light1;
+	//nint light2;
 } node_data_t;
 
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
@@ -50,6 +50,20 @@ typedef struct
 	uint8_t bytecode_length; // length of the bytecode_instructions, located after the struct
 	uint8_t num_of_bytecode_var; // number of variables after the struct
 } eval_pred_req_t;
+
+typedef struct
+{
+	uint8_t hops;
+	uint8_t var_id;
+	uint8_t length;
+} hops_position_t;
+
+typedef struct
+{
+	uint8_t predicate_id;
+	uint8_t num_hops_positions;
+	uint8_t data_length;
+} failure_response_t;
 
 ///
 /// Start VM Helper Functions
@@ -86,13 +100,13 @@ static void node_data(void * data)
 		nd->temp = sht11_temperature(raw_temperature);
 		nd->humidity = sht11_relative_humidity_compensated(raw_humidity, nd->temp);
 
-		SENSORS_ACTIVATE(light_sensor);
+		/*SENSORS_ACTIVATE(light_sensor);
 		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
 		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
 		SENSORS_DEACTIVATE(light_sensor);
 
-		nd->light1 = s1087_light1(raw_light1);
-		nd->light2 = s1087_light1(raw_light2);
+		nd->light1 = (nint)s1087_light1(raw_light1);
+		nd->light2 = (nint)s1087_light1(raw_light2);*/
 	}
 }
 ///
@@ -154,12 +168,18 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
 
-	printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",
+	printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%%\n",
+		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
+		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
+		hops,
+		(int)nd->temp, (int)nd->humidity);
+
+	/*printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",
 		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
 		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
 		hops,
 		(int)nd->temp, (int)nd->humidity,
-		(int)nd->light1, (int)nd->light2);
+		(int)nd->light1, (int)nd->light2);*/
 
 
 	map_t * map = get_hop_map(hops);
@@ -309,9 +329,10 @@ static void trickle_send_rcv(struct trickle_conn * c)
 // Used to handle receiving predicate failure messages
 static void mesh_receiver_rcv(struct mesh_conn *c, rimeaddr_t const * from, uint8_t hops)
 {
-	printf("Response received from %s: %.*s\n",
-         addr2str(from),
-         packetbuf_datalen(), (char *)packetbuf_dataptr());
+	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
+
+	printf("Response received from %s, %u hops away. ", addr2str(from), hops);
+	printf("Failed predicate %u.\n", response->predicate_id);
 }
 
 static void mesh_receiver_sent(struct mesh_conn * c)
@@ -498,6 +519,17 @@ exit:
 	PROCESS_END();
 }
 
+static uint8_t hop_data_length(var_elem_t const * variable)
+{
+	unsigned int length = 0;
+	uint8_t j;
+	for (j = 1; j <= variable->hops; ++j)
+	{
+		length += map_length(get_hop_map(j));
+	}
+
+	return length;
+}
 
 
 static bool evaluate_predicate(
@@ -511,7 +543,7 @@ static bool evaluate_predicate(
 	// Register the data functions 
 	register_function(0, &get_addr, TYPE_INTEGER);
 	register_function(2, &get_temp, TYPE_FLOATING);
-	register_function(3, &get_humidity, TYPE_FLOATING);
+	register_function(3, &get_humidity, TYPE_INTEGER);
 
 	printf("Binding variables using %p\n", all_neighbour_data);
 
@@ -521,12 +553,7 @@ static bool evaluate_predicate(
 	{
 		// Get the length of this hop's data
 		// including all of the closer hop's data length
-		unsigned int length = 0;
-		uint8_t j;
-		for (j = 1; j <= variables[i].hops; ++j)
-		{
-			length += map_length(get_hop_map(j));
-		}
+		unsigned int length = hop_data_length(&variables[i]);
 
 		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
@@ -648,17 +675,41 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			if (evaluation_result)
 			{
 				printf("Pred: TRUE\n");
-
-				packetbuf_copyfrom("Pred: TRUE", strlen("Pred: TRUE"));
-				mesh_send(&meshreceiver, &baseStationAddr);
 			}
 			else
 			{
 				printf("Pred: FAILED due to error: %s\n", error_message());
-
-				packetbuf_copyfrom(error_message(), strlen(error_message()));
-				mesh_send(&meshreceiver, &baseStationAddr);
 			}
+
+			unsigned int packet_length = sizeof(failure_response_t) +
+										 sizeof(hops_position_t) * pe->variables_details_length +
+										 sizeof(node_data_t) * max_size;
+
+			packetbuf_clear();
+			packetbuf_set_datalen(packet_length);
+			debug_packet_size(packet_length);
+			failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
+			memset(msg, 0, packet_length);
+
+			msg->predicate_id = pe->id;
+			msg->num_hops_positions = pe->variables_details_length;
+			msg->data_length = max_size;
+
+			hops_position_t * hops_details = (hops_position_t *)(msg + 1);
+
+			unsigned int i;
+			for (i = 0; i < msg->num_hops_positions; ++i)
+			{
+				hops_details[i].hops = pe->variables_details[i].hops;
+				hops_details[i].var_id = pe->variables_details[i].var_id;
+				hops_details[i].length = hop_data_length(&pe->variables_details[i]);
+			}
+
+			node_data_t * msg_neighbour_data = (node_data_t *)(hops_details + pe->variables_details_length);
+
+			memcpy(msg_neighbour_data, all_neighbour_data, sizeof(node_data_t) * max_size);
+
+			mesh_send(&meshreceiver, &baseStationAddr);
 		}
 
 		// Free the allocated neighbour data
@@ -670,6 +721,9 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		// we do not want to keep using its last piece of data
 		// we want that lack of data to be picked up on.
 		array_list_clear(&hops_data);
+
+		// Reset the count of the data received
+		max_size = 0;
 	}
 
 exit:

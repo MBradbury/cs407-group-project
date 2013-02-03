@@ -16,13 +16,13 @@ bool debug_packet_size(size_t expected)
 
 	if (len < expected)
 	{
-		printf("Bad packet length of %u, expected at least %u", len, expected);
+		printf("Bad packet length of %u, expected at least %u\n", len, expected);
 		failed = true;
 	}
 
 	if (len > PACKETBUF_SIZE)
 	{
-		printf("Packet of length %u is too large, should be %u or lower", len, PACKETBUF_SIZE);
+		printf("Packet of length %u is too large, should be %u or lower\n", len, PACKETBUF_SIZE);
 		failed = true;
 	}
 

@@ -326,7 +326,7 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 
 	start_neighbour_detect(&one_hop_neighbours, 150);
 	
-	// Wait for some time to collect neighbour info
+	// Wait for some time to collectl neighbour info
 	etimer_set(&et, 2 * 60 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 

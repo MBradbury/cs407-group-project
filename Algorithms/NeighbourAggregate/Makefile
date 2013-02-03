@@ -1,11 +1,6 @@
 CONTIKI_PROJECT = neighbour-aggregate
 all: $(CONTIKI_PROJECT)
 
-# Target references:
-# http://www.sics.se/contiki/wiki/index.php/Contiki_make_targets
-
-TARGET = sky
-
 PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/TreeAggregator
 PROJECT_SOURCEFILES =
 

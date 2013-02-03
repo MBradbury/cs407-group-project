@@ -139,6 +139,8 @@ static void finish_aggregate_collect(void * ptr)
 	conn->is_collecting = false;
 
 	// Reset the data we have stored to nothing
+	// We cano do this as write_data_to_packet should have freed the memory
+	// if anything was allocated.
 	memset(conn->data, 0, conn->data_length);
 }
 
@@ -466,7 +468,7 @@ static void tree_aggregate_own(void * ptr)
 	SENSORS_ACTIVATE(light_sensor);
 	int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
 	int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-	SENSORS_DEACTIVATE(sht11_sensor);
+	SENSORS_DEACTIVATE(light_sensor);
 
 	data.light1 = s1087_light1(raw_light1);
 	data.light2 = s1087_light1(raw_light2);
@@ -543,7 +545,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 		SENSORS_ACTIVATE(light_sensor);
 		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
 		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-		SENSORS_DEACTIVATE(sht11_sensor);
+		SENSORS_DEACTIVATE(light_sensor);
 
 		// Create the data message that we are going to send
 		packetbuf_clear();

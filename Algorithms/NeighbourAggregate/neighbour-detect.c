@@ -14,13 +14,25 @@
 static struct neighbor_discovery_conn nd;
 static unique_array_t * results_ptr = NULL;
 
-static bool rimeaddr_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
+#define INITIAL_INTERVAL (25 * CLOCK_SECOND)
+#define MIN_INTERVAL (15 * CLOCK_SECOND)
+#define MAX_INTERVAL (120 * CLOCK_SECOND)
 
-	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
+static struct ctimer round_timer;
+#define ROUND_TIME (MAX_INTERVAL * 2)
+static uint16_t round_count = 0;
+
+
+static void round_complete(void * ptr)
+{
+	++round_count;
+
+	neighbor_discovery_set_val(&nd, round_count);
+
+	// Reset the timer
+	ctimer_set(&round_timer, ROUND_TIME, &round_complete, NULL);
 }
+
 
 static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr_t const * from, uint16_t val)
 {
@@ -57,20 +69,20 @@ void start_neighbour_detect(unique_array_t * results, uint16_t channel)
 {
 	printf("Neighbour Discovery: Started!\n");
 
-	unique_array_init(results, &rimeaddr_equality, &free);
-
 	results_ptr = results;
 
 	neighbor_discovery_open(
         &nd,
         channel, 
-        5 * CLOCK_SECOND,	// Initial interval
-        5 * CLOCK_SECOND, 	// Min interval
-        120 * CLOCK_SECOND,	// Max interval
+        INITIAL_INTERVAL,
+        MIN_INTERVAL,
+        MAX_INTERVAL,
         &neighbor_discovery_callbacks
 	);
 
-    neighbor_discovery_start(&nd, 1);
+    neighbor_discovery_start(&nd, round_count);
+
+	ctimer_set(&round_timer, ROUND_TIME, &round_complete, NULL);
 
 	leds_on(LEDS_BLUE);
 }
@@ -81,6 +93,8 @@ void stop_neighbour_detect(void)
 
 	neighbor_discovery_close(&nd);
 	results_ptr = NULL;
+
+	ctimer_stop(&round_timer);
 
 	leds_off(LEDS_BLUE);
 }

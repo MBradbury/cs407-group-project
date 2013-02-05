@@ -312,11 +312,11 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 	
-#ifdef IS_SINK
-	printf("Setting address so we are sink node.\n");
-	rimeaddr_set_node_addr(&sink);
-#endif
-
+	if (rimeaddr_cmp(&rimeaddr_node_addr,&sink))
+	{
+		printf("We are sink node.\n");
+	}
+	
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 

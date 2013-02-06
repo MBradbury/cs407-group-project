@@ -119,8 +119,9 @@ static void list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 
 PROCESS(neighbour_agg_process, "Neighbour Agg process");
 PROCESS(neighbour_agg_send_data_process, "SEND DATA");
+PROCESS(power_checker, "Power checker");
 
-AUTOSTART_PROCESSES(&neighbour_agg_process);
+AUTOSTART_PROCESSES(&neighbour_agg_process,&power_checker);
 
 
 static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
@@ -295,6 +296,21 @@ static tree_agg_callbacks_t callbacks = {
 	&tree_aggregate_own, &tree_agg_store_packet, &tree_agg_write_data_to_packet
 };
 
+PROCESS_THREAD(power_checker,ev,data)
+{
+	static struct etimer et;
+
+	PROCESS_BEGIN();
+
+    while (1)
+    {
+        etimer_set(&et, 10 * CLOCK_SECOND);
+        PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+        printf("Powerlevel: %d\n",cc2420_get_txpower());
+    }
+
+	PROCESS_END();
+}
 
 PROCESS_THREAD(neighbour_agg_process, ev, data)
 {

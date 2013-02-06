@@ -109,7 +109,15 @@ static void parent_detect_finished(void * ptr)
 	// parent we heard
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->parent, &conn->best_parent);
-	msg->hop_count = conn->best_hop + 1;
+	
+	if(conn->best_hop == UINT_MAX) //if at the max, want to set to 1 hop, not 0
+	{
+		msg->hop_count = 1;
+	}
+	else 
+	{
+		msg->hop_count = conn->best_hop + 1;
+	}
 
 	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
 
@@ -504,6 +512,10 @@ PROCESS_THREAD(startup_process, ev, data)
 	static rimeaddr_t sink;
 
 	PROCESS_BEGIN();
+
+#ifdef POWER_LEVEL
+	cc2420_set_txpower(POWER_LEVEL);
+#endif
 
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;

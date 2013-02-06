@@ -210,6 +210,8 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 
 	setup_tree_msg_t const * msg = (setup_tree_msg_t const *)packetbuf_dataptr();
 
+	unsigned int originator_distance = msg->hop_count + 1;
+
 	printf("Tree Agg: Got setup message from %s\n", addr2str(&msg->source));
 
 	// If the sink received a setup message, then do nothing
@@ -239,19 +241,19 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 
 	// As we have received a message we need to record the node
 	// it came from, if it is closer to the sink.
-	if (msg->hop_count < conn->best_hop)
+	if (originator_distance < conn->best_hop)
 	{
 		char firstaddr[RIMEADDR_STRING_LENGTH];
 		char secondaddr[RIMEADDR_STRING_LENGTH];
 
 		printf("Tree Agg: Updating to a better parent (%s H:%u) was:(%s H:%u)\n",
-			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), msg->hop_count,
+			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), originator_distance,
 			addr2str_r(&conn->best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->best_hop
 		);
 
 		// Set the best parent, and the hop count of that node
 		rimeaddr_copy(&conn->best_parent, &msg->source);
-		conn->best_hop = msg->hop_count;
+		conn->best_hop = originator_distance;
 	}
 
 	

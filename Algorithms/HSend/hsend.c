@@ -463,7 +463,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	baseStationAddr.u8[1] = 0;
 
 	// Set the predicate evaluation target
-	destination.u8[0] = 10;
+	destination.u8[0] = 2;
 	destination.u8[1] = 0;
 
 	if(rimeaddr_cmp(&rimeaddr_node_addr,&destination))

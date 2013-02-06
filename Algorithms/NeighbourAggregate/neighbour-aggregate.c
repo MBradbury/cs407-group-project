@@ -15,6 +15,8 @@
 
 #include "lib/random.h"
 
+#include "node-id.h"
+
 #include "dev/leds.h"
 #include "dev/cc2420.h"
 

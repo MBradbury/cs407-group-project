@@ -16,14 +16,14 @@
 static struct neighbor_discovery_conn nd;
 static unique_array_t * results_ptr = NULL;
 
-#define INITIAL_INTERVAL (25 * CLOCK_SECOND)
-#define MIN_INTERVAL (15 * CLOCK_SECOND)
+#define INITIAL_INTERVAL (15 * CLOCK_SECOND)
+#define MIN_INTERVAL (5 * CLOCK_SECOND)
 #define MAX_INTERVAL (120 * CLOCK_SECOND)
 
 static struct ctimer round_timer;
 #define ROUND_TIME (MAX_INTERVAL * 2)
 static uint16_t round_count = 0;
-#define MISSED_ROUND_THRESHOLD 3
+#define MISSED_ROUND_THRESHOLD 4
 
 
 static bool rimeaddr_equality(void const * left, void const * right)

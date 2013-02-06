@@ -44,15 +44,15 @@ static inline bool is_sink(tree_agg_conn_t const * conn)
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
-static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
+static const clock_time_t STUBBORN_WAIT = 60 * CLOCK_SECOND;
 
 // Time to gather aggregations over
 static const clock_time_t AGGREGATION_WAIT = 45 * CLOCK_SECOND;
 
 // Time to wait to detect parents
-static const clock_time_t PARENT_DETECT_WAIT = 22 * CLOCK_SECOND;
+static const clock_time_t PARENT_DETECT_WAIT = 35 * CLOCK_SECOND;
 
-static const uint8_t RUNICAST_MAX_RETX = 3;
+static const uint8_t RUNICAST_MAX_RETX = 6;
 
 
 static void stbroadcast_cancel_void(void * ptr)
@@ -204,7 +204,7 @@ static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, u
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
 {
-	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
+	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
 	tree_agg_conn_t * conn = conncvt_stbcast(ptr);
 

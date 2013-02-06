@@ -56,7 +56,8 @@ static void round_complete(void * ptr)
 
 		if (round_count - stored->round_last_seen >= MISSED_ROUND_THRESHOLD)
 		{
-			printf("Detected that %s is no longer in our neighbourhood, so removing it\n", addr2str(addr));
+			printf("Detected that %s is no longer in our neighbourhood, so removing it (R=%u RLS=%u)\n",
+				addr2str(addr), round_count, stored->round_last_seen);
 
 			// We haven't seen this node for a while, so need to remove it
 			// from both the results and our local map

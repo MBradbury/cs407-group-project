@@ -110,7 +110,8 @@ static void parent_detect_finished(void * ptr)
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->parent, &conn->best_parent);
 	
-	// If at the max, want to set to 1 hop, not 0
+	// If at the max, want to keep as UINT_MAX to prevent
+	// integer overflow to 0
 	if (conn->best_hop == UINT_MAX) 
 	{
 		msg->hop_count = UINT_MAX;
@@ -119,6 +120,8 @@ static void parent_detect_finished(void * ptr)
 	{
 		msg->hop_count = conn->best_hop + 1;
 	}
+
+	printf("Sending setup message onwards with hop count %u\n", msg->hop_count);
 
 	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
 
@@ -262,6 +265,16 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 		rimeaddr_copy(&conn->best_parent, &msg->source);
 		conn->best_hop = msg->hop_count;
 	}
+	else
+	{
+		char firstaddr[RIMEADDR_STRING_LENGTH];
+		char secondaddr[RIMEADDR_STRING_LENGTH];
+
+		printf("Tree Agg: Ignoring worse (or equal) parent (%s H:%u) currently:(%s H:%u)\n",
+			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), msg->hop_count,
+			addr2str_r(&conn->best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->best_hop
+		);
+	}
 
 	
 	// If the parent of the node that sent this message is this node,
@@ -301,7 +314,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->parent, &rimeaddr_null);
-	msg->hop_count = 1;
+	msg->hop_count = 1u;
 
 	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
 

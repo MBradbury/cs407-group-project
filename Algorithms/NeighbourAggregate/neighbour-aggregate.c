@@ -28,6 +28,9 @@
 #include "debug-helper.h"
 #include "unique-array.h"
 
+static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
+static const clock_time_t INITIAL_NEIGHBOUR_DETECT_PERIOD = 2 * 60 * CLOCK_SECOND;
+
 // The neighbours the current node has
 // This is a list of rimeaddr_t
 static unique_array_t one_hop_neighbours;
@@ -175,18 +178,18 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 	unique_array_t * data = &((aggregation_data_t *)voiddata)->list;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
 	
-	rimeaddr_t const * ap = (rimeaddr_t const *)(data_to_apply + 1);
+	rimeaddr_pair_t const * ap = (rimeaddr_pair_t const *)(data_to_apply + 1);
 
 	unsigned int i;
-	for (i = 0; i < data_to_apply->length; i += 2)
+	for (i = 0; i < data_to_apply->length; ++i)
 	{
 		// Check if the address pair is the the array before
 		// allocating memory
 		if (!unique_array_contains(data, &ap[i]))
 		{
 			rimeaddr_pair_t * pair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-			rimeaddr_copy(&pair->first, &ap[i]);
-			rimeaddr_copy(&pair->second, &ap[i+1]);
+			rimeaddr_copy(&pair->first, &ap[i].first);
+			rimeaddr_copy(&pair->second, &ap[i].second);
 
 			unique_array_append(data, pair);
 		}
@@ -329,7 +332,7 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 	start_neighbour_detect(&one_hop_neighbours, 150);
 	
 	// Wait for some time to collectl neighbour info
-	etimer_set(&et, 2 * 60 * CLOCK_SECOND);
+	etimer_set(&et, INITIAL_NEIGHBOUR_DETECT_PERIOD);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	//stop_neighbour_detect();
@@ -355,7 +358,7 @@ PROCESS_THREAD(neighbour_agg_send_data_process, ev, data)
 
 	while (true)
 	{
-		etimer_set(&et, 10 * 60 * CLOCK_SECOND);
+		etimer_set(&et, ROUND_LENGTH);
 
 		if (tree_agg_is_leaf(&aggconn))
 		{

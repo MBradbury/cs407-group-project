@@ -18,6 +18,9 @@ CFLAGS += -Werror=bad-function-cast
 
 CFLAGS += -DNDEBUG
 
+# Disable uip
+#CONTIKI_NO_NET=1
+
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include
 

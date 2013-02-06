@@ -100,7 +100,7 @@ static void print_ua_rimeaddr_pair(unique_array_t const * data)
 
 
 // Data is a list of rimeaddr_t
-static void list_to_array_single(unique_array_t * data, collect_msg_t * msg)
+static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 {
 	rimeaddr_pair_t * addr_arr = (rimeaddr_pair_t *)(msg + 1);
 
@@ -117,6 +117,8 @@ static void list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 		
 		++i;
 	}
+
+	return i;
 }
 
 

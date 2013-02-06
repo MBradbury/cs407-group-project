@@ -8,6 +8,8 @@
 
 #include "net/rime.h"
 
+#include "sys/node-id.h"
+
 #include "dev/leds.h"
 #include "dev/sht11-sensor.h"
 #include "dev/light-sensor.h"

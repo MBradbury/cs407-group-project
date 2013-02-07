@@ -240,6 +240,9 @@ sudo make example-unicast.upload DEFINES=HELLOWORLD,NODE_ID=1 MOTES=/dev/ttyUSB0
 Adding .upload to the end of the project name, will start the upload to the motes. The MOTES variable is used to locate the USB port for the mote.
 The NODE\_ID is used to set the rime address on the nodes. Provided the following macro is inserted into the code.
 
+\subsection{Power Levels}
+Using the low power levels (3 or lower) resulted in very unreliable transmission rates/distances. 
+
 \begin{listing} 
 \begin{minted}[fontsize=\small]{c}
 #ifdef NODE_ID

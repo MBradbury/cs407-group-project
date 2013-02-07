@@ -198,16 +198,18 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 
 \clearpage
 
-\input{ImplementedAlgorithms}
+\input{PracticalExperience}
 
 \clearpage
 
+\input{ImplementedAlgorithms}
+
+\clearpage
 
 \section{Knowledge Gained}
 \begin{enumerate}
 	\item Not possible to write WSN applications in Java and have them run on the WSN nodes. Only possible to write in C and have that code run on the physical hardware. Java code will only run in the Cooja simulator for the Contiki OS.
 	\item A Cooja plug-in that monitors and records network traffic would be specific only to the simulator and would not be possible to apply to physical nodes
-	\item Had to convert from raw sensor data to expected results using equations found in \cite{sensiriondatasheet}
 	\item Always worth waiting for a period of time before starting protocol, to allow for nodes to set up
 \end{enumerate}
 
@@ -230,26 +232,6 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 	\item Make logging reliable (TCP/IP?) even at the expense of energy
 \end{enumerate}
 
-\subsection{Uploading to the motes}
-Command used
-\begin{listing} 
-\begin{minted}[fontsize=\small]{bash}
-sudo make example-unicast.upload DEFINES=HELLOWORLD,NODE_ID=1 MOTES=/dev/ttyUSB0
-\end{minted}
-\end{listing}
-Adding .upload to the end of the project name, will start the upload to the motes. The MOTES variable is used to locate the USB port for the mote.
-The NODE\_ID is used to set the rime address on the nodes. Provided the following macro is inserted into the code.
-
-\subsection{Power Levels}
-Using the low power levels (3 or lower) resulted in very unreliable transmission rates/distances. 
-
-\begin{listing} 
-\begin{minted}[fontsize=\small]{c}
-#ifdef NODE_ID
-node_id_burn(NODE_ID);
-#endif
-\end{minted}
-\end{listing}
 
 \clearpage
 

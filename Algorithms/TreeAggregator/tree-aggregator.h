@@ -18,10 +18,13 @@ typedef struct
 
 	void (* aggregate_update)(void * data, void const * to_apply);
 
+	/** This function is used to add a nodes own one data */
 	void (* aggregate_own)(void * data);
 
+	/** This function is called when a node needs to savea  packet */
 	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
 
+	/** This function is called to write the nodes stored data to an outward packet */
 	void (* write_data_to_packet)(struct tree_agg_conn * conn);
 } tree_agg_callbacks_t;
 

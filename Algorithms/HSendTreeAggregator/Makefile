@@ -1,11 +1,11 @@
 CONTIKI_PROJECT = hsendtreeagg
 all: $(CONTIKI_PROJECT)
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/PredicateLanguage $(CS407DIR)/Algorithms/TreeAggregator
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/PredicateLanguage $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourAggregate
 PROJECT_SOURCEFILES = 
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c predlang.c array-list.c map.c unique-array.c random-range.c tree-aggregator.c led-helper.c
+CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c predlang.c array-list.c map.c unique-array.c random-range.c tree-aggregator.c led-helper.c neighbour-detect.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

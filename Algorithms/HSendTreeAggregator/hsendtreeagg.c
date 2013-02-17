@@ -26,28 +26,15 @@
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-#include "unique-array.h"
 #include "array-list.h"
  
-static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
-
-// The neighbours the current node has
-// This is a list of rimeaddr_t
-static unique_array_t one_hop_neighbours;
-
-static array_list_t data_list;
+static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
 
 typedef struct
 {
 	uint8_t round_count;
 	array_list_t list;
 } aggregation_data_t;
-
-typedef struct
-{
-	rimeaddr_t first;
-	rimeaddr_t second;
-} rimeaddr_pair_t;
 
 typedef struct
 {
@@ -65,27 +52,6 @@ typedef struct
 	//nint light2;
 } node_data_t;
 
-static bool rimeaddr_pair_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	rimeaddr_pair_t const * lp = (rimeaddr_pair_t const *)left;
-	rimeaddr_pair_t const * rp = (rimeaddr_pair_t const *)right;
-
-	return
-		(rimeaddr_cmp(&lp->first, &rp->first) && rimeaddr_cmp(&lp->second, &rp->second)) ||
-		(rimeaddr_cmp(&lp->second, &rp->first) && rimeaddr_cmp(&lp->first, &rp->second));
-}
-
-static bool rimeaddr_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
-}
-
 PROCESS(data_gather, "Data Gather");
 PROCESS(send_data_process, "Send data process");
 
@@ -102,7 +68,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 
 	uint8_t length = msg->length;
 
-	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
+	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
 
 	unsigned int i;
 	
@@ -135,22 +101,27 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 {
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
-	printf("Tree Agg: Update local data\n");
 
-	unique_array_t * data = &((aggregation_data_t *)voiddata)->list;
+	array_list_t * data = &((aggregation_data_t *)voiddata)->list;
 	collected_data_t const * data_to_apply = (collected_data_t const *)to_apply;
-	
-	node_data_t * msgdata = (node_data_t *)(data_to_apply + 1); //get the pointer after the message
+	printf("Tree Agg: Update local data, length: %d\n",data_to_apply->length);
+
+	node_data_t const * msgdata = (node_data_t const *)(data_to_apply + 1); //get the pointer after the message
 
 	unsigned int i;
+	printf("Update Data from: ");
 	for(i = 0; i< data_to_apply->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
 		tmp->temp = msgdata[i].temp;
 		tmp->humidity = msgdata[i].humidity;
 
-		array_list_append(&data->list, tmp);
+		rimeaddr_copy(&tmp->addr,&msgdata[i].addr);
+
+		printf("%s,",addr2str(&tmp->addr));
+		array_list_append(data, tmp);
 	}
+	printf("\n");
 }
 
 //TODO: Add our own one hop data to the list
@@ -168,15 +139,15 @@ static void tree_aggregate_own(void * ptr)
 
 	msg->temp = sht11_temperature(raw_temperature);
 	msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temp);	
+	rimeaddr_copy(&msg->addr,&rimeaddr_node_addr);//copy in the rime address
 
-	array_list_append(&data,&msg);
+	array_list_append(data, msg);
 }
 
 //store an inbound packet to the datastructure
 //Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
-	printf("Tree Agg: Store Packet\n");
 
 	collected_data_t const * msg = (collected_data_t const *)packet; //get the packet as a struct
 
@@ -186,8 +157,10 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 
 	array_list_init(&conn_data->list, &free);
 	
-	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
-
+	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
+	printf("Tree Agg: Store Packet length: %d\n", msg->length);
+	
+	printf("%s: Store Packet Data from: ", addr2str(&rimeaddr_node_addr));
 	unsigned int i;
 	for(i = 0; i< msg->length; ++i)
 	{
@@ -195,8 +168,12 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 		tmp->temp = msgdata[i].temp;
 		tmp->humidity = msgdata[i].humidity;
 
+		rimeaddr_copy(&tmp->addr,&msgdata[i].addr);
+		printf("%s,",addr2str(&tmp->addr));
+
 		array_list_append(&conn_data->list, tmp);
 	}
+	printf("\n");
 }
 
 //write the data structure to the outbout packet buffer
@@ -209,7 +186,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 
 	aggregation_data_t * conn_data = (aggregation_data_t *)conn->data;
 	uint8_t length = array_list_length(&conn_data->list);
-	unsigned int packet_length = sizeof(node_data_t) + sizeof(collected_data_t) * length;
+	unsigned int packet_length = sizeof(collected_data_t) + sizeof(node_data_t) * length;
 
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_length);
@@ -219,21 +196,21 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("Writing packet, length %d\n data length:%d", msg->length,length);
+	printf("Writing packet, length %d data length:%d\n", msg->length,length);
 
 	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 
 	unsigned int i = 0;
-	unique_array_elem_t elem;
+	array_list_elem_t elem;
 	for (elem = array_list_first(&conn_data->list); 
 		array_list_continue(&conn_data->list, elem);
 		elem = array_list_next(elem))
 	{
-		node_data_t const * original = (node_data_t *)array_list_data(&conn_data->list, elem);
+		node_data_t * original = (node_data_t *)array_list_data(&conn_data->list, elem);
 
 		rimeaddr_copy(&msgdata[i].addr, &original->addr);
 		msgdata[i].temp = original->temp;
-		msgdata[i].humidity = &original->humidity;
+		msgdata[i].humidity = original->humidity;
 
 		++i;
 	}
@@ -276,7 +253,6 @@ PROCESS_THREAD(data_gather, ev, data)
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
 	// Wait for some time to let process start up and perform neighbourgh detect
-	array_list_init(&data_list,NULL);
 
 	//start_neighbour_detect(&one_hop_neighbours, 150);
 	
@@ -330,6 +306,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 			
 			msgdata[0].temp = sht11_temperature(raw_temperature);
 			msgdata[0].humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata[0].temp);
+			rimeaddr_copy(&msgdata[0].addr, &rimeaddr_node_addr);
 
 			//send data
 			tree_agg_send(&aggconn);
@@ -341,7 +318,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 	}
 
 exit:
-	unique_array_clear(&one_hop_neighbours);
 	tree_agg_close(&aggconn);
 	PROCESS_END();
 }

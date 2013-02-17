@@ -22,19 +22,13 @@ typedef struct
 	// After this point the user generated data will be contained
 } nhopflood_msg_t;
 
-// Argument Params Structs
-typedef struct
-{
-	nhopflood_conn_t * conn;
-} nhopflood_timer_params_t;
-
 static inline nhopflood_conn_t * conncvt_flood_message_recv(struct stbroadcast_conn * conn)
 {
 	return (nhopflood_conn_t *)conn;
 }
 
 // Stubborn Broadcast Message Recieved Callback
-static void flood_message_recv(struct stbroadcast_conn * c)
+static void flood_message_recv(struct broadcast_conn * c)
 {
 	// Get a pointer to the nhopflood_conn_t
 	nhopflood_conn_t * conn = conncvt_flood_message_recv(c);
@@ -59,9 +53,9 @@ static void flood_message_recv(struct stbroadcast_conn * c)
 }
 
 // Stubborn Broadcast Message Sent Callback 
-static void flood_message_sent(struct stbroadcast_conn *c)
+static void flood_message_sent(struct broadcast_conn *c)
 {
-	//printf("I've sent a nhopflood message!\n");
+	printf("I've sent a nhopflood message!\n");
 }
 
 // Setup the Stubborn Broadcast Callbacks
@@ -116,8 +110,8 @@ bool nhopflood_end(nhopflood_conn_t * conn)
 	return true;
 }
 
-// Register a request to send this nodes data n hops next cycle
-bool nhopflood_register(nhopflood_conn_t * conn, uint8_t hops)
+// Register a request to send this nodes data n hops next round
+bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 {
 	if (hops == 0)
 	{
@@ -133,10 +127,7 @@ bool nhopflood_register(nhopflood_conn_t * conn, uint8_t hops)
 	// If max_hops == 0 then we havent recieved a register request before in this cycle so we should initialise the timer for the delayed start
 	if (conn->max_hops == 0)
 	{
-		nhopflood_timer_params_t * params = (nhopflood_timer_params_t *)malloc(sizeof(nhopflood_timer_params_t));
-		params->conn = conn;
-
-		ctimer_set(&conn->delay_timer, conn->send_delay, &nhopflood_delayed_start_sending, conn);
+		ctimer_set(&conn->delay_timer, conn->send_delay, &nhopflood_delayed_start_sending, &conn);
 	}
 
 	// If this request is higher than 
@@ -156,7 +147,7 @@ void nhopflood_delayed_start_sending(void * ptr)
 	// Calculate the size of the packet
 	unsigned int packet_size = sizeof(nhopflood_msg_t) + conn->data_size;
 
-	// Create the memory for the packet to broadcast
+	// Create the memory for the packet
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_size);
 	debug_packet_size(packet_size);
@@ -177,7 +168,7 @@ void nhopflood_delayed_start_sending(void * ptr)
 	packetqueue_init(&nhopflood_packetqueue);
 	
 	// Enqueue the packet previously created
-	packetqueue_enqueue_packetbuf(&nhopflood_packetqueue, 0, );
+	packetqueue_enqueue_packetbuf(&nhopflood_packetqueue, 0, &msg);
 
 	// Start a timer to send the first packet in the queue every interval
 	ctimer_set(&conn->send_timer, &conn->period, &nhopflood_delayed_repeat_send, conn);
@@ -191,12 +182,19 @@ void nhopflood_delayed_repeat_send(void * ptr)
 	// Get the conn from the pointer provided
 	nhopflood_conn_t * conn = (nhopflood_conn_t *)ptr;
 
-	//TODO: Get the first packet from the packet queue
+	//Get the first packet from the packet queue
+	nhopflood_msg_t * msg = (nhopflood_msg_t *)packetqueue_ptr(packetqueue_first(&nhopflood_packetqueue));
+
+	//If its from this node copy it and re-enqueue it
+	if (&msg->originator == &rimeaddr_node_addr)
+	{
+		packetqueue_enqueue_packetbuf(&nhopflood_packetqueue, 0, &msg);
+	}
+
+	//Send the packet using normal broadcast
+	broadcast_send(&conn->bc);
+
 	//TODO: Dequeue the packet from the packet queue
-	//TODO: If its from this node and isn't out of date copy it and re-enqueue it
-	
-	//TODO: Send the packet using normal broadcast
-	broadcast_send(&conn);
 
 	// Reset the timer to call this function again
 	ctimer_reset(&conn->send_timer);
@@ -205,6 +203,7 @@ void nhopflood_delayed_repeat_send(void * ptr)
 void nhopflood_delayed_cancel(void * ptr)
 {
 	//TODO: Cancel the nhopflood_delayed_repeat_send_timer
+
 	//TODO: Clear the packet queue
 
 	// Get the params from the pointer provided
@@ -219,9 +218,4 @@ void nhopflood_delayed_cancel(void * ptr)
 
 	// Finally we free the allocated params structure.
 	free(ptr);
-}
-
-void nhopflood_broadcast_packet()
-{
-
 }

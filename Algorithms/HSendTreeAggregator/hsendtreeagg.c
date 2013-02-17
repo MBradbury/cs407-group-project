@@ -21,7 +21,6 @@
 #include "dev/cc2420.h"
 
 #include "tree-aggregator.h"
-//#include "neighbour-detect.h"
 
 #include "led-helper.h"
 #include "sensor-converter.h"
@@ -99,17 +98,16 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 
 static void tree_aggregate_update(void * voiddata, void const * to_apply)
 {
-	toggle_led_for(LEDS_RED, CLOCK_SECOND);
+	printf("Tree Agg: Update local data\n");
 
+	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
 	array_list_t * data = &((aggregation_data_t *)voiddata)->list;
 	collected_data_t const * data_to_apply = (collected_data_t const *)to_apply;
-	printf("Tree Agg: Update local data, length: %d\n",data_to_apply->length);
 
 	node_data_t const * msgdata = (node_data_t const *)(data_to_apply + 1); //get the pointer after the message
 
 	unsigned int i;
-	printf("Update Data from: ");
 	for(i = 0; i< data_to_apply->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
@@ -118,10 +116,8 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 
 		rimeaddr_copy(&tmp->addr,&msgdata[i].addr);
 
-		printf("%s,",addr2str(&tmp->addr));
 		array_list_append(data, tmp);
 	}
-	printf("\n");
 }
 
 //TODO: Add our own one hop data to the list
@@ -148,6 +144,7 @@ static void tree_aggregate_own(void * ptr)
 //Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
+	printf("Tree Agg: Store Packet\n");
 
 	collected_data_t const * msg = (collected_data_t const *)packet; //get the packet as a struct
 
@@ -158,9 +155,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	array_list_init(&conn_data->list, &free);
 	
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
-	printf("Tree Agg: Store Packet length: %d\n", msg->length);
 	
-	printf("%s: Store Packet Data from: ", addr2str(&rimeaddr_node_addr));
 	unsigned int i;
 	for(i = 0; i< msg->length; ++i)
 	{
@@ -169,11 +164,9 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 		tmp->humidity = msgdata[i].humidity;
 
 		rimeaddr_copy(&tmp->addr,&msgdata[i].addr);
-		printf("%s,",addr2str(&tmp->addr));
 
 		array_list_append(&conn_data->list, tmp);
 	}
-	printf("\n");
 }
 
 //write the data structure to the outbout packet buffer
@@ -253,8 +246,6 @@ PROCESS_THREAD(data_gather, ev, data)
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
 	// Wait for some time to let process start up and perform neighbourgh detect
-
-	//start_neighbour_detect(&one_hop_neighbours, 150);
 	
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

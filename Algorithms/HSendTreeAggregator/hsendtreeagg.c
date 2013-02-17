@@ -29,7 +29,7 @@
 #include "unique-array.h"
 #include "array-list.h"
  
-static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
+static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
 
 // The neighbours the current node has
 // This is a list of rimeaddr_t
@@ -59,7 +59,6 @@ typedef struct
 typedef struct
 {
 	rimeaddr_t addr;
-	uint8_t round_count;
 	float temp;
 	int humidity;
 	//nint light1;
@@ -97,20 +96,22 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-	printf("Tree Agg: Recv\n");
 
 	//extract data from packet buffer
 	collected_data_t const * msg = (collected_data_t const *)packetbuf_dataptr();
 
 	uint8_t length = msg->length;
-	
+
 	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 
 	unsigned int i;
 	
 	for(i = 0; i < length; ++i)
 	{
-		printf("Node: %s\nTemp:%d, Humidity: %d\n\n",addr2str(&msgdata[i].addr), msgdata[i].temp, msgdata[i].humidity);
+		printf("Tree Agg: Recv, Node: %s Temp:%d, Humidity: %d\n", 
+			addr2str(&msgdata[i].addr), 
+			(int)msgdata[i].temp, 
+			msgdata[i].humidity);
 	}
 
 	//evaluate
@@ -145,7 +146,6 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 	for(i = 0; i< data_to_apply->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
-		tmp->round_count = msgdata[i].round_count;
 		tmp->temp = msgdata[i].temp;
 		tmp->humidity = msgdata[i].humidity;
 
@@ -159,7 +159,7 @@ static void tree_aggregate_own(void * ptr)
 	printf("Tree Agg: Update local data with own data\n");
 
 	array_list_t * data =  &((aggregation_data_t *)ptr)->list;
-	static node_data_t * msg;
+	node_data_t * msg = (node_data_t *)malloc(sizeof(node_data_t));
 
 	SENSORS_ACTIVATE(sht11_sensor);
 	int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
@@ -168,7 +168,6 @@ static void tree_aggregate_own(void * ptr)
 
 	msg->temp = sht11_temperature(raw_temperature);
 	msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temp);	
-	msg->round_count = &((aggregation_data_t *)ptr)->round_count;
 
 	array_list_append(&data,&msg);
 }
@@ -193,7 +192,6 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	for(i = 0; i< msg->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
-		tmp->round_count = msgdata[i].round_count;
 		tmp->temp = msgdata[i].temp;
 		tmp->humidity = msgdata[i].humidity;
 
@@ -221,6 +219,8 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
+	printf("Writing packet, length %d\n data length:%d", msg->length,length);
+
 	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 
 	unsigned int i = 0;
@@ -234,7 +234,6 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 		rimeaddr_copy(&msgdata[i].addr, &original->addr);
 		msgdata[i].temp = original->temp;
 		msgdata[i].humidity = &original->humidity;
-		msgdata[i].round_count = msg->round_count;
 
 		++i;
 	}
@@ -309,27 +308,28 @@ PROCESS_THREAD(send_data_process, ev, data)
 			//Tree should be set up by now
 			//Start sending data up the tree
 
-			unsigned int one_hop_n_size = unique_array_length(&one_hop_neighbours);
-
 			//create data message
 			packetbuf_clear();
 			//set length of the buffer
-			packetbuf_set_datalen(sizeof(node_data_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
-			debug_packet_size(sizeof(node_data_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
-			node_data_t * msg = (node_data_t *)packetbuf_dataptr();
+			packetbuf_set_datalen(sizeof(collected_data_t) + sizeof(node_data_t));
+			debug_packet_size(sizeof(collected_data_t) + sizeof(node_data_t));
+			collected_data_t * msg = (collected_data_t *)packetbuf_dataptr();
 
 			//copy in data into the buffer
-			memset(msg, 0, sizeof(node_data_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
+			memset(msg, 0, sizeof(collected_data_t) + sizeof(node_data_t));
+
+			msg->round_count = round_count;
+			msg->length = 1;
 
 			SENSORS_ACTIVATE(sht11_sensor);
 			int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
 			int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 			SENSORS_DEACTIVATE(sht11_sensor);
-
-			msg->temp = sht11_temperature(raw_temperature);
-			msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temp);
-
-			msg->round_count = round_count;
+			
+			node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
+			
+			msgdata[0].temp = sht11_temperature(raw_temperature);
+			msgdata[0].humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata[0].temp);
 
 			//send data
 			tree_agg_send(&aggconn);

@@ -27,6 +27,8 @@
 #include "debug-helper.h"
 #include "array-list.h"
  
+#include "neighbour-aggregate.h"
+
 static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
 
 typedef struct
@@ -50,6 +52,12 @@ typedef struct
 	//nint light1;
 	//nint light2;
 } node_data_t;
+
+/* to be called when neighbour aggregate gets some data to add */
+static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, int round_count)
+{
+
+}
 
 PROCESS(data_gather, "Data Gather");
 PROCESS(send_data_process, "Send data process");
@@ -245,13 +253,15 @@ PROCESS_THREAD(data_gather, ev, data)
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
-	// Wait for some time to let process start up and perform neighbourgh detect
+	// Wait for some time to let process start up and perform neighbour detect
 	
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
+	start_neighbour_aggregate(&handle_neighbour_data);
+
 	printf("Starting Tree Aggregation\n");
-	tree_agg_open(&aggconn, &sink, 118, 132, sizeof(aggregation_data_t), &callbacks);
+	tree_agg_open(&aggconn, &sink, 150, 100, sizeof(aggregation_data_t), &callbacks);
 
 	PROCESS_END();
 }

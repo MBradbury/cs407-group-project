@@ -28,12 +28,17 @@
 #include "debug-helper.h"
 #include "unique-array.h"
 
+#include "neighbour-aggregate.h"
+
+
 static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
 static const clock_time_t INITIAL_NEIGHBOUR_DETECT_PERIOD = 2 * 60 * CLOCK_SECOND;
 
 // The neighbours the current node has
 // This is a list of rimeaddr_t
 static unique_array_t one_hop_neighbours;
+
+static void (* data_callback_fn)(rimeaddr_pair_t *, unsigned int, int);
 
 typedef struct
 {
@@ -47,12 +52,6 @@ typedef struct
 	uint8_t round_count;
 	unique_array_t list;
 } aggregation_data_t;
-
-typedef struct
-{
-	rimeaddr_t first;
-	rimeaddr_t second;
-} rimeaddr_pair_t;
 
 static bool rimeaddr_pair_equality(void const * left, void const * right)
 {
@@ -155,6 +154,11 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 	}
 
 	printf("}\n");
+	
+	if(data_callback_fn)  //check the function has been set before calling
+	{
+		data_callback_fn(neighbours,length,msg->round_count); //pass the data to a higherlevel
+	}
 }
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
@@ -395,5 +399,12 @@ exit:
 	unique_array_clear(&one_hop_neighbours);
 	tree_agg_close(&aggconn);
 	PROCESS_END();
+}
+
+void start_neighbour_aggregate(void (* data_recieved_fn)(rimeaddr_pair_t *, unsigned int, int))
+{
+	process_start(&neighbour_agg_process, NULL); //start the neighbour-aggregate process
+
+	data_callback_fn = data_recieved_fn; //assign the callback
 }
 

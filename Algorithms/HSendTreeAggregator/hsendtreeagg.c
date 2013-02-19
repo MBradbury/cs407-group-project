@@ -35,6 +35,20 @@ static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
 
 static map_t neighbour_info;
 
+static array_list_t predicates;
+
+typedef struct
+{
+	rimeaddr_t destination; //where the predicate should be evaluated from
+	uint8_t id; // Keep id as the first variable in the struct
+	uint8_t variables_details_length;
+	uint8_t bytecode_length;
+
+	var_elem_t * variables_details;
+	ubyte * bytecode;
+
+} predicate_detail_entry_t;
+
 typedef struct
 {
 	uint8_t round_count;
@@ -62,6 +76,15 @@ typedef struct
 	int key;
 	unique_array_t * data;
 } neighbour_map_elem_t; 
+
+static void predicate_detail_entry_cleanup(void * item)
+{
+	predicate_detail_entry_t * entry = (predicate_detail_entry_t *)item;
+
+	free(entry->variables_details);
+	free(entry->bytecode);
+	free(entry);
+}
 
 static bool intCompare(void const * x, void const * y)
 {
@@ -333,6 +356,37 @@ PROCESS_THREAD(data_gather, ev, data)
 	//if sink start the evaluation process to run in the background
 	if(rimeaddr_cmp(&rimeaddr_node_addr, &sink))
 	{
+		//create and save example predicates
+		array_list_init(&predicates, &free);
+	
+		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
+		
+		//create the predicate
+		uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+		uint8_t var_details = 2;
+		rimeaddr_t dest;
+		dest.u8[0] = 10;
+		dest.u8[1] = 0;
+		predicate_detail_entry_t *pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t))
+		rimeaddr_copy(&pred->destination, &dest);
+		pred->id = 1;
+		pred->bytecode_length = bytecode_length;
+		pred->variables_details_length = var_details;
+		
+		var_elem_t * msg_vars = (var_elem_t *)(malloc(sizeof(var_elem_t) * var_details);
+
+		msg_vars[0].hops = 2;
+		msg_vars[0].var_id = 255;
+		msg_vars[1].hops = 1;
+		msg_vars[1].var_id = 254;
+
+		pred->variables_details = msg_vars;
+		pred->bytecode = program_bytecode;
+
+		//add it to the list
+		array_list_append(&predicates, &pred);
+
+		//start the evauluation process
 		process_start(&data_evaluation_process,NULL);
 	}
 
@@ -407,7 +461,12 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 		etimer_set(&et, ROUND_LENGTH*1.2); //wait a little longer than the round length before evaluation
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
+		//go through the list of predicates
+		//for each one gather the data into the right order (based on the destination of the predicate)
+			//i.e. find teh 1 hop neighbours add their data to an array, then get the next hop and add them
+		//then run the evaluation 	
+
 	}
 
 	PROCESS_END();
-}
+	}

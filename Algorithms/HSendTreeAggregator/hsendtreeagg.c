@@ -89,6 +89,7 @@ static bool rimeaddr_equality(void const * left, void const * right)
 	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
 }
 
+//TODO: add clearing of previous neighbour information
 /* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, int round_count)
 {
@@ -111,7 +112,7 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 	int i;
 	for (i = 0; i < length; ++i)
 	{
-		unique_array_append(&information,&pairs[i]);//add the pair to the list
+		unique_array_append(&information,&pairs[i]); //add the pair to the list
 		//TODO: Check that this memory isn't corrupted later on
 	}
 }

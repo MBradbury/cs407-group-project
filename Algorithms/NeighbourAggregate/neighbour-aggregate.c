@@ -210,7 +210,9 @@ static void tree_aggregate_own(void * ptr)
 	unique_array_t * conn_list = &((aggregation_data_t *)ptr)->list;
 
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(&one_hop_neighbours); unique_array_continue(&one_hop_neighbours, elem); elem = unique_array_next(elem))
+	for (elem = unique_array_first(&one_hop_neighbours); 
+		unique_array_continue(&one_hop_neighbours, elem); 
+		elem = unique_array_next(elem))
 	{
 		rimeaddr_t * to = (rimeaddr_t *) unique_array_data(&one_hop_neighbours, elem);
 
@@ -283,7 +285,9 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 
 	unsigned int i = 0;
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(&data_array->list); unique_array_continue(&data_array->list, elem); elem = unique_array_next(elem))
+	for (elem = unique_array_first(&data_array->list); 
+		unique_array_continue(&data_array->list, elem); 
+		elem = unique_array_next(elem))
 	{
 		rimeaddr_pair_t const * to = (rimeaddr_pair_t *)unique_array_data(&data_array->list, elem);
 

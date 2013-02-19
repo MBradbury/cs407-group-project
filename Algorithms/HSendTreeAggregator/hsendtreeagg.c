@@ -109,6 +109,7 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 
 		map_put(&neighbour_info, &elem)
 	}
+
 	int i;
 	for (i = 0; i < length; ++i)
 	{
@@ -119,6 +120,7 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 
 PROCESS(data_gather, "Data Gather");
 PROCESS(send_data_process, "Send data process");
+PROCESS(data_evaluation_process, "Data evaluation process");
 
 AUTOSTART_PROCESSES(&data_gather);
 
@@ -323,6 +325,12 @@ PROCESS_THREAD(data_gather, ev, data)
 	printf("Starting Tree Aggregation\n");
 	tree_agg_open(&aggconn, &sink, 150, 100, sizeof(aggregation_data_t), &callbacks);
 
+	//if sink start the evaluation process to run in the background
+	if(rimeaddr_cmp(&rimeaddr_node_addr, &sink))
+	{
+		process_start(&data_evaluation_process,NULL);
+	}
+
 	PROCESS_END();
 }
 
@@ -380,5 +388,21 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 exit:
 	tree_agg_close(&aggconn);
+	PROCESS_END();
+}
+
+PROCESS_THREAD(data_evaluation_process, ev, data)
+{
+	static struct etimer et;
+
+	PROCESS_BEGIN();
+
+	while(true)
+	{
+		etimer_set(&et, ROUND_LENGTH*1.2); //wait a little longer than the round length before evaluation
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	}
+
 	PROCESS_END();
 }

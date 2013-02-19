@@ -462,9 +462,34 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		//go through the list of predicates
-		//for each one gather the data into the right order (based on the destination of the predicate)
-			//i.e. find teh 1 hop neighbours add their data to an array, then get the next hop and add them
-		//then run the evaluation 	
+		array_list_elem_t elem;
+		for (elem = array_list_first(&predicates); array_list_continue(&predicates, elem); elem = array_list_next(elem))
+		{
+		    predicate_detail_entry_t * data = (predicate_detail_entry_t *)array_list_data(&list, elem);
+
+		    rimeaddr_t destination = date->destination; //target node
+
+		    //work out the max number of hops needed for the predicate
+		    //then go through and get each hop in order
+		    unsigned int max_hops = 0;
+
+		    uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
+			if (local_max_hops > max_hops)
+			{
+				max_hops = local_max_hops;
+			}
+
+		    //for each one gather the data into the right order (based on the destination of the predicate)
+				//i.e. find the 1 hop neighbours add their data to an array, then get the next hop and add them
+			unsigned int i;
+			for (i = 0; i < max_hops; ++i)
+			{
+				
+			}
+
+			//then run the evaluation 
+		}
+			
 
 	}
 

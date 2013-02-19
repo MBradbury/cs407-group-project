@@ -61,11 +61,14 @@ typedef struct
 {
 	int key;
 	unique_array_t * data;
-} neighbour_map_elem_t;
+} neighbour_map_elem_t; 
 
-static bool intCompare(int a, int b)
+static bool intCompare(void const * x, void const * y)
 {
-	return (a < b) ? -1 : (a > b);
+	neighbour_map_elem_t const * a = x;
+	neighbour_map_elem_t const * b = y;
+
+	return (a->key < b->key) ? -1 : (a->key > b->key);
 }
 
 static bool rimeaddr_pair_equality(void const * left, void const * right)
@@ -96,24 +99,26 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
 	//check if round is in map already, if not create new unique array list
-
-	unique_array_t * information = map_get(&neighbour_info,round_count);
+	int * r = (int *)malloc(sizeof(int));
+	r = round_count;
+	unique_array_t * information = (unique_array_t *)map_get(&neighbour_info, &r);
+	free(r);
 
 	if (information == NULL) //not been initialised, need to create it
 	{
-		unique_array_init(&information, &rimeaddr_pair_equality, &free);
+		unique_array_init( information, &rimeaddr_pair_equality, &free);
 		
 		neighbour_map_elem_t * elem = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
 		elem->key = round_count;
 		elem->data = information;
 
-		map_put(&neighbour_info, &elem)
+		map_put(&neighbour_info, &elem); 
 	}
 
-	int i;
+	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		unique_array_append(&information,&pairs[i]); //add the pair to the list
+		unique_array_append(information, &pairs[i]); //add the pair to the list
 		//TODO: Check that this memory isn't corrupted later on
 	}
 }

@@ -21,15 +21,19 @@
 #include "dev/cc2420.h"
 
 #include "tree-aggregator.h"
+#include "neighbour-aggregate.h"
 
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
 #include "array-list.h"
- 
-#include "neighbour-aggregate.h"
+#include "unique-array.h"
+#include "map.h"
+
 
 static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
+
+static map_t neighbour_info;
 
 typedef struct
 {
@@ -53,10 +57,63 @@ typedef struct
 	//nint light2;
 } node_data_t;
 
+typedef struct
+{
+	int key;
+	unique_array_t * data;
+} neighbour_map_elem_t;
+
+static bool intCompare(int a, int b)
+{
+	return (a < b) ? -1 : (a > b);
+}
+
+static bool rimeaddr_pair_equality(void const * left, void const * right)
+{
+	if (left == NULL || right == NULL)
+		return false;
+
+	rimeaddr_pair_t const * lp = (rimeaddr_pair_t const *)left;
+	rimeaddr_pair_t const * rp = (rimeaddr_pair_t const *)right;
+
+	return
+		(rimeaddr_cmp(&lp->first, &rp->first) && rimeaddr_cmp(&lp->second, &rp->second)) ||
+		(rimeaddr_cmp(&lp->second, &rp->first) && rimeaddr_cmp(&lp->first, &rp->second));
+}
+
+static bool rimeaddr_equality(void const * left, void const * right)
+{
+	if (left == NULL || right == NULL)
+		return false;
+
+	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
+}
+
 /* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, int round_count)
 {
+	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
+	//check if round is in map already, if not create new unique array list
+
+	unique_array_t * information = map_get(&neighbour_info,round_count);
+
+	if (information == NULL) //not been initialised, need to create it
+	{
+		unique_array_init(&information, &rimeaddr_pair_equality, &free);
+		
+		neighbour_map_elem_t * elem = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
+		elem->key = round_count;
+		elem->data = information;
+
+		map_put(&neighbour_info, &elem)
+	}
+	int i;
+	for (i = 0; i < length; ++i)
+	{
+		unique_array_append(&information,&pairs[i]);//add the pair to the list
+		//TODO: Check that this memory isn't corrupted later on
+	}
 }
 
 PROCESS(data_gather, "Data Gather");
@@ -87,7 +144,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 			msgdata[i].humidity);
 	}
 
-	//evaluate
+	//evaluate at some point
 }
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
@@ -258,6 +315,8 @@ PROCESS_THREAD(data_gather, ev, data)
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
+
+	map_init(&neighbour_info, &intCompare, &free); //setup the map
 	start_neighbour_aggregate(&handle_neighbour_data);
 
 	printf("Starting Tree Aggregation\n");

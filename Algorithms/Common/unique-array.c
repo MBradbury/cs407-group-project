@@ -27,6 +27,19 @@ bool unique_array_append(unique_array_t * list, void * data)
 	return true;
 }
 
+bool unique_array_merge(unique_array_t * first, unique_array_t * second)
+{
+	unique_array_elem_t elem;
+	for (elem = unique_array_first(second); unique_array_continue(second, elem); elem = unique_array_next(elem))
+	{		
+		void const * item = unique_array_data(second, elem);
+
+		if (!unique_array_append(first, item)) return false;
+	}
+
+	return true;
+}
+
 bool unique_array_remove(unique_array_t * list, unique_array_elem_t elem)
 {
 	return list != NULL && array_list_remove(&list->list, elem);

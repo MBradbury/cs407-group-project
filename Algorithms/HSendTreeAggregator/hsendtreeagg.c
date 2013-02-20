@@ -642,6 +642,11 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 			unsigned int hops;
 			for (hops = 0; hops < max_hops; ++hops)
 			{
+				//array of nodes that we acquire during this round
+			    unique_array_t acquired_nodes;
+			    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
+			    unique_array_append(&acquired_nodes, &destination); 
+
 				//for each node in the target nodes, get the immediate neighbours,
 				unique_array_elem_t target;
 				for (target = unique_array_first(&target_nodes); 
@@ -649,7 +654,7 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 					target = unique_array_next(target))
 				{
 					rimeaddr_t const * t = unique_array_data(&target_nodes, target);
-					unique_array_t * neighbours = get_neighbours(t, round_count);
+					unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
 					
 					//go through the neighbours for the node
 					unique_array_elem_t neighbour;
@@ -677,11 +682,14 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 
 							//TODO: Check that this is right, (could be adding a node to the end of a list we are currently cycling through)
 							//add the node to the target nodes for the next round
-							unique_array_append(&target_nodes, &n);
+							unique_array_append(&acquired_nodes, &n);
 						}
 					}
 				}
-				//seen nodes += target nodes
+				//merge the old target nodes to the seen nodes, set the new target nodes to the acquired nodes
+				unique_array_merge(&seen_nodes,&target_nodes);
+				unique_array_clear(&target_nodes);
+				target_nodes = acquired_nodes;
 			}
 
 			//clear the unused arrays

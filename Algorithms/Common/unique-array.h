@@ -27,7 +27,8 @@ bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, 
 
 // Add / Remove items from list
 bool unique_array_append(unique_array_t * list, void * data);
-bool unique_array_clear(unique_array_t * list);
+bool unique_array_merge(unique_array_t * first, unique_array_t * second);
+bool unique_array_clear(unique_array_t * list); 
 
 bool unique_array_remove(unique_array_t * list, unique_array_elem_t elem);
 

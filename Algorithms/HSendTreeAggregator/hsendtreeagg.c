@@ -37,6 +37,8 @@ static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
 
 static map_t neighbour_info;
 
+static map_t recieved_data;
+
 static array_list_t predicates;
 
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
@@ -138,7 +140,7 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 
 	if (information == NULL) //not been initialised, need to create it
 	{
-		unique_array_init( information, &rimeaddr_pair_equality, &free);
+		unique_array_init(information, &rimeaddr_pair_equality, &free);
 		
 		neighbour_map_elem_t * elem = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
 		elem->key = round_count;
@@ -166,7 +168,6 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-
 	//extract data from packet buffer
 	collected_data_t const * msg = (collected_data_t const *)packetbuf_dataptr();
 
@@ -174,17 +175,25 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
 
+	map_t * round_data = map_get(&recieved_data, msg->round_count); //map for that round
+
+	if(round_data == NULL) //if the map hasn't been initialised
+	{
+		//init the new map
+
+		//add it to the main map
+	}
+
 	unsigned int i;
-	
 	for(i = 0; i < length; ++i)
 	{
 		printf("Tree Agg: Recv, Node: %s Temp:%d, Humidity: %d\n", 
 			addr2str(&msgdata[i].addr), 
 			(int)msgdata[i].temp, 
 			msgdata[i].humidity);
-	}
 
-	//evaluate at some point
+		//add the data to the map
+	}
 }
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
@@ -386,6 +395,8 @@ PROCESS_THREAD(data_gather, ev, data)
 		//create and save example predicates
 		array_list_init(&predicates, &free);
 	
+		map_init(&recieved_data, &intCompare, &free);
+
 		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 		
 		//create the predicate
@@ -499,20 +510,30 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 		    //work out the max number of hops needed for the predicate
 		    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
 
+		    //array of nodes that have been seen so far
+		    unique_array_t * seen_nodes;
+		    unique_array_init(seen_nodes, &rimeaddr_equality, &free);
+		    unique_array_append(seen_nodes, &destination); 
 
-		    //for each one gather the data into the right order (based on the destination of the predicate)
-				//i.e. find the 1 hop neighbours add their data to an array, then get the next hop and add them
-			unsigned int i;
-			for (i = 0; i < max_hops; ++i)
+		    //array of nodes that we need the neighbours for
+		    unique_array_t * target_nodes;
+		    unique_array_init(target_nodes, &rimeaddr_equality, &free);
+		    unique_array_append(target_nodes, &destination); 
+
+		    //Get the data for each hop level
+			unsigned int hops;
+			for (hops = 0; hops < max_hops; ++hops)
 			{
-
+				//for each node in the target nodes, get the immediate neighbours, 
+				//	check that the neighbours aren't in the list of seen nodes
+				//add their data to the main array
+				//seen nodes += target nodes
 			}
+
+			unique_array_clear(seen_nodes);
 
 			//then run the evaluation 
 		}
-			
-
 	}
-
 	PROCESS_END();
-	}
+}

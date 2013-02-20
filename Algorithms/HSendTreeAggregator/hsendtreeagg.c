@@ -94,6 +94,55 @@ typedef struct
 	map_t * data;
 } node_data_map_elem_t; 
 
+///
+/// Start VM Helper Functions
+///
+static void const * get_addr(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->addr;
+}
+
+static void const * get_temp(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->temp;
+}
+
+static void const * get_humidity(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->humidity;
+}
+
+//TODO: Convert this to work with a target node (i.e. use the data from another node)
+static void node_data(void * data)
+{
+	if (data != NULL)
+	{
+		node_data_t * nd = (node_data_t *)data;
+
+		// Store the current nodes address
+		rimeaddr_copy(&nd->addr, &rimeaddr_node_addr);
+
+		SENSORS_ACTIVATE(sht11_sensor);
+		int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		SENSORS_DEACTIVATE(sht11_sensor);
+
+		nd->temp = sht11_temperature(raw_temperature);
+		nd->humidity = sht11_relative_humidity_compensated(raw_humidity, nd->temp);
+
+		/*SENSORS_ACTIVATE(light_sensor);
+		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+		SENSORS_DEACTIVATE(light_sensor);
+
+		nd->light1 = (nint)s1087_light1(raw_light1);
+		nd->light2 = (nint)s1087_light1(raw_light2);*/
+	}
+}
+///
+/// End VM Helper Functions
+///
+
 static void predicate_detail_entry_cleanup(void * item)
 {
 	predicate_detail_entry_t * entry = (predicate_detail_entry_t *)item;
@@ -184,7 +233,7 @@ static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_coun
 
 	//pairs of neighbours for a given round
 	unique_array_t * pairs = (unique_array_t *)map_get(&neighbour_info, &r);
-
+	free(r);
 	//go through each pair
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(pairs); 
@@ -354,7 +403,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
 	aggregation_data_t * conn_data = (aggregation_data_t *)conn->data;
-	uint8_t length = array_list_length(&conn_data->list);
+	unsigned int length = array_list_length(&conn_data->list);
 	unsigned int packet_length = sizeof(collected_data_t) + sizeof(node_data_t) * length;
 
 	packetbuf_clear();
@@ -362,7 +411,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	debug_packet_size(packet_length);
 
 	collected_data_t * msg = (collected_data_t *)packetbuf_dataptr();
-	msg->length = length;
+	msg->length = (uint8_t)length;
 	msg->round_count = conn_data->round_count;
 
 	printf("Writing packet, length %d data length:%d\n", msg->length,length);
@@ -553,9 +602,9 @@ exit:
 PROCESS_THREAD(data_evaluation_process, ev, data)
 {
 	static struct etimer et; 
-	//use a separate round_count for this process, so there isn't any interferance with the other processes
+	//use a separate round_count for this process, so there isn't any interference with the other processes
 	static uint8_t round_count;
-	
+
 	PROCESS_BEGIN();
 
 	round_count = 0;
@@ -575,6 +624,9 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 
 		    //work out the max number of hops needed for the predicate
 		    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
+
+		    array_list_t all_data;
+		    array_list_init(&all_data, &free);
 
 		    //array of nodes that have been seen so far
 		    unique_array_t seen_nodes;
@@ -601,16 +653,31 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 					
 					//go through the neighbours for the node
 					unique_array_elem_t neighbour;
-					for (neighbour = unique_array_first(&neighbourw); 
-						unique_array_continue(&neighbours, neighbour); 
+					for (neighbour = unique_array_first(neighbours); 
+						unique_array_continue(neighbours, neighbour); 
 						neighbour = unique_array_next(neighbour))
 					{
-						//if the node hasn't been seen before
-						if(!unique_array_contains(seen_nodes,&target))
-						{
-							//add it to the hops data
+						//the neighbour found
+						rimeaddr_t const * n = unique_array_data(&neighbours, neighbour);
 
+						//if the neighbour hasn't been seen before
+						if(!unique_array_contains(&seen_nodes,&n))
+						{
+							int * r = (int *)malloc(sizeof(int));
+							r = round_count;
+							//get the data
+							node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, r); //map for that round
+							free(r);
+							map_t * round_data = st->data;
+
+							node_data_t * d = (node_data_t *)map_get(round_data, &n);
+							
+							//add it to the all_data
+							array_list_append(&all_data, &d);
+
+							//TODO: Check that this is right, (could be adding a node to the end of a list we are currently cycling through)
 							//add the node to the target nodes for the next round
+							unique_array_append(&target_nodes, &n);
 						}
 					}
 				}

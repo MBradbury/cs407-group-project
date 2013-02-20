@@ -41,6 +41,9 @@ static map_t recieved_data;
 
 static array_list_t predicates;
 
+// An array_list_t of map_t of node_data_t
+static array_list_t hops_data;
+
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
 typedef struct
 {
@@ -196,15 +199,22 @@ static bool rimeaddr_equality(void const * left, void const * right)
 /* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, int round_count)
 {
+	printf("Handling neighbour data\n");
 	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
 	//check if round is in map already, if not create new unique array list
 	int * r = (int *)malloc(sizeof(int));
 	r = &round_count;
-	unique_array_t * information = (unique_array_t *)map_get(&neighbour_info, &r);
-	free(r);
+	printf("Fetching information\n");
 
-	if (information == NULL) //not been initialised, need to create it
+	neighbour_map_elem_t *stored = (unique_array_t *)map_get(&neighbour_info, &r);
+	unique_array_t * information;
+
+	if(stored) //saved before
+	{
+		information = &stored->data;
+	}
+	else
 	{
 		unique_array_init(information, &rimeaddr_pair_equality, &free);
 		
@@ -212,14 +222,28 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 		elem->key = round_count;
 		elem->data = information;
 
-		map_put(&neighbour_info, &elem); 
+		map_put(&neighbour_info, elem); 
 	}
 
+	printf("got information\n");
+	free(r);
+
+
+	printf("begining adding pairs to the unique array\n");
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		unique_array_append(information, &pairs[i]); //add the pair to the list
-		//TODO: Check that this memory isn't corrupted later on
+		rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
+		printf("created pair information:%d\n",information);
+
+		rimeaddr_copy(&p->first, &pairs[i].first);
+		rimeaddr_copy(&p->second, &pairs[i].second);
+		printf("information size: %d\n",unique_array_length(information));
+
+		printf("Copied in pairs to p\n");
+
+		//printf("attempting to append to information %d\n",information);
+		unique_array_append(information, &p); //add the pair to the list
 	}
 }
 
@@ -302,8 +326,13 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 			(int)msgdata[i].temp, 
 			msgdata[i].humidity);
 
+		node_data_t * nd = (node_data_t *)malloc(sizeof(node_data_t));
+		rimeaddr_copy(&nd->addr,&msgdata[i].addr);
+		nd->temp = (int)msgdata[i].temp;
+		nd->humidity = msgdata[i].humidity;
+
 		//add the data to the map
-		map_put(round_data, &msgdata);
+		map_put(round_data, &nd);
 	}
 }
 
@@ -599,11 +628,85 @@ exit:
 	PROCESS_END();
 }
 
+static map_t * get_hop_map(uint8_t hop)
+{
+	if (hop == 0)
+		return NULL;
+
+	unsigned int length = array_list_length(&hops_data);
+
+	// Map doesn't exist so create it
+	if (length < hop)
+	{
+		unsigned int to_add;
+		for (to_add = hop - length; to_add > 0; --to_add)
+		{
+			map_t * map = (map_t *)malloc(sizeof(map_t));
+			map_init(map, &node_data_equality, &free);
+
+			array_list_append(&hops_data, map);
+		}
+	}
+
+	return (map_t *)array_list_data(&hops_data, hop - 1);
+}
+
+static uint8_t hop_data_length(var_elem_t const * variable)
+{
+	unsigned int length = 0;
+	uint8_t j;
+	for (j = 1; j <= variable->hops; ++j)
+	{
+		length += map_length(get_hop_map(j));
+	}
+
+	return length;
+}
+
+static void free_hops_data(void * voiddata)
+{
+	map_t * data = (map_t *)voiddata;
+	map_clear(data);
+	free(data);
+}
+
+static bool evaluate_predicate(
+	ubyte const * program, unsigned int program_length,
+	node_data_t const * all_neighbour_data,
+	var_elem_t const * variables, unsigned int variables_length)
+{
+	// Set up the predicate language VM
+	init_pred_lang(&node_data, sizeof(node_data_t));
+
+	// Register the data functions 
+	register_function(0, &get_addr, TYPE_INTEGER);
+	register_function(2, &get_temp, TYPE_FLOATING);
+	register_function(3, &get_humidity, TYPE_INTEGER);
+
+	printf("Binding variables using %p\n", all_neighbour_data);
+
+	// Bind the variables to the VM
+	unsigned int i;
+	for (i = 0; i < variables_length; ++i)
+	{
+		// Get the length of this hop's data
+		// including all of the closer hop's data length
+		unsigned int length = hop_data_length(&variables[i]);
+
+		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		bind_input(variables[i].var_id, all_neighbour_data, length);
+	}
+
+	return evaluate(program, program_length);
+}
+
+
 PROCESS_THREAD(data_evaluation_process, ev, data)
 {
 	static struct etimer et; 
 	//use a separate round_count for this process, so there isn't any interference with the other processes
 	static uint8_t round_count;
+	static node_data_t * all_neighbour_data = NULL;
 
 	PROCESS_BEGIN();
 
@@ -625,9 +728,9 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 		    //work out the max number of hops needed for the predicate
 		    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
 
-		    array_list_t all_data;
-		    array_list_init(&all_data, &free);
 
+			array_list_init(&hops_data, &free_hops_data);
+			unsigned int max_size = 0;
 		    //array of nodes that have been seen so far
 		    unique_array_t seen_nodes;
 		    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
@@ -663,7 +766,7 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 						neighbour = unique_array_next(neighbour))
 					{
 						//the neighbour found
-						rimeaddr_t const * n = unique_array_data(&neighbours, neighbour);
+						rimeaddr_t const * n = unique_array_data(neighbours, neighbour);
 
 						//if the neighbour hasn't been seen before
 						if(!unique_array_contains(&seen_nodes,&n))
@@ -675,14 +778,29 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 							free(r);
 							map_t * round_data = st->data;
 
-							node_data_t * d = (node_data_t *)map_get(round_data, &n);
+							node_data_t * nd = (node_data_t *)map_get(round_data, &n);
 							
-							//add it to the all_data
-							array_list_append(&all_data, &d);
 
-							//TODO: Check that this is right, (could be adding a node to the end of a list we are currently cycling through)
 							//add the node to the target nodes for the next round
 							unique_array_append(&acquired_nodes, &n);
+
+							map_t * map = get_hop_map(hops);
+
+							// Check that we have not previously received data from this node before
+							node_data_t * stored = (node_data_t *)map_get(map, n);
+							
+							if (stored != NULL)
+							{
+								memcpy(stored, nd, sizeof(node_data_t));
+							}
+							else
+							{
+								stored = (node_data_t *)malloc(sizeof(node_data_t));
+								memcpy(stored, nd, sizeof(node_data_t));
+
+								map_put(map, stored);
+								max_size++;
+							}
 						}
 					}
 				}
@@ -690,6 +808,7 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 				unique_array_merge(&seen_nodes,&target_nodes);
 				unique_array_clear(&target_nodes);
 				target_nodes = acquired_nodes;
+
 			}
 
 			//clear the unused arrays
@@ -697,7 +816,51 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 			unique_array_clear(&target_nodes);
 
 			//then run the evaluation using the collected data 
-		}
+
+			// Generate array of all the data
+			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
+
+			uint8_t i;
+			for (i = 1; i <= max_hops; ++i)
+			{
+				map_t * hop_map = get_hop_map(i);
+
+				unsigned int length = map_length(hop_map);
+
+				// Position in all_neighbour_data
+				unsigned int count = 0;
+
+				if (length > 0)
+				{
+					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
+					{
+						node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
+						memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
+						++count;
+					}
+				}
+
+				printf("i=%d Count=%d length=%d\n", i, count, length);
+			}
+
+
+			bool evaluation_result = evaluate_predicate(
+			pred->bytecode, pred->bytecode_length,
+			all_neighbour_data,
+			pred->variables_details, pred->variables_details_length);
+
+			if (evaluation_result)
+			{
+				printf("Pred: TRUE\n");
+			}
+			else
+			{
+				printf("Pred: FAILED due to error: %s\n", error_message());
+			}
+
+
+			array_list_clear(&hops_data);
+		} //end of predicate loop
 
 		++round_count; //increase the round count
 	}

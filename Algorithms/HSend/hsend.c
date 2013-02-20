@@ -213,7 +213,6 @@ static rimeaddr_t baseStationAddr;
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
 
-
 typedef struct
 {
 	uint8_t id; // Keep id as the first variable in the struct

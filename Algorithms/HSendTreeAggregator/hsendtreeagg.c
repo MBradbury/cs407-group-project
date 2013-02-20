@@ -552,9 +552,13 @@ exit:
 
 PROCESS_THREAD(data_evaluation_process, ev, data)
 {
-	static struct etimer et;
-
+	static struct etimer et; 
+	//use a separate round_count for this process, so there isn't any interferance with the other processes
+	static uint8_t round_count;
+	
 	PROCESS_BEGIN();
+
+	round_count = 0;
 
 	while(true)
 	{
@@ -586,16 +590,41 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 			unsigned int hops;
 			for (hops = 0; hops < max_hops; ++hops)
 			{
-				//for each node in the target nodes, get the immediate neighbours, 
-				//	check that the neighbours aren't in the list of seen nodes
-				//add their data to the main array
+				//for each node in the target nodes, get the immediate neighbours,
+				unique_array_elem_t target;
+				for (target = unique_array_first(&target_nodes); 
+					unique_array_continue(&target_nodes, target); 
+					target = unique_array_next(target))
+				{
+					rimeaddr_t const * t = unique_array_data(&target_nodes, target);
+					unique_array_t * neighbours = get_neighbours(t, round_count);
+					
+					//go through the neighbours for the node
+					unique_array_elem_t neighbour;
+					for (neighbour = unique_array_first(&neighbourw); 
+						unique_array_continue(&neighbours, neighbour); 
+						neighbour = unique_array_next(neighbour))
+					{
+						//if the node hasn't been seen before
+						if(!unique_array_contains(seen_nodes,&target))
+						{
+							//add it to the hops data
+
+							//add the node to the target nodes for the next round
+						}
+					}
+				}
 				//seen nodes += target nodes
 			}
 
+			//clear the unused arrays
 			unique_array_clear(&seen_nodes);
+			unique_array_clear(&target_nodes);
 
-			//then run the evaluation 
+			//then run the evaluation using the collected data 
 		}
+
+		++round_count; //increase the round count
 	}
 	PROCESS_END();
 }

@@ -88,6 +88,12 @@ typedef struct
 	unique_array_t * data;
 } neighbour_map_elem_t; 
 
+typedef struct
+{
+	int key;
+	map_t * data;
+} node_data_map_elem_t; 
+
 static void predicate_detail_entry_cleanup(void * item)
 {
 	predicate_detail_entry_t * entry = (predicate_detail_entry_t *)item;
@@ -116,6 +122,17 @@ static bool rimeaddr_pair_equality(void const * left, void const * right)
 	return
 		(rimeaddr_cmp(&lp->first, &rp->first) && rimeaddr_cmp(&lp->second, &rp->second)) ||
 		(rimeaddr_cmp(&lp->second, &rp->first) && rimeaddr_cmp(&lp->first, &rp->second));
+}
+
+static bool node_data_equality(void const * left, void const * right)
+{
+	if (left == NULL || right == NULL)
+		return false;
+
+	node_data_t const * l = (node_data_t const *)left;
+	node_data_t const * r = (node_data_t const *)right;
+
+	return rimeaddr_cmp(&l->addr, &r->addr);
 }
 
 static bool rimeaddr_equality(void const * left, void const * right)
@@ -175,13 +192,21 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
 
-	map_t * round_data = map_get(&recieved_data, (int *)msg->round_count); //map for that round
+	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, (int *)msg->round_count); //map for that round
+
+	map_t * round_data = st->data;
 
 	if(round_data == NULL) //if the map hasn't been initialised
 	{
 		//init the new map
+		map_init(round_data, &node_data_equality, &free);
+		
+		node_data_map_elem_t * elem = (node_data_map_elem_t *)malloc(sizeof(node_data_map_elem_t));
+		elem->key = msg->round_count;
+		elem->data = round_data;
 
 		//add it to the main map
+		map_put(&recieved_data, elem);
 	}
 
 	unsigned int i;
@@ -193,6 +218,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 			msgdata[i].humidity);
 
 		//add the data to the map
+		map_put(round_data, &msgdata);
 	}
 }
 

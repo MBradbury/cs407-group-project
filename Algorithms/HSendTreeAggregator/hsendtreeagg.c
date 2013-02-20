@@ -199,20 +199,21 @@ static bool rimeaddr_equality(void const * left, void const * right)
 /* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, int round_count)
 {
-	printf("Handling neighbour data\n");
+	printf("Handling neighbour data - HSend\n");
 	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
 	//check if round is in map already, if not create new unique array list
-	int * r = (int *)malloc(sizeof(int));
-	r = &round_count;
-	printf("Fetching information\n");
-
-	neighbour_map_elem_t *stored = (unique_array_t *)map_get(&neighbour_info, &r);
 	unique_array_t * information;
+
+	int * r = (int *)malloc(sizeof(int));
+	*r = round_count;
+
+	neighbour_map_elem_t * stored = (unique_array_t *)map_get(&neighbour_info, &r);
+	free(r);
 
 	if(stored) //saved before
 	{
-		information = &stored->data;
+		information = stored->data;
 	}
 	else
 	{
@@ -220,30 +221,22 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 		
 		neighbour_map_elem_t * elem = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
 		elem->key = round_count;
-		elem->data = information;
+		*elem->data = *information;
 
 		map_put(&neighbour_info, elem); 
 	}
 
-	printf("got information\n");
-	free(r);
-
-
-	printf("begining adding pairs to the unique array\n");
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
 		rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-		printf("created pair information:%d\n",information);
 
 		rimeaddr_copy(&p->first, &pairs[i].first);
 		rimeaddr_copy(&p->second, &pairs[i].second);
-		printf("information size: %d\n",unique_array_length(information));
-
-		printf("Copied in pairs to p\n");
+		printf("%d created pair, information:%d\n",i, &information);
 
 		//printf("attempting to append to information %d\n",information);
-		unique_array_append(information, &p); //add the pair to the list
+		unique_array_append(information, p); //add the pair to the list
 	}
 }
 
@@ -292,6 +285,7 @@ AUTOSTART_PROCESSES(&data_gather);
 //Sink recieved final set of data
 static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
+	printf("Tree Agg Received data - HSend\n");
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
 	//extract data from packet buffer
@@ -300,19 +294,25 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 	uint8_t length = msg->length;
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
+	int * r = (int *)malloc(sizeof(int));
+	*r = msg->round_count;
 
-	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, (int *)msg->round_count); //map for that round
+	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &r); //map for that round
 
-	map_t * round_data = st->data;
+	map_t * round_data;
 
-	if(round_data == NULL) //if the map hasn't been initialised
+	if (st)
+	{
+		round_data = st->data;
+	}
+	else
 	{
 		//init the new map
 		map_init(round_data, &node_data_equality, &free);
 		
 		node_data_map_elem_t * elem = (node_data_map_elem_t *)malloc(sizeof(node_data_map_elem_t));
 		elem->key = msg->round_count;
-		elem->data = round_data;
+		*elem->data = *round_data;
 
 		//add it to the main map
 		map_put(&recieved_data, elem);
@@ -321,7 +321,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 	unsigned int i;
 	for(i = 0; i < length; ++i)
 	{
-		printf("Tree Agg: Recv, Node: %s Temp:%d, Humidity: %d\n", 
+		printf("Tree Agg - HSend: Recv, Node: %s Temp:%d, Humidity: %d\n", 
 			addr2str(&msgdata[i].addr), 
 			(int)msgdata[i].temp, 
 			msgdata[i].humidity);
@@ -331,18 +331,18 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 		nd->temp = (int)msgdata[i].temp;
 		nd->humidity = msgdata[i].humidity;
 
-		//add the data to the map
-		map_put(round_data, &nd);
+		//add the data to the map 
+		map_put(round_data, nd);
 	}
 }
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 {
-	printf("Tree Agg: Setup finsihed\n");
+	printf("Tree Agg: Setup finsihed - HSend\n");
 
 	if (tree_agg_is_leaf(conn))
 	{
-		printf("Tree Agg: Is leaf starting data aggregation\n");
+		printf("Tree Agg: Is leaf starting data aggregation - HSend\n");
 
 		leds_on(LEDS_RED);
 
@@ -352,7 +352,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 
 static void tree_aggregate_update(void * voiddata, void const * to_apply)
 {
-	printf("Tree Agg: Update local data\n");
+	printf("Tree Agg: Update local data - HSend\n");
 
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
@@ -377,7 +377,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 //TODO: Add our own one hop data to the list
 static void tree_aggregate_own(void * ptr)
 {
-	printf("Tree Agg: Update local data with own data\n");
+	printf("Tree Agg: Update local data with own data - HSend\n");
 
 	array_list_t * data =  &((aggregation_data_t *)ptr)->list;
 	node_data_t * msg = (node_data_t *)malloc(sizeof(node_data_t));
@@ -398,7 +398,7 @@ static void tree_aggregate_own(void * ptr)
 //Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
-	printf("Tree Agg: Store Packet\n");
+	printf("Tree Agg: Store Packet - HSend\n");
 
 	collected_data_t const * msg = (collected_data_t const *)packet; //get the packet as a struct
 
@@ -443,7 +443,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	msg->length = (uint8_t)length;
 	msg->round_count = conn_data->round_count;
 
-	printf("Writing packet, length %d data length:%d\n", msg->length,length);
+	printf("Writing packet, length %d data length:%d - HSend\n", msg->length,length);
 
 	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 
@@ -526,8 +526,8 @@ PROCESS_THREAD(data_gather, ev, data)
 	map_init(&neighbour_info, &intCompare, &free); //setup the map
 	start_neighbour_aggregate(&handle_neighbour_data);
 
-	printf("Starting Tree Aggregation\n");
-	tree_agg_open(&aggconn, &sink, 150, 100, sizeof(aggregation_data_t), &callbacks);
+	printf("Starting Tree Aggregation - HSend\n");
+	tree_agg_open(&aggconn, &sink, 140, 110, sizeof(aggregation_data_t), &callbacks);
 
 	//if sink start the evaluation process to run in the background
 	if(rimeaddr_cmp(&rimeaddr_node_addr, &sink))
@@ -709,14 +709,18 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 	static node_data_t * all_neighbour_data = NULL;
 
 	PROCESS_BEGIN();
-
+	printf("Evaluation Process launched\n");
 	round_count = 0;
 
 	while(true)
 	{
-		etimer_set(&et, ROUND_LENGTH*1.2); //wait a little longer than the round length before evaluation
+		etimer_set(&et, CLOCK_SECOND * 60 * 2); //wait a little longer than the round length before evaluation
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+		etimer_set(&et, ROUND_LENGTH); 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
+		printf("Begining evaluation of predicates\n");
+		
 		//go through the list of predicates
 		array_list_elem_t elem;
 		for (elem = array_list_first(&predicates); array_list_continue(&predicates, elem); elem = array_list_next(elem))
@@ -772,9 +776,9 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 						if(!unique_array_contains(&seen_nodes,&n))
 						{
 							int * r = (int *)malloc(sizeof(int));
-							r = round_count;
+							*r = round_count;
 							//get the data
-							node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, r); //map for that round
+							node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &r); //map for that round
 							free(r);
 							map_t * round_data = st->data;
 

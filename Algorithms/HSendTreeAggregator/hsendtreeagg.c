@@ -174,6 +174,42 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 	}
 }
 
+/* Gets the neighbours of a given node */
+static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_count)
+{
+	unique_array_t * output;
+	unique_array_init(output, &rimeaddr_equality, &free);
+	int * r = (int *)malloc(sizeof(int));
+	r = &round_count;
+
+	//pairs of neighbours for a given round
+	unique_array_t * pairs = (unique_array_t *)map_get(&neighbour_info, &r);
+
+	//go through each pair
+	unique_array_elem_t elem;
+	for (elem = unique_array_first(pairs); 
+		unique_array_continue(pairs, elem); 
+		elem = unique_array_next(elem))
+	{
+		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(pairs, elem);
+
+		rimeaddr_t first = data->first;
+		rimeaddr_t second = data->second; 
+
+		//if either match, add the other to the list
+		if (rimeaddr_cmp(&first, target))
+		{
+			unique_array_append(output, &second);
+		}
+		else if (rimeaddr_cmp(&second, target))
+		{
+			unique_array_append(output, &first);
+		}
+	}
+
+	return output;
+}
+
 PROCESS(data_gather, "Data Gather");
 PROCESS(send_data_process, "Send data process");
 PROCESS(data_evaluation_process, "Data evaluation process");

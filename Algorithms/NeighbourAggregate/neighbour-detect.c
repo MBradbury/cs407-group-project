@@ -126,7 +126,7 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 
 static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 {
-	printf("Neighbour Discovery: sent message\n");
+	//printf("Neighbour Discovery: sent message\n");
 }
 
 static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =

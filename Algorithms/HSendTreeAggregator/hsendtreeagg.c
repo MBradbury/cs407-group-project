@@ -208,7 +208,7 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 	int * r = (int *)malloc(sizeof(int));
 	*r = round_count;
 
-	neighbour_map_elem_t * stored = (unique_array_t *)map_get(&neighbour_info, &r);
+	neighbour_map_elem_t * stored = map_get(&neighbour_info, &r);
 	free(r);
 
 	if(stored) //saved before
@@ -243,7 +243,7 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 /* Gets the neighbours of a given node */
 static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_count)
 {
-	unique_array_t * output;
+	unique_array_t * output = NULL;
 	unique_array_init(output, &rimeaddr_equality, &free);
 	int * r = (int *)malloc(sizeof(int));
 	r = &round_count;
@@ -298,8 +298,10 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 	*r = msg->round_count;
 
 	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &r); //map for that round
-
-	map_t * round_data;
+	
+	free(r);
+	
+	map_t * round_data = NULL;
 
 	if (st)
 	{
@@ -426,6 +428,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 //write the data structure to the outbout packet buffer
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 {
+	printf("Writing data to packet - HSend\n"); 
 	//take all data, write a struct to the buffer at the start, 
 	//containing the length of the packet (as the number of node_data_t)
 	//write the each one to memory
@@ -527,7 +530,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	start_neighbour_aggregate(&handle_neighbour_data);
 
 	printf("Starting Tree Aggregation - HSend\n");
-	tree_agg_open(&aggconn, &sink, 140, 110, sizeof(aggregation_data_t), &callbacks);
+	tree_agg_open(&aggconn, &sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 
 	//if sink start the evaluation process to run in the background
 	if(rimeaddr_cmp(&rimeaddr_node_addr, &sink))
@@ -714,8 +717,6 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 
 	while(true)
 	{
-		etimer_set(&et, CLOCK_SECOND * 60 * 2); //wait a little longer than the round length before evaluation
-		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		etimer_set(&et, ROUND_LENGTH); 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 

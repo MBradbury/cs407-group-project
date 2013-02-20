@@ -23,6 +23,8 @@
 #include "tree-aggregator.h"
 #include "neighbour-aggregate.h"
 
+#include "predlang.h"
+
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
@@ -36,6 +38,13 @@ static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
 static map_t neighbour_info;
 
 static array_list_t predicates;
+
+// Struct for the list of bytecode_variables. It contains the variable_id and hop count.
+typedef struct
+{
+	uint8_t hops;
+	uint8_t var_id;
+} var_elem_t;
 
 typedef struct
 {
@@ -123,7 +132,7 @@ static void handle_neighbour_data(rimeaddr_pair_t * pairs, unsigned int length, 
 
 	//check if round is in map already, if not create new unique array list
 	int * r = (int *)malloc(sizeof(int));
-	r = round_count;
+	r = &round_count;
 	unique_array_t * information = (unique_array_t *)map_get(&neighbour_info, &r);
 	free(r);
 
@@ -308,6 +317,24 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	array_list_clear(&conn_data->list);
 }
 
+static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
+{
+	uint8_t max_hops = 0;
+
+	unsigned int i;
+	for (i = 0; i < length; ++i)
+	{
+		if (variables[i].hops > max_hops)
+		{
+			max_hops = variables[i].hops;
+		}
+
+		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
+	}
+
+	return max_hops;
+}
+
 static tree_agg_conn_t aggconn;
 static const tree_agg_callbacks_t callbacks = {
 	&tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update,
@@ -367,13 +394,13 @@ PROCESS_THREAD(data_gather, ev, data)
 		rimeaddr_t dest;
 		dest.u8[0] = 10;
 		dest.u8[1] = 0;
-		predicate_detail_entry_t *pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t))
+		predicate_detail_entry_t *pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t));
 		rimeaddr_copy(&pred->destination, &dest);
 		pred->id = 1;
 		pred->bytecode_length = bytecode_length;
 		pred->variables_details_length = var_details;
 		
-		var_elem_t * msg_vars = (var_elem_t *)(malloc(sizeof(var_elem_t) * var_details);
+		var_elem_t * msg_vars = (var_elem_t *)(malloc(sizeof(var_elem_t) * var_details));
 
 		msg_vars[0].hops = 2;
 		msg_vars[0].var_id = 255;
@@ -465,26 +492,20 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 		array_list_elem_t elem;
 		for (elem = array_list_first(&predicates); array_list_continue(&predicates, elem); elem = array_list_next(elem))
 		{
-		    predicate_detail_entry_t * data = (predicate_detail_entry_t *)array_list_data(&list, elem);
+		    predicate_detail_entry_t * pred = (predicate_detail_entry_t *)array_list_data(&predicates, elem);
 
-		    rimeaddr_t destination = date->destination; //target node
+		    rimeaddr_t destination = pred->destination; //target node
 
 		    //work out the max number of hops needed for the predicate
-		    //then go through and get each hop in order
-		    unsigned int max_hops = 0;
+		    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
 
-		    uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
-			if (local_max_hops > max_hops)
-			{
-				max_hops = local_max_hops;
-			}
 
 		    //for each one gather the data into the right order (based on the destination of the predicate)
 				//i.e. find the 1 hop neighbours add their data to an array, then get the next hop and add them
 			unsigned int i;
 			for (i = 0; i < max_hops; ++i)
 			{
-				
+
 			}
 
 			//then run the evaluation 

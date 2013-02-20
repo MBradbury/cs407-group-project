@@ -175,7 +175,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
 
-	map_t * round_data = map_get(&recieved_data, msg->round_count); //map for that round
+	map_t * round_data = map_get(&recieved_data, (int *)msg->round_count); //map for that round
 
 	if(round_data == NULL) //if the map hasn't been initialised
 	{
@@ -511,14 +511,14 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 		    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
 
 		    //array of nodes that have been seen so far
-		    unique_array_t * seen_nodes;
-		    unique_array_init(seen_nodes, &rimeaddr_equality, &free);
-		    unique_array_append(seen_nodes, &destination); 
+		    unique_array_t seen_nodes;
+		    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
+		    unique_array_append(&seen_nodes, &destination); 
 
 		    //array of nodes that we need the neighbours for
-		    unique_array_t * target_nodes;
-		    unique_array_init(target_nodes, &rimeaddr_equality, &free);
-		    unique_array_append(target_nodes, &destination); 
+		    unique_array_t target_nodes;
+		    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
+		    unique_array_append(&target_nodes, &destination); 
 
 		    //Get the data for each hop level
 			unsigned int hops;
@@ -530,7 +530,7 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 				//seen nodes += target nodes
 			}
 
-			unique_array_clear(seen_nodes);
+			unique_array_clear(&seen_nodes);
 
 			//then run the evaluation 
 		}

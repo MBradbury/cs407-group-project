@@ -155,7 +155,6 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 
 	printf("}\n");
 	
-	printf("Calling callback \n");
 	//Call the callback
 	(*conn->callbacks.data_callback_fn)(neighbours, length, msg->round_count);
 }
@@ -349,27 +348,23 @@ void neighbour_agg_send_data(void *ptr)
 	conn->round_count++;
 	
 	//setup a ctimer to repeat in ROUND_LENGTH time
-	static struct ctimer ct;
-	ctimer_set(&ct, ROUND_LENGTH, &neighbour_agg_send_data, conn);
-
+	ctimer_set(&conn->ct_send_data, ROUND_LENGTH, &neighbour_agg_send_data, conn);
 }
-
-//used by the ctimer for opening the tree agg
-struct open_tree_agg_s
+typedef struct
 {
 	neighbour_agg_conn_t * conn;
 	rimeaddr_t * sink;
 	uint16_t ch1;
 	uint16_t ch2;
 	uint16_t ch3;
-};
-
+} open_tree_agg_t;
 //called by the ctimer after the initial setup
 static void open_tree_agg(void * ptr)
 {
-	struct open_tree_agg_s * data = (struct open_tree_agg_s *)ptr; 
+	open_tree_agg_t * data = (open_tree_agg_t *)ptr; 
 
-	printf("open Bool %d\n",tree_agg_open(&data->conn->tc, data->sink, data->ch1, data->ch2, sizeof(aggregation_data_t), &callbacks));
+	tree_agg_open(&data->conn->tc, data->sink, data->ch1, data->ch2, sizeof(aggregation_data_t), &callbacks);
+	free(data);
 }
 
 void neighbour_aggregate_open(neighbour_agg_conn_t * conn, 
@@ -399,16 +394,16 @@ void neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 
 	start_neighbour_detect(&conn->one_hop_neighbours, ch3);
 	
-	// Wait for some time to collect neighbour info, and open the tree
-	static struct ctimer ct;
-	static struct open_tree_agg_s s;
-	s.conn = conn;
-	s.sink = &sink;
-	s.ch1 = ch1;
-	s.ch2 = ch2;
-	s.ch3 = ch3;
+	open_tree_agg_t * s_init = (open_tree_agg_t *) malloc(sizeof(open_tree_agg_t));
 
-	ctimer_set(&ct, INITIAL_NEIGHBOUR_DETECT_PERIOD, &open_tree_agg, &s);
+	// Wait for some time to collect neighbour info, and open the tree
+	s_init->conn = conn;
+	s_init->sink = &sink;
+	s_init->ch1 = ch1;
+	s_init->ch2 = ch2;
+	s_init->ch3 = ch3;
+
+	ctimer_set(&conn->ct_initial_wait, INITIAL_NEIGHBOUR_DETECT_PERIOD, &open_tree_agg, s_init);
 	//stop_neighbour_detect();
 
 	//tree_agg_open(&conn->tc, &sink, ch1, ch2, sizeof(aggregation_data_t), &callbacks);
@@ -434,6 +429,8 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 }
 
 static neighbour_agg_conn_t nconn;
+static neighbour_agg_conn_t nconn2;
+
 static const neighbour_agg_callbacks_t c = {&handle_neighbour_data};
 
 PROCESS_THREAD(neighbour_agg_process, ev, data)

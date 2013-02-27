@@ -7,6 +7,8 @@
 #include "neighbour-detect.h"
 
 struct neighbour_agg_conn_t;
+//used by the ctimer for opening the tree agg
+
 
 typedef struct
 {
@@ -29,7 +31,13 @@ typedef struct neighbour_agg_conn_t
 	neighbour_agg_callbacks_t callbacks;
 
 	unsigned int round_count;
+	
+	struct ctimer ct_send_data;
+	struct ctimer ct_initial_wait;
+
 } neighbour_agg_conn_t;
+
+
 
 /* starts the neighbour aggregate the argument is a function that will be used by the sink to process the data */
 void neighbour_aggregate_open(neighbour_agg_conn_t * conn, 

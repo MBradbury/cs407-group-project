@@ -20,8 +20,7 @@
 #include "dev/leds.h"
 #include "dev/cc2420.h"
 
-#include "tree-aggregator.h"
-#include "neighbour-detect.h"
+
 
 #include "led-helper.h"
 #include "sensor-converter.h"
@@ -34,11 +33,17 @@
 static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
 static const clock_time_t INITIAL_NEIGHBOUR_DETECT_PERIOD = 2 * 60 * CLOCK_SECOND;
 
+void neighbour_agg_send_data(void *ptr);
+
 // The neighbours the current node has
 // This is a list of rimeaddr_t
 static unique_array_t one_hop_neighbours;
 
-static void (* data_callback_fn)(rimeaddr_pair_t *, unsigned int, int);
+/* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
+static inline neighbour_agg_conn_t * conncvt_treeconn(tree_agg_conn_t * conn)
+{
+	return (neighbour_agg_conn_t *)conn;
+}
 
 typedef struct
 {
@@ -121,14 +126,10 @@ static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 }
 
 
-PROCESS(neighbour_agg_process, "Neighbour Agg process");
-PROCESS(neighbour_agg_send_data_process, "SEND DATA");
-
-AUTOSTART_PROCESSES(&neighbour_agg_process);
-
-
-static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
+static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 {
+	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
+
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
 	printf("Tree Agg: Recv\n");
@@ -155,23 +156,23 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 
 	printf("}\n");
 	
-	if(data_callback_fn)  //check the function has been set before calling
-	{
-		data_callback_fn(neighbours,length,msg->round_count); //pass the data to a higherlevel
-	}
+	//Call the callback
+	(*conn->callbacks.data_callback_fn)(neighbours, length, msg->round_count);
 }
 
-static void tree_agg_setup_finished(tree_agg_conn_t * conn)
+static void tree_agg_setup_finished(tree_agg_conn_t * tconn)
 {
+	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
+
 	printf("Tree Agg: Setup finsihed\n");
 
-	if (tree_agg_is_leaf(conn))
+	if (tree_agg_is_leaf(tconn))
 	{
 		printf("Tree Agg: Is leaf starting data aggregation\n");
 
 		leds_on(LEDS_RED);
 
-		process_start(&neighbour_agg_send_data_process, NULL);
+		neighbour_agg_send_data(conn); //start sending data
 	}
 }
 
@@ -232,8 +233,10 @@ static void tree_aggregate_own(void * ptr)
 	}
 }
 
-static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
+static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, unsigned int length)
 {
+	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
+
 	printf("Tree Agg: Store packet\n");
 
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
@@ -241,7 +244,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	rimeaddr_pair_t const * neighbours = (rimeaddr_pair_t const *)(msg + 1);
 	unsigned int neighbours_count = (length - sizeof(collect_msg_t)) / sizeof(rimeaddr_pair_t);
 
-	aggregation_data_t * conn_data = (aggregation_data_t *)conn->data;
+	aggregation_data_t * conn_data = (aggregation_data_t *)conn->tc.data;
 
 	conn_data->round_count = msg->round_count;
 
@@ -261,11 +264,13 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	}
 }
 
-static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
+static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn)
 {
+	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
+
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
-	aggregation_data_t * data_array = (aggregation_data_t *)conn->data;
+	aggregation_data_t * data_array = (aggregation_data_t *)conn->tc.data;
 
 	printf("Writing: ");
 	print_ua_rimeaddr_pair(&data_array->list);
@@ -302,12 +307,131 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 }
 
 
-static tree_agg_conn_t aggconn;
 static const tree_agg_callbacks_t callbacks = {
 	&tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update,
 	&tree_aggregate_own, &tree_agg_store_packet, &tree_agg_write_data_to_packet
 };
 
+
+void neighbour_agg_send_data(void *ptr)
+{
+	//extract the struct
+	neighbour_agg_conn_t * conn = (neighbour_agg_conn_t *)ptr;
+
+	//process the data, and send it on
+	if (tree_agg_is_leaf(&conn->tc))
+	{
+		printf("Is leaf sending 1-hop data onwards\n");
+
+		// By this point the tree should be set up,
+		// so now we should move to aggregating data
+		// through the tree
+	 
+		unsigned int one_hop_n_size = unique_array_length(&conn->one_hop_neighbours);
+
+		// Create the data message that we are going to send
+		packetbuf_clear();
+		packetbuf_set_datalen(sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
+		debug_packet_size(sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
+		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
+		memset(msg, 0, sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
+
+		msg->round_count = conn->round_count;
+
+		list_to_array_single(&conn->one_hop_neighbours, msg);
+
+		tree_agg_send(&conn->tc);
+	}
+
+	conn->round_count++;
+	
+	//setup a ctimer to repeat in ROUND_LENGTH time
+	static struct ctimer ct;
+	ctimer_set(&ct, ROUND_LENGTH, &neighbour_agg_send_data, conn);
+
+}
+
+//used by the ctimer for opening the tree agg
+struct open_tree_agg_s
+{
+	neighbour_agg_conn_t * conn;
+	rimeaddr_t * sink;
+	uint16_t ch1;
+	uint16_t ch2;
+	uint16_t ch3;
+};
+
+//called by the ctimer after the initial setup
+static void open_tree_agg(void * ptr)
+{
+	struct open_tree_agg_s * data = (struct open_tree_agg_s *)ptr; 
+	tree_agg_open(&data->conn->tc, data->sink, data->ch1, data->ch2, sizeof(aggregation_data_t), &callbacks);
+
+}
+
+void neighbour_aggregate_open(neighbour_agg_conn_t * conn, 
+								uint16_t ch1,
+								uint16_t ch2,
+								uint16_t ch3,
+								neighbour_agg_callbacks_t const * callback_fns)
+{
+	static rimeaddr_t sink; //this will never change, don't need multiple instances 
+
+	sink.u8[0] = 1;
+	sink.u8[1] = 0;
+	
+	if (rimeaddr_cmp(&rimeaddr_node_addr,&sink))
+	{
+		printf("We are sink node.\n");
+	}
+	
+	// We need to set the random number generator here
+	random_init(*(uint16_t*)(&rimeaddr_node_addr));
+
+	printf("Setting up aggregation tree...\n");
+
+	unique_array_init(&conn->one_hop_neighbours, &rimeaddr_equality, &free);
+
+	memcpy(&conn->callbacks, callback_fns, sizeof(neighbour_agg_callbacks_t)); //copy in the callbacks
+
+	start_neighbour_detect(&conn->one_hop_neighbours, ch3);
+	
+	// Wait for some time to collect neighbour info, and open the tree
+	static struct ctimer ct;
+	static struct open_tree_agg_s s;
+	s.conn = conn;
+	s.sink = &sink;
+	s.ch1 = ch1;
+	s.ch2 = ch2;
+	s.ch3 = ch3;
+
+	ctimer_set(&ct, INITIAL_NEIGHBOUR_DETECT_PERIOD, &open_tree_agg, &s);
+	//stop_neighbour_detect();
+
+	//tree_agg_open(&conn->tc, &sink, ch1, ch2, sizeof(aggregation_data_t), &callbacks);
+}
+
+void neighbour_aggregate_close(neighbour_agg_conn_t * conn)
+{
+	//close the connections
+	unique_array_clear(&conn-> one_hop_neighbours);
+	tree_agg_close(&conn->tc);
+	conn->round_count = 0;
+}
+
+#ifdef NEIGHBOUR_AGG_APPLICATION
+
+PROCESS(neighbour_agg_process, "Neighbour Agg process");
+
+AUTOSTART_PROCESSES(&neighbour_agg_process);
+
+static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, int round_count)
+{
+	printf("Got some data of length :%d\n",length);
+}
+
+static neighbour_agg_conn_t nconn;
+static const neighbour_agg_callbacks_t c = {&handle_neighbour_data};
 
 PROCESS_THREAD(neighbour_agg_process, ev, data)
 {
@@ -337,78 +461,14 @@ PROCESS_THREAD(neighbour_agg_process, ev, data)
 
 	printf("Setting up aggregation tree...\n");
 
-	unique_array_init(&one_hop_neighbours, &rimeaddr_equality, &free);
-
-	start_neighbour_detect(&one_hop_neighbours, 150);
-	
-	// Wait for some time to collectl neighbour info
-	etimer_set(&et, INITIAL_NEIGHBOUR_DETECT_PERIOD);
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	unique_array_init(&nconn.one_hop_neighbours, &rimeaddr_equality, &free);
 
 	//stop_neighbour_detect();
 
-	tree_agg_open(&aggconn, &sink, 118, 132, sizeof(aggregation_data_t), &callbacks);
+	//tree_agg_open(&aggconn, &sink, 121, 110, sizeof(aggregation_data_t), &callbacks);
+	neighbour_aggregate_open(&nconn, 121,110,150, &c);
 
 	PROCESS_END();
 }
 
-PROCESS_THREAD(neighbour_agg_send_data_process, ev, data)
-{
-	static struct etimer et;
-	static uint8_t round_count;
-
-	PROCESS_EXITHANDLER(goto exit;)
-	PROCESS_BEGIN();
-
-	printf("Starting data generation process\n");
-
-	leds_on(LEDS_GREEN);
-
-	round_count = 0;
-
-	while (true)
-	{
-		etimer_set(&et, ROUND_LENGTH);
-
-		if (tree_agg_is_leaf(&aggconn))
-		{
-			printf("Is leaf sending 1-hop data onwards\n");
-
-			// By this point the tree should be set up,
-			// so now we should move to aggregating data
-			// through the tree
-		 
-			unsigned int one_hop_n_size = unique_array_length(&one_hop_neighbours);
-
-			// Create the data message that we are going to send
-			packetbuf_clear();
-			packetbuf_set_datalen(sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
-			debug_packet_size(sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
-			collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
-			memset(msg, 0, sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
-
-			msg->round_count = round_count;
-
-			list_to_array_single(&one_hop_neighbours, msg);
-	
-			tree_agg_send(&aggconn);
-		}
-
-		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-		++round_count;
-	}
-
-exit:
-	unique_array_clear(&one_hop_neighbours);
-	tree_agg_close(&aggconn);
-	PROCESS_END();
-}
-
-void start_neighbour_aggregate(void (* data_recieved_fn)(rimeaddr_pair_t *, unsigned int, int))
-{
-	process_start(&neighbour_agg_process, NULL); //start the neighbour-aggregate process
-
-	data_callback_fn = data_recieved_fn; //assign the callback
-}
-
+#endif

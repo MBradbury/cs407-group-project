@@ -320,7 +320,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	// Wait for a bit to allow a few messages to be sent
 	ctimer_set(&conn->ct_wait_finished, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
 }
-
+ 
 
 
 bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
@@ -517,6 +517,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 }
 
 static tree_agg_conn_t conn;
+static tree_agg_conn_t conn2;
 static tree_agg_callbacks_t callbacks = {
 	&tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update,
 	&tree_aggregate_own, &tree_agg_store_packet, &tree_agg_write_data_to_packet

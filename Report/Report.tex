@@ -103,7 +103,7 @@
 
 % Title
 \HRule \\[0.4cm]
-{\Huge \bfseries Towards Debugging Wireless Sensor Network Applications}\\[0.4cm]
+{\Huge \bfseries Towards Practical Debugging of Wireless Sensor Network Applications}\\[0.4cm]
 
 \HRule \\[2cm]
 
@@ -306,6 +306,15 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 \subsection{Clustering}
 
 \inputminted[linenos=true,tabsize=3,fontsize=\small]{c}{../Samples/Clustering/cluster.c}
+
+\newpage
+
+
+\section{Future Work}
+
+\subsection{Improve memory Management}
+
+We use malloc to dynamically allocate memory when needed as this simplified development. This meant that we did not have to learn alternative memory allocators. However, we could use these alternate allocators to optimise the code to minimise (i) internal memory fragmentation (ii) external memory fragmentation (iii) performance (as malloc should not be used in RTS like WSNs due to \ldots) and (iv) memory usage.
 
 \newpage
 

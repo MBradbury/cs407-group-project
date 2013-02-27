@@ -127,8 +127,7 @@ static void parent_detect_finished(void * ptr)
 
 	// Wait for a bit to allow a few messages to be sent
 	// Then close the connection and tell user that we are done
-	static struct ctimer ct;
-	ctimer_set(&ct, STUBBORN_WAIT, &stbroadcast_cancel_void_and_callback, conn);
+	ctimer_set(&conn->ct_parent_detect, STUBBORN_WAIT, &stbroadcast_cancel_void_and_callback, conn);
 }
 
 
@@ -192,8 +191,7 @@ static void recv_aggregate(struct runicast_conn * ptr, const rimeaddr_t * origin
 			conn->is_collecting = true;
 
 			// Start aggregation timer
-			static struct ctimer aggregate_ct;
-			ctimer_set(&aggregate_ct, AGGREGATION_WAIT, &finish_aggregate_collect, conn);
+			ctimer_set(&conn->aggregate_ct, AGGREGATION_WAIT, &finish_aggregate_collect, conn);
 		}
 	}
 }
@@ -243,8 +241,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 
 		// Start the timer that will call a function when we are
 		// done detecting parents.
-		static struct ctimer ct;
-		ctimer_set(&ct, PARENT_DETECT_WAIT, &parent_detect_finished, conn);
+		ctimer_set(&conn->ctrecv, PARENT_DETECT_WAIT, &parent_detect_finished, conn);
 
 		printf("Tree Agg: Not seen setup message before, so setting timer...\n");
 	}
@@ -321,8 +318,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	printf("Tree Agg: IsSink, sending initial message...\n");
 
 	// Wait for a bit to allow a few messages to be sent
-	static struct ctimer ct;
-	ctimer_set(&ct, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
+	ctimer_set(&conn->ct_wait_finished, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
 }
 
 
@@ -371,8 +367,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 			printf("Tree Agg: Starting aggregation tree setup...\n");
 
 			// Wait a bit to allow processes to start up
-			static struct ctimer ct;
-			ctimer_set(&ct, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
+			ctimer_set(&conn->ct_open, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
 		}
 
 		printf("Tree Agg: Starting Succeeded!\n");
@@ -398,6 +393,12 @@ void tree_agg_close(tree_agg_conn_t * conn)
 			free(conn->data);
 			conn->data = NULL;
 		}
+
+		ctimer_stop(&conn->ctrecv);
+		ctimer_stop(&conn->aggregate_ct);
+		ctimer_stop(&conn->ct_parent_detect);
+		ctimer_stop(&conn->ct_open);
+		ctimer_stop(&conn->ct_wait_finished);
 	}
 }
 

@@ -50,6 +50,12 @@ typedef struct tree_agg_conn
 
 	tree_agg_callbacks_t callbacks;
 
+	//ctimers
+	struct ctimer ctrecv;
+	struct ctimer aggregate_ct;
+	struct ctimer ct_parent_detect;
+	struct ctimer ct_open;
+	struct ctimer ct_wait_finished;
 } tree_agg_conn_t;
 
 

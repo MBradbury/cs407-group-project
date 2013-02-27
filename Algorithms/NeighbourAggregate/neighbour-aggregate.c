@@ -37,7 +37,6 @@ void neighbour_agg_send_data(void *ptr);
 
 // The neighbours the current node has
 // This is a list of rimeaddr_t
-static unique_array_t one_hop_neighbours;
 
 /* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
 static inline neighbour_agg_conn_t * conncvt_treeconn(tree_agg_conn_t * conn)
@@ -132,7 +131,7 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-	printf("Tree Agg: Recv\n");
+	printf("Neighbour Agg - Neighbour Aggregate: Recv\n");
 
 	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
 
@@ -156,6 +155,7 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 
 	printf("}\n");
 	
+	printf("Calling callback \n");
 	//Call the callback
 	(*conn->callbacks.data_callback_fn)(neighbours, length, msg->round_count);
 }
@@ -164,11 +164,11 @@ static void tree_agg_setup_finished(tree_agg_conn_t * tconn)
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("Tree Agg: Setup finsihed\n");
+	printf("Neighbour Agg: Setup finsihed conn: %p\n",conn);
 
 	if (tree_agg_is_leaf(tconn))
 	{
-		printf("Tree Agg: Is leaf starting data aggregation\n");
+		printf("Neighbour Agg: Is leaf starting data aggregation\n");
 
 		leds_on(LEDS_RED);
 
@@ -180,7 +180,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 {
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
-	printf("Tree Agg: Update local data\n");
+	printf("Neighbour Agg: Update local data\n");
 
 	unique_array_t * data = &((aggregation_data_t *)voiddata)->list;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
@@ -206,16 +206,18 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 // Add our own one hop data to the list
 static void tree_aggregate_own(void * ptr)
 {
-	printf("Tree Agg: Update local data with own data\n");
+	printf("Neighbour Agg: Update local data with own data\n");
+	
+	neighbour_agg_conn_t * conn = conncvt_treeconn(ptr);
 
 	unique_array_t * conn_list = &((aggregation_data_t *)ptr)->list;
 
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(&one_hop_neighbours); 
-		unique_array_continue(&one_hop_neighbours, elem); 
+	for (elem = unique_array_first(&conn->one_hop_neighbours); 
+		unique_array_continue(&conn->one_hop_neighbours, elem); 
 		elem = unique_array_next(elem))
 	{
-		rimeaddr_t * to = (rimeaddr_t *) unique_array_data(&one_hop_neighbours, elem);
+		rimeaddr_t * to = (rimeaddr_t *) unique_array_data(&conn->one_hop_neighbours, elem);
 
 		// Allocate a static pair to avoid doing malloc
 		// if the pair is already in the list
@@ -237,7 +239,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("Tree Agg: Store packet\n");
+	printf("Neighbour Agg: Store packet\n");
 
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 	
@@ -315,6 +317,7 @@ static const tree_agg_callbacks_t callbacks = {
 
 void neighbour_agg_send_data(void *ptr)
 {
+	printf("Neighbour Agg send data leaf\n");
 	//extract the struct
 	neighbour_agg_conn_t * conn = (neighbour_agg_conn_t *)ptr;
 
@@ -365,8 +368,8 @@ struct open_tree_agg_s
 static void open_tree_agg(void * ptr)
 {
 	struct open_tree_agg_s * data = (struct open_tree_agg_s *)ptr; 
-	tree_agg_open(&data->conn->tc, data->sink, data->ch1, data->ch2, sizeof(aggregation_data_t), &callbacks);
 
+	printf("open Bool %d\n",tree_agg_open(&data->conn->tc, data->sink, data->ch1, data->ch2, sizeof(aggregation_data_t), &callbacks));
 }
 
 void neighbour_aggregate_open(neighbour_agg_conn_t * conn, 
@@ -388,7 +391,7 @@ void neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
-	printf("Setting up aggregation tree...\n");
+	printf("Setting up aggregation tree - Neighbour Agg...\n");
 
 	unique_array_init(&conn->one_hop_neighbours, &rimeaddr_equality, &free);
 
@@ -414,7 +417,7 @@ void neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 void neighbour_aggregate_close(neighbour_agg_conn_t * conn)
 {
 	//close the connections
-	unique_array_clear(&conn-> one_hop_neighbours);
+	unique_array_clear(&conn->one_hop_neighbours);
 	tree_agg_close(&conn->tc);
 	conn->round_count = 0;
 }

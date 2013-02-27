@@ -1,4 +1,3 @@
-
 *.toc
 *.synctex.gz
 *.out
@@ -54,3 +53,6 @@ VarDepthClustering
 *.target
 *.z1
 *.pyg
+*.cproject
+*.project
+*.settings

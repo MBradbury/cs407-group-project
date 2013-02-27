@@ -333,7 +333,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		callbacks->aggregate_update != NULL && callbacks->aggregate_own != NULL &&
 		callbacks->store_packet != NULL)
 	{
-		printf("Tree Agg: Starting...\n");
+		printf("Tree Agg: Starting... %p\n",conn);
 
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
 

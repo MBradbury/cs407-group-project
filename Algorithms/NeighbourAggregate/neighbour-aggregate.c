@@ -91,10 +91,10 @@ static void print_ua_rimeaddr_pair(unique_array_t const * data)
 	{
 		rimeaddr_pair_t * pair = (rimeaddr_pair_t *) unique_array_data(data, elem);
 
-		printf("(%s, %s) ",
-			addr2str_r(&pair->first, firstaddr, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&pair->second, secondaddr, RIMEADDR_STRING_LENGTH)
-		);
+		//printf("(%s, %s) ",
+		//	addr2str_r(&pair->first, firstaddr, RIMEADDR_STRING_LENGTH),
+		//	addr2str_r(&pair->second, secondaddr, RIMEADDR_STRING_LENGTH)
+		//);
 	}
 
 	printf("}\n");

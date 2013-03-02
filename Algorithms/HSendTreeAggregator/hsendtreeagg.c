@@ -227,20 +227,23 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 
 	char firstaddr[RIMEADDR_STRING_LENGTH];
 	char secondaddr[RIMEADDR_STRING_LENGTH];
-
+char firstaddr2[RIMEADDR_STRING_LENGTH];
+	char secondaddr2[RIMEADDR_STRING_LENGTH];
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
 		rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
 		
 		
-		rimeaddr_copy(&pairs[i].first, &p->first);
-		rimeaddr_copy(&pairs[i].second, &p->second);
+		rimeaddr_copy(&p->first, &pairs[i].first);
+		rimeaddr_copy(&p->second, &pairs[i].second);
 		
-		//printf("%d created pair (%s,%s)\n", i,
-		//	addr2str_r(&p->first, firstaddr, RIMEADDR_STRING_LENGTH),
-		//	addr2str_r(&p->second, secondaddr, RIMEADDR_STRING_LENGTH)
-		//	); 
+		printf("Eval: created pair (%s,%s) from (%s,%s)\n",
+			addr2str_r(&p->first, firstaddr, RIMEADDR_STRING_LENGTH),
+			addr2str_r(&p->second, secondaddr, RIMEADDR_STRING_LENGTH),
+			addr2str_r(&pairs[i].first, firstaddr2, RIMEADDR_STRING_LENGTH),
+			addr2str_r(&pairs[i].second, secondaddr2, RIMEADDR_STRING_LENGTH)
+			); 
 
 		 //add the pair to the list
 		unique_array_append(information, p);
@@ -250,14 +253,36 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 	printf("Pairs count: %d map length: %d infromation: %d\n", unique_array_length(pair), map_length(&neighbour_info), unique_array_length(information));
 }
 
+
+/*
+================================================================================================================================================================================================
+										TODO< CHECK neighbours are being returned properly!
+================================================================================================================================================================================================
+================================================================================================================================================================================================
+================================================================================================================================================================================================
+*/
+
+
+
 /* Gets the neighbours of a given node */
-static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_count)
+static unique_array_t * get_neighbours(rimeaddr_t * target, int round_count)
 {
 	unique_array_t * output = (unique_array_t *)malloc(sizeof(unique_array_t));
 	unique_array_init(output, &rimeaddr_equality, &free);
 
 	//pairs of neighbours for a given round
-	unique_array_t * pairs = (unique_array_t *)map_get(&neighbour_info, &round_count);
+	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
+	unique_array_t * pairs;
+
+	if(stored) //saved before
+	{
+		pairs = stored->data;
+	}
+	else
+	{
+		return output; //no data, return empty array
+	}
+
 	printf("Eval: Pairs count: %d map length: %d\n", unique_array_length(pairs), map_length(&neighbour_info));
 	//go through each pair
 	unique_array_elem_t elem;
@@ -267,17 +292,25 @@ static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_coun
 	{
 		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(pairs, elem);
 
-		rimeaddr_t first = data->first;
-		rimeaddr_t second = data->second; 
+	char firstaddr[RIMEADDR_STRING_LENGTH];
+	char secondaddr[RIMEADDR_STRING_LENGTH];
+	char thirdaddr[RIMEADDR_STRING_LENGTH];
 
+		printf("Eval: checking pair (%s,%s) with target: %s\n", 
+			addr2str_r(&data->first, firstaddr, RIMEADDR_STRING_LENGTH),
+			addr2str_r(&data->second, secondaddr, RIMEADDR_STRING_LENGTH),
+			addr2str_r(target, thirdaddr, RIMEADDR_STRING_LENGTH)
+
+			); 
+		
 		//if either match, add the other to the list
-		if (rimeaddr_cmp(&first, target))
+		if (rimeaddr_cmp(&data->first, target))
 		{
-			unique_array_append(output, &second);
+			unique_array_append(output, &data->second);
 		}
-		else if (rimeaddr_cmp(&second, target))
+		else if (rimeaddr_cmp(&data->second, target))
 		{
-			unique_array_append(output, &first);
+			unique_array_append(output, &data->first);
 		}
 	}
 
@@ -559,9 +592,9 @@ PROCESS_THREAD(data_gather, ev, data)
 		uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
 		uint8_t var_details = 2;
 		rimeaddr_t dest;
-		dest.u8[0] = 2;
+		dest.u8[0] = 4;
 		dest.u8[1] = 0;
-		predicate_detail_entry_t *pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t));
+		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t));
 		rimeaddr_copy(&pred->destination, &dest);
 		pred->id = 1;
 		pred->bytecode_length = bytecode_length;
@@ -764,9 +797,9 @@ static void data_evaluation(void * ptr)
 				unique_array_continue(&target_nodes, target); 
 				target = unique_array_next(target))
 			{
-				rimeaddr_t const * t = unique_array_data(&target_nodes, target);
+				rimeaddr_t * t = unique_array_data(&target_nodes, target); 
 				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
-				printf("Eval: got neighbours of size: %d\n",unique_array_length(neighbours));
+				printf("Eval: got neighbours of size: %d for target: %s\n",unique_array_length(neighbours),addr2str(t));
 				//go through the neighbours for the node
 				unique_array_elem_t neighbour;
 				for (neighbour = unique_array_first(neighbours); 

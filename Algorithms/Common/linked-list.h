@@ -33,7 +33,7 @@ bool linked_list_append(linked_list_t * list, void * data);
 bool linked_list_clear(linked_list_t * list);
 
 void * linked_list_peek(linked_list_t const * list);
-bool linked_list_pop(linked_list_t * list, bool free_item);
+bool linked_list_pop(linked_list_t * list);
 
 // Get list length
 unsigned int linked_list_length(linked_list_t const * list);

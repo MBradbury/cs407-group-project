@@ -1,43 +1,16 @@
 #include "eventupdate.h"
 
+#include <stdlib.h>
 
-static const clock_time_t RETX_INTERVAL = 2 * CLOCK_SECOND;
+#include "debug-helper.h"
 
-
-// The custom headers we use
-static const struct packetbuf_attrlist trickle_attributes[] = {
-	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
-	{ PACKETBUF_ATTR_HOPS, PACKETBUF_ATTR_BIT * 4 },
-	{ PACKETBUF_ATTR_TTL, PACKETBUF_ATTR_BIT * 4 },
-	BROADCAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
-};
-
-
-
-static void sb_recv(struct stbroadcast_conn * c)
+static void flood_recv(struct nhopflood_conn * c, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops)
 {
 	event_update_conn_t * conn = (event_update_conn_t *)c;
 
-	// TODO: Forward the data onwards depending on the TTL
-
 	// Inform the client that an update has occured
-	conn->update_fn(
-		packetbuf_addr(PACKETBUF_ADDR_ESENDER),
-		packetbuf_attr(PACKETBUF_ATTR_HOPS),
-		packetbuf_dataptr()
-		);
+	conn->update(conn, source, hops, previous_hops);
 }
-
-static void sb_sent(struct stbroadcast_conn * c)
-{
-}
-
-
-static const struct stbroadcast_callbacks callbacks = {&sb_recv, &sb_sent};
-
-
-
 
 static void data_check(void * p)
 {
@@ -84,22 +57,10 @@ static void data_check(void * p)
 		void * msg = packetbuf_dataptr();
 		memset(msg, 0, packet_size);
 
-		// Set the source of this messages
-		packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &rimeaddr_node_addr);
-
-		// Set the TTL
-		packetbuf_set_attr(PACKETBUF_ATTR_TTL, conn->distance);
-
-		// Set the number of hops traveled
-		packetbuf_set_attr(PACKETBUF_ATTR_HOPS, 1);
-
 		// Set the data to send
 		memcpy(msg, conn->data_loc, conn->data_size);
 
-		// TODO: change this to use message buffers!!
-		// TODO: or at least have the stbroadcast stop sending at some point
-
-		stbroadcast_send(&conn->sc, RETX_INTERVAL);
+		nhopflood_send(&conn->fc, conn->distance);
 	}
 
 	// Reset timer
@@ -111,7 +72,7 @@ bool event_update_start(event_update_conn_t * conn, uint8_t ch, data_generation_
 {
 	if (conn != NULL && data_fn != NULL && data_size != 0 && generate_period != 0 && update != NULL)
 	{
-		stbroadcast_open(&conn->sc, ch, &callbacks);
+		nhopflood_start(&conn->fc, ch, &flood_recv, CLOCK_SECOND * 3, 5);
 
 		conn->distance = 0;
 
@@ -138,7 +99,7 @@ void event_update_stop(event_update_conn_t * conn)
 		free(conn->data_loc);
 		conn->data_loc = NULL;
 
-		stdbroadcast_close(&conn->sc);
+		nhopflood_stop(&conn->fc);
 	}
 }
 
@@ -149,3 +110,4 @@ void event_update_set_distance(event_update_conn_t * conn, uint8_t distance)
 		conn->distance = distance;
 	}
 }
+

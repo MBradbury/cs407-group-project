@@ -3,19 +3,24 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdint.h>
 
-#include "net/rime.h"
-#include "net/rime/stbroadcast.h"
+#include "sys/ctimer.h"
+
+#include "nhopflood.h"
+
+struct event_update_conn;
 
 typedef void (*data_generation_fn)(void * data);
 typedef bool (*data_differs_fn)(void * data1, void * data2);
 
-typedef void (*update_fn)(rimeaddr_t const * from, uint8_t distance, void * data);
+typedef void (*update_fn)(struct event_update_conn * c, rimeaddr_t const * from, uint8_t distance, uint8_t previous_distance);
 
 typedef struct event_update_conn
 {
 	// A connection to receive and send data
-	struct stbroadcast_conn sc;
+	nhopflood_conn_t fc;
 
 	// The distance we will broadcast data out to
 	uint8_t distance;
@@ -39,7 +44,7 @@ typedef struct event_update_conn
 	update_fn update;
 
 	// The event timer
-	ctimer check_timer;
+	struct ctimer check_timer;
 
 } event_update_conn_t;
 
@@ -50,3 +55,4 @@ void event_update_stop(event_update_conn_t * conn);
 void event_update_set_distance(event_update_conn_t * conn, uint8_t distance);
 
 #endif /*CS407_EVENT_UPDATE_H*/
+

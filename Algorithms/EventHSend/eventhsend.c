@@ -14,7 +14,7 @@
 #include "dev/sht11-sensor.h"
 #include "dev/light-sensor.h"
 
-#include "eventupdate"
+#include "eventupdate.h"
 #include "predlang.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
@@ -111,6 +111,31 @@ static void node_data(void * data)
 		nd->light2 = (nint)s1087_light1(raw_light2);*/
 	}
 }
+
+static bool node_data_differs(void * data1, void * data2)
+{
+	node_data_t * nd1 = (node_data_t *)data1;
+	node_data_t * nd2 = (node_data_t *)data2;
+
+	if (nd1 == NULL && nd2 == NULL)
+	{
+		return false;
+	}
+	else if (nd1 == NULL || nd2 == NULL)
+	{
+		return true;
+	}
+	else
+	{
+		double temp_diff = nd1->temp - n2->temp;
+		if (temp_diff < 0) temp_diff = -temp_diff;
+
+		int humidity_diff = nd1->humidity - nd2->humidity;
+		if (humidity_diff < 0) humidity_diff = -humidity_diff;
+
+		return temp_diff > 3 || humidity_diff > 5;
+	}
+}
 ///
 /// End VM Helper Functions
 ///
@@ -163,9 +188,9 @@ static void free_hops_data(void * voiddata)
 }
 
 
-static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
+static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uint8_t hops, uint8_t previous_hops)
 {
-	node_data_t const * nd = (node_data_t const *)data;
+	node_data_t const * nd = (node_data_t const *)packetbuf_dataptr();
 
 	char from_str[RIMEADDR_STRING_LENGTH];
 	char addr_str[RIMEADDR_STRING_LENGTH];
@@ -182,6 +207,16 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 		hops,
 		(int)nd->temp, (int)nd->humidity,
 		(int)nd->light1, (int)nd->light2);*/
+
+	// If we have previously stored data from this node at
+	// a different location, then we need to forget about that
+	// information
+	if (previous_hops != 0 && hops != previous_hops)
+	{
+		map_t * prev_map = get_hop_map(previous_hops);
+
+		map_remove(prev_map, from);
+	}
 
 
 	map_t * map = get_hop_map(hops);
@@ -205,7 +240,7 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 
 
 
-static nhopreq_conn_t hc;
+static event_update_conn_t euc;
 static struct trickle_conn tcsender;
 static struct mesh_conn meshreceiver;
 static rimeaddr_t baseStationAddr;
@@ -326,6 +361,9 @@ static void trickle_send_rcv(struct trickle_conn * c)
 			memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
 		}
 	}
+
+	// TODO: need to call event_update_set_distance and set the maximum distance
+	// we need to send information to the correct distance
 }
 
 // Used to handle receiving predicate failure messages
@@ -466,18 +504,17 @@ PROCESS_THREAD(mainProcess, ev, data)
 	destination.u8[0] = 2;
 	destination.u8[1] = 0;
 
-	if(rimeaddr_cmp(&rimeaddr_node_addr,&destination))
+	if (rimeaddr_cmp(&rimeaddr_node_addr,&destination))
 	{
 		printf("Is Destination.\n");
 	}
-
 
 	trickle_open(&tcsender, trickle_interval, 121, &tcsender_callbacks);
 	channel_set_attributes(121, trickle_attributes);
 
 	mesh_open(&meshreceiver, 126, &meshreceiver_callbacks);
 
-	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
+	if (!event_update_start(&euc, 149, &node_data, &node_data_differs, sizeof(node_data_t), CLOCK_SECOND * 10, &receieved_data))
 	{
 		printf("nhopreq start function failed\n");
 	}
@@ -511,7 +548,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 exit:
 	printf("Exiting MAIN Process...\n");
 	array_list_clear(&hops_data);
-	nhopreq_end(&hc);
+	event_update_stop(&euc);
 	trickle_close(&tcsender);
 	mesh_close(&meshreceiver);
 	PROCESS_END();

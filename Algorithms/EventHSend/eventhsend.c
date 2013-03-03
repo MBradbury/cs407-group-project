@@ -8,7 +8,9 @@
 
 #include "net/rime.h"
 
+#ifdef NODE_ID
 #include "sys/node-id.h"
+#endif
 
 #include "dev/leds.h"
 #include "dev/sht11-sensor.h"
@@ -127,7 +129,7 @@ static bool node_data_differs(void * data1, void * data2)
 	}
 	else
 	{
-		double temp_diff = nd1->temp - n2->temp;
+		double temp_diff = nd1->temp - nd2->temp;
 		if (temp_diff < 0) temp_diff = -temp_diff;
 
 		int humidity_diff = nd1->humidity - nd2->humidity;
@@ -658,17 +660,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		// Only ask for data if the predicate needs it
 		if (max_hops != 0)
 		{
-			printf("Starting request for %d hops of data...\n", max_hops);
-
-			nhopreq_request_info(&hc, max_hops);
-	
-			// Get as much information as possible within a given time bound
-			etimer_set(&et, 120 * CLOCK_SECOND);
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-			printf("Finished collecting hop data.\n");
-
-
 			// Generate array of all the data
 			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 

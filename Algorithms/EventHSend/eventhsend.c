@@ -642,7 +642,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	
 	printf("HSEND Process Started.\n");
 
-	//Wait for other nodes to initialize.
+	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
@@ -745,15 +745,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		// Free the allocated neighbour data
 		free(all_neighbour_data);
 		all_neighbour_data = NULL;
-
-		// We want to remove all the data we gathered,
-		// this is important to do so as if a node dies
-		// we do not want to keep using its last piece of data
-		// we want that lack of data to be picked up on.
-		array_list_clear(&hops_data);
-
-		// Reset the count of the data received
-		max_size = 0;
 	}
 
 exit:

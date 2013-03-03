@@ -227,8 +227,7 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 
 	char firstaddr[RIMEADDR_STRING_LENGTH];
 	char secondaddr[RIMEADDR_STRING_LENGTH];
-char firstaddr2[RIMEADDR_STRING_LENGTH];
-	char secondaddr2[RIMEADDR_STRING_LENGTH];
+
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
@@ -238,31 +237,14 @@ char firstaddr2[RIMEADDR_STRING_LENGTH];
 		rimeaddr_copy(&p->first, &pairs[i].first);
 		rimeaddr_copy(&p->second, &pairs[i].second);
 		
-		printf("Eval: created pair (%s,%s) from (%s,%s)\n",
+		printf("Created pair (%s,%s)\n",
 			addr2str_r(&p->first, firstaddr, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&p->second, secondaddr, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&pairs[i].first, firstaddr2, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&pairs[i].second, secondaddr2, RIMEADDR_STRING_LENGTH)
-			); 
+			addr2str_r(&p->second, secondaddr, RIMEADDR_STRING_LENGTH));
 
 		 //add the pair to the list
 		unique_array_append(information, p);
 	}
-
-	unique_array_t * pair = (unique_array_t *)map_get(&neighbour_info, &round_count);
-	printf("Pairs count: %d map length: %d infromation: %d\n", unique_array_length(pair), map_length(&neighbour_info), unique_array_length(information));
 }
-
-
-/*
-================================================================================================================================================================================================
-										TODO< CHECK neighbours are being returned properly!
-================================================================================================================================================================================================
-================================================================================================================================================================================================
-================================================================================================================================================================================================
-*/
-
-
 
 /* Gets the neighbours of a given node */
 static unique_array_t * get_neighbours(rimeaddr_t * target, int round_count)
@@ -283,7 +265,7 @@ static unique_array_t * get_neighbours(rimeaddr_t * target, int round_count)
 		return output; //no data, return empty array
 	}
 
-	printf("Eval: Pairs count: %d map length: %d\n", unique_array_length(pairs), map_length(&neighbour_info));
+
 	//go through each pair
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(pairs); 
@@ -368,7 +350,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 			msgdata[i].humidity);
 
 		node_data_t * nd = (node_data_t *)malloc(sizeof(node_data_t));
-		//rimeaddr_copy(&nd->addr, &msgdata[i].addr);
+		rimeaddr_copy(&nd->addr, &msgdata[i].addr);
 		nd->temp = (int)msgdata[i].temp;
 		nd->humidity = msgdata[i].humidity;
 
@@ -587,13 +569,13 @@ PROCESS_THREAD(data_gather, ev, data)
 		map_init(&recieved_data, &intCompare, &free);
 
 		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
-		
 		//create the predicate
 		uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
 		uint8_t var_details = 2;
 		rimeaddr_t dest;
-		dest.u8[0] = 4;
+		dest.u8[0] = 2;
 		dest.u8[1] = 0;
+
 		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t));
 		rimeaddr_copy(&pred->destination, &dest);
 		pred->id = 1;
@@ -618,6 +600,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	}
 
 	PROCESS_END();
+	return 0;
 }
 
 PROCESS_THREAD(send_data_process, ev, data)
@@ -675,6 +658,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 exit:
 	tree_agg_close(&aggconn);
 	PROCESS_END();
+	return 0;
 }
 
 static map_t * get_hop_map(uint8_t hop)
@@ -754,7 +738,7 @@ static void data_evaluation(void * ptr)
 	static uint8_t round_count = 0;
 	static node_data_t * all_neighbour_data;
 
-	printf("Beginning Evaluation\n");
+	printf("\nEval: Beginning Evaluation\n");
 	
 	//go through the list of predicates
 	array_list_elem_t elem;
@@ -784,7 +768,7 @@ static void data_evaluation(void * ptr)
 
 	    //Get the data for each hop level
 		unsigned int hops;
-		for (hops = 0; hops < max_hops; ++hops)
+		for (hops = 1; hops <= max_hops; ++hops)
 		{
 			//array of nodes that we acquire during this round
 		    unique_array_t acquired_nodes;
@@ -797,9 +781,11 @@ static void data_evaluation(void * ptr)
 				unique_array_continue(&target_nodes, target); 
 				target = unique_array_next(target))
 			{
-				rimeaddr_t * t = unique_array_data(&target_nodes, target); 
+				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
+
 				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
 				printf("Eval: got neighbours of size: %d for target: %s\n",unique_array_length(neighbours),addr2str(t));
+				
 				//go through the neighbours for the node
 				unique_array_elem_t neighbour;
 				for (neighbour = unique_array_first(neighbours); 
@@ -810,10 +796,11 @@ static void data_evaluation(void * ptr)
 					rimeaddr_t const * n = unique_array_data(neighbours, neighbour);
 
 					//if the neighbour hasn't been seen before
-					if(!unique_array_contains(&seen_nodes,&n))
+					if(!unique_array_contains(&seen_nodes, n)) 
 					{
 						int * r = (int *)malloc(sizeof(int));
 						*r = round_count;
+
 						//get the data
 						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &r); //map for that round
 						free(r);
@@ -821,15 +808,18 @@ static void data_evaluation(void * ptr)
 
 						node_data_t * nd = (node_data_t *)map_get(round_data, &n);
 						
-
+						rimeaddr_t *node_to_copy = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
+						rimeaddr_copy(node_to_copy, n);
+						printf("Eval: copied and storing: %s\n", addr2str(node_to_copy));
 						//add the node to the target nodes for the next round
-						unique_array_append(&acquired_nodes, &n);
+						unique_array_append(&acquired_nodes, node_to_copy);
 
 						map_t * map = get_hop_map((uint8_t)hops);
 
 						// Check that we have not previously received data from this node before
 						node_data_t * stored = (node_data_t *)map_get(map, n);
 						
+						//Then copy in data
 						if (stored != NULL)
 						{
 							memcpy(stored, nd, sizeof(node_data_t));
@@ -846,25 +836,22 @@ static void data_evaluation(void * ptr)
 					}
 				}
 				unique_array_clear(neighbours); 
-				free(neighbours);
 			}
-
 
 			//merge the old target nodes to the seen nodes, set the new target nodes to the acquired nodes
 			unique_array_merge(&seen_nodes,&target_nodes);
 			unique_array_clear(&target_nodes);
-			target_nodes = acquired_nodes;
+			unique_array_merge(&target_nodes,&acquired_nodes); //add the acquired_nodes into the target nodes
+			unique_array_clear(&acquired_nodes);
 		}
 
 		//clear the unused arrays
-		unique_array_clear(&seen_nodes);
 		unique_array_clear(&target_nodes);
-
 		//then run the evaluation using the collected data 
 
 		// Generate array of all the data
 		all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
-		printf("Max hops: %d\n",max_hops);
+		printf("Eval: Max hops: %d\n",max_hops);
 		uint8_t i;
 		for (i = 1; i <= max_hops; ++i)
 		{
@@ -885,7 +872,7 @@ static void data_evaluation(void * ptr)
 				}
 			}
 
-			printf("i=%d Count=%d length=%d\n", i, count, length);
+			printf("Eval: i=%d Count=%d length=%d\n", i, count, length);
 		}
 
 		bool evaluation_result = evaluate_predicate(

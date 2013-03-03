@@ -33,6 +33,19 @@ When developing our mote applications in the simulator there is a very useful fe
 \subsection{Communication Between Mote and Computer}
 To be able to send and receive information between an application running on a mote and an application running on the computer the mote is connected to we needed to use several applications to assist in the data transfer. The easiest flow of data was from the mote to the computer as Contiki supports writing to \verb|stdout| which can then be read using a tool called \verb|serialdump|. Unfortunately Contiki doesn't support writing to \verb|stdout| so we had to develop and alternative method to read data sent from a computer. Also when sending data from the computer application to the mote application we couldn't simply open a filestream in Java and write to that (and expected Contiki to receive it), so we also had to come up with a custom way to do this.
 
+\subsubsection{Receiving Data from Nodes}
+
+\url{http://ai.vub.ac.be/Robotics/wiki/index.php/Compiling,_uploading_and_interacting_with_Contiki:_Hello_World}
+
+\subsubsection{Sending Data to Nodes}
+
+\url{https://github.com/contiki-os/contiki/wiki/Input-and-output#wiki-Serial_Communication}
+
+
+\subsubsection{Simulating with Cooja}
+
+Use the \verb|serial_socket| plugin to create a serial server or client for a given node. Connect to these via sockets and communicate that way.
+
 \subsection{Developing with Small Message IDs}
 
 When using small message identifiers, after sending enough messages the variable used to hold the identifier will overflow. This make testing if a message has come after another message slightly difficult.

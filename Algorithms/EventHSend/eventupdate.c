@@ -1,6 +1,7 @@
 #include "eventupdate.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "debug-helper.h"
 
@@ -55,7 +56,6 @@ static void data_check(void * p)
 		packetbuf_set_datalen(packet_size);
 		debug_packet_size(packet_size);
 		void * msg = packetbuf_dataptr();
-		memset(msg, 0, packet_size);
 
 		// Set the data to send
 		memcpy(msg, conn->data_loc, conn->data_size);
@@ -107,7 +107,15 @@ void event_update_set_distance(event_update_conn_t * conn, uint8_t distance)
 {
 	if (conn != NULL)
 	{
+		printf("Setting the update distance to be %d hops\n", distance);
+
 		conn->distance = distance;
+
+		// Now that the distance has changed we need to trigger an update
+		// the next chance we get. This is done by forgetting about the
+		// last bit of data that we sent.
+		free(conn->data_loc);
+		conn->data_loc = NULL;
 	}
 }
 

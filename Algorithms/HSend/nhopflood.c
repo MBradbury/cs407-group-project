@@ -11,6 +11,8 @@
 #include "random-range.h"
 #include "debug-helper.h"
 
+static void nhopflood_delayed_start_sending(void * ptr);
+
 // The custom headers we use
 static const struct packetbuf_attrlist flood_attributes[] = {
 	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
@@ -51,6 +53,8 @@ static packet_details_t * alloc_packet_details(uint8_t id, uint8_t hops)
 	details->data = malloc(details->data_length);
 
 	memcpy(details->data, packetbuf_dataptr(), details->data_length);
+
+	return details;
 }
 
 static packet_details_t * packet_details_from_packetbuf(void)
@@ -68,6 +72,8 @@ static packet_details_t * packet_details_from_packetbuf(void)
 	details->data = malloc(details->data_length);
 
 	memcpy(details->data, packetbuf_dataptr(), details->data_length);
+
+	return details;
 }
 
 static void free_packet_details(void * ptr)
@@ -182,8 +188,15 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		// and we have not seen it before.
 		if (packetbuf_attr(PACKETBUF_ATTR_TTL) != 0)
 		{
+			printf("Adding received message to queue\n");
 			packet_details_t * details = packet_details_from_packetbuf();
 			linked_list_append(&conn->packet_queue, details);
+
+			// If the timer has stopped, then start it back up again
+			if (ctimer_expired(&conn->send_timer))
+			{
+				ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
+			}
 		}
 	}
 }
@@ -200,42 +213,50 @@ static void nhopflood_delayed_start_sending(void * ptr)
 
 	packet_details_t * details = (packet_details_t *) linked_list_peek(&conn->packet_queue);
 
-	// Only send if the TTL is greater than 0
-	if (details->ttl > 0)
+	if (details != NULL)
 	{
-		// Create the memory for the packet
-		packetbuf_clear();
-		packetbuf_set_datalen(details->data_length);
-		debug_packet_size(details->data_length);
-		void * msg = packetbuf_dataptr();
+		// Only send if the TTL is greater than 0
+		if (details->ttl > 0)
+		{
+			printf("Sending onwards data with id:%d ttl:%d hops:%d from:%s\n",
+				details->id, details->ttl - 1, details->hops + 1, addr2str(&details->sender));
 
-		// Copy the packet to the buffer
-		memcpy(msg, details->data, details->data_length);
+			// Create the memory for the packet
+			packetbuf_clear();
+			packetbuf_set_datalen(details->data_length);
+			debug_packet_size(details->data_length);
+			void * msg = packetbuf_dataptr();
 
-		// Set the header flags
-		packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->sender);
-		packetbuf_set_attr(PACKETBUF_ATTR_HOPS, details->hops + 1);
-		packetbuf_set_attr(PACKETBUF_ATTR_TTL, details->ttl - 1);
-		packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, details->id);
+			// Copy the packet to the buffer
+			memcpy(msg, details->data, details->data_length);
 
-		// Send the packet using normal broadcast
-		broadcast_send(&conn->bc);
+			// Set the header flags
+			packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->sender);
+			packetbuf_set_attr(PACKETBUF_ATTR_HOPS, details->hops + 1);
+			packetbuf_set_attr(PACKETBUF_ATTR_TTL, details->ttl - 1);
+			packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, details->id);
 
-		// Increment the retransmission counter
-		details->retx += 1;
-	}
+			// Send the packet using normal broadcast
+			if (broadcast_send(&conn->bc))
+			{
+				// Increment the retransmission counter
+				details->retx += 1;
+			}
+		}
 
-	// Remove the current queued packet as we have sent all we intend to send
-	// Or the TTL is 0
-	if (details->retx >= conn->maxrx || details->ttl == 0)
-	{
-		linked_list_pop(&conn->packet_queue);
-	}
+		// Remove the current queued packet as we have sent all we intend to send
+		// Or the TTL is 0
+		if (details->retx >= conn->maxrx || details->ttl == 0)
+		{
+			printf("Removing packet from queue RETX(%d >= %d) or TTL(%d == 0)\n", details->retx, conn->maxrx, details->ttl);
+			linked_list_pop(&conn->packet_queue);
+		}
 	
-	// If we still have more packets to send, start the timer again
-	if (! linked_list_is_empty(&conn->packet_queue))
-	{
-		ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
+		// If we still have more packets to send, start the timer again
+		if (! linked_list_is_empty(&conn->packet_queue))
+		{
+			ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
+		}
 	}
 }
 
@@ -296,6 +317,7 @@ bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 	// do nothing
 	if (hops == 0)
 	{
+		printf("Nowhere to send data to as hops=0\n");
 		return true;
 	}
 

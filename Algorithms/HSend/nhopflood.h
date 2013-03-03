@@ -13,7 +13,7 @@
 
 struct nhopflood_conn;
 
-typedef (*nhopflood_recv_fn)(struct nhopflood_conn * conn, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops);
+typedef void (*nhopflood_recv_fn)(struct nhopflood_conn * conn, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops);
 
 typedef struct nhopflood_conn
 {

@@ -72,7 +72,7 @@ bool event_update_start(event_update_conn_t * conn, uint8_t ch, data_generation_
 {
 	if (conn != NULL && data_fn != NULL && data_size != 0 && generate_period != 0 && update != NULL)
 	{
-		nhopflood_start(&conn->fc, ch, &flood_recv, CLOCK_SECOND * 3, 5);
+		nhopflood_start(&conn->fc, ch, &flood_recv, CLOCK_SECOND * 3, 3);
 
 		conn->distance = 0;
 

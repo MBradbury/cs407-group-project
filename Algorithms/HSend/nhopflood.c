@@ -113,6 +113,16 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 	// Get a pointer to the nhopflood_conn_t
 	nhopflood_conn_t * conn = conncvt_broadcast(c);
 
+	/*char s1[RIMEADDR_STRING_LENGTH], s2[RIMEADDR_STRING_LENGTH];
+
+	printf("Received flood from %s with id:%d ttl:%d hops:%d src:%s\n",
+		addr2str_r(sender, s1, RIMEADDR_STRING_LENGTH),
+		packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID),
+		packetbuf_attr(PACKETBUF_ATTR_TTL),
+		packetbuf_attr(PACKETBUF_ATTR_HOPS),
+		addr2str_r(packetbuf_addr(PACKETBUF_ADDR_ESENDER), s2, RIMEADDR_STRING_LENGTH)
+	);*/
+
 	last_seen_t * last = map_get(&conn->latest_message_seen, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 
 	bool seenbefore = true;
@@ -188,15 +198,9 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		// and we have not seen it before.
 		if (packetbuf_attr(PACKETBUF_ATTR_TTL) != 0)
 		{
-			printf("Adding received message to queue\n");
+			//printf("Adding received message to queue\n");
 			packet_details_t * details = packet_details_from_packetbuf();
 			linked_list_append(&conn->packet_queue, details);
-
-			// If the timer has stopped, then start it back up again
-			if (ctimer_expired(&conn->send_timer))
-			{
-				ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
-			}
 		}
 	}
 }
@@ -218,8 +222,8 @@ static void nhopflood_delayed_start_sending(void * ptr)
 		// Only send if the TTL is greater than 0
 		if (details->ttl > 0)
 		{
-			printf("Sending onwards data with id:%d ttl:%d hops:%d from:%s\n",
-				details->id, details->ttl - 1, details->hops + 1, addr2str(&details->sender));
+			//printf("Sending onwards data with id:%d ttl:%d hops:%d from:%s\n",
+			//	details->id, details->ttl - 1, details->hops + 1, addr2str(&details->sender));
 
 			// Create the memory for the packet
 			packetbuf_clear();
@@ -248,16 +252,13 @@ static void nhopflood_delayed_start_sending(void * ptr)
 		// Or the TTL is 0
 		if (details->retx >= conn->maxrx || details->ttl == 0)
 		{
-			printf("Removing packet from queue RETX(%d >= %d) or TTL(%d == 0)\n", details->retx, conn->maxrx, details->ttl);
+			//printf("Removing packet from queue RETX(%d >= %d) or TTL(%d == 0)\n", details->retx, conn->maxrx, details->ttl);
 			linked_list_pop(&conn->packet_queue);
 		}
-	
-		// If we still have more packets to send, start the timer again
-		if (! linked_list_is_empty(&conn->packet_queue))
-		{
-			ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
-		}
 	}
+
+	// Restart the ctimer
+	ctimer_restart(&conn->send_timer);
 }
 
 
@@ -282,6 +283,8 @@ bool nhopflood_start(nhopflood_conn_t * conn, uint8_t ch, nhopflood_recv_fn rece
 
 	conn->send_period = send_period;
 	conn->maxrx = maxrx;
+
+	ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
 
 	return true;
 }
@@ -309,7 +312,7 @@ bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 {
 	if (conn == NULL)
 	{
-		printf("The nhopflood_conn is null!\n");
+		//printf("The nhopflood_conn is null!\n");
 		return false;
 	}
 
@@ -326,12 +329,6 @@ bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 
 	// Record the details to be sent
 	linked_list_append(&conn->packet_queue, details);
-
-	// If the timer has stopped, then start it back up again
-	if (ctimer_expired(&conn->send_timer))
-	{
-		ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
-	}
 
 	return true;
 }

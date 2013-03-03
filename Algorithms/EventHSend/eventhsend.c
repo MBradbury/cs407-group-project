@@ -194,13 +194,9 @@ static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uin
 {
 	node_data_t const * nd = (node_data_t const *)packetbuf_dataptr();
 
-	char from_str[RIMEADDR_STRING_LENGTH];
-	char addr_str[RIMEADDR_STRING_LENGTH];
-
-	printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%%\n",
-		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
-		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
-		hops,
+	printf("Obtained information from %s hops:%u (prev:%d), T:%d H:%d%%\n",
+		addr2str(from),
+		hops, previous_hops,
 		(int)nd->temp, (int)nd->humidity);
 
 	/*printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",

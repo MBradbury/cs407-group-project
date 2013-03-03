@@ -21,6 +21,6 @@ CFLAGS += -DNDEBUG
 # Disable uip
 #CONTIKI_NO_NET=1
 
-CONTIKI = $(HOME)/contiki-2.6
+CONTIKI = $(HOME)/contiki
 include $(CONTIKI)/Makefile.include
 

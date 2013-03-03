@@ -106,7 +106,7 @@ void * linked_list_peek(linked_list_t const * list)
 	return first == NULL ? NULL : first->data;
 }
 
-bool linked_list_pop(linked_list_t * list, bool free_item)
+bool linked_list_pop(linked_list_t * list)
 {
 	if (list == NULL)
 	{
@@ -122,11 +122,7 @@ bool linked_list_pop(linked_list_t * list, bool free_item)
 
 	list->head = first->next;
 
-	if (free_item)
-	{
-		list->cleanup(first->data);
-	}
-
+	list->cleanup(first->data);
 	free(first);
 	
 	return true;

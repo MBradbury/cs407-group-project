@@ -466,11 +466,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 	destination.u8[0] = 2;
 	destination.u8[1] = 0;
 
-	if(rimeaddr_cmp(&rimeaddr_node_addr,&destination))
+	if (rimeaddr_cmp(&rimeaddr_node_addr,&destination))
 	{
 		printf("Is Destination.\n");
 	}
-
 
 	trickle_open(&tcsender, trickle_interval, 121, &tcsender_callbacks);
 	channel_set_attributes(121, trickle_attributes);

@@ -7,10 +7,15 @@
 
 static void flood_recv(struct nhopflood_conn * c, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops)
 {
-	event_update_conn_t * conn = (event_update_conn_t *)c;
+	// Prevent delivering details about the current node
+	// (that has been received via another node)
+	if (!rimeaddr_cmp(source, &rimeaddr_node_addr))
+	{
+		event_update_conn_t * conn = (event_update_conn_t *)c;
 
-	// Inform the client that an update has occured
-	conn->update(conn, source, hops, previous_hops);
+		// Inform the client that an update has occured
+		conn->update(conn, source, hops, previous_hops);
+	}
 }
 
 static void data_check(void * p)

@@ -617,8 +617,6 @@ static bool evaluate_predicate(
 	register_function(2, &get_temp, TYPE_FLOATING);
 	register_function(3, &get_humidity, TYPE_INTEGER);
 
-	printf("Binding variables using %p\n", all_neighbour_data);
-
 	// Bind the variables to the VM
 	unsigned int i;
 	for (i = 0; i < variables_length; ++i)

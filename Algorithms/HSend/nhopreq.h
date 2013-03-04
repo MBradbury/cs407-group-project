@@ -29,6 +29,10 @@ typedef struct
 
 	map_t messages;
 
+	struct ctimer runicast_timer;
+	struct ctimer forward_timer;
+	struct ctimer datareq_stbroadcast_stop_timer;
+
 } nhopreq_conn_t;
 
 bool is_base_station(nhopreq_conn_t const * conn);
@@ -44,4 +48,3 @@ bool nhopreq_end(nhopreq_conn_t * conn);
 void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops);
 
 #endif /*CS407_NHOPREQ_H*/
-

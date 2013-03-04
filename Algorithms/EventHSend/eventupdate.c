@@ -24,9 +24,11 @@ static void data_check(void * p)
 
 	bool has_changed = false;
 
+	// Allocate some memory for the current data
 	void * tmp = malloc(conn->data_size);
 	conn->data_fn(tmp);
 
+	// Check to see if we have any data currently stored
 	if (conn->data_loc != NULL)
 	{
 		has_changed = conn->differs_fn(conn->data_loc, tmp);
@@ -42,6 +44,8 @@ static void data_check(void * p)
 	}
 	else
 	{
+		// No data currently stored
+		// so set the stored data to the recently gained data
 		conn->data_loc = tmp;
 		tmp = NULL;
 

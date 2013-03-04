@@ -114,6 +114,10 @@ static void node_data(void * data)
 	}
 }
 
+// Our differs function
+// This is simply an arbitrary comparison that sees if data
+// has significantly changed. What is significant is up to the
+// application to decide.
 static bool node_data_differs(void * data1, void * data2)
 {
 	node_data_t * nd1 = (node_data_t *)data1;

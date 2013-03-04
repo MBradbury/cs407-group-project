@@ -51,3 +51,8 @@ Use the \verb|serial_socket| plugin to create a serial server or client for a gi
 When using small message identifiers, after sending enough messages the variable used to hold the identifier will overflow. This make testing if a message has come after another message slightly difficult.
 
 
+\subsection{Static variables}
+
+When developing libraries make sure you use static variables vary carefully. For example we found that commonly we would make callback timers static and then use that object. When the code using that timer will only be called from one place it is okay. However, when you have multiple calls to that timer (imagine broadcasting on different channels) this can cause race conditions as the memory for that timer is being shared. What should be done is the timer object should be placed in a struct and that struct should be passed to the relevant functions that need to access the timer. For each time you wish to use the library a pointer to a different struct should be passed to those functions.
+
+

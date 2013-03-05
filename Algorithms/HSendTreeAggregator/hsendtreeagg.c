@@ -766,14 +766,17 @@ static void data_evaluation(void * ptr)
 	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
 	    unique_array_append(&target_nodes, &destination); 
 
+	    //array of nodes that we acquire during this round and have seen already
+	    unique_array_t acquired_nodes;
+	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
+	    unique_array_merge(&acquired_nodes, &seen_nodes); //get the nodes seen already
+
 	    //Get the data for each hop level
 		unsigned int hops;
 		for (hops = 1; hops <= max_hops; ++hops)
 		{
-			//array of nodes that we acquire during this round
-		    unique_array_t acquired_nodes;
-		    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
-		    unique_array_append(&acquired_nodes, &destination); 
+			printf("Eval: gettings hops: %d\n", hops);
+			
 
 			//for each node in the target nodes, get the immediate neighbours,
 			unique_array_elem_t target;
@@ -784,7 +787,7 @@ static void data_evaluation(void * ptr)
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
 
 				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
-				printf("Eval: got neighbours of size: %d for target: %s\n",unique_array_length(neighbours),addr2str(t));
+				printf("Eval: got neighbours of size: %d for target: %s\n", unique_array_length(neighbours), addr2str(t));
 				
 				//go through the neighbours for the node
 				unique_array_elem_t neighbour;
@@ -810,7 +813,8 @@ static void data_evaluation(void * ptr)
 						
 						rimeaddr_t *node_to_copy = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
 						rimeaddr_copy(node_to_copy, n);
-						printf("Eval: copied and storing: %s\n", addr2str(node_to_copy));
+						printf("Eval: copied and storing if not already invovled: %s\n", addr2str(node_to_copy));
+						
 						//add the node to the target nodes for the next round
 						unique_array_append(&acquired_nodes, node_to_copy);
 
@@ -839,9 +843,9 @@ static void data_evaluation(void * ptr)
 			}
 
 			//merge the old target nodes to the seen nodes, set the new target nodes to the acquired nodes
-			unique_array_merge(&seen_nodes,&target_nodes);
+			unique_array_merge(&seen_nodes, &target_nodes);
 			unique_array_clear(&target_nodes);
-			unique_array_merge(&target_nodes,&acquired_nodes); //add the acquired_nodes into the target nodes
+			unique_array_merge(&target_nodes, &acquired_nodes); //add the acquired_nodes into the target nodes
 			unique_array_clear(&acquired_nodes);
 		}
 

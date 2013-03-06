@@ -372,7 +372,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 		tmp->temp = msgdata[i].temp;
 		tmp->humidity = msgdata[i].humidity;
 
-		rimeaddr_copy(&tmp->addr,&msgdata[i].addr);
+		rimeaddr_copy(&tmp->addr, &msgdata[i].addr);
 
 		array_list_append(data, tmp);
 	}
@@ -383,7 +383,7 @@ static void tree_aggregate_own(void * ptr)
 {
 	printf("HSend Agg: Update local data with own data\n");
 
-	array_list_t * data =  &((aggregation_data_t *)ptr)->list;
+	array_list_t * data = &((aggregation_data_t *)ptr)->list;
 	node_data_t * msg = (node_data_t *)malloc(sizeof(node_data_t));
 
 	SENSORS_ACTIVATE(sht11_sensor);
@@ -393,7 +393,7 @@ static void tree_aggregate_own(void * ptr)
 
 	msg->temp = sht11_temperature(raw_temperature);
 	msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temp);	
-	rimeaddr_copy(&msg->addr,&rimeaddr_node_addr);//copy in the rime address
+	rimeaddr_copy(&msg->addr, &rimeaddr_node_addr);//copy in the rime address
 
 	array_list_append(data, msg);
 }
@@ -445,10 +445,10 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 	debug_packet_size(packet_length);
 
 	collected_data_t * msg = (collected_data_t *)packetbuf_dataptr();
-	msg->length = (uint8_t)length;
+	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("Writing packet, length %d data length:%d - HSend\n", msg->length,length);
+	printf("Writing packet, length %d data length:%d - HSend\n", msg->length, length);
 
 	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 
@@ -537,12 +537,12 @@ PROCESS_THREAD(data_gather, ev, data)
 
 	tree_agg_open(&aggconn, &sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 
-	neighbour_aggregate_open(&nconn, 121, 110, 150, &neighbour_callbacks);
+	neighbour_aggregate_open(&nconn, &sink, 121, 110, 150, &neighbour_callbacks);
 
 
 
-	//if sink start the evaluation process to run in the background
-	if(rimeaddr_cmp(&rimeaddr_node_addr, &sink))
+	// If sink start the evaluation process to run in the background
+	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
 	{
 		//create and save example predicates
 		array_list_init(&predicates, &free);
@@ -870,3 +870,4 @@ static void data_evaluation(void * ptr)
 
 	ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10, &data_evaluation, NULL);
 }
+

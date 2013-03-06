@@ -1,7 +1,7 @@
 CONTIKI_PROJECT = neighbour-aggregate
 all: $(CONTIKI_PROJECT)
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/TreeAggregator
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers $(CS407DIR)/Algorithms/Common/net
 PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=
@@ -15,6 +15,8 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wunused -Wno-unused-value -Wreturn-type
 
 CFLAGS += -Werror=bad-function-cast
+
+CFLAGS += -DNEIGHBOUR_AGG_APPLICATION
 
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include

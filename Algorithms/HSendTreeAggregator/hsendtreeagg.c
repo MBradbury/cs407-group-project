@@ -776,14 +776,14 @@ static void data_evaluation(void * ptr)
 	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
 	    unique_array_append(&target_nodes, &destination); //start with the destination node
 
+	    //Array of nodes, we gathered this round
+	    unique_array_t acquired_nodes;
+	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
+
 	    //Get the data for each hop level
 		unsigned int hops;
 		for (hops = 1; hops <= max_hops; ++hops)
 		{
-			//Array of nodes, we gathered this round
-		    unique_array_t acquired_nodes;
-		    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
-
 		    //for each node in the target nodes, get the immediate neighbours,
 			unique_array_elem_t target;
 			for (target = unique_array_first(&target_nodes); 
@@ -791,68 +791,9 @@ static void data_evaluation(void * ptr)
 				target = unique_array_next(target))
 			{
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
+				printf("Eval: Checking Target: %s for hops %d", addr2str(t), hops);
 
 				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
-			}
-		}
-	}
-}
-
-static void data_evaluation2(void * ptr)
-{
-	static uint8_t round_count = 0;
-	static node_data_t * all_neighbour_data;
-
-	printf("\nEval: Beginning Evaluation\n");
-	
-	//go through the list of predicates
-	array_list_elem_t elem;
-	for (elem = array_list_first(&predicates); array_list_continue(&predicates, elem); elem = array_list_next(elem))
-	{
-	    predicate_detail_entry_t * pred = (predicate_detail_entry_t *)array_list_data(&predicates, elem);
-
-	    rimeaddr_t destination = pred->destination; //target node
-
-	    //work out the max number of hops needed for the predicate
-	    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
-	    printf("Eval: max hops: %d\n",max_hops);
-
-		array_list_init(&hops_data, &free_hops_data);
-
-		unsigned int max_size = 0;
-
-	    //array of nodes that have been seen so far
-	    unique_array_t seen_nodes;
-	    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
-	    unique_array_append(&seen_nodes, &destination); 
-
-	    //array of nodes that we need the neighbours for
-	    unique_array_t target_nodes;
-	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
-	    unique_array_append(&target_nodes, &destination); 
-
-	    //array of nodes that we acquire during this round and have seen already
-	    unique_array_t acquired_nodes;
-	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
-	    unique_array_merge(&acquired_nodes, &seen_nodes); //get the nodes seen already
-
-	    //Get the data for each hop level
-		unsigned int hops;
-		for (hops = 1; hops <= max_hops; ++hops)
-		{
-			printf("Eval: gettings hops: %d\n", hops);
-			
-
-			//for each node in the target nodes, get the immediate neighbours,
-			unique_array_elem_t target;
-			for (target = unique_array_first(&target_nodes); 
-				unique_array_continue(&target_nodes, target); 
-				target = unique_array_next(target))
-			{
-				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-
-				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
-				printf("Eval: got neighbours of size: %d for target: %s\n", unique_array_length(neighbours), addr2str(t));
 				
 				//go through the neighbours for the node
 				unique_array_elem_t neighbour;
@@ -861,7 +802,7 @@ static void data_evaluation2(void * ptr)
 					neighbour = unique_array_next(neighbour))
 				{
 					//the neighbour found
-					rimeaddr_t const * n = unique_array_data(neighbours, neighbour);
+					rimeaddr_t * n = unique_array_data(neighbours, neighbour);
 
 					//if the neighbour hasn't been seen before
 					if(!unique_array_contains(&seen_nodes, n)) 
@@ -873,9 +814,8 @@ static void data_evaluation2(void * ptr)
 
 						node_data_t * nd = (node_data_t *)map_get(round_data, &n);
 						
-						rimeaddr_t *node_to_copy = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
+						rimeaddr_t * node_to_copy = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
 						rimeaddr_copy(node_to_copy, n);
-						printf("Eval: copied and storing if not already invovled: %s\n", addr2str(node_to_copy));
 						
 						//add the node to the target nodes for the next round
 						unique_array_append(&acquired_nodes, node_to_copy);
@@ -904,16 +844,11 @@ static void data_evaluation2(void * ptr)
 				unique_array_clear(neighbours); 
 			}
 
-			//merge the old target nodes to the seen nodes, set the new target nodes to the acquired nodes
+			//been through targets add them to the seen nodes
 			unique_array_merge(&seen_nodes, &target_nodes);
-			unique_array_clear(&target_nodes);
-			unique_array_merge(&target_nodes, &acquired_nodes); //add the acquired_nodes into the target nodes
-			unique_array_clear(&acquired_nodes);
+			//unique_array_clear(&target_nodes); //reset the array //Don't do this, frees the memory,
+			unique_array_merge(&target_nodes, &acquired_nodes); //add in the acquired nodes
 		}
-
-		//clear the unused arrays
-		unique_array_clear(&target_nodes);
-		//then run the evaluation using the collected data 
 
 		// Generate array of all the data
 		all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
@@ -930,6 +865,7 @@ static void data_evaluation2(void * ptr)
 
 			if (length > 0)
 			{
+				array_list_elem_t elem;
 				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 				{
 					node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
@@ -957,9 +893,8 @@ static void data_evaluation2(void * ptr)
 
 		array_list_clear(&hops_data);
 	}
+
 	//++round_count;
 
 	ctimer_set(&ct_data_eval, CLOCK_SECOND * 60, &data_evaluation, NULL);
 }
-
-

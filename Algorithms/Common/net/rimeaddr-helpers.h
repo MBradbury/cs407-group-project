@@ -12,6 +12,8 @@ typedef struct rimeaddr_pair
 
 bool rimeaddr_equality(void const * left, void const * right);
 
+void * rimeaddr_clone(void const * addr);
+
 bool rimeaddr_pair_equality(void const * left, void const * right);
 
 #endif /*CS407_RIMEADDR_HELPERS_H*/

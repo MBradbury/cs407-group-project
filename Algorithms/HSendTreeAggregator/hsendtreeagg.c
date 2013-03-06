@@ -92,14 +92,14 @@ typedef struct
 
 typedef struct
 {
-	int key;
-	unique_array_t * data;
+	unsigned int key;
+	unique_array_t data;
 } neighbour_map_elem_t; 
 
 typedef struct
 {
-	int key;
-	map_t * data;
+	unsigned int key;
+	map_t data;
 } node_data_map_elem_t; 
 
 ///
@@ -129,7 +129,7 @@ static void node_data(void * data)
 
 		node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count); //map for that round
 
-		map_t * round_data = st->data;
+		map_t * round_data = &st->data;
 
 		node_data_t * stored_data = (node_data_t *)map_get(round_data, &pred_simulated_node);
 
@@ -159,53 +159,41 @@ static void predicate_detail_entry_cleanup(void * item)
 
 static bool neighbour_map_key_compare(void const * x, void const * y)
 {
-	neighbour_map_elem_t const * a = (neighbour_map_elem_t const *)x;
-	neighbour_map_elem_t const * b = (neighbour_map_elem_t const *)y;
-
-	return a->key == b->key;
-}
-
-
-static bool node_data_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
+	if (x == NULL || y == NULL)
 		return false;
 
-	node_data_t const * l = (node_data_t const *)left;
-	node_data_t const * r = (node_data_t const *)right;
+	unsigned int const * a = (unsigned int const *)x;
+	unsigned int const * b = (unsigned int const *)y;
 
-	return rimeaddr_cmp(&l->addr, &r->addr);
+	return *a == *b;
 }
 
 
 //TODO: add clearing of previous neighbour information
 /* to be called when neighbour aggregate gets some data to add */
-static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, int round_count)
+static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
 	printf("Handling neighbour data - HSend\n");
 	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
 	// Check if round is in map already, if not create new unique array list
-	unique_array_t * information;
+	
 
 	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
 
-	if (stored) //saved before
+	// Not saved before
+	if (stored == NULL)
 	{
-		information = stored->data;
-	}
-	else
-	{
-		information = (unique_array_t *)malloc(sizeof(unique_array_t));
+		stored = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
 		
-		unique_array_init(information, &rimeaddr_pair_equality, &free);
+		unique_array_init(&stored->data, &rimeaddr_pair_equality, &free);
 
-		neighbour_map_elem_t * elem = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
-		elem->key = round_count;
-		elem->data = information;
+		stored->key = round_count;
 
-		map_put(&neighbour_info, elem); 
+		map_put(&neighbour_info, stored);
 	}
+
+	unique_array_t * information = &stored->data;
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -226,20 +214,19 @@ static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_coun
 	unique_array_t * output = (unique_array_t *)malloc(sizeof(unique_array_t));
 	unique_array_init(output, &rimeaddr_equality, &free);
 
-	//pairs of neighbours for a given round
+	// Pairs of neighbours for a given round
 	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
-	unique_array_t * pairs;
-
-	if (stored) //saved before
+	
+	// Saved before
+	if (stored == NULL) 
 	{
-		pairs = stored->data;
-	}
-	else
-	{
-		return output; //no data, return empty array
+		// No data, return empty array
+		return output; 
 	}
 
-	//go through each pair
+	unique_array_t * pairs = &stored->data;
+
+	// Go through each pair
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(pairs); 
 		unique_array_continue(pairs, elem); 
@@ -247,7 +234,7 @@ static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_coun
 	{
 		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(pairs, elem);
 		
-		//if either match, add the other to the list
+		// If either match, add the other to the list
 		if (rimeaddr_cmp(&data->first, target))
 		{
 			unique_array_append(output, &data->second);
@@ -281,27 +268,20 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 
 	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &msg->round_count); // Map for that round
 
-	map_t * round_data;
-
-	if (st)
+	if (st == NULL)
 	{
-		round_data = st->data;
-	}
-	else
-	{
-		// Allocate a new map object
-		round_data = (map_t *)malloc(sizeof(map_t));
+		st = (node_data_map_elem_t *)malloc(sizeof(node_data_map_elem_t));
 
 		// Init the new map
-		map_init(round_data, &node_data_equality, &free);
+		map_init(&st->data, &rimeaddr_equality, &free);
 		
-		st = (node_data_map_elem_t *)malloc(sizeof(node_data_map_elem_t));
 		st->key = msg->round_count;
-		st->data = round_data;
 
 		// Add it to the main map
 		map_put(&recieved_data, st);
 	}
+
+	map_t * round_data = &st->data;
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -637,7 +617,7 @@ static map_t * get_hop_map(uint8_t hop)
 		for (to_add = hop - length; to_add > 0; --to_add)
 		{
 			map_t * map = (map_t *)malloc(sizeof(map_t));
-			map_init(map, &node_data_equality, &free);
+			map_init(map, &rimeaddr_equality, &free);
 
 			array_list_append(&hops_data, map);
 		}
@@ -748,29 +728,29 @@ static void data_evaluation(void * ptr)
 
 				unique_array_t * neighbours = get_neighbours(t, pred_round_count); //get the neighbours of the node
 				
-				//go through the neighbours for the node
+				// Go through the neighbours for the node
 				unique_array_elem_t neighbour;
 				for (neighbour = unique_array_first(neighbours); 
 					unique_array_continue(neighbours, neighbour); 
 					neighbour = unique_array_next(neighbour))
 				{
-					//the neighbour found
+					// The neighbour found
 					rimeaddr_t * n = unique_array_data(neighbours, neighbour);
 
-					//if the neighbour hasn't been seen before
-					if(!unique_array_contains(&seen_nodes, n)) 
+					// If the neighbour hasn't been seen before
+					if (!unique_array_contains(&seen_nodes, n)) 
 					{
-						//get the data
-						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count); //map for that round
+						// Get the data map for that round
+						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count);
 
-						map_t * round_data = st->data;
+						map_t * round_data = &st->data;
 
 						node_data_t * nd = (node_data_t *)map_get(round_data, &n);
 
 						rimeaddr_t * node_to_copy = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
 						rimeaddr_copy(node_to_copy, n);
 						
-						//add the node to the target nodes for the next round
+						// Add the node to the target nodes for the next round
 						unique_array_append(&acquired_nodes, node_to_copy);
 
 						map_t * map = get_hop_map((uint8_t)hops);
@@ -778,29 +758,29 @@ static void data_evaluation(void * ptr)
 						// Check that we have not previously received data from this node before
 						node_data_t * stored = (node_data_t *)map_get(map, n);
 						
-						//Then copy in data
-						if (stored != NULL)
-						{
-							memcpy(stored, nd, sizeof(node_data_t));
-						}
-						else
+						// Then copy in data
+						if (stored == NULL)
 						{
 							stored = (node_data_t *)malloc(sizeof(node_data_t));
-							memcpy(stored, nd, sizeof(node_data_t));
-
 							map_put(map, stored);
+
 							max_size++;
-							printf("Eval: Max_size increased to %d\n",max_size);
+							printf("Eval: Max_size increased to %d\n", max_size);
 						}
+						memcpy(stored, nd, sizeof(node_data_t));
 					}
 				}
-				unique_array_clear(neighbours); 
+
+				// Free the returned neighbours array
+				unique_array_clear(neighbours);
+				free(neighbours);
 			}
 
-			//been through targets add them to the seen nodes
-			unique_array_merge(&seen_nodes, &target_nodes);
-			//unique_array_clear(&target_nodes); //reset the array //Don't do this, frees the memory,
-			unique_array_merge(&target_nodes, &acquired_nodes); //add in the acquired nodes
+			// Been through targets add them to the seen nodes
+			unique_array_merge(&seen_nodes, &target_nodes, &rimeaddr_clone);
+
+			// unique_array_clear(&target_nodes); //reset the array //Don't do this, frees the memory,
+			unique_array_merge(&target_nodes, &acquired_nodes, &rimeaddr_clone); //add in the acquired nodes
 		}
 
 		// Generate array of all the data

@@ -27,14 +27,20 @@ bool unique_array_append(unique_array_t * list, void * data)
 	return true;
 }
 
-bool unique_array_merge(unique_array_t * first, unique_array_t * second)
+bool unique_array_merge(unique_array_t * first, unique_array_t const * second, unique_array_copy_t copy)
 {
+	if (first == NULL || second == NULL || copy == NULL)
+	{
+		return false;
+	}
+
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(second); unique_array_continue(second, elem); elem = unique_array_next(elem))
 	{		
-		void const * item = unique_array_data(second, elem);
+		void * item = unique_array_data(second, elem);
+		void * item_copy = copy(item);
 
-		if (!unique_array_append(first, item)) return false;
+		if (!unique_array_append(first, item_copy)) return false;
 	}
 
 	return true;

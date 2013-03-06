@@ -55,93 +55,55 @@ class NodeCommsResponder implements NodeCommsCallback {
  *
  * @author Tim
  */
-public class WSNMonitor implements Runnable {
+public class WSNMonitor {
     private volatile boolean running = false;
     
     private final List<NetworkUpdateListener> listeners;
     
-    private final Map<Integer, NetworkState> previousStates;
-    
-    private int round = 0;
-    private NetworkState currentState = null;
+    private final Map<Integer, NetworkState> states;
     
     private final NodeComms comms;
     
     public WSNMonitor(String comPort) {
         listeners = new ArrayList<>();
         
-        previousStates = new HashMap<>();
+        states = new HashMap<>();
         
         comms = new NodeComms(comPort);
         
-        currentState = new NetworkState();
-        
         comms.connect(new NodeCommsResponder(this));
+    }
+    
+    public Map<Integer, NetworkState> getStates() {
+        return states;
     }
     
     public void addListener(NetworkUpdateListener listener) {
         listeners.add(listener);
     }
     
-    public void terminate() {
-        running = false;
-    }
-    
-    @Override
-    public void run() {
-        /*running = true;
-        
-        //Build test network
-        currentState.addEdge(1, 2);
-        currentState.addEdge(3, 4);
-        currentState.addEdge(5, 6);
-        currentState.addEdge(2, 4);
-        currentState.addEdge(4, 6);
-        
-        int i = 0;
-        NetworkState previousState = null;
-        while (running) {
-            i++;
-            try {
-                //Notify listeners of updated network state.
-                if(previousState == null || !currentState.equals(previousState)) {
-                    for(NetworkUpdateListener listener : listeners) {
-                        listener.networkUpdated(currentState);
-                    }
-                    
-                    previousState = currentState;
-                }
-                
-                //Evaluate predicates, update network state.
-                if(i >= 7) {
-                    currentState.removeEdge(1, 2);
-                }
-                
-                Thread.sleep((long)1000);
-            } catch (InterruptedException e) {
-                running = false;
-            }
-        }*/
-    }
-    
     /**
      * This function applies the received information to the gui
      */
     public void update(int round, List<NodeIdPair> edges) {
-        // Rounds not equal, on a new round
-        if (this.round != round) {
-            previousStates.put(this.round, currentState);
-            currentState = new NetworkState();
-            this.round = round;
+        
+        NetworkState roundState;
+        
+        if (!states.containsKey(round)) {
+            roundState = new NetworkState();
+            states.put(round, roundState);
+        }
+        else {
+            roundState = states.get(round);
         }
         
         // New we need to add the new edges to the network
         for (NodeIdPair pair : edges) {
-            currentState.addEdge(pair.getLeft(), pair.getRight());
+            roundState.addEdge(pair.getLeft(), pair.getRight());
         }
         
         for (NetworkUpdateListener listener : listeners) {
-            listener.networkUpdated(currentState);
+            listener.networkUpdated(states);
         }
     }
 }

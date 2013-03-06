@@ -327,7 +327,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 	node_data_t const * msgdata = (node_data_t const *)(data_to_apply + 1); //get the pointer after the message
 
 	unsigned int i;
-	for (i = 0; i< data_to_apply->length; ++i)
+	for (i = 0; i < data_to_apply->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
 		tmp->temp = msgdata[i].temp;
@@ -339,7 +339,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 	}
 }
 
-//TODO: Add our own one hop data to the list
+// Add our own one hop data to the list
 static void tree_aggregate_own(void * ptr)
 {
 	printf("HSend Agg: Update local data with own data\n");
@@ -376,7 +376,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
 	
 	unsigned int i;
-	for(i = 0; i< msg->length; ++i)
+	for (i = 0; i< msg->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
 		tmp->temp = msgdata[i].temp;
@@ -475,7 +475,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	cc2420_set_txpower(POWER_LEVEL); //Set the power levels for the radio
 #endif 
 
-	//Assign the sink node, default as 1.0
+	// Assign the sink node, default as 1.0
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 
@@ -524,7 +524,7 @@ PROCESS_THREAD(data_gather, ev, data)
 		pred->bytecode_length = bytecode_length;
 		pred->variables_details_length = var_details;
 		
-		var_elem_t * msg_vars = (var_elem_t *)(malloc(sizeof(var_elem_t) * var_details));
+		var_elem_t * msg_vars = (var_elem_t *)malloc(sizeof(var_elem_t) * var_details);
 
 		msg_vars[0].hops = 2;
 		msg_vars[0].var_id = 255;
@@ -534,15 +534,14 @@ PROCESS_THREAD(data_gather, ev, data)
 		pred->variables_details = msg_vars;
 		pred->bytecode = program_bytecode;
 
-		//add it to the list
+		// Add it to the list
 		array_list_append(&predicates, pred);
 
-		//start the evauluation method
+		// Start the evauluation method
 		ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10 , &data_evaluation, NULL);
 	}
 
 	PROCESS_END();
-	return 0;
 }
 
 PROCESS_THREAD(send_data_process, ev, data)
@@ -623,7 +622,7 @@ static map_t * get_hop_map(uint8_t hop)
 		}
 	}
 
-	return (map_t *)array_list_data(&hops_data, (array_list_elem_t)hop - 1);
+	return (map_t *)array_list_data(&hops_data, hop - 1);
 }
 
 static uint8_t hop_data_length(var_elem_t const * variable)
@@ -726,7 +725,8 @@ static void data_evaluation(void * ptr)
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
 				printf("Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
-				unique_array_t * neighbours = get_neighbours(t, pred_round_count); //get the neighbours of the node
+				// Get the neighbours of the node
+				unique_array_t * neighbours = get_neighbours(t, pred_round_count);
 				
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbour;
@@ -811,9 +811,9 @@ static void data_evaluation(void * ptr)
 		}
 
 		bool evaluation_result = evaluate_predicate(
-		pred->bytecode, pred->bytecode_length,
-		all_neighbour_data,
-		pred->variables_details, pred->variables_details_length);
+			pred->bytecode, pred->bytecode_length,
+			all_neighbour_data,
+			pred->variables_details, pred->variables_details_length);
 
 		if (evaluation_result)
 		{

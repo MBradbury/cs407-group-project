@@ -36,7 +36,12 @@ bool unique_array_merge(unique_array_t * first, unique_array_t const * second, u
 
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(second); unique_array_continue(second, elem); elem = unique_array_next(elem))
-	{		
+	{
+		// We cannot just add the item from the second array,
+		// as then that item would be owned by two containers.
+		//
+		// So we need a function that will allocate the memory for
+		// the new item and possibly do some conversion.
 		void * item = unique_array_data(second, elem);
 		void * item_copy = copy(item);
 

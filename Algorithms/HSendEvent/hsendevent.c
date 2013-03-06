@@ -21,6 +21,7 @@
 #include "predlang.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
+#include "rimeadder-helpers.h"
 
 // The custom headers we use
 static const struct packetbuf_attrlist trickle_attributes[] = {
@@ -152,17 +153,6 @@ static array_list_t hops_data;
 // Count the number of elements added to each of the lists
 static unsigned int max_size = 0;
 
-static bool rimeaddr_equal_node_data(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	node_data_t const * l = (node_data_t const *)left;
-	node_data_t const * r = (node_data_t const *)right;
-
-	return rimeaddr_cmp(&l->addr, &r->addr);
-}
-
 static map_t * get_hop_map(uint8_t hop)
 {
 	if (hop == 0)
@@ -177,7 +167,7 @@ static map_t * get_hop_map(uint8_t hop)
 		for (to_add = hop - length; to_add > 0; --to_add)
 		{
 			map_t * map = (map_t *)malloc(sizeof(map_t));
-			map_init(map, &rimeaddr_equal_node_data, &free);
+			map_init(map, &rimeaddr_equality, &free);
 
 			array_list_append(&hops_data, map);
 		}
@@ -226,18 +216,15 @@ static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uin
 	// Check that we have not previously received data from this node before
 	node_data_t * stored = (node_data_t *)map_get(map, from);
 	
-	if (stored != NULL)
-	{
-		memcpy(stored, nd, sizeof(node_data_t));
-	}
-	else
+	if (stored == NULL)
 	{
 		stored = (node_data_t *)malloc(sizeof(node_data_t));
-		memcpy(stored, nd, sizeof(node_data_t));
 
 		map_put(map, stored);
 		max_size++;
 	}
+
+	memcpy(stored, nd, sizeof(node_data_t));
 }
 
 

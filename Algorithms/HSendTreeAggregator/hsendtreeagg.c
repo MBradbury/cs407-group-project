@@ -862,7 +862,7 @@ static void data_evaluation(void * ptr)
 			printf("Pred: FAILED due to error: %s\n", error_message());
 		}
 
-		array_list_clear(&hops_data) * 10;
+		array_list_clear(&hops_data);
 	}
 
 	++round_count;

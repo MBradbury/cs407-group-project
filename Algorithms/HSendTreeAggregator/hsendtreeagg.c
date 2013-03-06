@@ -45,6 +45,10 @@ static array_list_t predicates;
 // An array_list_t of map_t of node_data_t
 static array_list_t hops_data;
 
+//used for simulating evaluating a predicate on a node
+static rimeaddr_t pred_simulated_node;
+
+static uint8_t pred_round_count;
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
 typedef struct
 {
@@ -123,24 +127,21 @@ static void node_data(void * data)
 	{
 		node_data_t * nd = (node_data_t *)data;
 
+		node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count); //map for that round
+
+		map_t * round_data = st->data;
+
+		node_data_t * stored_data = (node_data_t *)map_get(round_data, &pred_simulated_node);
+
 		// Store the current nodes address
-		rimeaddr_copy(&nd->addr, &rimeaddr_node_addr);
+		rimeaddr_copy(&nd->addr, &stored_data->addr);
 
-		SENSORS_ACTIVATE(sht11_sensor);
-		int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
-		SENSORS_DEACTIVATE(sht11_sensor);
+		nd->temp = stored_data->temp;
+		nd->humidity = stored_data->humidity;
 
-		nd->temp = sht11_temperature(raw_temperature);
-		nd->humidity = sht11_relative_humidity_compensated(raw_humidity, nd->temp);
-
-		/*SENSORS_ACTIVATE(light_sensor);
-		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
-		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-		SENSORS_DEACTIVATE(light_sensor);
-
-		nd->light1 = (nint)s1087_light1(raw_light1);
-		nd->light2 = (nint)s1087_light1(raw_light2);*/
+		/*
+		nd->light1 = stored_data->light1;
+		nd->light2 = stored_data->light2;*/
 	}
 }
 ///
@@ -715,7 +716,6 @@ static bool evaluate_predicate(
 
 static void data_evaluation(void * ptr)
 {
-	static uint8_t round_count = 0;
 	static node_data_t * all_neighbour_data; //data that is passed to the evaluation
 	printf("Eval: Beginning Evaluation\n");
 
@@ -729,6 +729,7 @@ static void data_evaluation(void * ptr)
 		
 		rimeaddr_t destination; //destination node (initial target)
 	    rimeaddr_copy(&destination, &pred->destination);
+	    rimeaddr_copy(&pred_simulated_node, &pred->destination); //copy into the simulated node
 
 	    //get the maximum number of hops needed for this predcate
 	    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
@@ -764,7 +765,7 @@ static void data_evaluation(void * ptr)
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
 				printf("Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
-				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
+				unique_array_t * neighbours = get_neighbours(t, pred_round_count); //get the neighbours of the node
 				
 				//go through the neighbours for the node
 				unique_array_elem_t neighbour;
@@ -779,7 +780,7 @@ static void data_evaluation(void * ptr)
 					if(!unique_array_contains(&seen_nodes, n)) 
 					{
 						//get the data
-						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &round_count); //map for that round
+						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count); //map for that round
 
 						map_t * round_data = st->data;
 
@@ -865,7 +866,7 @@ static void data_evaluation(void * ptr)
 		array_list_clear(&hops_data) * 10;
 	}
 
-	++round_count;
+	++pred_round_count;
 
 	ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10, &data_evaluation, NULL);
 }

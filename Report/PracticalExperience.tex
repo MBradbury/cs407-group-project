@@ -50,4 +50,18 @@ Use the \verb|serial_socket| plugin to create a serial server or client for a gi
 
 When using small message identifiers, after sending enough messages the variable used to hold the identifier will overflow. This make testing if a message has come after another message slightly difficult.
 
+\subsection{Setting up serial2pty Cooja Plugin}
+
+\begin{listing}[H]
+\begin{minted}[fontsize=\small]{bash}
+cd ~/contiki/tools/cooja/apps
+git clone git://i4git.informatik.uni-erlangen.de/contiki_projects.git -b serial2pty serial2pty
+cd serial2pty
+# Apply patch to fix build process
+ant jar
+\end{minted}
+\end{listing}
+
+Now you can load this plugin in Cooja by going to \verb|Settings| \verb|->| \verb|Cooja Extensions| and selecting serial2pty. Once it has been selected click \verb|Apply for session| and \verb|Save| and the plugin will now be enabled. To run it simply \verb|Tools| \verb|->| \verb| Serial 2 Pty| \verb|->| and select the node you want to connect. You will be told what device you can connect to, to receive the serial output from.
+
 

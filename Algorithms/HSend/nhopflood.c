@@ -123,6 +123,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		addr2str_r(packetbuf_addr(PACKETBUF_ADDR_ESENDER), s2, RIMEADDR_STRING_LENGTH)
 	);*/
 
+	// Get the last seen entry for the end-point sender
 	last_seen_t * last = map_get(&conn->latest_message_seen, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 
 	bool seenbefore = true;
@@ -133,6 +134,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 	{
 		seenbefore = false;
 
+		// We need to record that we have seen a packet from this sender
 		last = (last_seen_t *)malloc(sizeof(last_seen_t));
 		rimeaddr_copy(&last->from, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 		last->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
@@ -140,7 +142,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 
 		map_put(&conn->latest_message_seen, last);
 	}
-	// Not seen before
+	// Not seen this message before, but have received from this node before
 	else if (last->id < packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) || 
 			(packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) == 0 && last->id > 240) // Handle integer overflow
 			)

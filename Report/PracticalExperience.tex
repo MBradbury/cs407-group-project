@@ -65,3 +65,8 @@ ant jar
 Now you can load this plugin in Cooja by going to \verb|Settings| \verb|->| \verb|Cooja Extensions| and selecting serial2pty. Once it has been selected click \verb|Apply for session| and \verb|Save| and the plugin will now be enabled. To run it simply \verb|Tools| \verb|->| \verb| Serial 2 Pty| \verb|->| and select the node you want to connect. You will be told what device you can connect to, to receive the serial output from.
 
 
+\subsection{Static variables}
+
+When developing libraries make sure you use static variables vary carefully. For example we found that commonly we would make callback timers static and then use that object. When the code using that timer will only be called from one place it is okay. However, when you have multiple calls to that timer (imagine broadcasting on different channels) this can cause race conditions as the memory for that timer is being shared. What should be done is the timer object should be placed in a struct and that struct should be passed to the relevant functions that need to access the timer. For each time you wish to use the library a pointer to a different struct should be passed to those functions.
+
+

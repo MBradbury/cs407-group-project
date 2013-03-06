@@ -8,18 +8,18 @@ import edu.uci.ics.jung.graph.UndirectedSparseGraph;
  * @author Tim
  */
 public class NetworkState {
-    private Graph<Integer, String> g = new UndirectedSparseGraph();
+    private Graph<NodeId, String> g = new UndirectedSparseGraph();
     
     /**
      * Return a handle to the internal graph.
      * @return graph
      */
-    public Graph<Integer, String> getGraph() {
+    public Graph<NodeId, String> getGraph() {
         return g;
     }
     
     public void clearGraph() {
-        for(Integer vertex : g.getVertices()) {
+        for(NodeId vertex : g.getVertices()) {
             g.removeVertex(vertex);
         }
     }
@@ -29,7 +29,7 @@ public class NetworkState {
      * @param node1
      * @param node2 
      */
-    public void addEdge(int node1, int node2) {
+    public void addEdge(NodeId node1, NodeId node2) {
         assert(node1 != node2);
         
         String edgeName = nodePairToEdgeName(node1, node2);
@@ -54,7 +54,7 @@ public class NetworkState {
      * @param node1
      * @param node2 
      */
-    public void removeEdge(int node1, int node2) {
+    public void removeEdge(NodeId node1, NodeId node2) {
         assert(node1 != node2);
         
         String edgeName = nodePairToEdgeName(node1, node2);
@@ -86,13 +86,13 @@ public class NetworkState {
      * @param node2
      * @return A string that is invariant for any pair of nodes regardless of ordering.
      */
-    public static String nodePairToEdgeName(int node1, int node2) {
+    public static String nodePairToEdgeName(NodeId node1, NodeId node2) {
         assert(node1 != node2);
         
-        String n1 = ((Integer)node1).toString();
-        String n2 = ((Integer)node2).toString();
+        String n1 = node1.toString();
+        String n2 = node2.toString();
         
-        if(node1 < node2) {
+        if (node1.compareTo(node2) < 0) {
             return n1 + " <-> " + n2;
         }
         else {

@@ -69,6 +69,7 @@ void tree_agg_close(tree_agg_conn_t * conn);
 
 void tree_agg_send(tree_agg_conn_t * conn);
 
+bool tree_agg_is_sink(tree_agg_conn_t const * conn);
 bool tree_agg_is_leaf(tree_agg_conn_t const * conn);
 bool tree_agg_is_collecting(tree_agg_conn_t const * conn);
 

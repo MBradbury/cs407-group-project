@@ -1,7 +1,7 @@
 #ifndef CS407_UNIQUE_ARRAY
 #define CS407_UNIQUE_ARRAY
 
-#include "array-list.h"
+#include "containers/array-list.h"
 
 #ifndef _MSC_VER
 #	include <stdbool.h>

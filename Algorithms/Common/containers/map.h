@@ -1,7 +1,7 @@
 #ifndef CS407_MAP
 #define CS407_MAP
 
-#include "unique-array.h"
+#include "containers/unique-array.h"
 
 typedef unique_array_t map_t;
 typedef unique_array_elem_t map_elem_t;

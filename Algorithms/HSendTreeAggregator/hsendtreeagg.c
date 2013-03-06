@@ -20,7 +20,7 @@
 #include "dev/leds.h"
 #include "dev/cc2420.h"
 
-#include "tree-aggregator.h"
+#include "net/tree-aggregator.h"
 #include "neighbour-aggregate.h"
 
 #include "predlang.h"
@@ -28,9 +28,9 @@
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-#include "array-list.h"
-#include "unique-array.h"
-#include "map.h"
+#include "containers/array-list.h"
+#include "containers/unique-array.h"
+#include "containers/map.h"
 
 static void data_evaluation(void * ptr);
 

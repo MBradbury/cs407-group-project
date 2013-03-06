@@ -1,11 +1,11 @@
-CONTIKI_PROJECT = eventhsend
+CONTIKI_PROJECT = hsend
 all: $(CONTIKI_PROJECT)
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/PredicateLanguage $(CS407DIR)/Algorithms/HSend
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers $(CS407DIR)/PredicateLanguage
 PROJECT_SOURCEFILES = 
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c predlang.c linked-list.c array-list.c map.c unique-array.c random-range.c eventupdate.c nhopflood.c
+CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c nhopreq.c predlang.c array-list.c map.c unique-array.c random-range.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \
@@ -21,6 +21,6 @@ CFLAGS += -DNDEBUG
 # Disable uip
 #CONTIKI_NO_NET=1
 
-CONTIKI = $(HOME)/contiki
+CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include
 

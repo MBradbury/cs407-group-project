@@ -1,7 +1,7 @@
 CONTIKI_PROJECT = hsendtreeagg
 all: $(CONTIKI_PROJECT)
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/PredicateLanguage $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourAggregate
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers $(CS407DIR)/Algorithms/Common/net $(CS407DIR)/PredicateLanguage $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourAggregate
 PROJECT_SOURCEFILES = 
 
 CONTIKIDIRS :=

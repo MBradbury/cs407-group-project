@@ -1,4 +1,4 @@
-#include "array-list.h"
+#include "containers/array-list.h"
 
 #include <stdlib.h>
 #include <stddef.h>

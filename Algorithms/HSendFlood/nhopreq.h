@@ -5,7 +5,7 @@
 #include "net/rime/stbroadcast.h"
 #include "net/rime/runicast.h"
 
-#include "map.h"
+#include "containers/map.h"
 
 #include <stdbool.h>
 #include <stdint.h>

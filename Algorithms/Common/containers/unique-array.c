@@ -1,4 +1,4 @@
-#include "unique-array.h"
+#include "containers/unique-array.h"
 
 #include <stdlib.h>
 #include <stddef.h>

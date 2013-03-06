@@ -769,11 +769,32 @@ static void data_evaluation(void * ptr)
 		//array of nodes that have been seen and checked so far
 	    unique_array_t seen_nodes;
 	    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
+	    unique_array_append(&seen_nodes, &destination); //start with the destination node
 
-	    //array of nodes that we need the neighbours for
+		//array of nodes that we need the neighbours for
 	    unique_array_t target_nodes;
 	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
 	    unique_array_append(&target_nodes, &destination); //start with the destination node
+
+	    //Get the data for each hop level
+		unsigned int hops;
+		for (hops = 1; hops <= max_hops; ++hops)
+		{
+			//Array of nodes, we gathered this round
+		    unique_array_t acquired_nodes;
+		    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
+
+		    //for each node in the target nodes, get the immediate neighbours,
+			unique_array_elem_t target;
+			for (target = unique_array_first(&target_nodes); 
+				unique_array_continue(&target_nodes, target); 
+				target = unique_array_next(target))
+			{
+				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
+
+				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
+			}
+		}
 	}
 }
 
@@ -845,12 +866,9 @@ static void data_evaluation2(void * ptr)
 					//if the neighbour hasn't been seen before
 					if(!unique_array_contains(&seen_nodes, n)) 
 					{
-						int * r = (int *)malloc(sizeof(int));
-						*r = round_count;
-
 						//get the data
-						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &r); //map for that round
-						free(r);
+						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &round_count); //map for that round
+
 						map_t * round_data = st->data;
 
 						node_data_t * nd = (node_data_t *)map_get(round_data, &n);

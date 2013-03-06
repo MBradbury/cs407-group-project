@@ -157,12 +157,12 @@ static void predicate_detail_entry_cleanup(void * item)
 	free(entry);
 }
 
-static bool intCompare(void const * x, void const * y)
+static bool neighbour_map_key_compare(void const * x, void const * y)
 {
-	neighbour_map_elem_t const * a = x;
-	neighbour_map_elem_t const * b = y;
+	neighbour_map_elem_t const * a = (neighbour_map_elem_t const *)x;
+	neighbour_map_elem_t const * b = (neighbour_map_elem_t const *)y;
 
-	return a-b;
+	return a->key == b->key;
 }
 
 
@@ -512,7 +512,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 
-	map_init(&neighbour_info, &intCompare, &free); //setup the map
+	map_init(&neighbour_info, &neighbour_map_key_compare, &free); //setup the map
 
 	printf("Starting HSend Aggregation - HSend\n");
 
@@ -528,7 +528,7 @@ PROCESS_THREAD(data_gather, ev, data)
 		//create and save example predicates
 		array_list_init(&predicates, &free);
 	
-		map_init(&recieved_data, &intCompare, &free);
+		map_init(&recieved_data, &neighbour_map_key_compare, &free);
 
 		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 		//create the predicate

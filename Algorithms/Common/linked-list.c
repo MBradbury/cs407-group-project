@@ -99,6 +99,35 @@ bool linked_list_append(linked_list_t * list, void * data)
 	return true;
 }
 
+void * linked_list_peek(linked_list_t const * list)
+{
+	linked_list_elem_t first = linked_list_first(list);
+
+	return first == NULL ? NULL : first->data;
+}
+
+bool linked_list_pop(linked_list_t * list)
+{
+	if (list == NULL)
+	{
+		return false;
+	}
+
+	linked_list_elem_t first = linked_list_first(list);
+
+	if (first == NULL)
+	{
+		return false;
+	}
+
+	list->head = first->next;
+
+	list->cleanup(first->data);
+	free(first);
+	
+	return true;
+}
+
 unsigned int linked_list_length(linked_list_t const * list)
 {
 	if (list == NULL)
@@ -115,6 +144,11 @@ unsigned int linked_list_length(linked_list_t const * list)
 	}
 
 	return length;
+}
+
+bool linked_list_is_empty(linked_list_t const * list)
+{
+	return list != NULL && list->head != NULL;
 }
 
 

@@ -1,37 +1,49 @@
+#ifndef CS407_NHOPFLOOD
+#define CS407_NHOPFLOOD
+
+#include "sys/ctimer.h"
 #include "net/rime.h"
-#include "net/rime/packetqueue.h"
 #include "net/rime/broadcast.h"
+
+#include "linked-list.h"
+#include "map.h"
 
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct
+struct nhopflood_conn;
+
+typedef void (*nhopflood_recv_fn)(struct nhopflood_conn * conn, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops);
+
+typedef struct nhopflood_conn
 {
 	struct broadcast_conn bc;
 
-	unsigned int message_id;
-	unsigned int data_size;
-	unsigned int max_hops;
+	nhopflood_recv_fn receive_fn;
 
-	data_generation_fn data_fn;
-	data_receive_fn receive_fn;
+	uint8_t current_id;
 
-	clock_time_t send_delay;
-	clock_time_t period;
-	clock_time_t max;
+	// Maximum number of retransmits
+	uint8_t maxrx;
 
-	struct ctimer delay_timer;
+	clock_time_t send_period;
+
 	struct ctimer send_timer;
-	struct ctimer cancel_timer;
+
+	linked_list_t packet_queue;
+	map_t latest_message_seen;
+	
 } nhopflood_conn_t;
 
 // Initialise n-hop data flooding.
-bool nhopflood_start(
-	nhopflood_conn_t * conn, uint8_t ch1, data_generation_fn data_fn, 
-	data_receive_fn receive_fn, unsigned int data_size);
+bool nhopflood_start(nhopflood_conn_t * conn, uint8_t ch, nhopflood_recv_fn receive_fn,
+	clock_time_t send_period, uint8_t maxrx);
 
 // Shutdown n-hop data flooding.
-bool nhopflood_end(nhopflood_conn_t * conn);
+bool nhopflood_stop(nhopflood_conn_t * conn);
 
 // Send an n-hop data flood.
-void nhopflood_send(nhopflood_conn_t * conn, uint8_t hops);
+bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops);
+
+#endif /*CS407_NHOPFLOOD*/
+

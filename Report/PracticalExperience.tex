@@ -32,3 +32,41 @@ When developing our mote applications in the simulator there is a very useful fe
 
 \subsection{Communication Between Mote and Computer}
 To be able to send and receive information between an application running on a mote and an application running on the computer the mote is connected to we needed to use several applications to assist in the data transfer. The easiest flow of data was from the mote to the computer as Contiki supports writing to \verb|stdout| which can then be read using a tool called \verb|serialdump|. Unfortunately Contiki doesn't support writing to \verb|stdout| so we had to develop and alternative method to read data sent from a computer. Also when sending data from the computer application to the mote application we couldn't simply open a filestream in Java and write to that (and expected Contiki to receive it), so we also had to come up with a custom way to do this.
+
+\subsubsection{Receiving Data from Nodes}
+
+\url{http://ai.vub.ac.be/Robotics/wiki/index.php/Compiling,_uploading_and_interacting_with_Contiki:_Hello_World}
+
+\subsubsection{Sending Data to Nodes}
+
+\url{https://github.com/contiki-os/contiki/wiki/Input-and-output#wiki-Serial_Communication}
+
+
+\subsubsection{Simulating with Cooja}
+
+Use the \verb|serial_socket| plugin to create a serial server or client for a given node. Connect to these via sockets and communicate that way.
+
+\subsection{Developing with Small Message IDs}
+
+When using small message identifiers, after sending enough messages the variable used to hold the identifier will overflow. This make testing if a message has come after another message slightly difficult.
+
+\subsection{Setting up serial2pty Cooja Plugin}
+
+\begin{listing}[H]
+\begin{minted}[fontsize=\small]{bash}
+cd ~/contiki/tools/cooja/apps
+git clone git://i4git.informatik.uni-erlangen.de/contiki_projects.git -b serial2pty serial2pty
+cd serial2pty
+# Apply patch to fix build process
+ant jar
+\end{minted}
+\end{listing}
+
+Now you can load this plugin in Cooja by going to \verb|Settings| \verb|->| \verb|Cooja Extensions| and selecting serial2pty. Once it has been selected click \verb|Apply for session| and \verb|Save| and the plugin will now be enabled. To run it simply \verb|Tools| \verb|->| \verb| Serial 2 Pty| \verb|->| and select the node you want to connect. You will be told what device you can connect to, to receive the serial output from.
+
+
+\subsection{Static variables}
+
+When developing libraries make sure you use static variables vary carefully. For example we found that commonly we would make callback timers static and then use that object. When the code using that timer will only be called from one place it is okay. However, when you have multiple calls to that timer (imagine broadcasting on different channels) this can cause race conditions as the memory for that timer is being shared. What should be done is the timer object should be placed in a struct and that struct should be passed to the relevant functions that need to access the timer. For each time you wish to use the library a pointer to a different struct should be passed to those functions.
+
+

@@ -9,24 +9,28 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Paint;
+import java.awt.Shape;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.geom.Ellipse2D;
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Random;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import org.apache.commons.collections15.Transformer;
@@ -40,13 +44,11 @@ public class PredVis extends JFrame {
     private DefaultListModel<Predicate> predicateListModel = null;
     
     //Network data.
-    private NetworkState networkState = null;
-    private Layout<Integer, String> layout = null;
-    private BasicVisualizationServer<Integer, String> vv = null;
+    private Layout<NodeId, String> layout = null;
+    private BasicVisualizationServer<NodeId, String> vv = null;
     
     //Monitoring data.
-    WSNMonitor wsnMonitor = null;
-    Thread monitoringThread = null;
+    private WSNMonitor wsnMonitor = null;
     
     //GUI widgets.
     private JTabbedPane tabbedPane = null;
@@ -55,6 +57,9 @@ public class PredVis extends JFrame {
     private JButton addPredicateButton = null;
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
+    private JSlider historySlider = null;
+    
+    private int currentRound = 0;
     
     public PredVis(String comPort) {
         super("Predicate Visualiser");
@@ -62,14 +67,12 @@ public class PredVis extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent ev) {
-                killMonitoring();
                 dispose();
             }
         });
         
         //Init base state.
         initPredicates();
-        initNetwork();
         
         //Init gui.
         initTabbedPane();
@@ -100,10 +103,6 @@ public class PredVis extends JFrame {
                 
             }
         });
-    }
-    
-     private void initNetwork() {
-        networkState = new NetworkState();
     }
 
     private void initTabbedPane() {
@@ -155,62 +154,68 @@ public class PredVis extends JFrame {
         tabbedPane.addTab("Predicates", null, predicatePanel, "View Predicate List");
     }
     
+    private void handleNetworkUpdated(final Map<Integer, NetworkState> networkstates) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                if (networkstates.containsKey(currentRound)) {
+                    updateNetworkView(networkstates.get(currentRound));
+                }
+                revalidate();
+                repaint();
+            }
+        });
+    }
+    
     private void initNetworkViewer() {
         networkPanel = new JPanel();
         graphPanel = new JPanel(new BorderLayout());
         updateNetworkView(null);
         networkPanel.add(graphPanel);
-        networkPanel.add(new JLabel("Monitoring " + predicateListModel.size() + " predicates. TODO update me"));
+        //networkPanel.add(new JLabel("Monitoring " + predicateListModel.size() + " predicates. TODO update me"));
+        
+        historySlider = new JSlider(JSlider.VERTICAL, 0, 0, 0);
+        historySlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent ce) {
+                if (!historySlider.getValueIsAdjusting()) {
+                    currentRound = historySlider.getValue();
+                    handleNetworkUpdated(wsnMonitor.getStates());
+                }
+            }
+            
+        });
+        historySlider.setPaintLabels(true);
+        historySlider.setPaintTicks(true);
+        networkPanel.add(historySlider);
         
         tabbedPane.addTab("Network", null, networkPanel, "View Network Diagram");
     }
     
-    private void initMonitoring(String comPort) {
-        if(monitoringThread != null) {
-            return;
-        }
-        
+    private void initMonitoring(String comPort) {        
         //Listen for updates to network state.
-        wsnMonitor = new WSNMonitor();
+        wsnMonitor = new WSNMonitor(comPort);
         wsnMonitor.addListener(new NetworkUpdateListener() {
             @Override
-            public void networkUpdated(final NetworkState ns) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        updateNetworkView(ns);
-                        revalidate();
-                        repaint();
+            public void networkUpdated(final Map<Integer, NetworkState> networkStates) {
+                handleNetworkUpdated(networkStates);
+                
+                // Update the maximum tick of the history slider
+                for (Integer i : networkStates.keySet()) {
+                    if (i > historySlider.getMaximum()) {
+                        historySlider.setMaximum(i);
                     }
-                });
+                }
             }
         });
-        
-        monitoringThread = new Thread(wsnMonitor, "monitor predicates");
-        monitoringThread.start();
-    }
-    
-    private void killMonitoring() {
-        if(monitoringThread != null) {
-            wsnMonitor.terminate();
-            
-            try {
-                monitoringThread.join();
-            } catch(InterruptedException e) {
-                //Do nothing.
-            }
-            
-            monitoringThread = null;
-            wsnMonitor = null;
-        }
     }
     
     private void updateNetworkView(NetworkState ns) {
-        if(ns == null) {
+        if (ns == null) {
             ns = new NetworkState();
         }
         
-        if(vv != null) {
+        if (vv != null) {
             graphPanel.remove(vv);
         }
         
@@ -220,16 +225,25 @@ public class PredVis extends JFrame {
         vv = new BasicVisualizationServer<>(layout);
         vv.setPreferredSize(new Dimension(600, 600));
         
-        //Init. vertex painter.
-        Transformer<Integer, Paint> vertexPaint = new Transformer<Integer, Paint>() {
+        // Init. vertex painter.
+        // TODO: Prevent colour changing on a resize
+        // Ideally we want a function that will cap a node id to a colour
+        final Transformer<NodeId, Paint> vertexPaint = new Transformer<NodeId, Paint>() {
             @Override
-            public Paint transform(Integer i) {
+            public Paint transform(NodeId i) {
                 Random rng = new Random();
                 return new Color(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256));
             }
         };
         
+        final Transformer<NodeId, Shape> vertexSize = new Transformer<NodeId, Shape>(){
+            public Shape transform(NodeId i){
+                return new Ellipse2D.Double(-20, -20, 40, 40);
+            }
+        };
+        
         vv.getRenderContext().setVertexFillPaintTransformer(vertexPaint);
+        vv.getRenderContext().setVertexShapeTransformer(vertexSize);
         vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller());
         vv.getRenderer().getVertexLabelRenderer().setPosition(Position.CNTR);
         
@@ -241,7 +255,7 @@ public class PredVis extends JFrame {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws IOException {
-        if(args.length != 1) {
+        if (args.length != 1) {
             System.err.println("Must supply communication port.");
             return;
         }

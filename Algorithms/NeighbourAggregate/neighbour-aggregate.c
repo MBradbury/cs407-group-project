@@ -139,7 +139,7 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 
 	rimeaddr_pair_t const * neighbours = (rimeaddr_pair_t const *)(msg + 1);
 
-	printf("R=%d {", msg->round_count);
+	printf("R=%d|", msg->round_count);
 
 	char firstaddr[RIMEADDR_STRING_LENGTH];
 	char secondaddr[RIMEADDR_STRING_LENGTH];
@@ -147,12 +147,12 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		printf("(%s,%s) ",
+		printf("%s,%s",
 			addr2str_r(&neighbours[i].first, firstaddr, RIMEADDR_STRING_LENGTH),
 			addr2str_r(&neighbours[i].second, secondaddr, RIMEADDR_STRING_LENGTH)
 		);
 	}
-
+	
 	printf("}\n");
 	
 	//Call the callback

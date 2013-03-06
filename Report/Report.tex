@@ -103,7 +103,7 @@
 
 % Title
 \HRule \\[0.4cm]
-{\Huge \bfseries Towards Debugging Wireless Sensor Network Applications}\\[0.4cm]
+{\Huge \bfseries Towards Practical Debugging of Wireless Sensor Network Applications}\\[0.4cm]
 
 \HRule \\[2cm]
 
@@ -244,6 +244,26 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 
 \clearpage
 
+\section{Future Work}
+
+\subsection{Improve memory Management}
+
+We use malloc to dynamically allocate memory when needed as this simplified development. This meant that we did not have to learn alternative memory allocators. However, we could use these alternate allocators to optimise the code to minimise (i) internal memory fragmentation (ii) external memory fragmentation (iii) performance (as malloc should not be used in RTS like WSNs due to \ldots) and (iv) memory usage.
+
+
+\subsection{Improve C Containers Developed}
+
+To aid in the development of our applications (and to ease developers from other languages such as Java to C) we developed a library of containers. These containers are very simple with the aim of having low memory usage. However, the complexity of certain operations could be improved. For example the \verb|map| container's time complexity for retrieval of an element given a key is O(n) where n is the number of elements in the container as the underlying container is simply an array. This could be improved to O(log(n)) by sorting the elements in the underlying array, or improved further to amortized O(1) by using a hash table. Although, whatever improved container is chosen, the importance of memory usage (including issues such as fragmentation) should be taken into account.
+
+\clearpage
+
+
+\section{Conclusions}
+
+
+\clearpage
+
+
 \appendixpage
 \addappheadtotoc
 \appendix
@@ -308,7 +328,6 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 \inputminted[linenos=true,tabsize=3,fontsize=\small]{c}{../Samples/Clustering/cluster.c}
 
 \newpage
-
 
 
 \section{References}

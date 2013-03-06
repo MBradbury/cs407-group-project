@@ -1,227 +1,337 @@
 #include "nhopflood.h"
 
 #include "contiki.h"
-
 #include "dev/leds.h"
+#include "net/packetbuf.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 #include "random-range.h"
-#include "sensor-converter.h"
 #include "debug-helper.h"
+
+static void nhopflood_delayed_start_sending(void * ptr);
+
+// The custom headers we use
+static const struct packetbuf_attrlist flood_attributes[] = {
+	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
+	{ PACKETBUF_ATTR_HOPS, PACKETBUF_ATTR_BIT * 4 },
+	{ PACKETBUF_ATTR_TTL, PACKETBUF_ATTR_BIT * 4 },
+	{ PACKETBUF_ATTR_EPACKET_ID, PACKETBUF_ATTR_BIT * 8 },
+	BROADCAST_ATTRIBUTES
+    PACKETBUF_ATTR_LAST
+};
 
 // Message Structs
 typedef struct
 {
-	rimeaddr_t originator;
-	message_id_t message_id;
-	uint8_t max_hops;
-	uint8_t current_hops;
-	// After this point the user generated data will be contained
-} nhopflood_msg_t;
+	rimeaddr_t sender;
+	uint8_t id;
+	uint8_t ttl;
+	uint8_t hops;
 
-// Argument Params Structs
+	uint8_t retx;
+
+	uint8_t data_length;
+	void * data;
+
+} packet_details_t;
+
+static packet_details_t * alloc_packet_details(uint8_t id, uint8_t hops)
+{
+	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t));
+
+	rimeaddr_copy(&details->sender, &rimeaddr_node_addr);
+	details->id = id;
+	details->ttl = hops;
+	details->hops = 0;
+
+	details->retx = 0;
+
+	details->data_length = packetbuf_datalen();
+	details->data = malloc(details->data_length);
+
+	memcpy(details->data, packetbuf_dataptr(), details->data_length);
+
+	return details;
+}
+
+static packet_details_t * packet_details_from_packetbuf(void)
+{
+	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t));
+
+	rimeaddr_copy(&details->sender, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
+	details->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
+	details->ttl = packetbuf_attr(PACKETBUF_ATTR_TTL);
+	details->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+
+	details->retx = 0;
+
+	details->data_length = packetbuf_datalen();
+	details->data = malloc(details->data_length);
+
+	memcpy(details->data, packetbuf_dataptr(), details->data_length);
+
+	return details;
+}
+
+static void free_packet_details(void * ptr)
+{
+	packet_details_t * details = (packet_details_t *)ptr;
+	if (details != NULL)
+	{
+		free(details->data);
+		free(details);
+	}
+}
+
+
 typedef struct
 {
-	nhopflood_conn_t * conn;
-} nhopflood_timer_params_t;
+	rimeaddr_t from;
+	uint8_t id;
+	uint8_t hops;
+} last_seen_t;
 
-static inline nhopflood_conn_t * conncvt_flood_message_recv(struct stbroadcast_conn * conn)
+static bool rimeaddr_equality(void const * left, void const * right)
+{
+	if (left == NULL || right == NULL)
+		return false;
+
+	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
+}
+
+static inline nhopflood_conn_t * conncvt_broadcast(struct broadcast_conn * conn)
 {
 	return (nhopflood_conn_t *)conn;
 }
 
-// Stubborn Broadcast Message Recieved Callback
-static void flood_message_recv(struct stbroadcast_conn * c)
+// We receive a message from a neighbour
+static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sender)
 {
 	// Get a pointer to the nhopflood_conn_t
-	nhopflood_conn_t * conn = conncvt_flood_message_recv(c);
+	nhopflood_conn_t * conn = conncvt_broadcast(c);
 
-	// Copy the message from the packet buffer
-	char tmpBuffer[PACKETBUF_SIZE];
-	memcpy(tmpBuffer, packetbuf_dataptr(), packetbuf_datalen());
-	nhopflood_msg_t const * msg = (nhopflood_msg_t *)tmpBuffer;
+	/*char s1[RIMEADDR_STRING_LENGTH], s2[RIMEADDR_STRING_LENGTH];
 
-	//Increment current_hops
-	msg->current_hops++;
+	printf("Received flood from %s with id:%d ttl:%d hops:%d src:%s\n",
+		addr2str_r(sender, s1, RIMEADDR_STRING_LENGTH),
+		packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID),
+		packetbuf_attr(PACKETBUF_ATTR_TTL),
+		packetbuf_attr(PACKETBUF_ATTR_HOPS),
+		addr2str_r(packetbuf_addr(PACKETBUF_ADDR_ESENDER), s2, RIMEADDR_STRING_LENGTH)
+	);*/
 
-	// Print a debug message
-	printf("I just recieved a Flood Message! Originator: %s Max Hops: %d Current Hops %d Message ID: %d\n",
-		addr2str(&msg->originator),
-		msg->max_hops,
-		msg->current_hops,
-		msg->message_id);
+	// Get the last seen entry for the end-point sender
+	last_seen_t * last = map_get(&conn->latest_message_seen, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 
-	//TODO: If current_hops <= max_hops, then deliver
-	//TODO: If current_hops < max_hops, then enqueue in packet buffer to be retransmitted
-}
+	bool seenbefore = true;
 
-// Stubborn Broadcast Message Sent Callback 
-static void flood_message_sent(struct stbroadcast_conn *c)
-{
-	//printf("I've sent a nhopflood message!\n");
+	// Check if we have seen this packet before
+	// Not seen from this node before
+	if (last == NULL)
+	{
+		seenbefore = false;
+
+		// We need to record that we have seen a packet from this sender
+		last = (last_seen_t *)malloc(sizeof(last_seen_t));
+		rimeaddr_copy(&last->from, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
+		last->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
+		last->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+
+		map_put(&conn->latest_message_seen, last);
+	}
+	// Not seen this message before, but have received from this node before
+	else if (last->id < packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) || 
+			(packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) == 0 && last->id > 240) // Handle integer overflow
+			)
+	{
+		seenbefore = false;
+		last->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
+		last->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+	}
+	// Seen before but this is from a shorter route
+	else if (last->id == packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) &&
+			 last->hops < packetbuf_attr(PACKETBUF_ATTR_HOPS))
+	{
+		// Have seen before, but re-deliver
+		conn->receive_fn(
+			conn,
+			packetbuf_addr(PACKETBUF_ADDR_ESENDER), 
+			packetbuf_attr(PACKETBUF_ATTR_HOPS),
+			last->hops
+		);
+
+		// We now need to update the hop count we have recorded
+		linked_list_elem_t elem;
+		for (elem = linked_list_first(&conn->packet_queue);
+			linked_list_continue(&conn->packet_queue, elem);
+			elem = linked_list_next(elem))
+		{
+			packet_details_t * data = (packet_details_t *) linked_list_data(&conn->packet_queue, elem);
+
+			if (rimeaddr_equality(&data->sender, packetbuf_addr(PACKETBUF_ADDR_ESENDER)) &&
+				data->id == last->id)
+			{
+				uint8_t hops_diff = data->hops - packetbuf_attr(PACKETBUF_ATTR_HOPS);
+
+				// Update the hops
+				data->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+
+				// As we have updated the hops we also need to update the TTL
+				data->ttl = (hops_diff > data->ttl) ? 0 : data->ttl - hops_diff;
+			}
+		}
+
+		last->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+	}
+
+	if (!seenbefore)
+	{
+		conn->receive_fn(
+			conn,
+			packetbuf_addr(PACKETBUF_ADDR_ESENDER), 
+			packetbuf_attr(PACKETBUF_ATTR_HOPS),
+			0
+		);
+
+		// Add this packet to the queue if it needs to be forwarded
+		// and we have not seen it before.
+		if (packetbuf_attr(PACKETBUF_ATTR_TTL) != 0)
+		{
+			//printf("Adding received message to queue\n");
+			packet_details_t * details = packet_details_from_packetbuf();
+			linked_list_append(&conn->packet_queue, details);
+		}
+	}
 }
 
 // Setup the Stubborn Broadcast Callbacks
-static const struct broadcast_callbacks broadcastCallbacks =
-	{ &flood_message_recv, &flood_message_sent };
+static const struct broadcast_callbacks broadcastCallbacks = { &flood_message_recv };
 
-// Initialise n-hop data flooding.
-bool nhopflood_start(
-	nhopflood_conn_t * conn, uint8_t ch1, data_generation_fn data_fn, 
-	data_receive_fn receive_fn, unsigned int data_size, clock_time_t period, 
-	clock_time_t max, clock_time_t send_delay)
+
+
+static void nhopflood_delayed_start_sending(void * ptr)
 {
-	if (conn == NULL || data_fn == NULL ||  data_size == 0 ||
-		receive_fn == NULL || ch1 == NULL)
+	// Get the conn from the pointer provided
+	nhopflood_conn_t * conn = (nhopflood_conn_t *)ptr;
+
+	packet_details_t * details = (packet_details_t *) linked_list_peek(&conn->packet_queue);
+
+	if (details != NULL)
 	{
-		printf("nhopflood_start failed!\n");
-		return false;
+		// Only send if the TTL is greater than 0
+		if (details->ttl > 0)
+		{
+			//printf("Sending onwards data with id:%d ttl:%d hops:%d from:%s\n",
+			//	details->id, details->ttl - 1, details->hops + 1, addr2str(&details->sender));
+
+			// Create the memory for the packet
+			packetbuf_clear();
+			packetbuf_set_datalen(details->data_length);
+			debug_packet_size(details->data_length);
+			void * msg = packetbuf_dataptr();
+
+			// Copy the packet to the buffer
+			memcpy(msg, details->data, details->data_length);
+
+			// Set the header flags
+			packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->sender);
+			packetbuf_set_attr(PACKETBUF_ATTR_HOPS, details->hops + 1);
+			packetbuf_set_attr(PACKETBUF_ATTR_TTL, details->ttl - 1);
+			packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, details->id);
+
+			// Send the packet using normal broadcast
+			if (broadcast_send(&conn->bc))
+			{
+				// Increment the retransmission counter
+				details->retx += 1;
+			}
+		}
+
+		// Remove the current queued packet as we have sent all we intend to send
+		// Or the TTL is 0
+		if (details->retx >= conn->maxrx || details->ttl == 0)
+		{
+			//printf("Removing packet from queue RETX(%d >= %d) or TTL(%d == 0)\n", details->retx, conn->maxrx, details->ttl);
+			linked_list_pop(&conn->packet_queue);
+		}
 	}
 
-	// Initialize the packetqueue
-	PACKETQUEUE(nhopflood_packetqueue, 100);
+	// Restart the ctimer
+	ctimer_restart(&conn->send_timer);
+}
 
-	ctimer_init();
 
-	broadcast_open(&conn->bc, ch1, &stbroadcastCallbacks);
+// Initialise n-hop data flooding.
+bool nhopflood_start(nhopflood_conn_t * conn, uint8_t ch, nhopflood_recv_fn receive_fn,
+	clock_time_t send_period, uint8_t maxrx)
+{
+	if (conn == NULL || receive_fn == NULL || ch == 0)
+	{
+		return false;
+	}
+	
+	broadcast_open(&conn->bc, ch, &broadcastCallbacks);
+	channel_set_attributes(ch, flood_attributes);
 
-	conn->data_fn = data_fn;
 	conn->receive_fn = receive_fn;
 
-	conn->data_size = data_size;
-	conn->max_hops = 0;
-	conn->message_id = 0;
+	conn->current_id = 0;
 
-	conn->period = period;
-	conn->max = max;
-	conn->send_delay = send_delay;
+	linked_list_init(&conn->packet_queue, &free_packet_details);
+	map_init(&conn->latest_message_seen, &rimeaddr_equality, &free);
+
+	conn->send_period = send_period;
+	conn->maxrx = maxrx;
+
+	ctimer_set(&conn->send_timer, conn->send_period, &nhopflood_delayed_start_sending, conn);
 
 	return true;
 }
 
 // Shutdown n-hop data flooding.
-bool nhopflood_end(nhopflood_conn_t * conn)
+bool nhopflood_stop(nhopflood_conn_t * conn)
 {
 	if (conn == NULL)
 	{
-		printf("nhopflood_end failed!\n");
 		return false;
 	}
+
+	ctimer_stop(&conn->send_timer);
+
+	map_clear(&conn->latest_message_seen);
+	linked_list_clear(&conn->packet_queue);
 
 	broadcast_close(&conn->bc);
 
 	return true;
 }
 
-// Register a request to send this nodes data n hops next cycle
-bool nhopflood_register(nhopflood_conn_t * conn, uint8_t hops)
+// Register a request to send this nodes data n hops next round
+bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 {
-	if (hops == 0)
+	if (conn == NULL)
 	{
-		printf("Hops cannot be set to 0!\n");
+		//printf("The nhopflood_conn is null!\n");
 		return false;
 	}
 
-	if (conn == NULL)
+	// When the number of hops to send to are 0, we can simply
+	// do nothing
+	if (hops == 0)
 	{
-		printf("The nhopflood_conn is null!\n");
+		printf("Nowhere to send data to as hops=0\n");
+		return true;
 	}
 
-	// If max_hops == 0 then we havent recieved a register request before in this cycle so we should initialise the timer for the delayed start
-	if (conn->max_hops == 0)
-	{
-		nhopflood_timer_params_t * params = (nhopflood_timer_params_t *)malloc(sizeof(nhopflood_timer_params_t));
-		params->conn = conn;
+	// Create packet details
+	packet_details_t * details = alloc_packet_details(conn->current_id++, hops);
 
-		ctimer_set(&conn->delay_timer, conn->send_delay, &nhopflood_delayed_start_sending, conn);
-	}
-
-	// If this request is higher than 
-	if (conn->max_hops < hops)
-	{
-		conn->max_hops = hops;
-	}
+	// Record the details to be sent
+	linked_list_append(&conn->packet_queue, details);
 
 	return true;
 }
 
-void nhopflood_delayed_start_sending(void * ptr)
-{
-	// Get the conn from the pointer provided
-	nhopflood_conn_t * conn = (nhopflood_conn_t *)ptr;
-
-	// Calculate the size of the packet
-	unsigned int packet_size = sizeof(nhopflood_msg_t) + conn->data_size;
-
-	// Create the memory for the packet to broadcast
-	packetbuf_clear();
-	packetbuf_set_datalen(packet_size);
-	debug_packet_size(packet_size);
-	nhopflood_msg_t * msg = (nhopflood_msg_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_size);
-
-	// Populate the packet with our data
-	rimeaddr_copy(&msg->originator, &rimeaddr_node_addr);
-	msg->message_id = conn->message_id;
-	msg->max_hops = conn->max_hops;
-	msg->current_hops = 0;
-
-	// Get the data to send from the data function
-	void * msg_data = (void *)(msg + 1);
-	(*conn->conn->data_fn)(msg_data);
-
-	// Initialize the packet queue
-	packetqueue_init(&nhopflood_packetqueue);
-	
-	// Enqueue the packet previously created
-	packetqueue_enqueue_packetbuf(&nhopflood_packetqueue, 0, );
-
-	// Start a timer to send the first packet in the queue every interval
-	ctimer_set(&conn->send_timer, &conn->period, &nhopflood_delayed_repeat_send, conn);
-
-	// Start a timer to cancel the broadcast after max time has been reached
-	ctimer_set(&conn->cancel_timer, &conn->max, &nhopflood_delayed_cancel, conn);
-}
-
-void nhopflood_delayed_repeat_send(void * ptr)
-{
-	// Get the conn from the pointer provided
-	nhopflood_conn_t * conn = (nhopflood_conn_t *)ptr;
-
-	//TODO: Get the first packet from the packet queue
-	//TODO: Dequeue the packet from the packet queue
-	//TODO: If its from this node and isn't out of date copy it and re-enqueue it
-	
-	//TODO: Send the packet using normal broadcast
-	broadcast_send(&conn);
-
-	// Reset the timer to call this function again
-	ctimer_reset(&conn->send_timer);
-}
-
-void nhopflood_delayed_cancel(void * ptr)
-{
-	//TODO: Cancel the nhopflood_delayed_repeat_send_timer
-	//TODO: Clear the packet queue
-
-	// Get the params from the pointer provided
-	nhopflood_timer_params_t * params = (nhopflood_timer_params_t *)ptr;
-
-	// Cancel the stubborn broadcast
-	stbroadcast_cancel(params->conn->bc);
-
-	// Reset the max_hops to start the cycle again
-	params->conn->max_hops = 0;
-	params->conn->message_id++;
-
-	// Finally we free the allocated params structure.
-	free(ptr);
-}
-
-void nhopflood_broadcast_packet()
-{
-
-}

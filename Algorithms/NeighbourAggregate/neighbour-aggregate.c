@@ -128,9 +128,14 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 			addr2str_r(&neighbours[i].first, firstaddr, RIMEADDR_STRING_LENGTH),
 			addr2str_r(&neighbours[i].second, secondaddr, RIMEADDR_STRING_LENGTH)
 		);
+
+		if (i + 1 < length)
+		{
+			printf("~");
+		}
 	}
 	
-	printf("}\n");
+	printf("\n");
 	
 	// Call the callback
 	(*conn->callbacks.data_callback_fn)(neighbours, length, msg->round_count);

@@ -9,10 +9,13 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Paint;
+import java.awt.Shape;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Ellipse2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
@@ -26,7 +29,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import org.apache.commons.collections15.Transformer;
@@ -40,13 +42,12 @@ public class PredVis extends JFrame {
     private DefaultListModel<Predicate> predicateListModel = null;
     
     //Network data.
-    private NetworkState networkState = null;
-    private Layout<Integer, String> layout = null;
-    private BasicVisualizationServer<Integer, String> vv = null;
+    private Layout<NodeId, String> layout = null;
+    private BasicVisualizationServer<NodeId, String> vv = null;
     
     //Monitoring data.
-    WSNMonitor wsnMonitor = null;
-    Thread monitoringThread = null;
+    private WSNMonitor wsnMonitor = null;
+    private Thread monitoringThread = null;
     
     //GUI widgets.
     private JTabbedPane tabbedPane = null;
@@ -69,7 +70,6 @@ public class PredVis extends JFrame {
         
         //Init base state.
         initPredicates();
-        initNetwork();
         
         //Init gui.
         initTabbedPane();
@@ -100,10 +100,6 @@ public class PredVis extends JFrame {
                 
             }
         });
-    }
-    
-     private void initNetwork() {
-        networkState = new NetworkState();
     }
 
     private void initTabbedPane() {
@@ -166,12 +162,12 @@ public class PredVis extends JFrame {
     }
     
     private void initMonitoring(String comPort) {
-        if(monitoringThread != null) {
+        if (monitoringThread != null) {
             return;
         }
         
         //Listen for updates to network state.
-        wsnMonitor = new WSNMonitor();
+        wsnMonitor = new WSNMonitor(comPort);
         wsnMonitor.addListener(new NetworkUpdateListener() {
             @Override
             public void networkUpdated(final NetworkState ns) {
@@ -195,7 +191,7 @@ public class PredVis extends JFrame {
             wsnMonitor.terminate();
             
             try {
-                monitoringThread.join();
+                monitoringThread.join(1000);
             } catch(InterruptedException e) {
                 //Do nothing.
             }
@@ -206,7 +202,7 @@ public class PredVis extends JFrame {
     }
     
     private void updateNetworkView(NetworkState ns) {
-        if(ns == null) {
+        if (ns == null) {
             ns = new NetworkState();
         }
         
@@ -220,16 +216,25 @@ public class PredVis extends JFrame {
         vv = new BasicVisualizationServer<>(layout);
         vv.setPreferredSize(new Dimension(600, 600));
         
-        //Init. vertex painter.
-        Transformer<Integer, Paint> vertexPaint = new Transformer<Integer, Paint>() {
+        // Init. vertex painter.
+        // TODO: Prevent colour changing on a resize
+        // Ideally we want a function that will cap a node id to a colour
+        final Transformer<NodeId, Paint> vertexPaint = new Transformer<NodeId, Paint>() {
             @Override
-            public Paint transform(Integer i) {
+            public Paint transform(NodeId i) {
                 Random rng = new Random();
                 return new Color(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256));
             }
         };
         
+        final Transformer<NodeId, Shape> vertexSize = new Transformer<NodeId, Shape>(){
+            public Shape transform(NodeId i){
+                return new Ellipse2D.Double(-20, -20, 40, 40);
+            }
+        };
+        
         vv.getRenderContext().setVertexFillPaintTransformer(vertexPaint);
+        vv.getRenderContext().setVertexShapeTransformer(vertexSize);
         vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller());
         vv.getRenderer().getVertexLabelRenderer().setPosition(Position.CNTR);
         
@@ -241,7 +246,7 @@ public class PredVis extends JFrame {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws IOException {
-        if(args.length != 1) {
+        if (args.length != 1) {
             System.err.println("Must supply communication port.");
             return;
         }

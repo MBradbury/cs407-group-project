@@ -8,56 +8,67 @@ import java.io.InputStreamReader;
  *
  * @author Tim
  */
-public class SinkComms {
-    public static final String SERIALDUMP_LINUX = "./tools/sky/serialdump-linux";
+public class NodeComms {
+    public static final String SERIALDUMP_LINUX = "/home/user/contiki/tools/sky/serialdump-linux";
     
-    private String comPort = null;
-    private Process serialDumpProcess = null;
-    
-    public SinkComms(String comPort) {
+    private final String comPort;
+    private Thread readInput = null;
+    private volatile boolean stop = false;
+
+    public NodeComms(String comPort) {
         this.comPort = comPort;
     }
     
-    public void connect() {
+    public void connect(final NodeCommsCallback callback) {
         final String fullCommand = SERIALDUMP_LINUX + " " + "-b115200" + " " + comPort;
         final String[] cmd = fullCommand.split(" ");
         
         //Open streams from sink node.
         try {
-            serialDumpProcess = Runtime.getRuntime().exec(cmd);
+            final Process serialDumpProcess = Runtime.getRuntime().exec(cmd);
             final BufferedReader input = new BufferedReader(new InputStreamReader(serialDumpProcess.getInputStream()));
             final BufferedReader err = new BufferedReader(new InputStreamReader(serialDumpProcess.getErrorStream()));
             
-            Thread readInput = new Thread(new Runnable() {
+            readInput = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     String line;
 
                     try {
                         while((line = input.readLine()) != null) {
-                            assert(line != null);
-                            String[] components = line.split(" ");
- 
-                            for(int i=0; i<components.length; i++) {
-                                System.out.print(components[i] + " ");
+                            if (stop) {
+                                break;
                             }
                             
-                            System.out.println();
+                            assert(line != null);
+                            
+                            // We have a line, now we need to send it to the callback
+                            callback.receivedLine(line);
                         }
+                        
                         input.close();
-                        System.out.println("Serialdump process shut down, exiting");
-                        System.exit(1);
+                        callback.closedConnection();
                     } catch(IOException e) {
-                        System.err.println("Exception when reading from serialdump");
-                        System.exit(1);
+                        callback.lostConnection(e);
                     }
                 }
             }, "read input stream thread");
 
             readInput.start();
         } catch(Exception e) {
-            System.err.println("Exception when executing '" + fullCommand + "'");
-            System.exit(1);
+            callback.lostConnection(e);
+        }
+    }
+    
+    public void close()
+    {
+        try {
+            stop = true;
+            if (readInput != null) {
+                readInput.join(1000);
+            }
+        } catch (Exception e) {
+            // Ignore
         }
     }
 }

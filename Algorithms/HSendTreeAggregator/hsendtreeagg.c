@@ -225,23 +225,15 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 		map_put(&neighbour_info, elem); 
 	}
 
-	char firstaddr[RIMEADDR_STRING_LENGTH];
-	char secondaddr[RIMEADDR_STRING_LENGTH];
-
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
 		rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
 		
-		
 		rimeaddr_copy(&p->first, &pairs[i].first);
 		rimeaddr_copy(&p->second, &pairs[i].second);
-		
-		printf("Created pair (%s,%s)\n",
-			addr2str_r(&p->first, firstaddr, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&p->second, secondaddr, RIMEADDR_STRING_LENGTH));
 
-		 //add the pair to the list
+		//add the pair to the list
 		unique_array_append(information, p);
 	}
 }
@@ -265,7 +257,6 @@ static unique_array_t * get_neighbours(rimeaddr_t * target, int round_count)
 		return output; //no data, return empty array
 	}
 
-
 	//go through each pair
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(pairs); 
@@ -273,17 +264,6 @@ static unique_array_t * get_neighbours(rimeaddr_t * target, int round_count)
 		elem = unique_array_next(elem))
 	{
 		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(pairs, elem);
-
-	char firstaddr[RIMEADDR_STRING_LENGTH];
-	char secondaddr[RIMEADDR_STRING_LENGTH];
-	char thirdaddr[RIMEADDR_STRING_LENGTH];
-
-		printf("Eval: checking pair (%s,%s) with target: %s\n", 
-			addr2str_r(&data->first, firstaddr, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&data->second, secondaddr, RIMEADDR_STRING_LENGTH),
-			addr2str_r(target, thirdaddr, RIMEADDR_STRING_LENGTH)
-
-			); 
 		
 		//if either match, add the other to the list
 		if (rimeaddr_cmp(&data->first, target))
@@ -595,8 +575,8 @@ PROCESS_THREAD(data_gather, ev, data)
 		//add it to the list
 		array_list_append(&predicates, pred);
 
-		//start the evauluation process
-		ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 1 , &data_evaluation, NULL);
+		//start the evauluation method
+		ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10 , &data_evaluation, NULL);
 	}
 
 	PROCESS_END();
@@ -739,15 +719,6 @@ static void data_evaluation(void * ptr)
 	static node_data_t * all_neighbour_data; //data that is passed to the evaluation
 	printf("Eval: Beginning Evaluation\n");
 
-	//steps:
-	//for each predicate
-		//Start with the target node, and get all the neighbours
-		//go through each neighbour
-			//Check if already seen the neighbour, (if we have ignore)
-			//Add its data to the appropiate place in the array
-			//add the neighbour to the list of seen nodes
-			//add it to a list of target nodes needed to check
-
 	//for each predicate		
 	array_list_elem_t pred_elem;
 	for (pred_elem = array_list_first(&predicates); 
@@ -791,7 +762,7 @@ static void data_evaluation(void * ptr)
 				target = unique_array_next(target))
 			{
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-				printf("Eval: Checking Target: %s for hops %d", addr2str(t), hops);
+				printf("Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
 				unique_array_t * neighbours = get_neighbours(t, round_count); //get the neighbours of the node
 				
@@ -813,7 +784,7 @@ static void data_evaluation(void * ptr)
 						map_t * round_data = st->data;
 
 						node_data_t * nd = (node_data_t *)map_get(round_data, &n);
-						
+
 						rimeaddr_t * node_to_copy = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
 						rimeaddr_copy(node_to_copy, n);
 						
@@ -852,7 +823,7 @@ static void data_evaluation(void * ptr)
 
 		// Generate array of all the data
 		all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
-		printf("Eval: Max hops: %d\n",max_hops);
+
 		uint8_t i;
 		for (i = 1; i <= max_hops; ++i)
 		{
@@ -891,10 +862,10 @@ static void data_evaluation(void * ptr)
 			printf("Pred: FAILED due to error: %s\n", error_message());
 		}
 
-		array_list_clear(&hops_data);
+		array_list_clear(&hops_data) * 10;
 	}
 
-	//++round_count;
+	++round_count;
 
-	ctimer_set(&ct_data_eval, CLOCK_SECOND * 60, &data_evaluation, NULL);
+	ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10, &data_evaluation, NULL);
 }

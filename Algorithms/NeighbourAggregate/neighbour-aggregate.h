@@ -1,9 +1,7 @@
 #ifndef CS407_NEIGHBOUR_AGGREGATE
 #define CS407_NEIGHBOUR_AGGREGATE
 
-#include "net/rime.h"
-
-#include <stdbool.h>
+#include "rimeaddr-helpers.h"
 
 #include "net/tree-aggregator.h"
 #include "neighbour-detect.h"
@@ -11,12 +9,6 @@
 struct neighbour_agg_conn_t;
 //used by the ctimer for opening the tree agg
 
-
-typedef struct
-{
-	rimeaddr_t first;
-	rimeaddr_t second;
-} rimeaddr_pair_t;
 
 typedef struct
 {
@@ -50,3 +42,4 @@ bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 void neighbour_aggregate_close(neighbour_agg_conn_t * conn);
 
 #endif /*CS407_NEIGHBOUR_AGGREGATE*/
+

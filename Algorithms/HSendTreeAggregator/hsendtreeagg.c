@@ -84,8 +84,8 @@ typedef struct
 typedef struct
 {
 	rimeaddr_t addr;
-	float temp;
-	int humidity;
+	nfloat temp;
+	nint humidity;
 	//nint light1;
 	//nint light2;
 } node_data_t;
@@ -165,18 +165,6 @@ static bool intCompare(void const * x, void const * y)
 	return a-b;
 }
 
-static bool rimeaddr_pair_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	rimeaddr_pair_t const * lp = (rimeaddr_pair_t const *)left;
-	rimeaddr_pair_t const * rp = (rimeaddr_pair_t const *)right;
-
-	return
-		(rimeaddr_cmp(&lp->first, &rp->first) && rimeaddr_cmp(&lp->second, &rp->second)) ||
-		(rimeaddr_cmp(&lp->second, &rp->first) && rimeaddr_cmp(&lp->first, &rp->second));
-}
 
 static bool node_data_equality(void const * left, void const * right)
 {
@@ -189,13 +177,6 @@ static bool node_data_equality(void const * left, void const * right)
 	return rimeaddr_cmp(&l->addr, &r->addr);
 }
 
-static bool rimeaddr_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
-}
 
 //TODO: add clearing of previous neighbour information
 /* to be called when neighbour aggregate gets some data to add */
@@ -204,12 +185,12 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 	printf("Handling neighbour data - HSend\n");
 	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
-	//check if round is in map already, if not create new unique array list
+	// Check if round is in map already, if not create new unique array list
 	unique_array_t * information;
 
 	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
 
-	if(stored) //saved before
+	if (stored) //saved before
 	{
 		information = stored->data;
 	}
@@ -234,13 +215,13 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 		rimeaddr_copy(&p->first, &pairs[i].first);
 		rimeaddr_copy(&p->second, &pairs[i].second);
 
-		//add the pair to the list
+		// Add the pair to the list
 		unique_array_append(information, p);
 	}
 }
 
 /* Gets the neighbours of a given node */
-static unique_array_t * get_neighbours(rimeaddr_t * target, int round_count)
+static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_count)
 {
 	unique_array_t * output = (unique_array_t *)malloc(sizeof(unique_array_t));
 	unique_array_init(output, &rimeaddr_equality, &free);
@@ -249,7 +230,7 @@ static unique_array_t * get_neighbours(rimeaddr_t * target, int round_count)
 	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
 	unique_array_t * pairs;
 
-	if(stored) //saved before
+	if (stored) //saved before
 	{
 		pairs = stored->data;
 	}
@@ -285,20 +266,20 @@ PROCESS(send_data_process, "Send data process");
 
 AUTOSTART_PROCESSES(&data_gather);
 
-//Sink recieved final set of data
+// Sink recieved final set of data
 static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 {
 	printf("HSend Agg Received data\n");
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-	//extract data from packet buffer
+	// Extract data from packet buffer
 	collected_data_t const * msg = (collected_data_t const *)packetbuf_dataptr();
 
 	uint8_t length = msg->length;
 
-	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
+	node_data_t const * msgdata = (node_data_t const *)(msg + 1); // Get the pointer after the message
 
-	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &msg->round_count); //map for that round
+	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &msg->round_count); // Map for that round
 
 	map_t * round_data;
 
@@ -308,22 +289,22 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 	}
 	else
 	{
-		//allocate a new map object
+		// Allocate a new map object
 		round_data = (map_t *)malloc(sizeof(map_t));
 
-		//init the new map
+		// Init the new map
 		map_init(round_data, &node_data_equality, &free);
 		
 		st = (node_data_map_elem_t *)malloc(sizeof(node_data_map_elem_t));
 		st->key = msg->round_count;
 		st->data = round_data;
 
-		//add it to the main map
+		// Add it to the main map
 		map_put(&recieved_data, st);
 	}
 
 	unsigned int i;
-	for(i = 0; i < length; ++i)
+	for (i = 0; i < length; ++i)
 	{
 		printf("HSend Agg - HSend: Recv, Node: %s Temp:%d, Humidity: %d\n", 
 			addr2str(&msgdata[i].addr), 
@@ -335,7 +316,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 		nd->temp = (int)msgdata[i].temp;
 		nd->humidity = msgdata[i].humidity;
 
-		//add the data to the map 
+		// Add the data to the map 
 		map_put(round_data, nd);
 	}
 }
@@ -366,7 +347,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 	node_data_t const * msgdata = (node_data_t const *)(data_to_apply + 1); //get the pointer after the message
 
 	unsigned int i;
-	for(i = 0; i< data_to_apply->length; ++i)
+	for (i = 0; i< data_to_apply->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
 		tmp->temp = msgdata[i].temp;

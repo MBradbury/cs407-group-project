@@ -736,6 +736,50 @@ static bool evaluate_predicate(
 static void data_evaluation(void * ptr)
 {
 	static uint8_t round_count = 0;
+	static node_data_t * all_neighbour_data; //data that is passed to the evaluation
+	printf("Eval: Beginning Evaluation\n");
+
+	//steps:
+	//for each predicate
+		//Start with the target node, and get all the neighbours
+		//go through each neighbour
+			//Check if already seen the neighbour, (if we have ignore)
+			//Add its data to the appropiate place in the array
+			//add the neighbour to the list of seen nodes
+			//add it to a list of target nodes needed to check
+
+	//for each predicate		
+	array_list_elem_t pred_elem;
+	for (pred_elem = array_list_first(&predicates); 
+		array_list_continue(&predicates, pred_elem); 
+		pred_elem = array_list_next(pred_elem))
+	{
+		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)array_list_data(&predicates, pred_elem);
+		
+		rimeaddr_t destination; //destination node (initial target)
+	    rimeaddr_copy(&destination, &pred->destination);
+
+	    //get the maximum number of hops needed for this predcate
+	    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
+
+		array_list_init(&hops_data, &free_hops_data);
+
+		unsigned int max_size = 0; //Number of nodes we pass to the evaluation
+
+		//array of nodes that have been seen and checked so far
+	    unique_array_t seen_nodes;
+	    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
+
+	    //array of nodes that we need the neighbours for
+	    unique_array_t target_nodes;
+	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
+	    unique_array_append(&target_nodes, &destination); //start with the destination node
+	}
+}
+
+static void data_evaluation2(void * ptr)
+{
+	static uint8_t round_count = 0;
 	static node_data_t * all_neighbour_data;
 
 	printf("\nEval: Beginning Evaluation\n");

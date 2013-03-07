@@ -150,7 +150,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * tconn)
 	{
 		printf("Neighbour Agg: Is leaf starting data aggregation\n");
 
-		leds_on(LEDS_RED);
+		leds_on(LEDS_GREEN);
 
 		// Start sending data if we are a leaf
 		neighbour_agg_send_data(conn);
@@ -159,7 +159,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * tconn)
 
 static void tree_aggregate_update(void * voiddata, void const * to_apply, unsigned int length)
 {
-	toggle_led_for(LEDS_RED, CLOCK_SECOND);
+	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
 	printf("Neighbour Agg: Update local data\n");
 
@@ -335,7 +335,6 @@ typedef struct
 	rimeaddr_t const * sink;
 	uint16_t ch1;
 	uint16_t ch2;
-	uint16_t ch3;
 } open_tree_agg_t;
 
 // Called by the ctimer after the initial setup
@@ -375,7 +374,6 @@ bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 		s_init->sink = sink;
 		s_init->ch1 = ch1;
 		s_init->ch2 = ch2;
-		s_init->ch3 = ch3;
 
 		ctimer_set(&conn->ct_initial_wait, INITIAL_NEIGHBOUR_DETECT_PERIOD, &open_tree_agg, s_init);
 
@@ -406,7 +404,7 @@ AUTOSTART_PROCESSES(&neighbour_agg_process);
 
 static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
-	printf("Got some data of length :%d in round %d\n", length, round_count);
+	printf("Got some data of length:%d in round %d\n", length, round_count);
 }
 
 static neighbour_agg_conn_t nconn;

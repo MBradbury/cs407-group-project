@@ -292,11 +292,8 @@ static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned i
 static map_t predicate_map;
 static uint8_t max_comm_hops = 0;
 
-// Rime address of target node (or rimeaddr_null for everyone)
-// binary bytecode for the VM
 static void trickle_send_rcv(struct trickle_conn * c)
 {
-	// Copy out packet, allows handling multiple evals at once
 	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
 	// Get eventual destination from header

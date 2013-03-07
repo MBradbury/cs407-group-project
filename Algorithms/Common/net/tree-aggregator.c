@@ -76,10 +76,6 @@ static void parent_detect_finished(void * ptr)
 {
 	tree_agg_conn_t * conn = (tree_agg_conn_t *)ptr;
 
-	// As we are no longer listening for our parent node
-	// indicate so through the LEDs
-	leds_off(LEDS_RED);
-
 	printf("Tree Agg: Timer on %s expired\n",
 		addr2str(&rimeaddr_node_addr));
 
@@ -261,6 +257,8 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 			addr2str(&msg->source));
 
 		conn->is_leaf_node = false;
+
+		leds_off(LEDS_RED);
 	}
 }
 

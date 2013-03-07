@@ -1,3 +1,5 @@
+#include "neighbour-aggregate.h"
+
 #include "contiki.h"
 
 #include "net/netstack.h"
@@ -20,13 +22,10 @@
 #include "dev/leds.h"
 #include "dev/cc2420.h"
 
-
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
 #include "containers/unique-array.h"
-
-#include "neighbour-aggregate.h"
 
 
 static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
@@ -248,7 +247,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 	}
 }
 
-static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn)
+static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data, size_t * data_length)
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
@@ -257,19 +256,17 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn)
 	aggregation_data_t * data_array = (aggregation_data_t *)conn->tc.data;
 
 #ifndef NDEBUG
-	printf("Writing: ");
+	printf("Neighbour Agg: Writing: ");
 	print_ua_rimeaddr_pair(&data_array->list);
 #endif
 
-	unsigned int length = unique_array_length(&data_array->list);
-	unsigned int packet_length = sizeof(collect_msg_t) + sizeof(rimeaddr_pair_t) * length;
+	unsigned int ulist_length = unique_array_length(&data_array->list);
 
-	packetbuf_clear();
-	packetbuf_set_datalen(packet_length);
-	debug_packet_size(packet_length);
+	*data_length = sizeof(collect_msg_t) + sizeof(rimeaddr_pair_t) * ulist_length;
+	*data = malloc(*data_length);
 
-	collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
-	msg->length = length;
+	collect_msg_t * msg = (collect_msg_t *)*data;
+	msg->length = ulist_length;
 	msg->round_count = data_array->round_count;
 
 	rimeaddr_pair_t * msgpairs = (rimeaddr_pair_t *)(msg + 1);
@@ -309,8 +306,6 @@ static void neighbour_agg_send_data(void * ptr)
 	// Process the data, and send it on
 	if (tree_agg_is_leaf(&conn->tc))
 	{
-		printf("Is leaf sending 1-hop data onwards\n");
-
 		// By this point the tree should be set up,
 		// so now we should move to aggregating data
 		// through the tree
@@ -318,17 +313,17 @@ static void neighbour_agg_send_data(void * ptr)
 		unsigned int one_hop_n_size = unique_array_length(&conn->one_hop_neighbours);
 
 		// Create the data message that we are going to send
-		packetbuf_clear();
-		packetbuf_set_datalen(sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
-		debug_packet_size(sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
-		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
-		memset(msg, 0, sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t));
+		size_t message_length = sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t);
+		collect_msg_t * msg = (collect_msg_t *)malloc(message_length);
+		memset(msg, 0, message_length);
 
 		msg->round_count = conn->round_count;
 
 		list_to_array_single(&conn->one_hop_neighbours, msg);
 
-		tree_agg_send(&conn->tc);
+		printf("Neighbour Agg: Is leaf sending 1-hop data onwards length:%d |1HN|:%d\n", message_length, one_hop_n_size);
+
+		tree_agg_send(&conn->tc, msg, message_length);
 	}
 
 	conn->round_count++;
@@ -365,7 +360,7 @@ bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 		// We need to set the random number generator here
 		random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
-		printf("Setting up aggregation tree - Neighbour Agg...\n");
+		printf("Neighbour Agg: Setting up aggregation tree\n");
 
 		if (!unique_array_init(&conn->one_hop_neighbours, &rimeaddr_equality, &free))
 		{
@@ -412,9 +407,9 @@ PROCESS(neighbour_agg_process, "Neighbour Agg process");
 
 AUTOSTART_PROCESSES(&neighbour_agg_process);
 
-static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, int round_count)
+static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
-	printf("Got some data of length :%d\n",length);
+	printf("Got some data of length :%d in round %d\n", length, round_count);
 }
 
 static neighbour_agg_conn_t nconn;

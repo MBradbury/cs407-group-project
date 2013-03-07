@@ -148,7 +148,7 @@ unsigned int linked_list_length(linked_list_t const * list)
 
 bool linked_list_is_empty(linked_list_t const * list)
 {
-	return list != NULL && list->head != NULL;
+	return list != NULL && list->head == NULL;
 }
 
 

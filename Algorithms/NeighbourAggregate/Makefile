@@ -5,7 +5,8 @@ PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/conta
 PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c tree-aggregator.c neighbour-detect.c unique-array.c array-list.c led-helper.c random-range.c map.c rimeaddr-helpers.c
+CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c tree-aggregator.c neighbour-detect.c \
+unique-array.c array-list.c led-helper.c random-range.c map.c rimeaddr-helpers.c multipacket.c linked-list.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

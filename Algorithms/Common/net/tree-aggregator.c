@@ -33,21 +33,15 @@ bool tree_agg_is_sink(tree_agg_conn_t const * conn)
 }
 
 
-// The maximum number of times the reliable unicast
-// will attempt to resend a message.
-static const int MAX_RUNICAST_RETX = 5;
-
 // The times stubborn broadcasting will use
 // to intersperse message resends
-static const clock_time_t STUBBORN_WAIT = 60 * CLOCK_SECOND;
+static const clock_time_t STUBBORN_WAIT = 20 * CLOCK_SECOND;
 
 // Time to gather aggregations over
 static const clock_time_t AGGREGATION_WAIT = 45 * CLOCK_SECOND;
 
 // Time to wait to detect parents
 static const clock_time_t PARENT_DETECT_WAIT = 35 * CLOCK_SECOND;
-
-static const uint8_t RUNICAST_MAX_RETX = 6;
 
 
 static void stbroadcast_cancel_void(void * ptr)
@@ -154,12 +148,9 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator, void * sent_data, size_t sent_length)
+static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator, void * msg, size_t length)
 {
 	tree_agg_conn_t * conn = conncvt_multipacket(ptr);
-
-	void const * msg = packetbuf_dataptr();
-	unsigned int length = packetbuf_datalen();
 
 	if (tree_agg_is_sink(conn))
 	{
@@ -321,8 +312,6 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		callbacks->aggregate_update != NULL && callbacks->aggregate_own != NULL &&
 		callbacks->store_packet != NULL)
 	{
-		printf("Tree Agg: Starting... %p\n",conn);
-
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
 		multipacket_open(&conn->mc, ch2, &callbacks_aggregate);
 

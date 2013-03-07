@@ -5,6 +5,7 @@
 #include "debug-helper.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 // From: http://stackoverflow.com/questions/3437404/min-and-max-in-c
 #define min(a, b) \
@@ -18,6 +19,7 @@ typedef struct
 {
 	uint16_t id;
 	rimeaddr_t target;
+	rimeaddr_t source;
 
 	void * data;
 	size_t length;
@@ -82,6 +84,7 @@ static const struct packetbuf_attrlist multipacket_attributes[] = {
 	{ PACKETBUF_ATTR_EPACKET_ID, PACKETBUF_ATTR_BYTE * sizeof(uint16_t) },	// ID
 	{ PACKETBUF_ATTR_EPACKET_TYPE, PACKETBUF_ATTR_BYTE * sizeof(uint8_t) },	// seqno
 	{ PACKETBUF_ATTR_TTL, PACKETBUF_ATTR_BYTE * sizeof(size_t) },	// Length
+	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
 	RUNICAST_ATTRIBUTES
     PACKETBUF_ATTR_LAST
 };
@@ -99,7 +102,7 @@ static void send_loop_callback(void * ptr)
 
 	// Check that we have something to send onwards and
 	// that runicast is not currently sending
-	if (linked_list_length(&conn->sending_packets) != 0 && !runicast_is_transmitting(&conn->rc))
+	if (!linked_list_is_empty(&conn->sending_packets) && !runicast_is_transmitting(&conn->rc))
 	{
 		multipacket_sending_packet_t * details = linked_list_peek(&conn->sending_packets);
 
@@ -117,6 +120,11 @@ static void send_loop_callback(void * ptr)
 		packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, details->id);
 		packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_TYPE, details->seqno);
 		packetbuf_set_attr(PACKETBUF_ATTR_TTL, details->length);
+
+		packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->source);
+
+		printf("multipacket: Sending a packet of sublength:%d/%d to %s with id %d and seqno %d\n",
+			to_send, details->length, addr2str(&details->target), details->id, details->seqno);
 		
 		runicast_send(&conn->rc, &details->target, MAX_REXMITS);
 
@@ -127,13 +135,16 @@ static void send_loop_callback(void * ptr)
 		// Check to see if we have finished sending
 		if (details->sent == details->length)
 		{
+			printf("multipacket: Finsihed sending a packet of length:%d to %s with id %d\n",
+				details->length, addr2str(&details->target), details->id);
+
 			conn->callbacks->sent(conn, &details->target, details->data, details->length);
 
 			linked_list_pop(&conn->sending_packets);
 		}
 	}
 
-	ctimer_set(&conn->ct_sender, 3 * CLOCK_SECOND, &send_loop_callback, conn);
+	ctimer_reset(&conn->ct_sender);
 }
 
 static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uint8_t seqno)
@@ -145,14 +156,21 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uin
 	uint8_t seq = packetbuf_attr(PACKETBUF_ATTR_EPACKET_TYPE);
 	size_t data_length = packetbuf_attr(PACKETBUF_ATTR_TTL);
 
+	rimeaddr_t const * source = packetbuf_addr(PACKETBUF_ADDR_ESENDER);
+
 	void * data_recv = packetbuf_dataptr();
 	size_t recv_length = packetbuf_datalen();
 
 	recv_key_t key;
 	key.data.id = packet_id;
-	rimeaddr_copy(&key.data.originator, from);
+	rimeaddr_copy(&key.data.originator, source);
 
 	multipacket_recieving_packet_t * details = (multipacket_recieving_packet_t *)map_get(&conn->receiving_packets, &key);
+
+
+	void * data_to_pass_onwards = NULL;
+	size_t length_of_data_to_pass_onwards = 0;
+	bool should_remove_from_map = false;
 
 	if (details == NULL)
 	{
@@ -160,16 +178,30 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uin
 		{
 			// We have not received this message before!
 
-			details = (multipacket_recieving_packet_t *)malloc(sizeof(multipacket_recieving_packet_t));
-			details->key = key;
-			details->data = malloc(data_length);
-			details->length = data_length;
-			details->last_seqno = seq;
-			details->data_received = recv_length;
+			printf("multipacket: Recv'd a new packet from %s with id %d and length %d/%d\n",
+				addr2str(from), packet_id, recv_length, data_length);
 
-			memcpy(details->data, data_recv, recv_length);
+			// OPTIMISATION: avoid allocating memory when we will free it shortly
+			// this is the case when we have an entire message in a single packet
+			if (recv_length == data_length)
+			{
+				data_to_pass_onwards = data_recv;
+				length_of_data_to_pass_onwards = recv_length;
+				// No need to remove from the map as we never added it
+			}
+			else
+			{
+				details = (multipacket_recieving_packet_t *)malloc(sizeof(multipacket_recieving_packet_t));
+				details->key = key;
+				details->data = malloc(data_length);
+				details->length = data_length;
+				details->last_seqno = seq;
+				details->data_received = recv_length;
 
-			map_put(&conn->receiving_packets, details);
+				memcpy(details->data, data_recv, recv_length);
+
+				map_put(&conn->receiving_packets, details);
+			}
 		}
 	}
 	else
@@ -177,6 +209,9 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uin
 		// Check that this is the next packet that we want
 		if (seq == details->last_seqno + 1)
 		{
+			printf("multipacket: Recv'd a new part of a packet from %s with id %d seqno:%d and length %d/%d\n",
+				addr2str(from), packet_id, seq, recv_length, details->length);
+
 			void * data_ptr = (char *)(details->data) + details->data_received;
 
 			memcpy(data_ptr, data_recv, recv_length);
@@ -184,16 +219,31 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uin
 			// Update the data received and the last seqno
 			details->data_received += recv_length;
 			details->last_seqno = seq;
+
+			// Check if we have got everything
+			// If so set the relevant variables
+			if (details->data_received == details->length)
+			{
+				data_to_pass_onwards = details->data;
+				length_of_data_to_pass_onwards = details->length;
+				should_remove_from_map = true;
+			}
 		}
 	}
 
 	// Check to see if we have fully received this packet
-	if (details != NULL && details->data_received == details->length)
+	if (details != NULL && data_to_pass_onwards != NULL)
 	{
-		conn->callbacks->recv(conn, from, details->data, details->length);
+		printf("multipacket: delivering packet from %s with id %d and length %d\n",
+			addr2str(from), packet_id, length_of_data_to_pass_onwards);
 
-		// This packet has been received so remove it
-		map_remove(&conn->receiving_packets, &key);
+		conn->callbacks->recv(conn, source, data_to_pass_onwards, length_of_data_to_pass_onwards);
+
+		if (should_remove_from_map)
+		{
+			// This packet has been received so remove it
+			map_remove(&conn->receiving_packets, &key);
+		}
 	}
 }
 
@@ -218,7 +268,7 @@ bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_c
 
 		conn->callbacks = callbacks;
 
-		ctimer_set(&conn->ct_sender, 3 * CLOCK_SECOND, &send_loop_callback, conn);
+		ctimer_set(&conn->ct_sender, 2 * CLOCK_SECOND, &send_loop_callback, conn);
 
 		linked_list_init(&conn->sending_packets, &sending_packet_cleanup);
 
@@ -253,6 +303,9 @@ void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void
 	details->sent = 0;
 	details->seqno = 0;
 	rimeaddr_copy(&details->target, target);
+	rimeaddr_copy(&details->source, &rimeaddr_node_addr);
+
+	printf("multipacket: Adding data of length %d to send to %s with id %d\n", length, addr2str(target), details->id);
 
 	// Add to the queue to send
 	linked_list_append(&conn->sending_packets, details);

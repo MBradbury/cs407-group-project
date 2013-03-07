@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 
+// From: http://stackoverflow.com/questions/3437404/min-and-max-in-c
 #define min(a, b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \

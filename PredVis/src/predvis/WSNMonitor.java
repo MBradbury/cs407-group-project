@@ -19,7 +19,7 @@ class NodeCommsResponder implements NodeCommsCallback {
         if (line.startsWith("R=")) {
             
             int round = 0;
-            List<NodeIdPair> pairs = new ArrayList<>();
+            List<NodeIdPair> pairs = new ArrayList<NodeIdPair>();
         
             String[] results = line.split("\\|");
             
@@ -65,9 +65,9 @@ public class WSNMonitor {
     private final NodeComms comms;
     
     public WSNMonitor(String comPort) {
-        listeners = new ArrayList<>();
+        listeners = new ArrayList<NetworkUpdateListener>();
         
-        states = new HashMap<>();
+        states = new HashMap<Integer, NetworkState>();
         
         comms = new NodeComms(comPort);
         

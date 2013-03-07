@@ -56,3 +56,4 @@ VarDepthClustering
 *.cproject
 *.project
 *.settings
+/PredVis/dist/

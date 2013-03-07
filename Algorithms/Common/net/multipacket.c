@@ -135,7 +135,7 @@ static void send_loop_callback(void * ptr)
 		// Check to see if we have finished sending
 		if (details->sent == details->length)
 		{
-			printf("multipacket: Finsihed sending a packet of length:%d to %s with id %d\n",
+			printf("multipacket: Finished sending a packet of length:%d to %s with id %d\n",
 				details->length, addr2str(&details->target), details->id);
 
 			conn->callbacks->sent(conn, &details->target, details->data, details->length);
@@ -232,7 +232,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uin
 	}
 
 	// Check to see if we have fully received this packet
-	if (details != NULL && data_to_pass_onwards != NULL)
+	if (data_to_pass_onwards != NULL)
 	{
 		printf("multipacket: delivering packet from %s with id %d and length %d\n",
 			addr2str(from), packet_id, length_of_data_to_pass_onwards);
@@ -268,7 +268,7 @@ bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_c
 
 		conn->callbacks = callbacks;
 
-		ctimer_set(&conn->ct_sender, 2 * CLOCK_SECOND, &send_loop_callback, conn);
+		ctimer_set(&conn->ct_sender, 1 * CLOCK_SECOND, &send_loop_callback, conn);
 
 		linked_list_init(&conn->sending_packets, &sending_packet_cleanup);
 

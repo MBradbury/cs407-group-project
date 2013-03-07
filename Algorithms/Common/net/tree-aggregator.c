@@ -157,7 +157,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 		printf("Tree Agg: We're sink, got message, sending to user\n");
 
 		// Pass this messge up to the user
-		(*conn->callbacks.recv)(conn, originator);
+		(*conn->callbacks.recv)(conn, originator, msg, length);
 	}
 	else
 	{
@@ -166,7 +166,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 		{
 			printf("Tree Agg: Cont Agg With: %s\n", addr2str(originator));
 
-			(*conn->callbacks.aggregate_update)(conn->data, msg);
+			(*conn->callbacks.aggregate_update)(conn->data, msg, length);
 		}
 		else
 		{

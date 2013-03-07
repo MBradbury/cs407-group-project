@@ -42,13 +42,13 @@ static inline neighbour_agg_conn_t * conncvt_treeconn(tree_agg_conn_t * conn)
 typedef struct
 {
 	// Number of address pairs
-	uint8_t length;
-	uint8_t round_count;
+	unsigned int length;
+	unsigned int round_count;
 } collect_msg_t;
 
 typedef struct
 {
-	uint8_t round_count;
+	unsigned int round_count;
 	unique_array_t list;
 } aggregation_data_t;
 
@@ -101,7 +101,7 @@ static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 }
 
 
-static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
+static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, void const * packet, unsigned int packet_length)
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
@@ -109,7 +109,7 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source)
 
 	printf("Neighbour Agg - Neighbour Aggregate: Recv\n");
 
-	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
+	collect_msg_t const * msg = (collect_msg_t const *)packet;
 
 	unsigned int length = msg->length;
 
@@ -157,7 +157,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * tconn)
 	}
 }
 
-static void tree_aggregate_update(void * voiddata, void const * to_apply)
+static void tree_aggregate_update(void * voiddata, void const * to_apply, unsigned int length)
 {
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
@@ -240,8 +240,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 		// As we expect the data we received to be free of duplicates
 		// We will not perform duplicate checks here.
 		rimeaddr_pair_t * pair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-		rimeaddr_copy(&pair->first, &neighbours[i].first);
-		rimeaddr_copy(&pair->second, &neighbours[i].second);
+		memcpy(pair, &neighbours[i], sizeof(rimeaddr_pair_t));
 
 		unique_array_append(&conn_data->list, pair);
 	}
@@ -277,10 +276,8 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data,
 		unique_array_continue(&data_array->list, elem); 
 		elem = unique_array_next(elem))
 	{
-		rimeaddr_pair_t const * to = (rimeaddr_pair_t *)unique_array_data(&data_array->list, elem);
-
-		rimeaddr_copy(&msgpairs[i].first, &to->first);
-		rimeaddr_copy(&msgpairs[i].second, &to->second);
+		rimeaddr_pair_t const * from = (rimeaddr_pair_t *)unique_array_data(&data_array->list, elem);
+		memcpy(&msgpairs[i], from, sizeof(rimeaddr_pair_t));
 
 		++i;
 	}

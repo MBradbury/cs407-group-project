@@ -12,12 +12,12 @@ typedef struct
 {
 	/** The function called when a message is received at the sink.
 		The arguments are: the connection and the message source. */
-	void (* recv)(struct tree_agg_conn * conn, rimeaddr_t const * source);
+	void (* recv)(struct tree_agg_conn * conn, rimeaddr_t const * source, void const * packet, unsigned int length);
 
 	/** This function is called when a node has finished setting up */
 	void (* setup_complete)(struct tree_agg_conn * conn);
 
-	void (* aggregate_update)(void * data, void const * to_apply);
+	void (* aggregate_update)(void * data, void const * to_apply, unsigned int length);
 
 	/** This function is used to add a nodes own one data */
 	void (* aggregate_own)(void * data);

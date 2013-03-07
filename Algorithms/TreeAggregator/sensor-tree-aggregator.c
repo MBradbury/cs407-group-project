@@ -38,9 +38,9 @@ PROCESS(send_data_process, "Data Sender");
 AUTOSTART_PROCESSES(&startup_process);
 
 
-static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
+static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, void const * packet, unsigned int length)
 {
-	collect_msg_t const * msg = (collect_msg_t const *)packetbuf_dataptr();
+	collect_msg_t const * msg = (collect_msg_t const *)packet;
 
 	printf("Tree Agg: Sink rcv: Src:%s Temp:%d Hudmid:%d%% Light1:%d Light2:%d\n",
 			addr2str(source),
@@ -56,7 +56,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 	}
 }
 
-static void tree_aggregate_update(void * data, void const * to_apply)
+static void tree_aggregate_update(void * data, void const * to_apply, unsigned int length)
 {
 	collect_msg_t * our_data = (collect_msg_t *)data;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;

@@ -59,10 +59,12 @@ typedef struct
 
 typedef struct
 {
-	rimeaddr_t destination; //where the predicate should be evaluated from
 	uint8_t id; // Keep id as the first variable in the struct
 	uint8_t variables_details_length;
 	uint8_t bytecode_length;
+
+	// Where the predicate should be evaluated from
+	rimeaddr_t destination;
 
 	var_elem_t * variables_details;
 	ubyte * bytecode;
@@ -100,7 +102,10 @@ typedef struct
 typedef struct
 {
 	unsigned int key;
+
+	// Map of node_data_t
 	map_t data;
+
 } node_data_map_elem_t; 
 
 ///
@@ -284,9 +289,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
 			msgdata[i].humidity);
 
 		node_data_t * nd = (node_data_t *)malloc(sizeof(node_data_t));
-		rimeaddr_copy(&nd->addr, &msgdata[i].addr);
-		nd->temp = (int)msgdata[i].temp;
-		nd->humidity = msgdata[i].humidity;
+		memcpy(nd, &msgdata[i], sizeof(node_data_t));
 
 		// Add the data to the map 
 		map_put(round_data, nd);
@@ -337,6 +340,7 @@ static void tree_aggregate_own(void * ptr)
 	printf("HSend Agg: Update local data with own data\n");
 
 	array_list_t * data = &((aggregation_data_t *)ptr)->list;
+
 	node_data_t * msg = (node_data_t *)malloc(sizeof(node_data_t));
 
 	SENSORS_ACTIVATE(sht11_sensor);
@@ -368,14 +372,10 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); //get the pointer after the message
 	
 	unsigned int i;
-	for (i = 0; i< msg->length; ++i)
+	for (i = 0; i < msg->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
-		tmp->temp = msgdata[i].temp;
-		tmp->humidity = msgdata[i].humidity;
-
-		rimeaddr_copy(&tmp->addr,&msgdata[i].addr);
-
+		memcpy(tmp, &msgdata[i], sizeof(node_data_t));
 		array_list_append(&conn_data->list, tmp);
 	}
 }
@@ -412,10 +412,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 		elem = array_list_next(elem))
 	{
 		node_data_t * original = (node_data_t *)array_list_data(&conn_data->list, elem);
-
-		rimeaddr_copy(&msgdata[i].addr, &original->addr);
-		msgdata[i].temp = original->temp;
-		msgdata[i].humidity = original->humidity;
+		memcpy(&msgdata[i], original, sizeof(node_data_t));
 
 		++i;
 	}

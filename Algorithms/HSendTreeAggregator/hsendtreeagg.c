@@ -572,9 +572,9 @@ PROCESS_THREAD(send_data_process, ev, data)
 			
 			node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 			
-			msgdata[0].temp = sht11_temperature(raw_temperature);
-			msgdata[0].humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata[0].temp);
-			rimeaddr_copy(&msgdata[0].addr, &rimeaddr_node_addr);
+			msgdata->temp = sht11_temperature(raw_temperature);
+			msgdata->humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata[0].temp);
+			rimeaddr_copy(&msgdata->addr, &rimeaddr_node_addr);
 
 			//send data
 			tree_agg_send(&aggconn);
@@ -675,36 +675,36 @@ static void data_evaluation(void * ptr)
 	{
 		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)array_list_data(&predicates, pred_elem);
 		
-		rimeaddr_t destination; //destination node (initial target)
+		rimeaddr_t destination; // Destination node (initial target)
 	    rimeaddr_copy(&destination, &pred->destination);
-	    rimeaddr_copy(&pred_simulated_node, &pred->destination); //copy into the simulated node
+	    rimeaddr_copy(&pred_simulated_node, &pred->destination); // Copy in the simulated node
 
-	    //get the maximum number of hops needed for this predcate
+	    // Get the maximum number of hops needed for this predcate
 	    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
 
 		array_list_init(&hops_data, &free_hops_data);
 
 		unsigned int max_size = 0; //Number of nodes we pass to the evaluation
 
-		//array of nodes that have been seen and checked so far
+		// Array of nodes that have been seen and checked so far
 	    unique_array_t seen_nodes;
 	    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
 	    unique_array_append(&seen_nodes, &destination); //start with the destination node
 
-		//array of nodes that we need the neighbours for
+		// Array of nodes that we need the neighbours for
 	    unique_array_t target_nodes;
 	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
 	    unique_array_append(&target_nodes, &destination); //start with the destination node
 
-	    //Array of nodes, we gathered this round
+	    // Array of nodes, we gathered this round
 	    unique_array_t acquired_nodes;
 	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
 
-	    //Get the data for each hop level
+	    // Get the data for each hop level
 		unsigned int hops;
 		for (hops = 1; hops <= max_hops; ++hops)
 		{
-		    //for each node in the target nodes, get the immediate neighbours,
+		    // For each node in the target nodes, get the immediate neighbours,
 			unique_array_elem_t target;
 			for (target = unique_array_first(&target_nodes); 
 				unique_array_continue(&target_nodes, target); 

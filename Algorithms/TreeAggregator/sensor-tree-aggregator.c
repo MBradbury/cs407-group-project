@@ -102,12 +102,11 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	memcpy(conn->data, packet, length);
 }
 
-static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
+static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, size_t * length)
 {
-	packetbuf_clear();
-	packetbuf_set_datalen(conn->data_length);
-	debug_packet_size(conn->data_length);
-	memcpy(packetbuf_dataptr(), conn->data, conn->data_length);
+	*length = conn->data_length;
+	*data = malloc(*length);
+	memcpy(*data, conn->data, conn->data_length);
 }
 
 static tree_agg_conn_t conn;
@@ -172,19 +171,14 @@ PROCESS_THREAD(send_data_process, ev, data)
 		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
 		SENSORS_DEACTIVATE(light_sensor);
 
-		// Create the data message that we are going to send
-		packetbuf_clear();
-		packetbuf_set_datalen(sizeof(collect_msg_t));
-		debug_packet_size(sizeof(collect_msg_t));
-		collect_msg_t * msg = (collect_msg_t *)packetbuf_dataptr();
-		memset(msg, 0, sizeof(collect_msg_t));
+		collect_msg_t * msg = (collect_msg_t *)malloc(sizeof(collect_msg_t));
 
 		msg->temperature = sht11_temperature(raw_temperature);
 		msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temperature);
 		msg->light1 = s1087_light1(raw_light1);
 		msg->light2 = s1087_light1(raw_light2);
 		
-		tree_agg_send(&conn);
+		tree_agg_send(&conn, msg, sizeof(collect_msg_t));
 
 		etimer_reset(&et);
 

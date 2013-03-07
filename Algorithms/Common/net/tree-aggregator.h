@@ -27,7 +27,7 @@ typedef struct
 	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
 
 	/** This function is called to write the nodes stored data to an outward packet */
-	void (* write_data_to_packet)(struct tree_agg_conn * conn);
+	void (* write_data_to_packet)(struct tree_agg_conn * conn, void ** data, size_t * length);
 } tree_agg_callbacks_t;
 
 typedef struct tree_agg_conn
@@ -68,7 +68,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 
 void tree_agg_close(tree_agg_conn_t * conn);
 
-void tree_agg_send(tree_agg_conn_t * conn);
+void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length);
 
 bool tree_agg_is_sink(tree_agg_conn_t const * conn);
 bool tree_agg_is_leaf(tree_agg_conn_t const * conn);

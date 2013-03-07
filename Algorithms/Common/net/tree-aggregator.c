@@ -132,10 +132,13 @@ static void finish_aggregate_collect(void * ptr)
 
 	(*conn->callbacks.aggregate_own)(conn->data);
 
-	// Copy aggregation data into the packet
-	(*conn->callbacks.write_data_to_packet)(conn);
+	void * data;
+	size_t length;
 
-	multipacket_send(&conn->mc, &conn->best_parent);
+	// Copy aggregation data into the packet
+	(*conn->callbacks.write_data_to_packet)(conn, &data, &length);
+
+	multipacket_send(&conn->mc, &conn->best_parent, data, length);
 
 	printf("Tree Agg: Send Agg\n");
 
@@ -151,7 +154,7 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator)
+static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator, void * sent_data, size_t sent_length)
 {
 	tree_agg_conn_t * conn = conncvt_multipacket(ptr);
 
@@ -191,9 +194,9 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 	}
 }
 
-static void multipacket_sent(struct multipacket_conn * c, int status, int num_tx)
+static void multipacket_sent(struct multipacket_conn * c, rimeaddr_t * const to, void * sent_data, size_t sent_length)
 {
-	printf("Tree Agg: runicast sent status:%d numtx:%d\n", status, num_tx);
+	printf("Tree Agg: Sent %d bytes to %s\n", sent_length, addr2str(to));
 }
 
 /** The function that will be executed when a message is received */
@@ -386,12 +389,12 @@ void tree_agg_close(tree_agg_conn_t * conn)
 	}
 }
 
-void tree_agg_send(tree_agg_conn_t * conn)
+void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length)
 {
-	if (conn != NULL)
+	if (conn != NULL && data != NULL)
 	{
-		printf("Tree Agg: Sending data to best parent %s\n", addr2str(&conn->best_parent));
-		multipacket_send(&conn->mc, &conn->best_parent);
+		printf("Tree Agg: Sending data to best parent %s with length %d\n", addr2str(&conn->best_parent), length);
+		multipacket_send(&conn->mc, &conn->best_parent, data, length);
 	}
 }
 

@@ -3,7 +3,8 @@
 
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
-#include "net/rime/runicast.h"
+
+#include "net/multipacket.h"
 
 struct tree_agg_conn;
 
@@ -33,7 +34,7 @@ typedef struct tree_agg_conn
 {
 	// DO NOT CHANGE CONNECTION ORDER!!!
 	struct stbroadcast_conn bc;
-	struct runicast_conn uc;
+	struct multipacket_conn mc;
 
 	bool has_seen_setup;
 	bool is_collecting;

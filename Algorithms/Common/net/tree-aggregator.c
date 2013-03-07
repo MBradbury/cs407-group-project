@@ -1,13 +1,11 @@
+#include "net/tree-aggregator.h"
+
 #include "contiki.h"
 
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <limits.h>
-
-#include "net/netstack.h"
-#include "net/rime.h"
-#include "net/rime/stbroadcast.h"
 
 #include "lib/random.h"
 
@@ -16,20 +14,17 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
-#include "net/tree-aggregator.h"
-
 
 static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
 {
 	return (tree_agg_conn_t *)conn;
 }
 
-static inline tree_agg_conn_t * conncvt_runicast(struct runicast_conn * conn)
+static inline tree_agg_conn_t * conncvt_multipacket(struct multipacket_conn * conn)
 {
 	return (tree_agg_conn_t *)
 		(((char *)conn) - sizeof(struct stbroadcast_conn));
 }
-
 
 bool tree_agg_is_sink(tree_agg_conn_t const * conn)
 {
@@ -37,6 +32,10 @@ bool tree_agg_is_sink(tree_agg_conn_t const * conn)
 		rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr);
 }
 
+
+// The maximum number of times the reliable unicast
+// will attempt to resend a message.
+static const int MAX_RUNICAST_RETX = 5;
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
@@ -136,7 +135,7 @@ static void finish_aggregate_collect(void * ptr)
 	// Copy aggregation data into the packet
 	(*conn->callbacks.write_data_to_packet)(conn);
 
-	runicast_send(&conn->uc, &conn->best_parent, RUNICAST_MAX_RETX);
+	multipacket_send(&conn->mc, &conn->best_parent);
 
 	printf("Tree Agg: Send Agg\n");
 
@@ -152,9 +151,9 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct runicast_conn * ptr, const rimeaddr_t * originator, uint8_t seqno)
+static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator)
 {
-	tree_agg_conn_t * conn = conncvt_runicast(ptr);
+	tree_agg_conn_t * conn = conncvt_multipacket(ptr);
 
 	void const * msg = packetbuf_dataptr();
 	unsigned int length = packetbuf_datalen();
@@ -192,20 +191,10 @@ static void recv_aggregate(struct runicast_conn * ptr, const rimeaddr_t * origin
 	}
 }
 
-static void runicast_sent(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
+static void multipacket_sent(struct multipacket_conn * c, int status, int num_tx)
 {
-	printf("Tree Agg: runicast sent to %s numtx:%d\n", addr2str(to), retransmissions);
+	printf("Tree Agg: runicast sent status:%d numtx:%d\n", status, num_tx);
 }
-
-static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
-{
-	printf("Tree Agg: runicast timedout to %s numtx:%d\n", addr2str(to), retransmissions);
-
-	// TODO: If we are getting a lot of these, then it may be the case
-	// that our target node has been lost.
-	// We may wish to consider other neighbours
-}
-
 
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
@@ -287,8 +276,8 @@ static void sent_stbroadcast(struct stbroadcast_conn * c) { }
 static const struct stbroadcast_callbacks callbacks_setup =
 	{ &recv_setup, &sent_stbroadcast };
 
-static const struct runicast_callbacks callbacks_aggregate =
-	{ &recv_aggregate, &runicast_sent, &runicast_timedout };
+static const struct multipacket_callbacks callbacks_aggregate =
+	{ &recv_aggregate, &multipacket_sent };
 
 
 void tree_agg_setup_wait_finished(void * ptr)
@@ -332,8 +321,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		printf("Tree Agg: Starting... %p\n",conn);
 
 		stbroadcast_open(&conn->bc, ch1, &callbacks_setup);
-
-		runicast_open(&conn->uc, ch2, &callbacks_aggregate);
+		multipacket_open(&conn->mc, ch2, &callbacks_aggregate);
 
 		conn->has_seen_setup = false;
 		conn->is_collecting = false;
@@ -382,7 +370,7 @@ void tree_agg_close(tree_agg_conn_t * conn)
 	if (conn != NULL)
 	{
 		stbroadcast_close(&conn->bc);
-		runicast_close(&conn->uc);
+		multipacket_close(&conn->mc);
 
 		if (conn->data != NULL)
 		{
@@ -403,8 +391,7 @@ void tree_agg_send(tree_agg_conn_t * conn)
 	if (conn != NULL)
 	{
 		printf("Tree Agg: Sending data to best parent %s\n", addr2str(&conn->best_parent));
-
-		runicast_send(&conn->uc, &conn->best_parent, RUNICAST_MAX_RETX);
+		multipacket_send(&conn->mc, &conn->best_parent);
 	}
 }
 
@@ -417,5 +404,3 @@ bool tree_agg_is_collecting(tree_agg_conn_t const * conn)
 {
 	return conn != NULL && conn->is_collecting;
 }
-
-

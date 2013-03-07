@@ -45,10 +45,11 @@ static array_list_t predicates;
 // An array_list_t of map_t of node_data_t
 static array_list_t hops_data;
 
-//used for simulating evaluating a predicate on a node
+// Used for simulating evaluating a predicate on a node
 static rimeaddr_t pred_simulated_node;
 
 static uint8_t pred_round_count;
+
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
 typedef struct
 {
@@ -120,7 +121,9 @@ static void const * get_humidity(void const * ptr)
 	return &((node_data_t const *)ptr)->humidity;
 }
 
-//TODO: Convert this to work with a target node (i.e. use the data from another node)
+// This function would typically just return the current nodes data
+// however because we are evaluating a predicate from a different node
+// we need to return that node's data
 static void node_data(void * data)
 {
 	if (data != NULL)
@@ -129,19 +132,9 @@ static void node_data(void * data)
 
 		node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count); //map for that round
 
-		map_t * round_data = &st->data;
+		node_data_t * stored_data = (node_data_t *)map_get(&st->data, &pred_simulated_node);
 
-		node_data_t * stored_data = (node_data_t *)map_get(round_data, &pred_simulated_node);
-
-		// Store the current nodes address
-		rimeaddr_copy(&nd->addr, &stored_data->addr);
-
-		nd->temp = stored_data->temp;
-		nd->humidity = stored_data->humidity;
-
-		/*
-		nd->light1 = stored_data->light1;
-		nd->light2 = stored_data->light2;*/
+		memcpy(nd, stored_data, sizeof(node_data_t));
 	}
 }
 ///
@@ -177,7 +170,6 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
 	// Check if round is in map already, if not create new unique array list
-	
 
 	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
 
@@ -209,7 +201,7 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 }
 
 /* Gets the neighbours of a given node */
-static unique_array_t * get_neighbours(rimeaddr_t const * target, int round_count)
+static unique_array_t * get_neighbours(rimeaddr_t const * target, unsigned int round_count)
 {
 	unique_array_t * output = (unique_array_t *)malloc(sizeof(unique_array_t));
 	unique_array_init(output, &rimeaddr_equality, &free);
@@ -506,7 +498,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
 	{
 		//create and save example predicates
-		array_list_init(&predicates, &free);
+		array_list_init(&predicates, &predicate_detail_entry_cleanup);
 	
 		map_init(&recieved_data, &neighbour_map_key_compare, &free);
 
@@ -599,7 +591,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 exit:
 	tree_agg_close(&aggconn);
 	PROCESS_END();
-	return 0;
 }
 
 static map_t * get_hop_map(uint8_t hop)
@@ -779,8 +770,11 @@ static void data_evaluation(void * ptr)
 			// Been through targets add them to the seen nodes
 			unique_array_merge(&seen_nodes, &target_nodes, &rimeaddr_clone);
 
-			// unique_array_clear(&target_nodes); //reset the array //Don't do this, frees the memory,
-			unique_array_merge(&target_nodes, &acquired_nodes, &rimeaddr_clone); //add in the acquired nodes
+			// Reset the array 
+			unique_array_clear(&target_nodes); 
+
+			// Add in the acquired nodes
+			unique_array_merge(&target_nodes, &acquired_nodes, &rimeaddr_clone);
 		}
 
 		// Generate array of all the data
@@ -825,6 +819,9 @@ static void data_evaluation(void * ptr)
 		}
 
 		array_list_clear(&hops_data);
+		unique_array_clear(&target_nodes);
+		unique_array_clear(&seen_nodes);
+		unique_array_clear(&acquired_nodes);
 	}
 
 	++pred_round_count;

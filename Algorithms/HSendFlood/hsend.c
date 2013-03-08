@@ -15,18 +15,12 @@
 #include "dev/light-sensor.h"
 
 #include "containers/map.h"
+#include "net/rimeaddr-helpers.h"
+#include "predicate-manager.h"
 #include "nhopreq.h"
 #include "predlang.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-
-// The custom headers we use
-static const struct packetbuf_attrlist trickle_attributes[] = {
-	{ PACKETBUF_ADDR_ERECEIVER, PACKETBUF_ADDRSIZE },
-	TRICKLE_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
-};
-
 
 // Struct for the list of node_data. It contains owner_addr, temperature and humidity. 
 typedef struct
@@ -37,21 +31,6 @@ typedef struct
 	//nint light1;
 	//nint light2;
 } node_data_t;
-
-// Struct for the list of bytecode_variables. It contains the variable_id and hop count.
-typedef struct
-{
-	uint8_t hops;
-	uint8_t var_id;
-} var_elem_t;
-
-//Struct recieved from base station that contains a predicate to be evaluated by this node.
-typedef struct 
-{
-	uint8_t predicate_id;
-	uint8_t bytecode_length; // length of the bytecode_instructions, located after the struct
-	uint8_t num_of_bytecode_var; // number of variables after the struct
-} eval_pred_req_t;
 
 typedef struct
 {
@@ -193,125 +172,14 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 
 
 static nhopreq_conn_t hc;
-static struct trickle_conn tcsender;
+static predicate_manager_conn_t predconn;
 static struct mesh_conn meshreceiver;
 static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
-
-typedef struct
+static void predicate_manager_update_callback(struct predicate_manager_conn * conn)
 {
-	uint8_t id; // Keep id as the first variable in the struct
-	uint8_t variables_details_length;
-	uint8_t bytecode_length;
-
-	var_elem_t * variables_details;
-	ubyte * bytecode;
-
-} predicate_detail_entry_t;
-
-static void predicate_detail_entry_cleanup(void * item)
-{
-	predicate_detail_entry_t * entry = (predicate_detail_entry_t *)item;
-
-	free(entry->variables_details);
-	free(entry->bytecode);
-	free(entry);
-}
-
-static bool predicate_id_equal(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	predicate_detail_entry_t const * l = (predicate_detail_entry_t const *)left;
-	predicate_detail_entry_t const * r = (predicate_detail_entry_t const *)right;
-
-	return l->id == r->id;
-}
-
-static map_t predicate_map;
-
-
-// Rime address of target node (or rimeaddr_null for everyone)
-// binary bytecode for the VM
-static void trickle_send_rcv(struct trickle_conn * c)
-{
-	// Copy out packet, allows handling multiple evals at once
-	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
-
-	// Get eventual destination from header
-	rimeaddr_t const * target = packetbuf_addr(PACKETBUF_ADDR_ERECEIVER);
-
-	//printf("Rcv packet length %d\n", packetbuf_datalen());
-		
-	if (rimeaddr_cmp(target, &rimeaddr_null) ||		// Send to all
-		rimeaddr_cmp(target, &rimeaddr_node_addr)) 	// We are the target
-	{
-		leds_on(LEDS_RED);
-		leds_off(LEDS_GREEN);
-
-		if (msg->bytecode_length == 0)
-		{
-			// There is no bytecode, so interpret this as a request to stop
-			// evaluating this predicate
-			map_remove(&predicate_map, &msg->predicate_id);
-
-			printf("Removed predicate with id %d\n", msg->predicate_id);
-		}
-		else
-		{
-			// Add or update entry
-			predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&predicate_map, &msg->predicate_id);
-
-			if (stored)
-			{
-				printf("Updating predicate with id %d.\n", msg->predicate_id);
-
-				// Re-allocate data structures if needed
-
-				if (msg->bytecode_length != stored->bytecode_length)
-				{
-					free(stored->bytecode);
-					stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
-				}
-
-				if (msg->num_of_bytecode_var != stored->variables_details_length)
-				{
-					free(stored->variables_details);
-					stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
-				}
-			}
-			else
-			{
-				printf("Creating predicate with id %d.\n", msg->predicate_id);
-
-				// Allocate memory for the data
-				stored = malloc(sizeof(predicate_detail_entry_t));
-
-				stored->id = msg->predicate_id; //set the key
-				stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
-				stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
-
-				// Put data in the map
-				map_put(&predicate_map, stored);
-			}
-
-			// Pointer for bytecode variables
-			var_elem_t const * variables = (var_elem_t const *)(msg + 1);
-
-			// Create a pointer to the bytecode instructions stored in the message.
-			ubyte const * bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
-
-			// Update data
-			stored->bytecode_length = msg->bytecode_length;
-			stored->variables_details_length = msg->num_of_bytecode_var;
-
-			memcpy(stored->bytecode, bytecode_instructions, sizeof(ubyte) * stored->bytecode_length);
-			memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
-		}
-	}
 }
 
 // Used to handle receiving predicate failure messages
@@ -334,8 +202,6 @@ static void mesh_receiver_timeout(struct mesh_conn * c)
 	mesh_send(&meshreceiver, &baseStationAddr);
 }
 
-static const struct trickle_callbacks tcsender_callbacks = { &trickle_send_rcv };
-
 static const struct mesh_callbacks meshreceiver_callbacks = { &mesh_receiver_rcv, &mesh_receiver_sent, &mesh_receiver_timeout };
 
 PROCESS(mainProcess, "MAIN Process");
@@ -350,78 +216,20 @@ static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 		return false;
 
 	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
-
-	// Send the request message
+	
+	static var_elem_t var_details[2];
+	var_details[0].hops = 2;
+	var_details[0].var_id = 255;
+	var_details[1].hops = 1;
+	var_details[1].var_id = 254;
 
 	uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
-	uint8_t var_details = 2;
-	
-	unsigned int packet_size = sizeof(eval_pred_req_t) + bytecode_length + (sizeof(var_elem_t) * var_details);
+	uint8_t var_details_length = 2;
 
-	packetbuf_clear();
-	packetbuf_set_datalen(packet_size);
-	debug_packet_size(packet_size);
-	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_size);
-
-	// Set eventual destination in header
-	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
-
-	msg->predicate_id = id;
-	msg->bytecode_length = bytecode_length;
-	msg->num_of_bytecode_var = var_details;
-
-	var_elem_t * msg_vars = (var_elem_t *)(msg + 1);
-
-	msg_vars[0].hops = 2;
-	msg_vars[0].var_id = 255;
-	msg_vars[1].hops = 1;
-	msg_vars[1].var_id = 254;
-
-	ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details);
-
-	// Debug check to make sure that we have done sane things!
-	if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
-	{
-		printf("Failed to copy data correctly got=%d expected=%u!\n",
-			(void *)(msg_bytecode + bytecode_length) - (void *)msg,
-			packet_size);
-	}
-
-	memcpy(msg_bytecode, program_bytecode, bytecode_length);
-
-	//printf("Sent packet length %d\n", packet_size);
-
-	trickle_send(&tcsender);
-
-	return true;
-}
-
-static bool send_cancel_predicate(rimeaddr_t const * destination, uint8_t id)
-{
-	if (destination == NULL)
-		return false;
-
-	unsigned int packet_size = sizeof(eval_pred_req_t);
-
-	packetbuf_clear();
-	packetbuf_set_datalen(packet_size);
-	debug_packet_size(packet_size);
-	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_size);
-
-	// Set eventual destination in header
-	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
-
-	msg->predicate_id = id;
-
-	// Setting bytecode length to 0 indicates that this predicate should be removed
-	msg->bytecode_length = 0;
-	msg->num_of_bytecode_var = 0;
-
-	trickle_send(&tcsender);
-
-	return true;
+	return predicate_manager_create(&predconn,
+		id, destination,
+		program_bytecode, bytecode_length,
+		var_details, var_details_length);
 }
 
 PROCESS_THREAD(mainProcess, ev, data)
@@ -442,14 +250,12 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	array_list_init(&hops_data, &free_hops_data);
 
-	map_init(&predicate_map, &predicate_id_equal, &predicate_detail_entry_cleanup);
-
 	// Set the address of the base station
 	baseStationAddr.u8[0] = 1;
 	baseStationAddr.u8[1] = 0;
 
 	// Set the predicate evaluation target
-	destination.u8[0] = 2;
+	destination.u8[0] = 5;
 	destination.u8[1] = 0;
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr,&destination))
@@ -457,8 +263,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 		printf("Is Destination.\n");
 	}
 
-	trickle_open(&tcsender, trickle_interval, 121, &tcsender_callbacks);
-	channel_set_attributes(121, trickle_attributes);
+	predicate_manager_open(&predconn, 121, trickle_interval, &predicate_manager_update_callback);
 
 	mesh_open(&meshreceiver, 126, &meshreceiver_callbacks);
 
@@ -497,7 +302,7 @@ exit:
 	printf("Exiting MAIN Process...\n");
 	array_list_clear(&hops_data);
 	nhopreq_end(&hc);
-	trickle_close(&tcsender);
+	predicate_manager_close(&predconn);
 	mesh_close(&meshreceiver);
 	PROCESS_END();
 }
@@ -568,6 +373,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	static struct etimer et;
 	static uint8_t max_hops = 0;
 	static node_data_t * all_neighbour_data = NULL;
+	static map_t const * predicate_map = NULL;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -589,10 +395,12 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 		max_hops = 0;
 
+		predicate_map = predicate_manager_get_map(&predconn);
+
 		map_elem_t elem;
-		for (elem = map_first(&predicate_map); map_continue(&predicate_map, elem); elem = map_next(elem))
+		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
 		{
-			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&predicate_map, elem);
+			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
 
 			uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
 
@@ -644,55 +452,58 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			}
 		}
 
-		for (elem = map_first(&predicate_map); map_continue(&predicate_map, elem); elem = map_next(elem))
+		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
 		{
-			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&predicate_map, elem);
+			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
 
-			printf("Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
-	
-			bool evaluation_result = evaluate_predicate(
-				pe->bytecode, pe->bytecode_length,
-				all_neighbour_data,
-				pe->variables_details, pe->variables_details_length);
-
-			if (evaluation_result)
+			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
 			{
-				printf("Pred: TRUE\n");
+				printf("Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
+		
+				bool evaluation_result = evaluate_predicate(
+					pe->bytecode, pe->bytecode_length,
+					all_neighbour_data,
+					pe->variables_details, pe->variables_details_length);
+
+				if (evaluation_result)
+				{
+					printf("Pred: TRUE\n");
+				}
+				else
+				{
+					printf("Pred: FAILED due to error: %s\n", error_message());
+				}
+
+				unsigned int packet_length = sizeof(failure_response_t) +
+											 sizeof(hops_position_t) * pe->variables_details_length +
+											 sizeof(node_data_t) * max_size;
+
+				packetbuf_clear();
+				packetbuf_set_datalen(packet_length);
+				debug_packet_size(packet_length);
+				failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
+				memset(msg, 0, packet_length);
+
+				msg->predicate_id = pe->id;
+				msg->num_hops_positions = pe->variables_details_length;
+				msg->data_length = max_size;
+
+				hops_position_t * hops_details = (hops_position_t *)(msg + 1);
+
+				unsigned int i;
+				for (i = 0; i < msg->num_hops_positions; ++i)
+				{
+					hops_details[i].hops = pe->variables_details[i].hops;
+					hops_details[i].var_id = pe->variables_details[i].var_id;
+					hops_details[i].length = hop_data_length(&pe->variables_details[i]);
+				}
+
+				node_data_t * msg_neighbour_data = (node_data_t *)(hops_details + pe->variables_details_length);
+
+				memcpy(msg_neighbour_data, all_neighbour_data, sizeof(node_data_t) * max_size);
+
+				mesh_send(&meshreceiver, &baseStationAddr);
 			}
-			else
-			{
-				printf("Pred: FAILED due to error: %s\n", error_message());
-			}
-
-			unsigned int packet_length = sizeof(failure_response_t) +
-										 sizeof(hops_position_t) * pe->variables_details_length +
-										 sizeof(node_data_t) * max_size;
-
-			packetbuf_clear();
-			packetbuf_set_datalen(packet_length);
-			debug_packet_size(packet_length);
-			failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
-			memset(msg, 0, packet_length);
-
-			msg->predicate_id = pe->id;
-			msg->num_hops_positions = pe->variables_details_length;
-			msg->data_length = max_size;
-
-			hops_position_t * hops_details = (hops_position_t *)(msg + 1);
-
-			unsigned int i;
-			for (i = 0; i < msg->num_hops_positions; ++i)
-			{
-				hops_details[i].hops = pe->variables_details[i].hops;
-				hops_details[i].var_id = pe->variables_details[i].var_id;
-				hops_details[i].length = hop_data_length(&pe->variables_details[i]);
-			}
-
-			node_data_t * msg_neighbour_data = (node_data_t *)(hops_details + pe->variables_details_length);
-
-			memcpy(msg_neighbour_data, all_neighbour_data, sizeof(node_data_t) * max_size);
-
-			mesh_send(&meshreceiver, &baseStationAddr);
 		}
 
 		// Free the allocated neighbour data

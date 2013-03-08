@@ -1,8 +1,8 @@
 #ifndef CS407_NEIGHBOUR_DETECT
 #define CS407_NEIGHBOUR_DETECT
 
-#include "unique-array.h"
-#include "map.h"
+#include "containers/unique-array.h"
+#include "containers/map.h"
 
 #include "net/rime/neighbor-discovery.h"
 
@@ -26,7 +26,9 @@ typedef struct neighbour_detect_conn_t
 	neighbour_detect_callbacks_t callbacks;
 	
 	map_t round_map;
+
 	struct ctimer round_timer;
+	
 	uint16_t round_count;
 
 } neighbour_detect_conn_t;

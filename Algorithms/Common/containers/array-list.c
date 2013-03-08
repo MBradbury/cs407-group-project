@@ -22,6 +22,11 @@ static bool realloc_array_list(array_list_t * list)
 
 	void ** newdata = (void **)malloc(sizeof(void *) * list->length);
 
+	if (newdata == NULL)
+	{
+		return false;
+	}
+
 	if (list->data != NULL && list->count != 0)
 	{
 		memcpy(newdata, list->data, sizeof(void *) * list->count);
@@ -85,7 +90,17 @@ bool array_list_append(array_list_t * list, void * data)
 	// Out of space so add some more
 	if (list->count == list->length)
 	{
-		realloc_array_list(list);
+		if (!realloc_array_list(list))
+		{
+			// If we failed to allocate the list, free the data given
+
+			if (list->cleanup != NULL)
+			{
+				list->cleanup(data);
+			}
+
+			return false;
+		}
 	}
 
 	// Add item

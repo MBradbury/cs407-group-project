@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS= -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wfloat-equal
 CFLAGS += -g
-CFLAGS += -I. -I../Algorithms/Common/
+CFLAGS += -I. -I../Algorithms/Common/ -I../Algorithms/Common/containers
 
 ODIR=obj
 LDIR=lib
@@ -11,7 +11,8 @@ LDFLAGS= -B -Felf
 _DEPS = 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o ../Algorithms/Common/array-list.o ../Algorithms/Common/linked-list.o ../Algorithms/Common/unique-array.o
+_OBJ = main.o ../Algorithms/Common/containers/array-list.o ../Algorithms/Common/containers/linked-list.o \
+../Algorithms/Common/containers/unique-array.o ../Algorithms/Common/containers/map.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 all: directories tests

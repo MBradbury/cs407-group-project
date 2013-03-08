@@ -25,14 +25,21 @@ bool unique_array_append(unique_array_t * list, void * data)
 	{
 		if (!array_list_append(&list->list, data))
 		{
-			list->list.cleanup(data);
+			if (list->list.cleanup != NULL)
+			{
+				list->list.cleanup(data);
+			}
+
 			return false;
 		}
 	}
 	else
 	{
-		// Free the data past to the unique array
-		list->list.cleanup(data);
+		if (list->list.cleanup != NULL)
+		{
+			// Free the data given to the unique array
+			list->list.cleanup(data);
+		}
 	}
 
 	// Already in list, so succeeded
@@ -65,8 +72,11 @@ bool unique_array_merge(unique_array_t * first, unique_array_t const * second, u
 			// in the list, so just use the array_list operation
 			if (!array_list_append(&first->list, item_copy))
 			{
-				// Tidy up the copy we made to prevent memory leaks
-				first->list.cleanup(item_copy);
+				if (first->list.cleanup != NULL)
+				{
+					// Tidy up the copy we made to prevent memory leaks
+					first->list.cleanup(item_copy);
+				}
 
 				return false;
 			}

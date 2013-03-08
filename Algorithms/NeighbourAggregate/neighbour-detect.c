@@ -139,6 +139,8 @@ void start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, ne
 
 	map_init(&conn->round_map, &rimeaddr_equality, &free);
 
+	unique_array_init(&conn->results, &rimeaddr_equality, &free);
+	
 	conn->results_ptr = &conn->results;
 	conn->round_count = 0;
 

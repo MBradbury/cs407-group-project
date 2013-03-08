@@ -8,11 +8,12 @@
 
 #include <stdint.h>
 
-typedef struct  
+struct neighbour_detect_conn_t;
+
+typedef struct
 {
 	//called after a round has been completed, with the latest results for a round
-    void (* round_complete_callback)(neighbour_detect_conn_t * conn, unique_array_t * neighbours, uint16_t round_count;
-);
+    void (* round_complete_callback)(struct neighbour_detect_conn_t * conn, unique_array_t * neighbours, uint16_t round_count);
 } neighbour_detect_callbacks_t;
 
 typedef struct neighbour_detect_conn_t

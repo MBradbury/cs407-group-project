@@ -14,6 +14,8 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+#undef NDEBUG
+
 typedef union
 {
 	uint32_t i32;
@@ -100,7 +102,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 #ifndef NDEBUG
 	if (packetbuf_datalen() != sizeof(req_data_msg_t))
 	{
-		printf("Packet length not as expected\n");
+		printf("nhopreq: Packet length not as expected\n");
 	}
 #endif
 
@@ -110,10 +112,10 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	req_data_msg_t msg;
 	memcpy(&msg, packetbuf_dataptr(), sizeof(req_data_msg_t));
 
-	printf("I just recieved a Stubborn Broadcast Message! Originator: %s Hop: %d Message ID: %d\n",
+	printf("nhopreq: I just recieved a Stubborn Broadcast Message! Originator: %s Hop: %d Message ID: %lu\n",
 		addr2str(&msg.originator),
 		msg.hop_limit,
-		msg.message_id);
+		msg.message_id.i32);
 
 	bool respond = false;
 
@@ -123,12 +125,12 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	// Message has been delivered before
 	if (data != NULL)
 	{
-		printf("Seen message with %d before.\n", msg.message_id);
+		printf("nhopreq: Seen message with %lu before.\n", msg.message_id.i32);
 
 		// If the new message has a higher hop count
 		if (msg.hop_limit > data->hops)
 		{
-			printf("Message received before and hops is higher\n");
+			printf("nhopreq: Message received before and hops is higher\n");
 
 			// Update the new originator and hop count
 			rimeaddr_copy(&data->originator, &msg.originator);
@@ -141,7 +143,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	// Message has NOT been delivered before
 	else
 	{
-		printf("Not seen message with %d before.\n", msg.message_id);
+		printf("nhopreq: Not seen message with %lu before.\n", msg.message_id.i32);
 
 		data = (sent_elem_t *)malloc(sizeof(sent_elem_t));
 
@@ -188,7 +190,7 @@ static void datareq_stbroadcast_callback_cancel(void * ptr)
 {
 	nhopreq_conn_t * conn = (nhopreq_conn_t *)ptr;
 
-	printf("Canceling Stubborn Broadcast.\n");
+	printf("nhopreq: Canceling Stubborn Broadcast.\n");
 	stbroadcast_cancel(&conn->bc);
 }
 
@@ -199,7 +201,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 {
 	nhopreq_conn_t * conn = conncvt_runicast(c);
 
-	printf("runicast received from %s\n", addr2str(from));
+	printf("nhopreq: runicast received from %s\n", addr2str(from));
 
 	// When receive message, forward the message on to the originator
 	// if the final originator, do something with the value
@@ -223,7 +225,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 		}
 		else
 		{
-			printf("Trying to forward data to: %s of id %d\n",
+			printf("nhopreq: Trying to forward data to: %s of id %lu\n",
 				addr2str(&data->originator), data->message_id.i32);
 
 			send_reply(
@@ -245,7 +247,7 @@ static void runicast_sent(struct runicast_conn * c, rimeaddr_t const * to, uint8
 
 static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
-	printf("Runicast timed out to:%s retransmissions:%d\n", addr2str(to), retransmissions);
+	printf("nhopreq: Runicast timed out to:%s retransmissions:%d\n", addr2str(to), retransmissions);
 }
 
 
@@ -269,7 +271,7 @@ static void delayed_reply_data(void * ptr)
 
 	if (data != NULL)
 	{
-		printf("Found data with id %lu, forwarding on message\n", p->message_id.i32);
+		printf("nhopreq: Found data with id %lu, forwarding on message\n", p->message_id.i32);
 
 		send_reply(
 			p->conn,
@@ -312,7 +314,7 @@ send_reply(
 {
 	if (runicast_is_transmitting(&hc->ru))
 	{
-		printf("runicast is already transmitting, trying again in a few seconds\n");
+		printf("nhopreq: runicast is already transmitting, trying again in a few seconds\n");
 
 		delayed_forward_reply_params_t * p =
 			(delayed_forward_reply_params_t *)
@@ -393,7 +395,7 @@ send_n_hop_data_request(
 	// often we send messages
 	clock_time_t random_send_time = random_time(2, 4, 0.1);
 
-	printf("Starting sbcast every %u second(s) for %u seconds\n", random_send_time, 20);
+	printf("nhopreq: Starting sbcast every %lu/%lu second(s) for %d seconds\n", random_send_time, CLOCK_SECOND, 20);
 
 	stbroadcast_send_stubborn(&conn->bc, random_send_time);
 
@@ -423,7 +425,7 @@ bool nhopreq_start(
 		data_fn == NULL || ch1 == ch2 || data_size == 0 ||
 		receive_fn == NULL)
 	{
-		printf("nhopreq_start failed!\n");
+		printf("nhopreq: start failed!\n");
 		return false;
 	}
 

@@ -33,10 +33,17 @@ static const clock_time_t INITIAL_NEIGHBOUR_DETECT_PERIOD = 2 * 60 * CLOCK_SECON
 
 static void neighbour_agg_send_data(void * ptr);
 
-/* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
+/* Gets the pointer to the main connection struct, from the given neighbour_detect_conn_t */
 static inline neighbour_agg_conn_t * conncvt_treeconn(tree_agg_conn_t * conn)
 {
 	return (neighbour_agg_conn_t *)conn;
+}
+
+/* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
+static inline neighbour_agg_conn_t * conncvt_neighbourdetect_conn(neighbour_detect_conn_t * conn)
+{
+	return (neighbour_agg_conn_t *)
+	(((char *)conn) - sizeof(tree_agg_conn_t));
 }
 
 typedef struct
@@ -101,11 +108,15 @@ static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 }
 
 static void neighbour_agg_round_complete(neighbour_detect_conn_t * conn, unique_array_t * neighbours, uint16_t round_count)
-{
-	//TODO, copy in neighbours to a current one_hop_neighbours array
+{	
 	//get main conn, for the array of one_hop_neighbours
+	neighbour_agg_conn_t * mainconn = conncvt_neighbourdetect_conn(conn);
+	
 	//Empty current one_hop_neighbours
-	//insert/copy new array
+	unique_array_clear(&mainconn->one_hop_neighbours);
+	
+	//copy new array into old
+	unique_array_merge(&mainconn->one_hop_neighbours, neighbours);
 }
 
 static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, void const * packet, unsigned int packet_length)

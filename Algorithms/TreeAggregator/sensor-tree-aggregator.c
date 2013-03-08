@@ -56,7 +56,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 	}
 }
 
-static void tree_aggregate_update(void * data, void const * to_apply, unsigned int length)
+static void tree_aggregate_update(tree_agg_conn_t * tconn, void * data, void const * to_apply, unsigned int length)
 {
 	collect_msg_t * our_data = (collect_msg_t *)data;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
@@ -74,7 +74,7 @@ static void tree_aggregate_update(void * data, void const * to_apply, unsigned i
 	our_data->light2 /= 2.0;
 }
 
-static void tree_aggregate_own(void * ptr)
+static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
 	collect_msg_t data;
 

@@ -310,7 +310,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 	}
 }
 
-static void tree_aggregate_update(void * voiddata, void const * to_apply, unsigned int to_apply_length)
+static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void const * to_apply, unsigned int to_apply_length)
 {
 	printf("HSend Agg: Update local data\n");
 
@@ -331,7 +331,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply, unsign
 }
 
 // Add our own one hop data to the list
-static void tree_aggregate_own(void * ptr)
+static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
 	printf("HSend Agg: Update local data with own data\n");
 

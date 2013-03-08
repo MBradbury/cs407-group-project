@@ -17,10 +17,10 @@ typedef struct
 	/** This function is called when a node has finished setting up */
 	void (* setup_complete)(struct tree_agg_conn * conn);
 
-	void (* aggregate_update)(void * data, void const * to_apply, unsigned int length);
+	void (* aggregate_update)(struct tree_agg_conn * tconn, void * data, void const * to_apply, unsigned int length);
 
 	/** This function is used to add a nodes own one data */
-	void (* aggregate_own)(void * data);
+	void (* aggregate_own)(struct tree_agg_conn * tconn, void * data);
 
 	/** This function is called when a node needs to savea  packet
 		The arguments are: Connection, Packet and the Packet Length  */

@@ -120,7 +120,7 @@ static void finish_aggregate_collect(void * ptr)
 {
 	tree_agg_conn_t * conn = (tree_agg_conn_t *)ptr;
 
-	(*conn->callbacks.aggregate_own)(conn->data);
+	(*conn->callbacks.aggregate_own)(conn, conn->data);
 
 	void * data;
 	size_t length;
@@ -163,7 +163,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 		{
 			printf("Tree Agg: Cont Agg With: %s of length %u\n", addr2str(originator), length);
 
-			(*conn->callbacks.aggregate_update)(conn->data, msg, length);
+			(*conn->callbacks.aggregate_update)(conn, conn->data, msg, length);
 		}
 		else
 		{

@@ -100,6 +100,13 @@ static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 	return i;
 }
 
+static void neighbour_agg_round_complete(neighbour_detect_conn_t * conn, unique_array_t * neighbours, uint16_t round_count)
+{
+	//TODO, copy in neighbours to a current one_hop_neighbours array
+	//get main conn, for the array of one_hop_neighbours
+	//Empty current one_hop_neighbours
+	//insert/copy new array
+}
 
 static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, void const * packet, unsigned int packet_length)
 {
@@ -344,6 +351,8 @@ static void open_tree_agg(void * ptr)
 	free(data);
 }
 
+static neighbour_detect_callbacks_t neighbour_detect_callbacks = {&neighbour_agg_round_complete};
+
 bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 	rimeaddr_t const * sink,
 	uint16_t ch1, uint16_t ch2, uint16_t ch3,
@@ -363,7 +372,7 @@ bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 
 		memcpy(&conn->callbacks, callback_fns, sizeof(neighbour_agg_callbacks_t)); //copy in the callbacks
 
-		start_neighbour_detect(&conn->one_hop_neighbours, ch3);
+		start_neighbour_detect(&conn->nd, ch3, &neighbour_detect_callbacks);
 	
 		open_tree_agg_t * s_init = (open_tree_agg_t *) malloc(sizeof(open_tree_agg_t));
 

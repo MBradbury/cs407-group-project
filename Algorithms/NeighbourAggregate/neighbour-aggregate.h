@@ -15,7 +15,8 @@ typedef struct
 typedef struct neighbour_agg_conn
 {
 	tree_agg_conn_t tc;
-
+	neighbour_detect_conn_t nd;
+	
 	unique_array_t one_hop_neighbours;
 
 	neighbour_agg_callbacks_t callbacks;

@@ -33,13 +33,13 @@ static const clock_time_t INITIAL_NEIGHBOUR_DETECT_PERIOD = 2 * 60 * CLOCK_SECON
 
 static void neighbour_agg_send_data(void * ptr);
 
-/* Gets the pointer to the main connection struct, from the given neighbour_detect_conn_t */
+/* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
 static inline neighbour_agg_conn_t * conncvt_treeconn(tree_agg_conn_t * conn)
 {
 	return (neighbour_agg_conn_t *)conn;
 }
 
-/* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
+/* Gets the pointer to the main connection struct, from the given neighbour_detect_conn_t */
 static inline neighbour_agg_conn_t * conncvt_neighbourdetect_conn(neighbour_detect_conn_t * conn)
 {
 	return (neighbour_agg_conn_t *)

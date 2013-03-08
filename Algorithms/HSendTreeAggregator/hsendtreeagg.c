@@ -48,7 +48,7 @@ static array_list_t hops_data;
 // Used for simulating evaluating a predicate on a node
 static rimeaddr_t pred_simulated_node;
 
-static uint8_t pred_round_count;
+static unsigned int pred_round_count;
 
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
 typedef struct
@@ -73,14 +73,14 @@ typedef struct
 
 typedef struct
 {
-	uint8_t round_count;
+	unsigned int round_count;
 	array_list_t list;
 } aggregation_data_t;
 
 typedef struct
 {
     uint8_t length;
-    uint8_t round_count;
+    unsigned int round_count;
 } collected_data_t;
 
 // Struct for the list of node_data. It contains owner_addr, round count, temperature and humidity. 
@@ -253,13 +253,12 @@ AUTOSTART_PROCESSES(&data_gather);
 // Sink recieved final set of data
 static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, void const * packet, unsigned int packet_length)
 {
-	printf("HSend Agg Received data\n");
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
 	// Extract data from packet buffer
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
-	uint8_t length = msg->length;
+	unsigned int length = msg->length;
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); // Get the pointer after the message
 
@@ -269,30 +268,29 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 	{
 		st = (node_data_map_elem_t *)malloc(sizeof(node_data_map_elem_t));
 
-		// Init the new map
-		map_init(&st->data, &rimeaddr_equality, &free);
-		
 		st->key = msg->round_count;
+		map_init(&st->data, &rimeaddr_equality, &free);
 
 		// Add it to the main map
 		map_put(&recieved_data, st);
 	}
 
-	map_t * round_data = &st->data;
+	printf("HSend Agg: Adding %u pieces of data in round %u\n", length, msg->round_count);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		printf("HSend Agg - HSend: Recv, Node: %s Temp:%d, Humidity: %d\n", 
-			addr2str(&msgdata[i].addr), 
-			(int)msgdata[i].temp, 
-			msgdata[i].humidity);
+		printf("HSend Agg: Data Node: %s Temp:%d, Humidity: %d in %p\n",
+			addr2str(&msgdata[i].addr),
+			(int)msgdata[i].temp,
+			msgdata[i].humidity,
+			&st->data);
 
 		node_data_t * nd = (node_data_t *)malloc(sizeof(node_data_t));
 		memcpy(nd, &msgdata[i], sizeof(node_data_t));
 
 		// Add the data to the map 
-		map_put(round_data, nd);
+		map_put(&st->data, nd);
 	}
 }
 

@@ -172,7 +172,7 @@ static bool neighbour_map_key_compare(void const * x, void const * y)
 static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
 	printf("Handling neighbour data - HSend\n");
-	//use a map based on round_count, map contains a unique array list of all the neighbour pairs
+	// Use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
 	// Check if round is in map already, if not create new unique array list
 
@@ -190,18 +190,12 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 		map_put(&neighbour_info, stored);
 	}
 
-	unique_array_t * information = &stored->data;
-
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
 		rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-		
-		rimeaddr_copy(&p->first, &pairs[i].first);
-		rimeaddr_copy(&p->second, &pairs[i].second);
-
-		// Add the pair to the list
-		unique_array_append(information, p);
+		memcpy(p, &pairs[i], sizeof(rimeaddr_pair_t));
+		unique_array_append(&stored->data, p);
 	}
 }
 

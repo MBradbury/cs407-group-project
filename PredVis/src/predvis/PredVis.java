@@ -41,7 +41,7 @@ import org.apache.commons.collections15.Transformer;
  */
 public class PredVis extends JFrame {
     //Predicate data.
-    private DefaultListModel<Predicate> predicateListModel = null;
+    private DefaultListModel/*<Predicate>*/ predicateListModel = null;
     
     //Network data.
     private Layout<NodeId, String> layout = null;
@@ -86,7 +86,7 @@ public class PredVis extends JFrame {
     }
     
     private void initPredicates() {
-        predicateListModel = new DefaultListModel<>();
+        predicateListModel = new DefaultListModel/*<>*/();
         predicateListModel.addListDataListener(new ListDataListener() {
             @Override
             public void intervalAdded(ListDataEvent e) {
@@ -161,7 +161,8 @@ public class PredVis extends JFrame {
                 if (networkstates.containsKey(currentRound)) {
                     updateNetworkView(networkstates.get(currentRound));
                 }
-                revalidate();
+                // TODO: Work out what the java 6 alternative of this is!
+                //revalidate();
                 repaint();
             }
         });
@@ -220,9 +221,9 @@ public class PredVis extends JFrame {
         }
         
         //Initialise network viewer.
-        layout = new CircleLayout(ns.getGraph());
+        layout = new CircleLayout<NodeId, String>(ns.getGraph());
         layout.setSize(new Dimension(550, 550));
-        vv = new BasicVisualizationServer<>(layout);
+        vv = new BasicVisualizationServer<NodeId, String>(layout);
         vv.setPreferredSize(new Dimension(600, 600));
         
         // Init. vertex painter.
@@ -237,6 +238,7 @@ public class PredVis extends JFrame {
         };
         
         final Transformer<NodeId, Shape> vertexSize = new Transformer<NodeId, Shape>(){
+            @Override
             public Shape transform(NodeId i){
                 return new Ellipse2D.Double(-20, -20, 40, 40);
             }
@@ -244,7 +246,7 @@ public class PredVis extends JFrame {
         
         vv.getRenderContext().setVertexFillPaintTransformer(vertexPaint);
         vv.getRenderContext().setVertexShapeTransformer(vertexSize);
-        vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller());
+        vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<NodeId>());
         vv.getRenderer().getVertexLabelRenderer().setPosition(Position.CNTR);
         
         graphPanel.add(vv);

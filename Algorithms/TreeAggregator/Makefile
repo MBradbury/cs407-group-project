@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = tree-aggregator
+CONTIKI_PROJECT = sensor-tree-aggregator
 all: $(CONTIKI_PROJECT)
 
 # Target references:
@@ -6,21 +6,19 @@ all: $(CONTIKI_PROJECT)
 
 TARGET = sky
 
-PROJECTDIRS := $(CS407DIR)/Algorithms/Common
+PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers $(CS407DIR)/Algorithms/Common/net
 PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c led-helper.c random-range.c
+CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c led-helper.c random-range.c tree-aggregator.c multipacket.c map.c linked-list.c unique-array.c array-list.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \
 -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code -Wmissing-field-initializers \
 -Wno-int-to-pointer-cast -Winit-self -Wstrict-aliasing -Wno-unused-parameter \
--Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration \
--Wunused -Wno-unused-value -Wreturn-type
+-Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration
 
-CFLAGS += -DBUILDING_TREE_AGGREGATION_APP
+CFLAGS += -Werror=bad-function-cast
 
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include
-

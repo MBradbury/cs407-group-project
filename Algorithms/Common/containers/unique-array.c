@@ -1,4 +1,4 @@
-#include "unique-array.h"
+#include "containers/unique-array.h"
 
 #include <stdlib.h>
 #include <stddef.h>
@@ -27,14 +27,25 @@ bool unique_array_append(unique_array_t * list, void * data)
 	return true;
 }
 
-bool unique_array_merge(unique_array_t * first, unique_array_t * second)
+bool unique_array_merge(unique_array_t * first, unique_array_t const * second, unique_array_copy_t copy)
 {
+	if (first == NULL || second == NULL || copy == NULL)
+	{
+		return false;
+	}
+
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(second); unique_array_continue(second, elem); elem = unique_array_next(elem))
-	{		
-		void const * item = unique_array_data(second, elem);
+	{
+		// We cannot just add the item from the second array,
+		// as then that item would be owned by two containers.
+		//
+		// So we need a function that will allocate the memory for
+		// the new item and possibly do some conversion.
+		void * item = unique_array_data(second, elem);
+		void * item_copy = copy(item);
 
-		if (!unique_array_append(first, item)) return false;
+		if (!unique_array_append(first, item_copy)) return false;
 	}
 
 	return true;

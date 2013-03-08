@@ -3,7 +3,8 @@
 
 #include "net/rime.h"
 #include "net/rime/stbroadcast.h"
-#include "net/rime/runicast.h"
+
+#include "net/multipacket.h"
 
 struct tree_agg_conn;
 
@@ -11,12 +12,12 @@ typedef struct
 {
 	/** The function called when a message is received at the sink.
 		The arguments are: the connection and the message source. */
-	void (* recv)(struct tree_agg_conn * conn, rimeaddr_t const * source);
+	void (* recv)(struct tree_agg_conn * conn, rimeaddr_t const * source, void const * packet, unsigned int length);
 
 	/** This function is called when a node has finished setting up */
 	void (* setup_complete)(struct tree_agg_conn * conn);
 
-	void (* aggregate_update)(void * data, void const * to_apply);
+	void (* aggregate_update)(void * data, void const * to_apply, unsigned int length);
 
 	/** This function is used to add a nodes own one data */
 	void (* aggregate_own)(void * data);
@@ -26,14 +27,14 @@ typedef struct
 	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
 
 	/** This function is called to write the nodes stored data to an outward packet */
-	void (* write_data_to_packet)(struct tree_agg_conn * conn);
+	void (* write_data_to_packet)(struct tree_agg_conn * conn, void ** data, size_t * length);
 } tree_agg_callbacks_t;
 
 typedef struct tree_agg_conn
 {
 	// DO NOT CHANGE CONNECTION ORDER!!!
 	struct stbroadcast_conn bc;
-	struct runicast_conn uc;
+	struct multipacket_conn mc;
 
 	bool has_seen_setup;
 	bool is_collecting;
@@ -67,8 +68,9 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 
 void tree_agg_close(tree_agg_conn_t * conn);
 
-void tree_agg_send(tree_agg_conn_t * conn);
+void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length);
 
+bool tree_agg_is_sink(tree_agg_conn_t const * conn);
 bool tree_agg_is_leaf(tree_agg_conn_t const * conn);
 bool tree_agg_is_collecting(tree_agg_conn_t const * conn);
 

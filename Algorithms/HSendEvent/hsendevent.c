@@ -8,17 +8,20 @@
 
 #include "net/rime.h"
 
+#ifdef NODE_ID
 #include "sys/node-id.h"
+#endif
 
 #include "dev/leds.h"
 #include "dev/sht11-sensor.h"
 #include "dev/light-sensor.h"
 
-#include "nhopreq.h"
+#include "containers/map.h"
+#include "net/eventupdate.h"
 #include "predlang.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-#include "map.h"
+#include "rimeadder-helpers.h"
 
 // The custom headers we use
 static const struct packetbuf_attrlist trickle_attributes[] = {
@@ -111,6 +114,35 @@ static void node_data(void * data)
 		nd->light2 = (nint)s1087_light1(raw_light2);*/
 	}
 }
+
+// Our differs function
+// This is simply an arbitrary comparison that sees if data
+// has significantly changed. What is significant is up to the
+// application to decide.
+static bool node_data_differs(void * data1, void * data2)
+{
+	node_data_t * nd1 = (node_data_t *)data1;
+	node_data_t * nd2 = (node_data_t *)data2;
+
+	if (nd1 == NULL && nd2 == NULL)
+	{
+		return false;
+	}
+	else if (nd1 == NULL || nd2 == NULL)
+	{
+		return true;
+	}
+	else
+	{
+		double temp_diff = nd1->temp - nd2->temp;
+		if (temp_diff < 0) temp_diff = -temp_diff;
+
+		int humidity_diff = nd1->humidity - nd2->humidity;
+		if (humidity_diff < 0) humidity_diff = -humidity_diff;
+
+		return temp_diff > 3 || humidity_diff > 5;
+	}
+}
 ///
 /// End VM Helper Functions
 ///
@@ -120,17 +152,6 @@ static array_list_t hops_data;
 
 // Count the number of elements added to each of the lists
 static unsigned int max_size = 0;
-
-static bool rimeaddr_equal_node_data(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	node_data_t const * l = (node_data_t const *)left;
-	node_data_t const * r = (node_data_t const *)right;
-
-	return rimeaddr_cmp(&l->addr, &r->addr);
-}
 
 static map_t * get_hop_map(uint8_t hop)
 {
@@ -146,7 +167,7 @@ static map_t * get_hop_map(uint8_t hop)
 		for (to_add = hop - length; to_add > 0; --to_add)
 		{
 			map_t * map = (map_t *)malloc(sizeof(map_t));
-			map_init(map, &rimeaddr_equal_node_data, &free);
+			map_init(map, &rimeaddr_equality, &free);
 
 			array_list_append(&hops_data, map);
 		}
@@ -163,17 +184,13 @@ static void free_hops_data(void * voiddata)
 }
 
 
-static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
+static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uint8_t hops, uint8_t previous_hops)
 {
-	node_data_t const * nd = (node_data_t const *)data;
+	node_data_t const * nd = (node_data_t const *)packetbuf_dataptr();
 
-	char from_str[RIMEADDR_STRING_LENGTH];
-	char addr_str[RIMEADDR_STRING_LENGTH];
-
-	printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%%\n",
-		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
-		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
-		hops,
+	printf("Obtained information from %s hops:%u (prev:%d), T:%d H:%d%%\n",
+		addr2str(from),
+		hops, previous_hops,
 		(int)nd->temp, (int)nd->humidity);
 
 	/*printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",
@@ -183,29 +200,36 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 		(int)nd->temp, (int)nd->humidity,
 		(int)nd->light1, (int)nd->light2);*/
 
+	// If we have previously stored data from this node at
+	// a different location, then we need to forget about that
+	// information
+	if (previous_hops != 0 && hops != previous_hops)
+	{
+		map_t * prev_map = get_hop_map(previous_hops);
+
+		map_remove(prev_map, from);
+	}
+
 
 	map_t * map = get_hop_map(hops);
 
 	// Check that we have not previously received data from this node before
 	node_data_t * stored = (node_data_t *)map_get(map, from);
 	
-	if (stored != NULL)
-	{
-		memcpy(stored, nd, sizeof(node_data_t));
-	}
-	else
+	if (stored == NULL)
 	{
 		stored = (node_data_t *)malloc(sizeof(node_data_t));
-		memcpy(stored, nd, sizeof(node_data_t));
 
 		map_put(map, stored);
 		max_size++;
 	}
+
+	memcpy(stored, nd, sizeof(node_data_t));
 }
 
 
 
-static nhopreq_conn_t hc;
+static event_update_conn_t euc;
 static struct trickle_conn tcsender;
 static struct mesh_conn meshreceiver;
 static rimeaddr_t baseStationAddr;
@@ -213,11 +237,14 @@ static rimeaddr_t baseStationAddr;
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
 
+
 typedef struct
 {
 	uint8_t id; // Keep id as the first variable in the struct
 	uint8_t variables_details_length;
 	uint8_t bytecode_length;
+
+	rimeaddr_t target;
 
 	var_elem_t * variables_details;
 	ubyte * bytecode;
@@ -244,87 +271,124 @@ static bool predicate_id_equal(void const * left, void const * right)
 	return l->id == r->id;
 }
 
+static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
+{
+	uint8_t max_hops = 0;
+
+	unsigned int i;
+	for (i = 0; i < length; ++i)
+	{
+		if (variables[i].hops > max_hops)
+		{
+			max_hops = variables[i].hops;
+		}
+
+		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
+	}
+
+	return max_hops;
+}
+
 static map_t predicate_map;
+static uint8_t max_comm_hops = 0;
 
-
-// Rime address of target node (or rimeaddr_null for everyone)
-// binary bytecode for the VM
 static void trickle_send_rcv(struct trickle_conn * c)
 {
-	// Copy out packet, allows handling multiple evals at once
 	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
 	// Get eventual destination from header
 	rimeaddr_t const * target = packetbuf_addr(PACKETBUF_ADDR_ERECEIVER);
 
 	//printf("Rcv packet length %d\n", packetbuf_datalen());
-		
-	if (rimeaddr_cmp(target, &rimeaddr_null) ||		// Send to all
-		rimeaddr_cmp(target, &rimeaddr_node_addr)) 	// We are the target
+	
+	leds_off(LEDS_GREEN);
+
+	if (msg->bytecode_length == 0)
 	{
-		leds_on(LEDS_RED);
-		leds_off(LEDS_GREEN);
+		// There is no bytecode, so interpret this as a request to stop
+		// evaluating this predicate
+		map_remove(&predicate_map, &msg->predicate_id);
 
-		if (msg->bytecode_length == 0)
+		printf("Removed predicate with id %d\n", msg->predicate_id);
+	}
+	else
+	{
+		// Add or update entry
+		predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&predicate_map, &msg->predicate_id);
+
+		if (stored)
 		{
-			// There is no bytecode, so interpret this as a request to stop
-			// evaluating this predicate
-			map_remove(&predicate_map, &msg->predicate_id);
+			printf("Updating predicate with id %d.\n", msg->predicate_id);
 
-			printf("Removed predicate with id %d\n", msg->predicate_id);
+			// Re-allocate data structures if needed
+
+			if (msg->bytecode_length != stored->bytecode_length)
+			{
+				free(stored->bytecode);
+				stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
+			}
+
+			if (msg->num_of_bytecode_var != stored->variables_details_length)
+			{
+				free(stored->variables_details);
+				stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
+			}
 		}
 		else
 		{
-			// Add or update entry
-			predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&predicate_map, &msg->predicate_id);
+			printf("Creating predicate with id %d.\n", msg->predicate_id);
 
-			if (stored)
-			{
-				printf("Updating predicate with id %d.\n", msg->predicate_id);
+			// Allocate memory for the data
+			stored = malloc(sizeof(predicate_detail_entry_t));
 
-				// Re-allocate data structures if needed
+			stored->id = msg->predicate_id; //set the key
+			stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
+			stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
 
-				if (msg->bytecode_length != stored->bytecode_length)
-				{
-					free(stored->bytecode);
-					stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
-				}
+			// Put data in the map
+			map_put(&predicate_map, stored);
+		}
 
-				if (msg->num_of_bytecode_var != stored->variables_details_length)
-				{
-					free(stored->variables_details);
-					stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
-				}
-			}
-			else
-			{
-				printf("Creating predicate with id %d.\n", msg->predicate_id);
+		// Update the target of this predicate
+		rimeaddr_copy(&stored->target, target);
 
-				// Allocate memory for the data
-				stored = malloc(sizeof(predicate_detail_entry_t));
+		// Pointer for bytecode variables
+		var_elem_t const * variables = (var_elem_t const *)(msg + 1);
 
-				stored->id = msg->predicate_id; //set the key
-				stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
-				stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
+		// Create a pointer to the bytecode instructions stored in the message.
+		ubyte const * bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
 
-				// Put data in the map
-				map_put(&predicate_map, stored);
-			}
+		// Update data
+		stored->bytecode_length = msg->bytecode_length;
+		stored->variables_details_length = msg->num_of_bytecode_var;
 
-			// Pointer for bytecode variables
-			var_elem_t const * variables = (var_elem_t const *)(msg + 1);
+		memcpy(stored->bytecode, bytecode_instructions, sizeof(ubyte) * stored->bytecode_length);
+		memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
+	}
 
-			// Create a pointer to the bytecode instructions stored in the message.
-			ubyte const * bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
+	leds_off(LEDS_RED);
 
-			// Update data
-			stored->bytecode_length = msg->bytecode_length;
-			stored->variables_details_length = msg->num_of_bytecode_var;
+	// We need to find and set the maximum distance of all predicates
+	map_elem_t elem;
+	for (elem = map_first(&predicate_map); map_continue(&predicate_map, elem); elem = map_next(elem))
+	{
+		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&predicate_map, elem);
 
-			memcpy(stored->bytecode, bytecode_instructions, sizeof(ubyte) * stored->bytecode_length);
-			memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
+		uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
+
+		if (local_max_hops > max_comm_hops)
+		{
+			max_comm_hops = local_max_hops;
+		}
+
+		// Set the led to be red if this node will evaluate a predicate
+		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+		{
+			leds_on(LEDS_RED);
 		}
 	}
+
+	event_update_set_distance(&euc, max_comm_hops);
 }
 
 // Used to handle receiving predicate failure messages
@@ -462,7 +526,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	baseStationAddr.u8[1] = 0;
 
 	// Set the predicate evaluation target
-	destination.u8[0] = 2;
+	destination.u8[0] = 5;
 	destination.u8[1] = 0;
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr,&destination))
@@ -475,7 +539,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	mesh_open(&meshreceiver, 126, &meshreceiver_callbacks);
 
-	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
+	if (!event_update_start(&euc, 149, &node_data, &node_data_differs, sizeof(node_data_t), CLOCK_SECOND * 10, &receieved_data))
 	{
 		printf("nhopreq start function failed\n");
 	}
@@ -509,7 +573,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 exit:
 	printf("Exiting MAIN Process...\n");
 	array_list_clear(&hops_data);
-	nhopreq_end(&hc);
+	event_update_stop(&euc);
 	trickle_close(&tcsender);
 	mesh_close(&meshreceiver);
 	PROCESS_END();
@@ -541,8 +605,6 @@ static bool evaluate_predicate(
 	register_function(2, &get_temp, TYPE_FLOATING);
 	register_function(3, &get_humidity, TYPE_INTEGER);
 
-	printf("Binding variables using %p\n", all_neighbour_data);
-
 	// Bind the variables to the VM
 	unsigned int i;
 	for (i = 0; i < variables_length; ++i)
@@ -558,28 +620,9 @@ static bool evaluate_predicate(
 	return evaluate(program, program_length);
 }
 
-static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
-{
-	uint8_t max_hops = 0;
-
-	unsigned int i;
-	for (i = 0; i < length; ++i)
-	{
-		if (variables[i].hops > max_hops)
-		{
-			max_hops = variables[i].hops;
-		}
-
-		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
-	}
-
-	return max_hops;
-}
-
 PROCESS_THREAD(hsendProcess, ev, data)
 {
 	static struct etimer et;
-	static uint8_t max_hops = 0;
 	static node_data_t * all_neighbour_data = NULL;
 
 	PROCESS_EXITHANDLER(goto exit;)
@@ -587,7 +630,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	
 	printf("HSEND Process Started.\n");
 
-	//Wait for other nodes to initialize.
+	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
@@ -599,42 +642,16 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		printf("HSEND: Wait finished! About to ask for data!\n");
-
-		max_hops = 0;
-
-		map_elem_t elem;
-		for (elem = map_first(&predicate_map); map_continue(&predicate_map, elem); elem = map_next(elem))
-		{
-			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&predicate_map, elem);
-
-			uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
-
-			if (local_max_hops > max_hops)
-			{
-				max_hops = local_max_hops;
-			}
-		}
-		
+	
 
 		// Only ask for data if the predicate needs it
-		if (max_hops != 0)
+		if (max_comm_hops != 0)
 		{
-			printf("Starting request for %d hops of data...\n", max_hops);
-
-			nhopreq_request_info(&hc, max_hops);
-	
-			// Get as much information as possible within a given time bound
-			etimer_set(&et, 120 * CLOCK_SECOND);
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-			printf("Finished collecting hop data.\n");
-
-
 			// Generate array of all the data
 			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
 			uint8_t i;
-			for (i = 1; i <= max_hops; ++i)
+			for (i = 1; i <= max_comm_hops; ++i)
 			{
 				map_t * hop_map = get_hop_map(i);
 
@@ -645,6 +662,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 				if (length > 0)
 				{
+					map_elem_t elem;
 					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 					{
 						node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
@@ -657,69 +675,64 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			}
 		}
 
+		map_elem_t elem;
 		for (elem = map_first(&predicate_map); map_continue(&predicate_map, elem); elem = map_next(elem))
 		{
 			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&predicate_map, elem);
 
-			printf("Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
+			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+			{
+				printf("Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 	
-			bool evaluation_result = evaluate_predicate(
-				pe->bytecode, pe->bytecode_length,
-				all_neighbour_data,
-				pe->variables_details, pe->variables_details_length);
+				bool evaluation_result = evaluate_predicate(
+					pe->bytecode, pe->bytecode_length,
+					all_neighbour_data,
+					pe->variables_details, pe->variables_details_length);
 
-			if (evaluation_result)
-			{
-				printf("Pred: TRUE\n");
+				if (evaluation_result)
+				{
+					printf("Pred: TRUE\n");
+				}
+				else
+				{
+					printf("Pred: FAILED due to error: %s\n", error_message());
+				}
+
+				unsigned int packet_length = sizeof(failure_response_t) +
+											 sizeof(hops_position_t) * pe->variables_details_length +
+											 sizeof(node_data_t) * max_size;
+
+				packetbuf_clear();
+				packetbuf_set_datalen(packet_length);
+				debug_packet_size(packet_length);
+				failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
+				memset(msg, 0, packet_length);
+
+				msg->predicate_id = pe->id;
+				msg->num_hops_positions = pe->variables_details_length;
+				msg->data_length = max_size;
+
+				hops_position_t * hops_details = (hops_position_t *)(msg + 1);
+
+				unsigned int i;
+				for (i = 0; i < msg->num_hops_positions; ++i)
+				{
+					hops_details[i].hops = pe->variables_details[i].hops;
+					hops_details[i].var_id = pe->variables_details[i].var_id;
+					hops_details[i].length = hop_data_length(&pe->variables_details[i]);
+				}
+
+				node_data_t * msg_neighbour_data = (node_data_t *)(hops_details + pe->variables_details_length);
+
+				memcpy(msg_neighbour_data, all_neighbour_data, sizeof(node_data_t) * max_size);
+
+				mesh_send(&meshreceiver, &baseStationAddr);
 			}
-			else
-			{
-				printf("Pred: FAILED due to error: %s\n", error_message());
-			}
-
-			unsigned int packet_length = sizeof(failure_response_t) +
-										 sizeof(hops_position_t) * pe->variables_details_length +
-										 sizeof(node_data_t) * max_size;
-
-			packetbuf_clear();
-			packetbuf_set_datalen(packet_length);
-			debug_packet_size(packet_length);
-			failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
-			memset(msg, 0, packet_length);
-
-			msg->predicate_id = pe->id;
-			msg->num_hops_positions = pe->variables_details_length;
-			msg->data_length = max_size;
-
-			hops_position_t * hops_details = (hops_position_t *)(msg + 1);
-
-			unsigned int i;
-			for (i = 0; i < msg->num_hops_positions; ++i)
-			{
-				hops_details[i].hops = pe->variables_details[i].hops;
-				hops_details[i].var_id = pe->variables_details[i].var_id;
-				hops_details[i].length = hop_data_length(&pe->variables_details[i]);
-			}
-
-			node_data_t * msg_neighbour_data = (node_data_t *)(hops_details + pe->variables_details_length);
-
-			memcpy(msg_neighbour_data, all_neighbour_data, sizeof(node_data_t) * max_size);
-
-			mesh_send(&meshreceiver, &baseStationAddr);
 		}
 
 		// Free the allocated neighbour data
 		free(all_neighbour_data);
 		all_neighbour_data = NULL;
-
-		// We want to remove all the data we gathered,
-		// this is important to do so as if a node dies
-		// we do not want to keep using its last piece of data
-		// we want that lack of data to be picked up on.
-		array_list_clear(&hops_data);
-
-		// Reset the count of the data received
-		max_size = 0;
 	}
 
 exit:

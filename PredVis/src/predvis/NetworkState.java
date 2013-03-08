@@ -8,7 +8,7 @@ import edu.uci.ics.jung.graph.UndirectedSparseGraph;
  * @author Tim
  */
 public class NetworkState {
-    private Graph<NodeId, String> g = new UndirectedSparseGraph();
+    private Graph<NodeId, String> g = new UndirectedSparseGraph<NodeId, String>();
     
     /**
      * Return a handle to the internal graph.

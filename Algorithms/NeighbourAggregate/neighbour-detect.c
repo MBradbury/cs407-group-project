@@ -13,9 +13,6 @@
 #include "led-helper.h"
 #include "debug-helper.h"
 
-static struct neighbor_discovery_conn nd;
-static unique_array_t * results_ptr = NULL;
-
 #define INITIAL_INTERVAL (15 * CLOCK_SECOND)
 #define MIN_INTERVAL (5 * CLOCK_SECOND)
 #define MAX_INTERVAL (120 * CLOCK_SECOND)
@@ -48,9 +45,9 @@ static void round_complete(void * ptr)
 	// We want to remove any nodes we haven't seen in a while
 
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(results_ptr); unique_array_continue(results_ptr, elem); )
+	for (elem = unique_array_first(conn->results_ptr); unique_array_continue(conn->results_ptr, elem); )
 	{
-		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(results_ptr, elem);
+		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(conn->results_ptr, elem);
 
 		round_map_elem_t * stored = (round_map_elem_t *)map_get(&round_map, addr);
 
@@ -62,7 +59,7 @@ static void round_complete(void * ptr)
 			// We haven't seen this node for a while, so need to remove it
 			// from both the results and our local map
 			map_remove(&round_map, addr);
-			unique_array_remove(results_ptr, elem);
+			unique_array_remove(conn->results_ptr, elem);
 		}
 		else
 		{
@@ -84,13 +81,13 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 	//printf("Mote With Address: %s is my Neighbour ", addr2str(from));
 	//printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
 
-	if (results_ptr != NULL)
+	if (conn->results_ptr != NULL)
 	{
-		if (!unique_array_contains(results_ptr, from))
+		if (!unique_array_contains(conn->results_ptr, from))
 		{
 			rimeaddr_t * store = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
 			rimeaddr_copy(store, from);
-			unique_array_append(results_ptr, store);
+			unique_array_append(conn->results_ptr, store);
 
 			printf("Recording Address: %s", addr2str(from));
 			printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
@@ -132,16 +129,16 @@ static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
 	{ &neighbor_discovery_recv, &neighbor_discovery_sent };
 
-void start_neighbour_detect(unique_array_t * results, uint16_t channel)
+void start_neighbour_detect(neighbour_detect_conn * conn, uint16_t channel, neighbour_detect_callbacks_t cb_fns);
 {
 	printf("Neighbour Discovery: Started!\n");
 
 	map_init(&round_map, &rimeaddr_equality, &free);
 
-	results_ptr = results;
+	conn->results_ptr = results;
 
 	neighbor_discovery_open(
-        &nd,
+        &conn->nd,
         channel, 
         INITIAL_INTERVAL,
         MIN_INTERVAL,
@@ -149,19 +146,19 @@ void start_neighbour_detect(unique_array_t * results, uint16_t channel)
         &neighbor_discovery_callbacks
 	);
 
-    neighbor_discovery_start(&nd, round_count);
+    neighbor_discovery_start(&conn->nd, round_count);
 
 	ctimer_set(&round_timer, ROUND_TIME, &round_complete, NULL);
 
 	leds_on(LEDS_BLUE);
 }
 
-void stop_neighbour_detect(void)
+void stop_neighbour_detect(neighbour_detect_conn * conn)
 {
 	printf("Neighbour Discovery: Stopped!\n");
 
-	neighbor_discovery_close(&nd);
-	results_ptr = NULL;
+	neighbor_discovery_close(&conn->nd);
+	conn->results_ptr = NULL;
 
 	ctimer_stop(&round_timer);
 

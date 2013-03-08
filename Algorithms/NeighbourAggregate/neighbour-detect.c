@@ -71,6 +71,9 @@ static void round_complete(void * ptr)
 
 	++conn->round_count;
 
+	//call the callback
+	(*conn->callbacks.round_complete_callback)(conn, &conn->results, conn->round_count);
+
 	neighbor_discovery_set_val(&conn->nd, conn->round_count);
 
 	// Reset the timer

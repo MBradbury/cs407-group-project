@@ -94,7 +94,7 @@ static void tree_aggregate_own(void * ptr)
 	data.light1 = s1087_light1(raw_light1);
 	data.light2 = s1087_light1(raw_light2);
 
-	tree_aggregate_update(ptr, &data);
+	tree_aggregate_update(ptr, &data, 0);
 }
 
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)

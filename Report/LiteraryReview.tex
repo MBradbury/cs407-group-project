@@ -1,6 +1,65 @@
 % !TeX root = Report.tex
-\section{Literary Review}
+\section{Literature Review}
 
+\subsection{Routing in Sensor Networks}
+
+\subsubsection{Flooding}
+
+
+
+\subsection{Simulating Sensor Networks}
+
+\subsubsection{TinyOS}
+
+\subsubsection{Contiki}
+% Cite basically all the papers at: http://www.contiki-os.org/support.html
+
+\subsubsection{NS2}
+
+\subsubsection{JProwler}
+
+\subsubsection{Simulating Energy Consumption}
+\cite{Shnayder04}
+
+
+\subsection{Sensor Network Platforms}
+
+\subsubsection{MICA}
+\cite{Mica2002}
+
+\subsubsection{Sky}
+
+
+\subsection{Practical Experience in Sensor Networks}
+
+\subsubsection{Air Pollution}
+\cite{libeliumAirPollution}
+\cite{wsnpollution}
+
+\subsubsection{Forest Fires}
+\cite{libeliumForestFires}
+
+\subsubsection{Great Duck Island}
+\cite{SzewczykPMC04}
+
+\subsubsection{Volcano Monitoring}
+\cite{Werner-Allen:2006:FYV:1298455.1298491}
+
+\subsubsection{Structural Monitoring}
+\cite{5508230}
+
+\subsubsection{Development of Applications}
+\cite{Fagerstrom:1988:DTD:55823.55833}
+
+
+\subsubsection{Power Considerations}
+
+
+\subsection{Predicates}
+
+
+
+\begin{comment}
 \subsection{Quality of Service}
 The area of Quality of Service (QoS) within Wireless Sensor Networks (WSN) is largely unexplored, due to the large differences between WSNs and traditional wireless networks. Traditional networks determine QoS based on high bandwidth allowance, as a result of high multimedia demands of applications. WSNs typically do not need to transfer this amount of data, and have a much lower bandwidth because of this. WSNs also have a wide range of different applications, and as a result, it is not clear how to develop transferable approaches to QoS  \cite{Akyildiz2002393}. 
 
@@ -21,6 +80,7 @@ Akyildiz et. al. further went on to describe the challenges specific to WSN;
 \end{itemize}
 
 QoS is a difficult term to define, mainly due to its various meanings and perspectives, because of this, measurements of quality must be generated based on the application involved, and the specific requirements of that application.
+
 
 \subsection{MAC Protocols}
 
@@ -91,6 +151,7 @@ After describing the operation of SMAC (as above), the authors highlights the pr
 The basic operation of QSMAC involves examining the average increase rate of data packets in a node's buffer queue. When this rate is more than one per second, packets are arriving faster than they can be processed using the default SMAC cycle, so the cycle duration is halved to double its effective processing speed. When the buffer is almost empty, the default cycle is restored.
 
 Simulations show performance greater than that of SMAC in terms of packets' delay, energy consumption, packet reception ratio and network throughput. As above, if these benefits translate to real hardware, QSMAC potentially offers a real improvement over existing wireless MAC protocols. However, its use in our network will have to be carefully considered, as it is currently unknown whether fluctuating traffic loads will be a likely scenario.
+
 
 \subsection{Global Predicate Detection}
 
@@ -174,3 +235,4 @@ H-SEND is optimised for WSNs in a variety of ways. For example, it minimises ove
 \subsubsection*{Dynamic Invariant Detection $\cup$ Checking Engine (DIDUCE)}
 
 DIDUCE is a tool which employs machine learning to dynamically generate hypotheses of invariants for a system at run-time; the invariants begin extremely strict, and are relaxed over time to allow for new correct behaviour. The machine learning aspect means that developers do not have to specify invariants themselves, which proves beneficial as accurately pinpointing the values necessary for fault-free operation is nontrivial. DIDUCE checks against the invariants continually during a program's operation and reports all violations detected at the end of the run, whereas Daicon merely presents the user with invariants found. For all its apparent usefulness, unfortunately DIDUCE was designed for large, complex systems rather than lightweight distributed systems with constrained resources (i.e. WSNs), so it is likely to prove infeasible to use this tool for GPD. \cite{diduce}
+\end{comment}

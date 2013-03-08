@@ -703,7 +703,7 @@ static void data_evaluation(void * ptr)
 
 				// Get the neighbours of the node
 				unique_array_t * neighbours = get_neighbours(t, pred_round_count);
-				
+				printf("Eval: got neighbours of size: %d\n",unique_array_length(neighbours));
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbour;
 				for (neighbour = unique_array_first(neighbours); 
@@ -712,6 +712,8 @@ static void data_evaluation(void * ptr)
 				{
 					// The neighbour found
 					rimeaddr_t * n = unique_array_data(neighbours, neighbour);
+
+					printf("Eval: Checking neighbour %s\n", addr2str(n));
 
 					// If the neighbour hasn't been seen before
 					if (!unique_array_contains(&seen_nodes, n)) 

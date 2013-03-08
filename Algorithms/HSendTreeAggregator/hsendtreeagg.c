@@ -251,13 +251,13 @@ PROCESS(send_data_process, "Send data process");
 AUTOSTART_PROCESSES(&data_gather);
 
 // Sink recieved final set of data
-static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source)
+static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, void const * packet, unsigned int packet_length)
 {
 	printf("HSend Agg Received data\n");
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
 	// Extract data from packet buffer
-	collected_data_t const * msg = (collected_data_t const *)packetbuf_dataptr();
+	collected_data_t const * msg = (collected_data_t const *)packet;
 
 	uint8_t length = msg->length;
 
@@ -310,7 +310,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 	}
 }
 
-static void tree_aggregate_update(void * voiddata, void const * to_apply)
+static void tree_aggregate_update(void * voiddata, void const * to_apply, unsigned int to_apply_length)
 {
 	printf("HSend Agg: Update local data\n");
 
@@ -325,11 +325,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply)
 	for (i = 0; i < data_to_apply->length; ++i)
 	{
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
-		tmp->temp = msgdata[i].temp;
-		tmp->humidity = msgdata[i].humidity;
-
-		rimeaddr_copy(&tmp->addr, &msgdata[i].addr);
-
+		memcpy(tmp, &msgdata[i], sizeof(node_data_t));
 		array_list_append(data, tmp);
 	}
 }
@@ -381,7 +377,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 }
 
 //write the data structure to the outbout packet buffer
-static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
+static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, size_t * packet_length)
 {
 	printf("Writing data to packet - HSend\n"); 
 	//take all data, write a struct to the buffer at the start, 
@@ -391,17 +387,15 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn)
 
 	aggregation_data_t * conn_data = (aggregation_data_t *)conn->data;
 	unsigned int length = array_list_length(&conn_data->list);
-	unsigned int packet_length = sizeof(collected_data_t) + sizeof(node_data_t) * length;
+	
+	*packet_length = sizeof(collected_data_t) + sizeof(node_data_t) * length;
+	*data = malloc(*packet_length);
 
-	packetbuf_clear();
-	packetbuf_set_datalen(packet_length);
-	debug_packet_size(packet_length);
-
-	collected_data_t * msg = (collected_data_t *)packetbuf_dataptr();
+	collected_data_t * msg = (collected_data_t *)*data;
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("Writing packet, length %d data length:%d - HSend\n", msg->length, length);
+	printf("Writing packet, length %d data length:%d - HSend\n", msg->length, *packet_length);
 
 	node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 
@@ -552,15 +546,10 @@ PROCESS_THREAD(send_data_process, ev, data)
 			//HSend should be set up by now
 			//Start sending data up the tree
 
-			//create data message
-			packetbuf_clear();
-			//set length of the buffer
-			packetbuf_set_datalen(sizeof(collected_data_t) + sizeof(node_data_t));
-			debug_packet_size(sizeof(collected_data_t) + sizeof(node_data_t));
-			collected_data_t * msg = (collected_data_t *)packetbuf_dataptr();
+			size_t data_length = sizeof(collected_data_t) + sizeof(node_data_t);
+			void * data = malloc(data_length);
 
-			//copy in data into the buffer
-			memset(msg, 0, sizeof(collected_data_t) + sizeof(node_data_t));
+			collected_data_t * msg = (collected_data_t *)data;
 
 			msg->round_count = round_count;
 			msg->length = 1;
@@ -576,8 +565,9 @@ PROCESS_THREAD(send_data_process, ev, data)
 			msgdata->humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata[0].temp);
 			rimeaddr_copy(&msgdata->addr, &rimeaddr_node_addr);
 
-			//send data
-			tree_agg_send(&aggconn);
+			tree_agg_send(&aggconn, data, data_length);
+
+			// No need to free data as tree_agg now owns that memory
 		}
 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

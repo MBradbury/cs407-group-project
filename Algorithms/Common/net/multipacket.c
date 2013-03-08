@@ -109,7 +109,7 @@ static void send_loop_callback(void * ptr)
 	{
 		multipacket_sending_packet_t * details = linked_list_peek(&conn->sending_packets);
 
-		size_t to_send = min(/*PACKETBUF_SIZE*/10, details->length - details->sent);
+		size_t to_send = min(PACKETBUF_SIZE, details->length - details->sent);
 
 		void * send_start = (char *)(details->data) + details->sent;
 

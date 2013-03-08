@@ -807,6 +807,9 @@ static void data_evaluation(void * ptr)
 		unique_array_clear(&acquired_nodes);
 	}
 
+	//remove the data we no longer need
+	map_remove(&recieved_data, pred_round_count);
+
 	++pred_round_count;
 
 	ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10, &data_evaluation, NULL);

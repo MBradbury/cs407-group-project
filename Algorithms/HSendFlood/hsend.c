@@ -178,8 +178,48 @@ static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
+
+static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
+{
+	uint8_t max_hops = 0;
+
+	unsigned int i;
+	for (i = 0; i < length; ++i)
+	{
+		if (variables[i].hops > max_hops)
+		{
+			max_hops = variables[i].hops;
+		}
+
+		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
+	}
+
+	return max_hops;
+}
+
+static uint8_t max_hops = 0;
+
 static void predicate_manager_update_callback(struct predicate_manager_conn * conn)
 {
+	map_t const * predicate_map = predicate_manager_get_map(conn);
+
+	max_hops = 0;
+
+	map_elem_t elem;
+	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+	{
+		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+
+		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+		{
+			uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
+
+			if (local_max_hops > max_hops)
+			{
+				max_hops = local_max_hops;
+			}
+		}
+	}
 }
 
 // Used to handle receiving predicate failure messages
@@ -280,23 +320,17 @@ PROCESS_THREAD(mainProcess, ev, data)
 		send_example_predicate(&destination, 1);
 
 		leds_on(LEDS_BLUE);
-
-		while (true)
-		{
-			etimer_set(&et, 10 * CLOCK_SECOND);
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-		}
 	}
 	else
 	{
 		leds_on(LEDS_GREEN);
-
-		while (true)
-		{
-			etimer_set(&et, 10 * CLOCK_SECOND);
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-		}
 	}	
+
+	while (true)
+	{
+		etimer_set(&et, 10 * CLOCK_SECOND);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	}
 
 exit:
 	printf("Exiting MAIN Process...\n");
@@ -350,28 +384,9 @@ static bool evaluate_predicate(
 	return evaluate(program, program_length);
 }
 
-static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
-{
-	uint8_t max_hops = 0;
-
-	unsigned int i;
-	for (i = 0; i < length; ++i)
-	{
-		if (variables[i].hops > max_hops)
-		{
-			max_hops = variables[i].hops;
-		}
-
-		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
-	}
-
-	return max_hops;
-}
-
 PROCESS_THREAD(hsendProcess, ev, data)
 {
 	static struct etimer et;
-	static uint8_t max_hops = 0;
 	static node_data_t * all_neighbour_data = NULL;
 	static map_t const * predicate_map = NULL;
 
@@ -392,24 +407,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		printf("HSEND: Wait finished! About to ask for data!\n");
-
-		max_hops = 0;
-
-		predicate_map = predicate_manager_get_map(&predconn);
-
-		map_elem_t elem;
-		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
-		{
-			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
-
-			uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
-
-			if (local_max_hops > max_hops)
-			{
-				max_hops = local_max_hops;
-			}
-		}
-		
 
 		// Only ask for data if the predicate needs it
 		if (max_hops != 0)
@@ -440,6 +437,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 				if (length > 0)
 				{
+					map_elem_t elem;
 					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 					{
 						node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
@@ -452,6 +450,9 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			}
 		}
 
+		predicate_map = predicate_manager_get_map(&predconn);
+
+		map_elem_t elem;
 		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
 		{
 			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);

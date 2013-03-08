@@ -235,6 +235,8 @@ static void predicate_manager_update_callback(struct predicate_manager_conn * co
 {
 	map_t const * predicate_map = predicate_manager_get_map(conn);
 
+	max_comm_hops = 0;
+
 	// We need to find and set the maximum distance of all predicates
 	map_elem_t elem;
 	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))

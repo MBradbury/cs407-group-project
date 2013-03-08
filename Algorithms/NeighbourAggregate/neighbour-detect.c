@@ -10,6 +10,7 @@
 
 #include "map.h"
 
+#include "rimeaddr-helpers.h"
 #include "led-helper.h"
 #include "debug-helper.h"
 
@@ -24,14 +25,6 @@
 static inline neighbour_detect_conn_t * conncvt_detectconn(struct neighbor_discovery_conn * conn)
 {
 	return (neighbour_detect_conn_t *)conn;
-}
-
-static bool rimeaddr_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
 }
 
 typedef struct

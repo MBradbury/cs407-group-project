@@ -518,6 +518,8 @@ PROCESS_THREAD(data_gather, ev, data)
 		// Add it to the list
 		array_list_append(&predicates, pred);
 
+		pred_round_count = 1;
+		
 		// Start the evauluation method
 		ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10 , &data_evaluation, NULL);
 	}

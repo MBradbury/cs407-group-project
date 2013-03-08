@@ -56,10 +56,10 @@ static void round_complete(void * ptr)
 
 	printf("Neighbour Detect: Round %u complete!\n", conn->round_count);
 
-	++conn->round_count;
-
 	// call the callback
 	(*conn->callbacks.round_complete_callback)(conn, &conn->results, conn->round_count);
+
+	++conn->round_count;
 
 	neighbor_discovery_set_val(&conn->nd, conn->round_count);
 

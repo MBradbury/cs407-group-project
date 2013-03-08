@@ -10,5 +10,7 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration \
 -Wunused -Wno-unused-value -Wreturn-type
 
+CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
+
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include

@@ -15,7 +15,7 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wuninitialized -Wold-style-definition -Wredundant-decls \
 -Wunused -Wno-unused-value -Wreturn-type
 
-CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration
+CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
 
 CFLAGS += -DNEIGHBOUR_AGG_APPLICATION
 

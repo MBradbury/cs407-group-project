@@ -208,7 +208,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 	// Debug check to make sure that we have done sane things!
 	if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
 	{
-		printf("Failed to copy data correctly got=%d expected=%u!\n",
+		printf("Failed to copy data correctly got=%ld expected=%u!\n",
 			(void *)(msg_bytecode + bytecode_length) - (void *)msg,
 			packet_size);
 	}

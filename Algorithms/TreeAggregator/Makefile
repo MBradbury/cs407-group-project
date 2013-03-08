@@ -18,7 +18,7 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wno-int-to-pointer-cast -Winit-self -Wstrict-aliasing -Wno-unused-parameter \
 -Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration
 
-CFLAGS += -Werror=bad-function-cast
+CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
 
 CONTIKI = $(HOME)/contiki-2.6
 include $(CONTIKI)/Makefile.include

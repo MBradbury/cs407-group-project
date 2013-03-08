@@ -153,7 +153,7 @@ static void inspect_stack(void)
 	ubyte * ptr;
 	for (ptr = stack_ptr; ptr < max; ++ptr)
 	{
-		printf("\tStack %d %d\n", max - ptr, *ptr);
+		printf("\tStack %d %u\n", (int)(max - ptr), *ptr);
 	}
 }
 

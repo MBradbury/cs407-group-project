@@ -13,8 +13,8 @@ struct multipacket_conn;
 
 typedef struct multipacket_callbacks
 {
-	void (* recv)(struct multipacket_conn * conn, rimeaddr_t const * from, void * data, size_t length);
-	void (* sent)(struct multipacket_conn * conn, rimeaddr_t const * to, void * data, size_t length);
+	void (* recv)(struct multipacket_conn * conn, rimeaddr_t const * from, void * data, unsigned int length);
+	void (* sent)(struct multipacket_conn * conn, rimeaddr_t const * to, void * data, unsigned int length);
 } multipacket_callbacks_t;
 
 typedef struct multipacket_conn
@@ -36,6 +36,6 @@ typedef struct multipacket_conn
 bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_callbacks_t const * callbacks);
 void multipacket_close(multipacket_conn_t * conn);
 
-void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void * data, size_t length);
+void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void * data, unsigned int length);
 
 #endif /*CS407_MULTIPACKET_H*/

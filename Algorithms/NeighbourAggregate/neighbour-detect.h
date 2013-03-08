@@ -1,6 +1,8 @@
 #ifndef CS407_NEIGHBOUR_DETECT
 #define CS407_NEIGHBOUR_DETECT
 
+#include "contiki.h"
+
 #include "containers/unique-array.h"
 #include "containers/map.h"
 
@@ -30,10 +32,15 @@ typedef struct neighbour_detect_conn_t
 	struct ctimer round_timer;
 	
 	uint16_t round_count;
+	uint16_t missed_round_threshold;
 
 } neighbour_detect_conn_t;
 
-bool start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, neighbour_detect_callbacks_t const * cb_fns);
+bool start_neighbour_detect(neighbour_detect_conn_t * conn,
+	uint16_t channel, neighbour_detect_callbacks_t const * cb_fns,
+	clock_time_t initial_interval, clock_time_t min_interval, clock_time_t max_interval,
+	clock_time_t round_time, uint16_t missed_round_threshold);
+
 void stop_neighbour_detect(neighbour_detect_conn_t * conn);
 
 #endif /*CS407_NEIGHBOUR_DETECT*/

@@ -28,18 +28,22 @@
 #include "containers/unique-array.h"
 
 
-static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
-static const clock_time_t INITIAL_NEIGHBOUR_DETECT_PERIOD = 2 * 60 * CLOCK_SECOND;
+#define INITIAL_INTERVAL (15 * CLOCK_SECOND)
+#define MIN_INTERVAL (5 * CLOCK_SECOND)
+#define MAX_INTERVAL (120 * CLOCK_SECOND)
+#define MISSED_ROUND_THRESHOLD 4
+
+static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
 
 static void neighbour_agg_send_data(void * ptr);
 
-/* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
+// Gets the pointer to the main connection struct, from the given tree_agg_conn_t
 static inline neighbour_agg_conn_t * conncvt_treeconn(tree_agg_conn_t * conn)
 {
 	return (neighbour_agg_conn_t *)conn;
 }
 
-/* Gets the pointer to the main connection struct, from the given neighbour_detect_conn_t */
+// Gets the pointer to the main connection struct, from the given neighbour_detect_conn_t
 static inline neighbour_agg_conn_t * conncvt_neighbourdetect_conn(neighbour_detect_conn_t * conn)
 {
 	return (neighbour_agg_conn_t *)
@@ -86,7 +90,7 @@ static void print_ua_rimeaddr_pair(unique_array_t const * data)
 
 
 // Data is a list of rimeaddr_t
-static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
+static size_t list_to_array_single(unique_array_t const * data, collect_msg_t * msg)
 {
 	rimeaddr_pair_t * addr_arr = (rimeaddr_pair_t *)(msg + 1);
 
@@ -97,7 +101,7 @@ static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 	for (elem = unique_array_first(data); unique_array_continue(data, elem); elem = unique_array_next(elem))
 	{
 		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(data, elem);
-		
+
 		rimeaddr_copy(&addr_arr[i].first, &rimeaddr_node_addr);
 		rimeaddr_copy(&addr_arr[i].second, addr);
 		
@@ -108,14 +112,17 @@ static size_t list_to_array_single(unique_array_t * data, collect_msg_t * msg)
 }
 
 static void neighbour_agg_round_complete(neighbour_detect_conn_t * conn, unique_array_t * neighbours, uint16_t round_count)
-{	
-	//get main conn, for the array of one_hop_neighbours
+{
+	printf("Neighbour Aggregate: Merging neighbour data round:%u len:%u\n",
+		round_count, unique_array_length(neighbours));
+
+	// Get main conn, for the array of one_hop_neighbours
 	neighbour_agg_conn_t * mainconn = conncvt_neighbourdetect_conn(conn);
 	
-	//Empty current one_hop_neighbours
+	// Empty current one_hop_neighbours
 	unique_array_clear(&mainconn->one_hop_neighbours);
 	
-	//copy new array into old
+	// Copy new array into old
 	unique_array_merge(&mainconn->one_hop_neighbours, neighbours, &rimeaddr_clone);
 }
 
@@ -125,7 +132,7 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, vo
 
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-	printf("Neighbour Agg - Neighbour Aggregate: Recv\n");
+	printf("Neighbour Aggregate: Recv\n");
 
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 
@@ -194,9 +201,7 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply, unsign
 		if (!unique_array_contains(data, &ap[i]))
 		{
 			rimeaddr_pair_t * pair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-			rimeaddr_copy(&pair->first, &ap[i].first);
-			rimeaddr_copy(&pair->second, &ap[i].second);
-
+			memcpy(pair, &ap[i], sizeof(rimeaddr_pair_t));
 			unique_array_append(data, pair);
 		}
 	}
@@ -205,9 +210,10 @@ static void tree_aggregate_update(void * voiddata, void const * to_apply, unsign
 // Add our own one hop data to the list
 static void tree_aggregate_own(void * ptr)
 {
-	printf("Neighbour Agg: Update local data with own data\n");
-	
 	neighbour_agg_conn_t * conn = conncvt_treeconn(ptr);
+
+	printf("Neighbour Agg: Update local data with own of len=%u\n",
+		unique_array_length(&conn->one_hop_neighbours));
 
 	unique_array_t * conn_list = &((aggregation_data_t *)ptr)->list;
 
@@ -242,10 +248,11 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 	
+	// Get an index into the neighbours list and the length of that list
 	rimeaddr_pair_t const * neighbours = (rimeaddr_pair_t const *)(msg + 1);
 	unsigned int neighbours_count = (length - sizeof(collect_msg_t)) / sizeof(rimeaddr_pair_t);
 
-	aggregation_data_t * conn_data = (aggregation_data_t *)conn->tc.data;
+	aggregation_data_t * conn_data = (aggregation_data_t *)tconn->data;
 
 	conn_data->round_count = msg->round_count;
 
@@ -264,11 +271,11 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 	}
 }
 
-static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data, size_t * data_length)
+static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data, unsigned int * data_length)
 {
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
-	aggregation_data_t * data_array = (aggregation_data_t *)tconn->data;
+	aggregation_data_t const * data_array = (aggregation_data_t *)tconn->data;
 
 #ifndef NDEBUG
 	printf("Neighbour Agg: Writing: ");
@@ -326,7 +333,7 @@ static void neighbour_agg_send_data(void * ptr)
 		unsigned int one_hop_n_size = unique_array_length(&conn->one_hop_neighbours);
 
 		// Create the data message that we are going to send
-		size_t message_length = sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t);
+		unsigned int message_length = sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t);
 		collect_msg_t * msg = (collect_msg_t *)malloc(message_length);
 		memset(msg, 0, message_length);
 
@@ -366,8 +373,13 @@ bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 
 		memcpy(&conn->callbacks, callback_fns, sizeof(neighbour_agg_callbacks_t));
 
-		start_neighbour_detect(&conn->nd, ch3, &neighbour_detect_callbacks);
+		start_neighbour_detect(&conn->nd,
+			ch3, &neighbour_detect_callbacks,
+			INITIAL_INTERVAL, MIN_INTERVAL, MAX_INTERVAL,
+			ROUND_LENGTH, MISSED_ROUND_THRESHOLD);
 
+		// We do not expect the first rounds of this to provide much information
+		// because we will not have discovered much about the network
 		tree_agg_open(&conn->tc, sink, ch1, ch2, sizeof(aggregation_data_t), &callbacks);
 
 		return true;

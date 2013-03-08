@@ -18,9 +18,21 @@ bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, 
 // Add / Remove items from list
 bool unique_array_append(unique_array_t * list, void * data)
 {
+	if (list == NULL || data == NULL)
+		return false;
+
 	if (!unique_array_contains(list, data))
 	{
-		return array_list_append(&list->list, data);
+		if (!array_list_append(&list->list, data))
+		{
+			list->list.cleanup(data);
+			return false;
+		}
+	}
+	else
+	{
+		// Free the data past to the unique array
+		list->list.cleanup(data);
 	}
 
 	// Already in list, so succeeded
@@ -43,9 +55,22 @@ bool unique_array_merge(unique_array_t * first, unique_array_t const * second, u
 		// So we need a function that will allocate the memory for
 		// the new item and possibly do some conversion.
 		void * item = unique_array_data(second, elem);
-		void * item_copy = copy(item);
 
-		if (!unique_array_append(first, item_copy)) return false;
+		if (!unique_array_contains(first, item))
+		{
+			// We need a clone of this item to put in the other list
+			void * item_copy = copy(item);
+
+			// We have already checked that it is not
+			// in the list, so just use the array_list operation
+			if (!array_list_append(&first->list, item_copy))
+			{
+				// Tidy up the copy we made to prevent memory leaks
+				first->list.cleanup(item_copy);
+
+				return false;
+			}
+		}
 	}
 
 	return true;
@@ -109,6 +134,3 @@ void * unique_array_data(unique_array_t const * list, unique_array_elem_t elem)
 {
 	return list == NULL ? NULL : array_list_data(&list->list, elem);
 }
-
-
-

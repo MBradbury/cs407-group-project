@@ -8,12 +8,13 @@
 
 typedef struct
 {
-	//Called when data is received at the sink, from the tree
+	// Called when data is received at the sink, from the tree
 	void (* data_callback_fn)(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count);
 } neighbour_agg_callbacks_t;
 
 typedef struct neighbour_agg_conn
 {
+	// Do not change the order of these connections
 	tree_agg_conn_t tc;
 	neighbour_detect_conn_t nd;
 	

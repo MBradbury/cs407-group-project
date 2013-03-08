@@ -27,7 +27,7 @@ typedef struct
 	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
 
 	/** This function is called to write the nodes stored data to an outward packet */
-	void (* write_data_to_packet)(struct tree_agg_conn * conn, void ** data, size_t * length);
+	void (* write_data_to_packet)(struct tree_agg_conn * conn, void ** data, unsigned int * length);
 } tree_agg_callbacks_t;
 
 typedef struct tree_agg_conn

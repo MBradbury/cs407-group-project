@@ -35,7 +35,7 @@ bool tree_agg_is_sink(tree_agg_conn_t const * conn)
 
 // The times stubborn broadcasting will use
 // to intersperse message resends
-static const clock_time_t STUBBORN_WAIT = 20 * CLOCK_SECOND;
+static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
 // Time to gather aggregations over
 static const clock_time_t AGGREGATION_WAIT = 45 * CLOCK_SECOND;
@@ -46,7 +46,7 @@ static const clock_time_t PARENT_DETECT_WAIT = 35 * CLOCK_SECOND;
 
 static void stbroadcast_cancel_void(void * ptr)
 {
-	stbroadcast_cancel(&conncvt_stbcast((struct stbroadcast_conn *)ptr)->bc);
+	stbroadcast_cancel((struct stbroadcast_conn *)ptr);
 
 	printf("Tree Agg: Stubborn bcast canceled\n");
 }
@@ -144,13 +144,14 @@ static void finish_aggregate_collect(void * ptr)
 }
 
 /** The function that will be executed when a message is received */
-static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator, void * msg, size_t length)
+static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * originator, void * msg, unsigned int length)
 {
 	tree_agg_conn_t * conn = conncvt_multipacket(ptr);
 
 	if (tree_agg_is_sink(conn))
 	{
-		printf("Tree Agg: We're sink, got message, sending to user\n");
+		printf("Tree Agg: We're sink, got message from %s length:%u, sending to user\n",
+			addr2str(originator), length);
 
 		// Pass this messge up to the user
 		(*conn->callbacks.recv)(conn, originator, msg, length);
@@ -160,13 +161,13 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 		// Apply some aggregation function
 		if (tree_agg_is_collecting(conn))
 		{
-			printf("Tree Agg: Cont Agg With: %s\n", addr2str(originator));
+			printf("Tree Agg: Cont Agg With: %s of length %u\n", addr2str(originator), length);
 
 			(*conn->callbacks.aggregate_update)(conn->data, msg, length);
 		}
 		else
 		{
-			printf("Tree Agg: Start Agg Addr: %s\n", addr2str(originator));
+			printf("Tree Agg: Start Agg Addr: %s of length %u\n", addr2str(originator), length);
 
 			// We need to copy the users data into our memory,
 			// So we can apply future aggregtions to it.
@@ -181,9 +182,9 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 	}
 }
 
-static void multipacket_sent(struct multipacket_conn * c, rimeaddr_t const * to, void * sent_data, size_t sent_length)
+static void multipacket_sent(struct multipacket_conn * c, rimeaddr_t const * to, void * sent_data, unsigned int sent_length)
 {
-	printf("Tree Agg: Sent %d bytes to %s\n", sent_length, addr2str(to));
+	printf("Tree Agg: Sent %u bytes to %s\n", sent_length, addr2str(to));
 }
 
 /** The function that will be executed when a message is received */
@@ -288,7 +289,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->parent, &rimeaddr_null);
-	msg->hop_count = 1u;
+	msg->hop_count = 1;
 
 	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
 

@@ -1,25 +1,17 @@
 #include "neighbour-detect.h"
 
 #include "contiki.h"
-#include "net/rime.h"
 #include "net/rime/neighbor-discovery.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#include "map.h"
+#include "containers/map.h"
 
 #include "rimeaddr-helpers.h"
 #include "led-helper.h"
 #include "debug-helper.h"
-
-#define INITIAL_INTERVAL (15 * CLOCK_SECOND)
-#define MIN_INTERVAL (5 * CLOCK_SECOND)
-#define MAX_INTERVAL (120 * CLOCK_SECOND)
-
-#define ROUND_TIME (MAX_INTERVAL * 2)
-#define MISSED_ROUND_THRESHOLD 4
 
 /* Gets the pointer to the main connection struct, from the given tree_agg_conn_t */
 static inline neighbour_detect_conn_t * conncvt_detectconn(struct neighbor_discovery_conn * conn)
@@ -46,10 +38,10 @@ static void round_complete(void * ptr)
 
 		round_map_elem_t * stored = (round_map_elem_t *)map_get(&conn->round_map, addr);
 
-		if (conn->round_count - stored->round_last_seen >= MISSED_ROUND_THRESHOLD)
+		if (conn->round_count - stored->round_last_seen >= conn->missed_round_threshold)
 		{
-			printf("Detected that %s is no longer in our neighbourhood, so removing it (R=%u RLS=%u)\n",
-				addr2str(addr), conn->round_count, stored->round_last_seen);
+			printf("Detected that %s is no longer in our neighbourhood, so removing it (R=%u RLS=%u THRE=%u)\n",
+				addr2str(addr), conn->round_count, stored->round_last_seen, conn->missed_round_threshold);
 
 			// We haven't seen this node for a while, so need to remove it
 			// from both the results and our local map
@@ -62,6 +54,8 @@ static void round_complete(void * ptr)
 		}
 	}
 
+	printf("Neighbour Detect: Round %u complete!\n", conn->round_count);
+
 	++conn->round_count;
 
 	// call the callback
@@ -70,7 +64,7 @@ static void round_complete(void * ptr)
 	neighbor_discovery_set_val(&conn->nd, conn->round_count);
 
 	// Reset the timer
-	ctimer_set(&conn->round_timer, ROUND_TIME, &round_complete, conn);
+	ctimer_reset(&conn->round_timer);
 }
 
 
@@ -126,7 +120,10 @@ static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
 	{ &neighbor_discovery_recv, &neighbor_discovery_sent };
 
-bool start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, neighbour_detect_callbacks_t const * cb_fns)
+bool start_neighbour_detect(neighbour_detect_conn_t * conn,
+	uint16_t channel, neighbour_detect_callbacks_t const * cb_fns,
+	clock_time_t initial_interval, clock_time_t min_interval, clock_time_t max_interval,
+	clock_time_t round_time, uint16_t missed_round_threshold)
 {
 	// Check parameters
 	if (conn != NULL && channel != 0 && cb_fns != NULL)
@@ -138,21 +135,22 @@ bool start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, ne
 		unique_array_init(&conn->results, &rimeaddr_equality, &free);
 		
 		conn->round_count = 0;
+		conn->missed_round_threshold = missed_round_threshold;
 
 		memcpy(&conn->callbacks, cb_fns, sizeof(neighbour_detect_callbacks_t)); //copy in the callbacks
 
 		neighbor_discovery_open(
 	        &conn->nd,
 	        channel, 
-	        INITIAL_INTERVAL,
-	        MIN_INTERVAL,
-	        MAX_INTERVAL,
+	        initial_interval,
+	        min_interval,
+	        max_interval,
 	        &neighbor_discovery_callbacks
 		);
 
 	    neighbor_discovery_start(&conn->nd, conn->round_count);
 
-		ctimer_set(&conn->round_timer, ROUND_TIME, &round_complete, conn);
+		ctimer_set(&conn->round_timer, round_time, &round_complete, conn);
 
 		leds_on(LEDS_BLUE);
 

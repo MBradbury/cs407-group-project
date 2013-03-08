@@ -43,7 +43,7 @@ static inline neighbour_agg_conn_t * conncvt_treeconn(tree_agg_conn_t * conn)
 static inline neighbour_agg_conn_t * conncvt_neighbourdetect_conn(neighbour_detect_conn_t * conn)
 {
 	return (neighbour_agg_conn_t *)
-	(((char *)conn) - sizeof(tree_agg_conn_t));
+		(((char *)conn) - sizeof(tree_agg_conn_t));
 }
 
 typedef struct
@@ -345,23 +345,6 @@ static void neighbour_agg_send_data(void * ptr)
 	ctimer_set(&conn->ct_send_data, ROUND_LENGTH, &neighbour_agg_send_data, conn);
 }
 
-typedef struct
-{
-	neighbour_agg_conn_t * conn;
-	rimeaddr_t const * sink;
-	uint16_t ch1;
-	uint16_t ch2;
-} open_tree_agg_t;
-
-// Called by the ctimer after the initial setup
-static void open_tree_agg(void * ptr)
-{
-	open_tree_agg_t * data = (open_tree_agg_t *)ptr; 
-
-	tree_agg_open(&data->conn->tc, data->sink, data->ch1, data->ch2, sizeof(aggregation_data_t), &callbacks);
-	free(data);
-}
-
 static neighbour_detect_callbacks_t neighbour_detect_callbacks = {&neighbour_agg_round_complete};
 
 bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
@@ -381,19 +364,11 @@ bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 			return false;
 		}
 
-		memcpy(&conn->callbacks, callback_fns, sizeof(neighbour_agg_callbacks_t)); //copy in the callbacks
+		memcpy(&conn->callbacks, callback_fns, sizeof(neighbour_agg_callbacks_t));
 
 		start_neighbour_detect(&conn->nd, ch3, &neighbour_detect_callbacks);
-	
-		open_tree_agg_t * s_init = (open_tree_agg_t *) malloc(sizeof(open_tree_agg_t));
 
-		// Wait for some time to collect neighbour info, and open the tree
-		s_init->conn = conn;
-		s_init->sink = sink;
-		s_init->ch1 = ch1;
-		s_init->ch2 = ch2;
-
-		ctimer_set(&conn->ct_initial_wait, INITIAL_NEIGHBOUR_DETECT_PERIOD, &open_tree_agg, s_init);
+		tree_agg_open(&conn->tc, sink, ch1, ch2, sizeof(aggregation_data_t), &callbacks);
 
 		return true;
 	}
@@ -410,6 +385,7 @@ void neighbour_aggregate_close(neighbour_agg_conn_t * conn)
 		ctimer_stop(&conn->ct_initial_wait);
 		unique_array_clear(&conn->one_hop_neighbours);
 		tree_agg_close(&conn->tc);
+		stop_neighbour_detect(&conn->nd);
 		conn->round_count = 0;
 	}
 }

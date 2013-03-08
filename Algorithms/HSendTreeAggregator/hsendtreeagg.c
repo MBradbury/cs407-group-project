@@ -460,7 +460,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 
-	if (rimeaddr_cmp(&rimeaddr_node_addr,&sink))
+	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
 	{
 		printf("We are sink node.\n");
 	}

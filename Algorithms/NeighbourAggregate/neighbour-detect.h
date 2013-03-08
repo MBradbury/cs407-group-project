@@ -7,6 +7,7 @@
 #include "net/rime/neighbor-discovery.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct neighbour_detect_conn_t;
 
@@ -20,8 +21,7 @@ typedef struct neighbour_detect_conn_t
 {
 	struct neighbor_discovery_conn nd;
 
-	unique_array_t  results;
-	unique_array_t * results_ptr;
+	unique_array_t results;
 
 	neighbour_detect_callbacks_t callbacks;
 	
@@ -31,7 +31,7 @@ typedef struct neighbour_detect_conn_t
 
 } neighbour_detect_conn_t;
 
-void start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, neighbour_detect_callbacks_t const * cb_fns);
+bool start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, neighbour_detect_callbacks_t const * cb_fns);
 void stop_neighbour_detect(neighbour_detect_conn_t * conn);
 
 #endif /*CS407_NEIGHBOUR_DETECT*/

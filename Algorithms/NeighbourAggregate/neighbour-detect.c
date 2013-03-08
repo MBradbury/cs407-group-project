@@ -43,13 +43,13 @@ typedef struct
 
 static void round_complete(void * ptr)
 {
-	neighbour_detect_conn_t * conn = conncvt_detectconn(ptr);
+	neighbour_detect_conn_t * conn = (neighbour_detect_conn_t *)ptr;
 
 	// We want to remove any nodes we haven't seen in a while
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(conn->results_ptr); unique_array_continue(conn->results_ptr, elem); )
+	for (elem = unique_array_first(&conn->results); unique_array_continue(&conn->results, elem); )
 	{
-		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(conn->results_ptr, elem);
+		rimeaddr_t * addr = (rimeaddr_t *) unique_array_data(&conn->results, elem);
 
 		round_map_elem_t * stored = (round_map_elem_t *)map_get(&conn->round_map, addr);
 
@@ -61,7 +61,7 @@ static void round_complete(void * ptr)
 			// We haven't seen this node for a while, so need to remove it
 			// from both the results and our local map
 			map_remove(&conn->round_map, addr);
-			unique_array_remove(conn->results_ptr, elem);
+			unique_array_remove(&conn->results, elem);
 		}
 		else
 		{
@@ -74,7 +74,7 @@ static void round_complete(void * ptr)
 	neighbor_discovery_set_val(&conn->nd, conn->round_count);
 
 	// Reset the timer
-	ctimer_set(&conn->round_timer, ROUND_TIME, &round_complete, NULL);
+	ctimer_set(&conn->round_timer, ROUND_TIME, &round_complete, conn);
 }
 
 
@@ -85,17 +85,14 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 
 	neighbour_detect_conn_t * conn = conncvt_detectconn(c);
 
-	if (conn->results_ptr != NULL)
+	if (!unique_array_contains(&conn->results, from))
 	{
-		if (!unique_array_contains(conn->results_ptr, from))
-		{
-			rimeaddr_t * store = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
-			rimeaddr_copy(store, from);
-			unique_array_append(conn->results_ptr, store);
+		rimeaddr_t * store = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
+		rimeaddr_copy(store, from);
+		unique_array_append(&conn->results, store);
 
-			printf("Recording Address: %s", addr2str(from));
-			printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
-		}
+		printf("Recording Address: %s", addr2str(from));
+		printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
 	}
 
 	// Update round map
@@ -133,46 +130,57 @@ static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
 static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
 	{ &neighbor_discovery_recv, &neighbor_discovery_sent };
 
-void start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, neighbour_detect_callbacks_t const * cb_fns)
+bool start_neighbour_detect(neighbour_detect_conn_t * conn, uint16_t channel, neighbour_detect_callbacks_t const * cb_fns)
 {
-	printf("Neighbour Discovery: Started!\n");
+	// Check parameters
+	if (conn != NULL && channel != 0 && cb_fns != NULL)
+	{
+		printf("Neighbour Discovery: Started!\n");
 
-	map_init(&conn->round_map, &rimeaddr_equality, &free);
+		map_init(&conn->round_map, &rimeaddr_equality, &free);
 
-	unique_array_init(&conn->results, &rimeaddr_equality, &free);
-	
-	conn->results_ptr = &conn->results;
-	conn->round_count = 0;
+		unique_array_init(&conn->results, &rimeaddr_equality, &free);
+		
+		conn->round_count = 0;
 
-	memcpy(&conn->callbacks, cb_fns, sizeof(neighbour_detect_callbacks_t)); //copy in the callbacks
+		memcpy(&conn->callbacks, cb_fns, sizeof(neighbour_detect_callbacks_t)); //copy in the callbacks
 
-	neighbor_discovery_open(
-        &conn->nd,
-        channel, 
-        INITIAL_INTERVAL,
-        MIN_INTERVAL,
-        MAX_INTERVAL,
-        &neighbor_discovery_callbacks
-	);
+		neighbor_discovery_open(
+	        &conn->nd,
+	        channel, 
+	        INITIAL_INTERVAL,
+	        MIN_INTERVAL,
+	        MAX_INTERVAL,
+	        &neighbor_discovery_callbacks
+		);
 
-    neighbor_discovery_start(&conn->nd, conn->round_count);
+	    neighbor_discovery_start(&conn->nd, conn->round_count);
 
-	ctimer_set(&conn->round_timer, ROUND_TIME, &round_complete, NULL);
+		ctimer_set(&conn->round_timer, ROUND_TIME, &round_complete, conn);
 
-	leds_on(LEDS_BLUE);
+		leds_on(LEDS_BLUE);
+
+		return true;
+	}
+
+	return false;
 }
 
 void stop_neighbour_detect(neighbour_detect_conn_t * conn)
 {
-	printf("Neighbour Discovery: Stopped!\n");
+	if (conn != NULL)
+	{
+		printf("Neighbour Discovery: Stopped!\n");
 
-	neighbor_discovery_close(&conn->nd);
-	conn->results_ptr = NULL;
+		neighbor_discovery_close(&conn->nd);
 
-	ctimer_stop(&conn->round_timer);
+		ctimer_stop(&conn->round_timer);
 
-	map_clear(&conn->round_map);
+		map_clear(&conn->round_map);
 
-	leds_off(LEDS_BLUE);
+		unique_array_clear(&conn->results);
+
+		leds_off(LEDS_BLUE);
+	}
 }
 

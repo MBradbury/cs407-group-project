@@ -116,7 +116,7 @@ static void neighbour_agg_round_complete(neighbour_detect_conn_t * conn, unique_
 	unique_array_clear(&mainconn->one_hop_neighbours);
 	
 	//copy new array into old
-	unique_array_merge(&mainconn->one_hop_neighbours, neighbours);
+	unique_array_merge(&mainconn->one_hop_neighbours, neighbours, &rimeaddr_clone);
 }
 
 static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, void const * packet, unsigned int packet_length)

@@ -14,7 +14,7 @@ struct multipacket_conn;
 typedef struct multipacket_callbacks
 {
 	void (* recv)(struct multipacket_conn * conn, rimeaddr_t const * from, void * data, size_t length);
-	void (* sent)(struct multipacket_conn * conn, rimeaddr_t * const to, void * data, size_t length);
+	void (* sent)(struct multipacket_conn * conn, rimeaddr_t const * to, void * data, size_t length);
 } multipacket_callbacks_t;
 
 typedef struct multipacket_conn

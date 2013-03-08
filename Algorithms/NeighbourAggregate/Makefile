@@ -9,13 +9,13 @@ CONTIKI_SOURCEFILES = sensor-converter.c debug-helper.c tree-aggregator.c neighb
 unique-array.c array-list.c led-helper.c random-range.c map.c rimeaddr-helpers.c multipacket.c linked-list.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
--Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \
+-Wfloat-equal -Wpointer-arith -Wbad-function-cast \
 -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code -Wmissing-field-initializers \
 -Wno-int-to-pointer-cast -Winit-self -Wstrict-aliasing -Wno-unused-parameter \
--Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration \
+-Wuninitialized -Wold-style-definition -Wredundant-decls \
 -Wunused -Wno-unused-value -Wreturn-type
 
-CFLAGS += -Werror=bad-function-cast
+CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration
 
 CFLAGS += -DNEIGHBOUR_AGG_APPLICATION
 

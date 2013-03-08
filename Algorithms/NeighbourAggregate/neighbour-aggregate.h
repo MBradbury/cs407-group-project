@@ -6,17 +6,13 @@
 #include "net/tree-aggregator.h"
 #include "neighbour-detect.h"
 
-struct neighbour_agg_conn_t;
-//used by the ctimer for opening the tree agg
-
-
 typedef struct
 {
 	//Called when data is received at the sink, from the tree
 	void (* data_callback_fn)(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count);
 } neighbour_agg_callbacks_t;
 
-typedef struct neighbour_agg_conn_t
+typedef struct neighbour_agg_conn
 {
 	tree_agg_conn_t tc;
 

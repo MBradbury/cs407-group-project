@@ -80,10 +80,13 @@ static bool recv_key_equality(void const * left, void const * right)
 	return l->i32 == r->i32;
 }
 
+#define PACKETBUF_ATTR_EPACKET_SEQNO PACKETBUF_ATTR_EPACKET_TYPE
+#define PACKETBUF_ATTR_EPACKET_ELENGTH PACKETBUF_ATTR_TTL
+
 static const struct packetbuf_attrlist multipacket_attributes[] = {
 	{ PACKETBUF_ATTR_EPACKET_ID, PACKETBUF_ATTR_BYTE * sizeof(uint16_t) },	// ID
-	{ PACKETBUF_ATTR_EPACKET_TYPE, PACKETBUF_ATTR_BYTE * sizeof(uint8_t) },	// seqno
-	{ PACKETBUF_ATTR_TTL, PACKETBUF_ATTR_BYTE * sizeof(size_t) },	// Length
+	{ PACKETBUF_ATTR_EPACKET_SEQNO, PACKETBUF_ATTR_BYTE * sizeof(uint8_t) },	// seqno
+	{ PACKETBUF_ATTR_EPACKET_ELENGTH, PACKETBUF_ATTR_BYTE * sizeof(size_t) },	// Length
 	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
 	RUNICAST_ATTRIBUTES
     PACKETBUF_ATTR_LAST
@@ -106,7 +109,7 @@ static void send_loop_callback(void * ptr)
 	{
 		multipacket_sending_packet_t * details = linked_list_peek(&conn->sending_packets);
 
-		size_t to_send = min(PACKETBUF_SIZE, details->length - details->sent);
+		size_t to_send = min(/*PACKETBUF_SIZE*/10, details->length - details->sent);
 
 		void * send_start = (char *)(details->data) + details->sent;
 
@@ -118,8 +121,8 @@ static void send_loop_callback(void * ptr)
 
 		// Set the id of this packet
 		packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, details->id);
-		packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_TYPE, details->seqno);
-		packetbuf_set_attr(PACKETBUF_ATTR_TTL, details->length);
+		packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_SEQNO, details->seqno);
+		packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ELENGTH, details->length);
 
 		packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->source);
 
@@ -147,14 +150,14 @@ static void send_loop_callback(void * ptr)
 	ctimer_reset(&conn->ct_sender);
 }
 
-static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uint8_t seqno)
+static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * from, uint8_t seqno)
 {
 	multipacket_conn_t * conn = runicast_conncvt(rc);
 
 	// We have received a packet, now we need to join stuff back together
 	uint16_t packet_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
-	uint8_t seq = packetbuf_attr(PACKETBUF_ATTR_EPACKET_TYPE);
-	size_t data_length = packetbuf_attr(PACKETBUF_ATTR_TTL);
+	uint8_t seq = packetbuf_attr(PACKETBUF_ATTR_EPACKET_SEQNO);
+	size_t data_length = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ELENGTH);
 
 	rimeaddr_t const * source = packetbuf_addr(PACKETBUF_ADDR_ESENDER);
 
@@ -247,12 +250,13 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t * from, uin
 	}
 }
 
-static void sent_by_runicast(struct runicast_conn * rc, rimeaddr_t * to, uint8_t retransmissions)
+static void sent_by_runicast(struct runicast_conn * rc, rimeaddr_t const * to, uint8_t retransmissions)
 {
 }
 
-static void runicast_timedout(struct runicast_conn * rc, rimeaddr_t * to, uint8_t retransmissions)
+static void runicast_timedout(struct runicast_conn * rc, rimeaddr_t const * to, uint8_t retransmissions)
 {
+	printf("multipacket: runicast time'd out sending to %s\n", addr2str(to));
 }
 
 static const struct runicast_callbacks rccallbacks = {&recv_from_runicast, &sent_by_runicast, &runicast_timedout};

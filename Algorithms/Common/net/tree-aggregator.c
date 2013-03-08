@@ -181,7 +181,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 	}
 }
 
-static void multipacket_sent(struct multipacket_conn * c, rimeaddr_t * const to, void * sent_data, size_t sent_length)
+static void multipacket_sent(struct multipacket_conn * c, rimeaddr_t const * to, void * sent_data, size_t sent_length)
 {
 	printf("Tree Agg: Sent %d bytes to %s\n", sent_length, addr2str(to));
 }

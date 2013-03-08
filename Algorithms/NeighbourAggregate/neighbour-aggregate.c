@@ -248,11 +248,9 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data, size_t * data_length)
 {
-	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
-
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
-	aggregation_data_t * data_array = (aggregation_data_t *)conn->tc.data;
+	aggregation_data_t * data_array = (aggregation_data_t *)tconn->data;
 
 #ifndef NDEBUG
 	printf("Neighbour Agg: Writing: ");
@@ -414,7 +412,6 @@ static const neighbour_agg_callbacks_t c = {&handle_neighbour_data};
 PROCESS_THREAD(neighbour_agg_process, ev, data)
 {
 	static rimeaddr_t sink;
-	static struct etimer et;
 
 	PROCESS_BEGIN();
 

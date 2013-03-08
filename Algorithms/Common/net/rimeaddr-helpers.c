@@ -28,7 +28,7 @@ bool rimeaddr_equality(void const * left, void const * right)
 void * rimeaddr_clone(void const * addr)
 {
 	rimeaddr_t * ptr = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
-	rimeaddr_copy(ptr, (rimeaddr_t *)addr);
+	rimeaddr_copy(ptr, (rimeaddr_t const *)addr);
 	return ptr;
 }
 

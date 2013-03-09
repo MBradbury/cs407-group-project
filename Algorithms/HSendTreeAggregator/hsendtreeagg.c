@@ -34,7 +34,8 @@
 
 static void data_evaluation(void * ptr);
 
-static const clock_time_t ROUND_LENGTH = 10 * 60 * CLOCK_SECOND;
+static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
+static const clock_time_t HSEND_INITIAL_ROUND_LENGTH = 7 * 60 * CLOCK_SECOND;
 
 static map_t neighbour_info;
 
@@ -512,10 +513,10 @@ PROCESS_THREAD(data_gather, ev, data)
 		// Add it to the list
 		array_list_append(&predicates, pred);
 
-		pred_round_count = 1;
+		pred_round_count = 0;
 		
 		// Start the evauluation method
-		ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10 , &data_evaluation, NULL);
+		ctimer_set(&ct_data_eval, HSEND_INITIAL_ROUND_LENGTH, &data_evaluation, NULL);
 	}
 
 	PROCESS_END();
@@ -813,6 +814,6 @@ static void data_evaluation(void * ptr)
 	
 	++pred_round_count;
 
-	ctimer_set(&ct_data_eval, CLOCK_SECOND * 60 * 10, &data_evaluation, NULL);
+	ctimer_set(&ct_data_eval, ROUND_LENGTH, &data_evaluation, NULL);
 }
 

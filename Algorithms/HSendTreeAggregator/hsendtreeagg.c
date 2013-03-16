@@ -43,7 +43,7 @@ static const clock_time_t HSEND_INITIAL_ROUND_LENGTH = 7 * 60 * CLOCK_SECOND;
 static map_t neighbour_info;
 
 // Map containing node_data_map_elem_t
-static map_t recieved_data;
+static map_t received_data;
 
 // List of predicate_detail_entry_t
 static array_list_t predicates;
@@ -141,7 +141,7 @@ static void node_data(void * data)
 	{
 		node_data_t * nd = (node_data_t *)data;
 
-		node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count); //map for that round
+		node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&received_data, &pred_round_count); //map for that round
 
 		node_data_t * stored_data = (node_data_t *)map_get(&st->data, &pred_simulated_node);
 
@@ -260,7 +260,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); // Get the pointer after the message
 
-	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &msg->round_count); // Map for that round
+	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&received_data, &msg->round_count); // Map for that round
 
 	if (st == NULL)
 	{
@@ -270,7 +270,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 		map_init(&st->data, &rimeaddr_equality, &free);
 
 		// Add it to the main map
-		map_put(&recieved_data, st);
+		map_put(&received_data, st);
 	}
 
 	printf("HSend Agg: Adding %u pieces of data in round %u\n", length, msg->round_count);
@@ -474,7 +474,7 @@ PROCESS_THREAD(data_gather, ev, data)
 		// Create and save example predicates
 		array_list_init(&predicates, &predicate_detail_entry_cleanup);
 	
-		map_init(&recieved_data, &neighbour_map_key_compare, &node_data_map_elem_free);
+		map_init(&received_data, &neighbour_map_key_compare, &node_data_map_elem_free);
 
 		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 		//create the predicate
@@ -712,7 +712,7 @@ static void data_evaluation(void * ptr)
 					if (!unique_array_contains(&seen_nodes, neighbour)) 
 					{
 						// Get the data map for that round
-						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count);
+						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&received_data, &pred_round_count);
 
 						if (st == NULL)
 						{
@@ -807,11 +807,11 @@ static void data_evaluation(void * ptr)
 	}
 
 	// Remove the data we no longer need
-	map_remove(&recieved_data, &pred_round_count);
+	map_remove(&received_data, &pred_round_count);
 	map_remove(&neighbour_info, &pred_round_count);
 
-	printf("Round: finishing=%d |recieved_data|=%d |neighbour_info|=%d\n",
-		pred_round_count, map_length(&recieved_data), map_length(&neighbour_info));
+	printf("Round: finishing=%d |received_data|=%d |neighbour_info|=%d\n",
+		pred_round_count, map_length(&received_data), map_length(&neighbour_info));
 	
 	++pred_round_count;
 

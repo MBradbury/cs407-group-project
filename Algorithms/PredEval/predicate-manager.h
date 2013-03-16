@@ -60,5 +60,7 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn,
 
 map_t const * predicate_manager_get_map(predicate_manager_conn_t * conn);
 
+uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe);
+
 
 #endif /*CS407_PREDICATE_MANAGER_H*/

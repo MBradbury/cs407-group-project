@@ -253,3 +253,27 @@ map_t const * predicate_manager_get_map(predicate_manager_conn_t * conn)
 {
 	return conn == NULL ? NULL : &conn->predicates;
 }
+
+
+uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
+{
+	if (pe == NULL)
+	{
+		return 0;
+	}
+
+	uint8_t max_hops = 0;
+
+	unsigned int i;
+	for (i = 0; i < pe->variables_details_length; ++i)
+	{
+		if (pe->variables_details[i].hops > max_hops)
+		{
+			max_hops = pe->variables_details[i].hops;
+		}
+
+		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
+	}
+
+	return max_hops;
+}

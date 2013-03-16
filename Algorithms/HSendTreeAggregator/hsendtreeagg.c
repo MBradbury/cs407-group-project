@@ -32,6 +32,8 @@
 #include "containers/unique-array.h"
 #include "containers/map.h"
 
+#include "predicate-manager.h"
+
 static void data_evaluation(void * ptr);
 
 static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
@@ -50,27 +52,6 @@ static array_list_t hops_data;
 static rimeaddr_t pred_simulated_node;
 
 static unsigned int pred_round_count;
-
-// Struct for the list of bytecode_variables. It contains the variable_id and hop count.
-typedef struct
-{
-	uint8_t hops;
-	uint8_t var_id;
-} var_elem_t;
-
-typedef struct
-{
-	uint8_t id; // Keep id as the first variable in the struct
-	uint8_t variables_details_length;
-	uint8_t bytecode_length;
-
-	// Where the predicate should be evaluated from
-	rimeaddr_t destination;
-
-	var_elem_t * variables_details;
-	ubyte * bytecode;
-
-} predicate_detail_entry_t;
 
 typedef struct
 {
@@ -408,24 +389,6 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	array_list_clear(&conn_data->list);
 }
 
-static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
-{
-	uint8_t max_hops = 0;
-
-	unsigned int i;
-	for (i = 0; i < length; ++i)
-	{
-		if (variables[i].hops > max_hops)
-		{
-			max_hops = variables[i].hops;
-		}
-
-		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
-	}
-
-	return max_hops;
-}
-
 static tree_agg_conn_t aggconn;
 static const tree_agg_callbacks_t callbacks = {
 	&tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update,
@@ -495,7 +458,7 @@ PROCESS_THREAD(data_gather, ev, data)
 		dest.u8[1] = 0;
 
 		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t));
-		rimeaddr_copy(&pred->destination, &dest);
+		rimeaddr_copy(&pred->target, &dest);
 		pred->id = 1;
 		pred->bytecode_length = bytecode_length;
 		pred->variables_details_length = var_details;
@@ -508,7 +471,9 @@ PROCESS_THREAD(data_gather, ev, data)
 		msg_vars[1].var_id = 254;
 
 		pred->variables_details = msg_vars;
-		pred->bytecode = program_bytecode;
+
+		pred->bytecode = (ubyte *)malloc(sizeof(ubyte) * bytecode_length);
+		memcpy(pred->bytecode, program_bytecode, sizeof(ubyte) * bytecode_length);
 
 		// Add it to the list
 		array_list_append(&predicates, pred);
@@ -542,9 +507,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 			//Start sending data up the tree
 
 			size_t data_length = sizeof(collected_data_t) + sizeof(node_data_t);
-			void * data = malloc(data_length);
-
-			collected_data_t * msg = (collected_data_t *)data;
+			collected_data_t * msg = (collected_data_t *)malloc(data_length);
 
 			msg->round_count = round_count;
 			msg->length = 1;
@@ -557,10 +520,10 @@ PROCESS_THREAD(send_data_process, ev, data)
 			node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
 			
 			msgdata->temp = sht11_temperature(raw_temperature);
-			msgdata->humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata[0].temp);
+			msgdata->humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata->temp);
 			rimeaddr_copy(&msgdata->addr, &rimeaddr_node_addr);
 
-			tree_agg_send(&aggconn, data, data_length);
+			tree_agg_send(&aggconn, msg, data_length);
 
 			// No need to free data as tree_agg now owns that memory
 		}
@@ -649,10 +612,9 @@ static bool evaluate_predicate(
 
 static void data_evaluation(void * ptr)
 {
-	static node_data_t * all_neighbour_data; //data that is passed to the evaluation
 	printf("Eval: Beginning Evaluation\n");
 
-	//for each predicate		
+	// For each predicate		
 	array_list_elem_t pred_elem;
 	for (pred_elem = array_list_first(&predicates); 
 		array_list_continue(&predicates, pred_elem); 
@@ -660,33 +622,37 @@ static void data_evaluation(void * ptr)
 	{
 		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)array_list_data(&predicates, pred_elem);
 		
-		rimeaddr_t destination; // Destination node (initial target)
-	    rimeaddr_copy(&destination, &pred->destination);
-	    rimeaddr_copy(&pred_simulated_node, &pred->destination); // Copy in the simulated node
+		// Copy in the simulated node
+	    rimeaddr_copy(&pred_simulated_node, &pred->target);
 
 	    // Get the maximum number of hops needed for this predcate
-	    unsigned int max_hops = maximum_hop_data_request(pred->variables_details, pred->variables_details_length);
+	    uint8_t max_hops = predicate_manager_max_hop(pred);
 
 		array_list_init(&hops_data, &free_hops_data);
 
-		unsigned int max_size = 0; //Number of nodes we pass to the evaluation
+		// Number of nodes we pass to the evaluation
+		unsigned int max_size = 0;
 
 		// Array of nodes that have been seen and checked so far
 	    unique_array_t seen_nodes;
 	    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
-	    unique_array_append(&seen_nodes, &destination); //start with the destination node
+
+	    // Start with the destination node
+	    unique_array_append(&seen_nodes, rimeaddr_clone(&pred->target)); 
 
 		// Array of nodes that we need the neighbours for
 	    unique_array_t target_nodes;
 	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
-	    unique_array_append(&target_nodes, &destination); //start with the destination node
+
+	    // Start with the destination node
+	    unique_array_append(&target_nodes, rimeaddr_clone(&pred->target));
 
 	    // Array of nodes, we gathered this round
 	    unique_array_t acquired_nodes;
 	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
 
 	    // Get the data for each hop level
-		unsigned int hops;
+		uint8_t hops;
 		for (hops = 1; hops <= max_hops; ++hops)
 		{
 		    // For each node in the target nodes, get the immediate neighbours,
@@ -718,17 +684,12 @@ static void data_evaluation(void * ptr)
 						// Get the data map for that round
 						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count);
 
-						map_t * round_data = &st->data;
+						node_data_t * nd = (node_data_t *)map_get(&st->data, n);
 
-						node_data_t * nd = (node_data_t *)map_get(round_data, &n);
-
-						rimeaddr_t * node_to_copy = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
-						rimeaddr_copy(node_to_copy, n);
-						
 						// Add the node to the target nodes for the next round
-						unique_array_append(&acquired_nodes, node_to_copy);
+						unique_array_append(&acquired_nodes, rimeaddr_clone(n));
 
-						map_t * map = get_hop_map((uint8_t)hops);
+						map_t * map = get_hop_map(hops);
 
 						// Check that we have not previously received data from this node before
 						node_data_t * stored = (node_data_t *)map_get(map, n);
@@ -762,30 +723,25 @@ static void data_evaluation(void * ptr)
 		}
 
 		// Generate array of all the data
-		all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
+		node_data_t * all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
 		uint8_t i;
 		for (i = 1; i <= max_hops; ++i)
 		{
 			map_t * hop_map = get_hop_map(i);
 
-			unsigned int length = map_length(hop_map);
-
 			// Position in all_neighbour_data
 			unsigned int count = 0;
 
-			if (length > 0)
+			array_list_elem_t elem;
+			for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 			{
-				array_list_elem_t elem;
-				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
-				{
-					node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
-					memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
-					++count;
-				}
+				node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
+				memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
+				++count;
 			}
 
-			printf("Eval: i=%d Count=%d length=%d\n", i, count, length);
+			printf("Eval: i=%d Count=%d length=%d\n", i, count, map_length(hop_map));
 		}
 
 		bool evaluation_result = evaluate_predicate(
@@ -806,11 +762,13 @@ static void data_evaluation(void * ptr)
 		unique_array_clear(&target_nodes);
 		unique_array_clear(&seen_nodes);
 		unique_array_clear(&acquired_nodes);
+
+		free(all_neighbour_data);
 	}
 
 	//remove the data we no longer need
-	map_remove(&recieved_data, pred_round_count);
-	map_remove(&neighbour_info, pred_round_count);
+	map_remove(&recieved_data, &pred_round_count);
+	map_remove(&neighbour_info, &pred_round_count);
 	
 	++pred_round_count;
 

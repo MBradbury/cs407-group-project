@@ -178,25 +178,6 @@ static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
-
-static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
-{
-	uint8_t max_hops = 0;
-
-	unsigned int i;
-	for (i = 0; i < length; ++i)
-	{
-		if (variables[i].hops > max_hops)
-		{
-			max_hops = variables[i].hops;
-		}
-
-		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
-	}
-
-	return max_hops;
-}
-
 static uint8_t max_hops = 0;
 
 static void predicate_manager_update_callback(struct predicate_manager_conn * conn)
@@ -212,7 +193,7 @@ static void predicate_manager_update_callback(struct predicate_manager_conn * co
 
 		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
 		{
-			uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
+			uint8_t local_max_hops = predicate_manager_max_hop(pe);
 
 			if (local_max_hops > max_hops)
 			{

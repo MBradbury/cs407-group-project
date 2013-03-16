@@ -57,12 +57,21 @@ When using small message identifiers, after sending enough messages the variable
 cd ~/contiki/tools/cooja/apps
 git clone git://i4git.informatik.uni-erlangen.de/contiki_projects.git -b serial2pty serial2pty
 cd serial2pty
-# Apply patch to fix build process
 ant jar
 \end{minted}
 \end{listing}
 
 Now you can load this plugin in Cooja by going to \verb|Settings| \verb|->| \verb|Cooja Extensions| and selecting serial2pty. Once it has been selected click \verb|Apply for session| and \verb|Save| and the plugin will now be enabled. To run it simply \verb|Tools| \verb|->| \verb| Serial 2 Pty| \verb|->| and select the node you want to connect. You will be told what device you can connect to, to receive the serial output from.
+
+Initially we found that this tool would not build, so a patch was created to fix those issues, sent to the developer and it was integrated into the repository.
+
+\subsection{Cooja Memory Usage  and Options}
+
+We found that Cooja's default settings when run using \verb|ant run| were suitable for smaller networks. However when running more memory intensive applications on the simulator of the hardware in Cooja or when running larger networks, Cooja itself can run out of memory. The simple solution is to simply run Cooja using \verb|ant run_bigmem| which supplies a flag limiting the maximum about of memory to 1536MB instead of 512MB when running normally \cite{?}.
+
+As Cooja is written in Java \cite{?} it means that all of Java's configuration flags are also up for modification. This however, means that the \verb|ant| build script at \verb|~/contiki/tools/cooja/build.xml| will need to be modified to include the flags that need to be passed to java.
+
+Finally, there is one other useful mode, and that is the ability to run Cooja without a GUI. This is done by changing the run command to \verb|ant run_nogui|. Running in this mode is very useful when running many simulations to obtain results from them as fast as possible.
 
 
 \subsection{Static variables}

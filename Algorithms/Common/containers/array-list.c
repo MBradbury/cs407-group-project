@@ -53,6 +53,22 @@ bool array_list_init(array_list_t * list, array_list_cleanup_t cleanup)
 	return true;
 }
 
+bool array_list_free(array_list_t * list)
+{
+	if (list == NULL)
+	{
+		return false;
+	}
+
+	array_list_clear(list);
+
+	free(list->data);
+	list->data = NULL;
+	list->length = 0;
+
+	return true;
+}
+
 bool array_list_clear(array_list_t * list)
 {
 	if (list == NULL)
@@ -71,10 +87,6 @@ bool array_list_clear(array_list_t * list)
 		}
 	}
 
-	free(list->data);
-
-	list->data = NULL;
-	list->length = 0;
 	list->count = 0;
 
 	return true;

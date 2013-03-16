@@ -171,7 +171,7 @@ void predicate_manager_close(predicate_manager_conn_t * conn)
 	{
 		trickle_close(&conn->tc);
 
-		map_clear(&conn->predicates);
+		map_free(&conn->predicates);
 	}
 }
 

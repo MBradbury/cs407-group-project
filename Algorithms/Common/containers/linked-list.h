@@ -28,6 +28,9 @@ typedef struct linked_list
 // Create the list
 bool linked_list_init(linked_list_t * list, linked_list_cleanup_t cleanup);
 
+// linked_list_free is the same as linked_list_clear
+#define linked_list_free linked_list_clear
+
 // Add / Remove items from list
 bool linked_list_append(linked_list_t * list, void * data);
 bool linked_list_clear(linked_list_t * list);

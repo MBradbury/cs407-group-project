@@ -25,6 +25,7 @@ typedef array_list_elem_t unique_array_elem_t;
 
 // Create the list
 bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, array_list_cleanup_t cleanup);
+bool unique_array_free(unique_array_t * list);
 
 // Add / Remove items from list
 bool unique_array_append(unique_array_t * list, void * data);

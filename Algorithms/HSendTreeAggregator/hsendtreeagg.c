@@ -33,6 +33,7 @@
 #include "containers/map.h"
 
 #include "predicate-manager.h"
+#include "hop-data-manager.h"
 
 static void data_evaluation(void * ptr);
 
@@ -48,8 +49,7 @@ static map_t received_data;
 // List of predicate_detail_entry_t
 static array_list_t predicates;
 
-// An array_list_t of map_t of node_data_t
-static array_list_t hops_data;
+static hop_data_t hop_data;
 
 // Used for simulating evaluating a predicate on a node
 static rimeaddr_t pred_simulated_node;
@@ -110,7 +110,7 @@ static void node_data_map_elem_free(void * ptr)
 {
 	node_data_map_elem_t * item = (node_data_map_elem_t *)ptr;
 
-	map_clear(&item->data);
+	map_free(&item->data);
 	free(item);
 }
 
@@ -413,7 +413,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	}
 
 	// Free the data here
-	unique_array_clear(&conn_data->list);
+	unique_array_free(&conn_data->list);
 }
 
 static tree_agg_conn_t aggconn;
@@ -563,48 +563,6 @@ exit:
 	PROCESS_END();
 }
 
-static map_t * get_hop_map(uint8_t hop)
-{
-	if (hop == 0)
-		return NULL;
-
-	unsigned int length = array_list_length(&hops_data);
-
-	// Map doesn't exist so create it
-	if (length < hop)
-	{
-		unsigned int to_add;
-		for (to_add = hop - length; to_add > 0; --to_add)
-		{
-			map_t * map = (map_t *)malloc(sizeof(map_t));
-			map_init(map, &rimeaddr_equality, &free);
-
-			array_list_append(&hops_data, map);
-		}
-	}
-
-	return (map_t *)array_list_data(&hops_data, hop - 1);
-}
-
-static uint8_t hop_data_length(var_elem_t const * variable)
-{
-	unsigned int length = 0;
-	uint8_t j;
-	for (j = 1; j <= variable->hops; ++j)
-	{
-		length += map_length(get_hop_map(j));
-	}
-
-	return (uint8_t)length;
-}
-
-static void free_hops_data(void * voiddata)
-{
-	map_t * data = (map_t *)voiddata;
-	map_clear(data);
-	free(data);
-}
-
 static bool evaluate_predicate(
 	ubyte const * program, unsigned int program_length,
 	node_data_t * all_neighbour_data,
@@ -626,7 +584,7 @@ static bool evaluate_predicate(
 	{
 		// Get the length of this hop's data
 		// including all of the closer hop's data length
-		unsigned int length = hop_data_length(&variables[i]);
+		unsigned int length = hop_manager_length(&hop_data, &variables[i]);
 
 		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
@@ -651,12 +609,9 @@ static void data_evaluation(void * ptr)
 	    rimeaddr_copy(&pred_simulated_node, &pred->target);
 
 	    // Get the maximum number of hops needed for this predcate
-	    uint8_t max_hops = predicate_manager_max_hop(pred);
+	    const uint8_t max_hops = predicate_manager_max_hop(pred);
 
-		array_list_init(&hops_data, &free_hops_data);
-
-		// Number of nodes we pass to the evaluation
-		unsigned int max_size = 0;
+		hop_manager_init(&hop_data);
 
 		// Array of nodes that have been seen and checked so far
 	    unique_array_t seen_nodes;
@@ -723,28 +678,13 @@ static void data_evaluation(void * ptr)
 							// Add the node to the target nodes for the next round
 							unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
 
-							map_t * hop_map = get_hop_map(hops);
-
-							// Check that we have not previously received data from this node before
-							node_data_t * stored = (node_data_t *)map_get(hop_map, neighbour);
-							
-							// Then copy in data
-							if (stored == NULL)
-							{
-								stored = (node_data_t *)malloc(sizeof(node_data_t));
-								map_put(hop_map, stored);
-
-								max_size++;
-								printf("Eval: Max_size increased to %d\n", max_size);
-							}
-
-							memcpy(stored, nd, sizeof(node_data_t));
+							hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
 						}
 					}
 				}
 
 				// Free the returned neighbours array
-				unique_array_clear(&neighbours);
+				unique_array_free(&neighbours);
 			}
 
 			// Been through targets add them to the seen nodes
@@ -758,6 +698,9 @@ static void data_evaluation(void * ptr)
 		// Generate array of all the data
 		node_data_t * all_neighbour_data = NULL;
 
+		// Number of nodes we pass to the evaluation
+		const unsigned int max_size = hop_manager_max_size(&hop_data);
+
 		if (max_size > 0)
 		{
 			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
@@ -768,7 +711,7 @@ static void data_evaluation(void * ptr)
 			uint8_t i;
 			for (i = 1; i <= max_hops; ++i)
 			{
-				map_t * hop_map = get_hop_map(i);
+				map_t * hop_map = hop_manager_get(&hop_data, i);
 
 				array_list_elem_t elem;
 				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
@@ -798,13 +741,11 @@ static void data_evaluation(void * ptr)
 
 		free(all_neighbour_data);
 
-		array_list_clear(&hops_data);
-		unique_array_clear(&target_nodes);
-		unique_array_clear(&seen_nodes);
-		unique_array_clear(&acquired_nodes);
+		hop_manager_reset(&hop_data);
+		unique_array_free(&target_nodes);
+		unique_array_free(&seen_nodes);
+		unique_array_free(&acquired_nodes);
 	}
-
-	int contains1 = map_get(&received_data, &pred_round_count) != NULL;
 
 	// NOTE: I have found that map_remove will never end up removing anything
 	// so the map must instead be cleared!

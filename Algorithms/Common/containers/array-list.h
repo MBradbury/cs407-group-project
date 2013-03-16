@@ -29,6 +29,7 @@ typedef struct array_list
 
 // Create the list
 bool array_list_init(array_list_t * list, array_list_cleanup_t cleanup);
+bool array_list_free(array_list_t * list);
 
 // Add / Remove items from list
 bool array_list_append(array_list_t * list, void * data);

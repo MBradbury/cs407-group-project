@@ -52,7 +52,7 @@ static char const * linked_list_test(void)
 		++i;
 	}
 
-	if (!linked_list_clear(&list)) return "Failed: Clear";
+	if (!linked_list_free(&list)) return "Failed: Free";
 
 	return "Succeeded";
 }
@@ -148,7 +148,7 @@ static char const * array_list_test(void)
 	if (i != sizeof(expected2) / sizeof(*expected2)) return "Failed: Length Check 2";
 	
 
-	if (!array_list_clear(&list)) return "Failed: Clear";
+	if (!array_list_free(&list)) return "Failed: Free";
 
 	return "Succeeded";
 }
@@ -232,8 +232,8 @@ static char const * unique_array_test(void)
 
 	unique_array_merge(&mergelist, &list, &copy_int);
 
-	if (!unique_array_clear(&mergelist)) return "Failed: Clear";
-	if (!unique_array_clear(&list)) return "Failed: Clear";
+	if (!unique_array_free(&mergelist)) return "Failed: Free";
+	if (!unique_array_free(&list)) return "Failed: Free";
 
 	return "Succeeded";
 }
@@ -303,7 +303,7 @@ static char const * map_test(void)
 		if (data->value != expected_values[i]) return "Failed: Data not as Expected";
 	}
 
-	if (!map_clear(&m)) return "Failed: Clear";
+	if (!map_free(&m)) return "Failed: Free";
 
 	return "Succeeded";
 }

@@ -7,7 +7,7 @@ PROJECT_SOURCEFILES =
 
 CONTIKIDIRS :=
 CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c nhopreq.c predlang.c array-list.c \
-map.c unique-array.c random-range.c rimeaddr-helpers.c predicate-manager.c
+map.c unique-array.c random-range.c rimeaddr-helpers.c predicate-manager.c hop-data-manager.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

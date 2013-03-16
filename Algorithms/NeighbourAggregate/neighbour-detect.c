@@ -170,9 +170,9 @@ void stop_neighbour_detect(neighbour_detect_conn_t * conn)
 
 		ctimer_stop(&conn->round_timer);
 
-		map_clear(&conn->round_map);
+		map_free(&conn->round_map);
 
-		unique_array_clear(&conn->results);
+		unique_array_free(&conn->results);
 
 		leds_off(LEDS_BLUE);
 	}

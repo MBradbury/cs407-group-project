@@ -16,6 +16,7 @@
 #include "net/eventupdate.h"
 #include "net/rimeaddr-helpers.h"
 #include "predicate-manager.h"
+#include "hop-data-manager.h"
 #include "predlang.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
@@ -121,42 +122,7 @@ static bool node_data_differs(void * data1, void * data2)
 /// End VM Helper Functions
 ///
 
-// An array_list_t of map_t of node_data_t
-static array_list_t hops_data;
-
-// Count the number of elements added to each of the lists
-static unsigned int max_size = 0;
-
-static map_t * get_hop_map(uint8_t hop)
-{
-	if (hop == 0)
-		return NULL;
-
-	unsigned int length = array_list_length(&hops_data);
-
-	// Map doesn't exist so create it
-	if (length < hop)
-	{
-		unsigned int to_add;
-		for (to_add = hop - length; to_add > 0; --to_add)
-		{
-			map_t * map = (map_t *)malloc(sizeof(map_t));
-			map_init(map, &rimeaddr_equality, &free);
-
-			array_list_append(&hops_data, map);
-		}
-	}
-
-	return (map_t *)array_list_data(&hops_data, hop - 1);
-}
-
-static void free_hops_data(void * voiddata)
-{
-	map_t * data = (map_t *)voiddata;
-	map_clear(data);
-	free(data);
-}
-
+static hop_data_t hop_data;
 
 static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uint8_t hops, uint8_t previous_hops)
 {
@@ -179,26 +145,10 @@ static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uin
 	// information
 	if (previous_hops != 0 && hops != previous_hops)
 	{
-		map_t * prev_map = get_hop_map(previous_hops);
-
-		map_remove(prev_map, from);
+		hop_manager_remove(&hop_data, previous_hops, from);
 	}
 
-
-	map_t * map = get_hop_map(hops);
-
-	// Check that we have not previously received data from this node before
-	node_data_t * stored = (node_data_t *)map_get(map, from);
-	
-	if (stored == NULL)
-	{
-		stored = (node_data_t *)malloc(sizeof(node_data_t));
-
-		map_put(map, stored);
-		max_size++;
-	}
-
-	memcpy(stored, nd, sizeof(node_data_t));
+	hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
 }
 
 
@@ -302,7 +252,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	cc2420_set_txpower(POWER_LEVEL);
 #endif
 
-	array_list_init(&hops_data, &free_hops_data);
+	hop_manager_init(&hop_data);
 
 	// Set the address of the base station
 	baseStationAddr.u8[0] = 1;
@@ -354,25 +304,12 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 exit:
 	printf("Exiting MAIN Process...\n");
-	array_list_clear(&hops_data);
+	hop_manager_free(&hop_data);
 	event_update_stop(&euc);
 	predicate_manager_close(&predconn);
 	mesh_close(&meshreceiver);
 	PROCESS_END();
 }
-
-static uint8_t hop_data_length(var_elem_t const * variable)
-{
-	unsigned int length = 0;
-	uint8_t j;
-	for (j = 1; j <= variable->hops; ++j)
-	{
-		length += map_length(get_hop_map(j));
-	}
-
-	return length;
-}
-
 
 static bool evaluate_predicate(
 	ubyte const * program, unsigned int program_length,
@@ -393,7 +330,7 @@ static bool evaluate_predicate(
 	{
 		// Get the length of this hop's data
 		// including all of the closer hop's data length
-		unsigned int length = hop_data_length(&variables[i]);
+		unsigned int length = hop_manager_length(&hop_data, &variables[i]);
 
 		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
@@ -425,6 +362,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 		printf("HSEND: Wait finished!\n");
 	
+		const unsigned int max_size = hop_manager_max_size(&hop_data);
 
 		// Only ask for data if the predicate needs it
 		if (max_comm_hops != 0 && max_size > 0)
@@ -438,7 +376,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			uint8_t i;
 			for (i = 1; i <= max_comm_hops; ++i)
 			{
-				map_t * hop_map = get_hop_map(i);
+				map_t * hop_map = hop_manager_get(&hop_data, i);
 
 				map_elem_t elem;
 				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
@@ -498,7 +436,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 				{
 					hops_details[i].hops = pe->variables_details[i].hops;
 					hops_details[i].var_id = pe->variables_details[i].var_id;
-					hops_details[i].length = hop_data_length(&pe->variables_details[i]);
+					hops_details[i].length = hop_manager_length(&hop_data, &pe->variables_details[i]);
 				}
 
 				node_data_t * msg_neighbour_data = (node_data_t *)(hops_details + pe->variables_details_length);

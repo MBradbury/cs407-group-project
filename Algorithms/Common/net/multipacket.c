@@ -303,8 +303,8 @@ void multipacket_close(multipacket_conn_t * conn)
 
 		ctimer_stop(&conn->ct_sender);
 
-		linked_list_clear(&conn->sending_packets);
-		map_clear(&conn->receiving_packets);
+		linked_list_free(&conn->sending_packets);
+		map_free(&conn->receiving_packets);
 	}
 }
 

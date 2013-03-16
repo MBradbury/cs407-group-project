@@ -12,6 +12,11 @@ bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_clea
 	return unique_array_init(map, key_equality, cleanup);
 }
 
+bool map_free(map_t * map)
+{
+	return unique_array_free(map);
+}
+
 // Add / Remove items from list
 bool map_put(map_t * map, void * keyanddata)
 {

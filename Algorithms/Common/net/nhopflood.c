@@ -301,8 +301,8 @@ bool nhopflood_stop(nhopflood_conn_t * conn)
 
 	ctimer_stop(&conn->send_timer);
 
-	map_clear(&conn->latest_message_seen);
-	linked_list_clear(&conn->packet_queue);
+	map_free(&conn->latest_message_seen);
+	linked_list_free(&conn->packet_queue);
 
 	broadcast_close(&conn->bc);
 

@@ -15,6 +15,11 @@ bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, 
 	return array_list_init(&list->list, cleanup);
 }
 
+bool unique_array_free(unique_array_t * list)
+{
+	return array_list_free(&list->list);
+}
+
 // Add / Remove items from list
 bool unique_array_append(unique_array_t * list, void * data)
 {

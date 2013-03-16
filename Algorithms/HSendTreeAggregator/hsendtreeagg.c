@@ -165,9 +165,8 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 	{
 		stored = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
 		
-		unique_array_init(&stored->data, &rimeaddr_pair_equality, &free);
-
 		stored->key = round_count;
+		unique_array_init(&stored->data, &rimeaddr_pair_equality, &free);
 
 		map_put(&neighbour_info, stored);
 	}
@@ -182,10 +181,12 @@ static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int le
 }
 
 /* Gets the neighbours of a given node */
-static unique_array_t * get_neighbours(rimeaddr_t const * target, unsigned int round_count)
+static void get_neighbours(rimeaddr_t const * target, unsigned int round_count, unique_array_t * output)
 {
-	unique_array_t * output = (unique_array_t *)malloc(sizeof(unique_array_t));
-	unique_array_init(output, &rimeaddr_equality, &free);
+	if (output == NULL || target == NULL)
+	{
+		return;
+	}
 
 	// Pairs of neighbours for a given round
 	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
@@ -194,31 +195,28 @@ static unique_array_t * get_neighbours(rimeaddr_t const * target, unsigned int r
 	if (stored == NULL) 
 	{
 		// No data, return empty array
-		return output; 
+		return; 
 	}
-
-	unique_array_t * pairs = &stored->data;
 
 	// Go through each pair
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(pairs); 
-		unique_array_continue(pairs, elem); 
+	for (elem = unique_array_first(&stored->data); 
+		unique_array_continue(&stored->data, elem); 
 		elem = unique_array_next(elem))
 	{
-		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(pairs, elem);
+		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(&stored->data, elem);
 		
 		// If either match, add the other to the list
-		if (rimeaddr_cmp(&data->first, target))
+		if (rimeaddr_cmp(&data->first, target) && !unique_array_contains(output, &data->second))
 		{
-			unique_array_append(output, &data->second);
+			unique_array_append(output, rimeaddr_clone(&data->second));
 		}
-		else if (rimeaddr_cmp(&data->second, target))
+
+		if (rimeaddr_cmp(&data->second, target) && !unique_array_contains(output, &data->first))
 		{
-			unique_array_append(output, &data->first);
+			unique_array_append(output, rimeaddr_clone(&data->first));
 		}
 	}
-
-	return output;
 }
 
 PROCESS(data_gather, "Data Gather");
@@ -665,16 +663,19 @@ static void data_evaluation(void * ptr)
 				printf("Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
 				// Get the neighbours of the node
-				unique_array_t * neighbours = get_neighbours(t, pred_round_count);
-				printf("Eval: got neighbours of size: %d\n",unique_array_length(neighbours));
+				unique_array_t neighbours;
+				unique_array_init(&neighbours, &rimeaddr_equality, &free);
+				get_neighbours(t, pred_round_count, &neighbours);
+				printf("Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
+
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbour;
-				for (neighbour = unique_array_first(neighbours); 
-					unique_array_continue(neighbours, neighbour); 
+				for (neighbour = unique_array_first(&neighbours); 
+					unique_array_continue(&neighbours, neighbour); 
 					neighbour = unique_array_next(neighbour))
 				{
 					// The neighbour found
-					rimeaddr_t * n = unique_array_data(neighbours, neighbour);
+					rimeaddr_t * n = unique_array_data(&neighbours, neighbour);
 
 					printf("Eval: Checking neighbour %s\n", addr2str(n));
 
@@ -708,8 +709,7 @@ static void data_evaluation(void * ptr)
 				}
 
 				// Free the returned neighbours array
-				unique_array_clear(neighbours);
-				free(neighbours);
+				unique_array_clear(&neighbours);
 			}
 
 			// Been through targets add them to the seen nodes

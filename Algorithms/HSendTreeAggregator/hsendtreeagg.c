@@ -669,37 +669,37 @@ static void data_evaluation(void * ptr)
 				printf("Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
 
 				// Go through the neighbours for the node
-				unique_array_elem_t neighbour;
-				for (neighbour = unique_array_first(&neighbours); 
-					unique_array_continue(&neighbours, neighbour); 
-					neighbour = unique_array_next(neighbour))
+				unique_array_elem_t neighbours_elem;
+				for (neighbours_elem = unique_array_first(&neighbours); 
+					unique_array_continue(&neighbours, neighbours_elem); 
+					neighbours_elem = unique_array_next(neighbours_elem))
 				{
 					// The neighbour found
-					rimeaddr_t * n = unique_array_data(&neighbours, neighbour);
+					rimeaddr_t * neighbour = unique_array_data(&neighbours, neighbours_elem);
 
-					printf("Eval: Checking neighbour %s\n", addr2str(n));
+					printf("Eval: Checking neighbour %s\n", addr2str(neighbour));
 
 					// If the neighbour hasn't been seen before
-					if (!unique_array_contains(&seen_nodes, n)) 
+					if (!unique_array_contains(&seen_nodes, neighbour)) 
 					{
 						// Get the data map for that round
 						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&recieved_data, &pred_round_count);
 
-						node_data_t * nd = (node_data_t *)map_get(&st->data, n);
+						node_data_t * nd = (node_data_t *)map_get(&st->data, neighbour);
 
 						// Add the node to the target nodes for the next round
-						unique_array_append(&acquired_nodes, rimeaddr_clone(n));
+						unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
 
-						map_t * map = get_hop_map(hops);
+						map_t * hop_map = get_hop_map(hops);
 
 						// Check that we have not previously received data from this node before
-						node_data_t * stored = (node_data_t *)map_get(map, n);
+						node_data_t * stored = (node_data_t *)map_get(hop_map, neighbour);
 						
 						// Then copy in data
 						if (stored == NULL)
 						{
 							stored = (node_data_t *)malloc(sizeof(node_data_t));
-							map_put(map, stored);
+							map_put(hop_map, stored);
 
 							max_size++;
 							printf("Eval: Max_size increased to %d\n", max_size);
@@ -724,25 +724,30 @@ static void data_evaluation(void * ptr)
 		}
 
 		// Generate array of all the data
-		node_data_t * all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
+		node_data_t * all_neighbour_data = NULL;
 
-		// Position in all_neighbour_data
-		unsigned int count = 0;
-
-		uint8_t i;
-		for (i = 1; i <= max_hops; ++i)
+		if (max_size > 0)
 		{
-			map_t * hop_map = get_hop_map(i);
+			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
-			array_list_elem_t elem;
-			for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
+			// Position in all_neighbour_data
+			unsigned int count = 0;
+
+			uint8_t i;
+			for (i = 1; i <= max_hops; ++i)
 			{
-				node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
-				memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
-				++count;
-			}
+				map_t * hop_map = get_hop_map(i);
 
-			printf("Eval: i=%d Count=%d length=%d\n", i, count, map_length(hop_map));
+				array_list_elem_t elem;
+				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
+				{
+					node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
+					memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
+					++count;
+				}
+
+				printf("Eval: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+			}
 		}
 
 		bool evaluation_result = evaluate_predicate(
@@ -759,12 +764,12 @@ static void data_evaluation(void * ptr)
 			printf("Pred: FAILED due to error: %s\n", error_message());
 		}
 
+		free(all_neighbour_data);
+
 		array_list_clear(&hops_data);
 		unique_array_clear(&target_nodes);
 		unique_array_clear(&seen_nodes);
 		unique_array_clear(&acquired_nodes);
-
-		free(all_neighbour_data);
 	}
 
 	//remove the data we no longer need
@@ -773,6 +778,6 @@ static void data_evaluation(void * ptr)
 	
 	++pred_round_count;
 
-	ctimer_set(&ct_data_eval, ROUND_LENGTH, &data_evaluation, NULL);
+	ctimer_set(&ct_data_eval, ROUND_LENGTH, &data_evaluation, ptr);
 }
 

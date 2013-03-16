@@ -427,7 +427,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	
 
 		// Only ask for data if the predicate needs it
-		if (max_comm_hops != 0)
+		if (max_comm_hops != 0 && max_size > 0)
 		{
 			// Generate array of all the data
 			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
@@ -440,8 +440,6 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			{
 				map_t * hop_map = get_hop_map(i);
 
-				
-
 				map_elem_t elem;
 				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 				{
@@ -450,7 +448,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 					++count;
 				}
 
-				printf("i=%d Count=%d length=%d\n", i, count, map_length(hop_map));
+				printf("i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 

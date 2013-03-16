@@ -457,8 +457,8 @@ PROCESS_THREAD(data_gather, ev, data)
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-
-	map_init(&neighbour_info, &neighbour_map_key_compare, &neighbour_map_elem_free); //setup the map
+	// Setup the map
+	map_init(&neighbour_info, &neighbour_map_key_compare, &neighbour_map_elem_free);
 
 	printf("Starting HSend Aggregation - HSend\n");
 
@@ -490,14 +490,12 @@ PROCESS_THREAD(data_gather, ev, data)
 		pred->bytecode_length = bytecode_length;
 		pred->variables_details_length = var_details;
 		
-		var_elem_t * msg_vars = (var_elem_t *)malloc(sizeof(var_elem_t) * var_details);
+		pred->variables_details = (var_elem_t *)malloc(sizeof(var_elem_t) * var_details);
 
-		msg_vars[0].hops = 2;
-		msg_vars[0].var_id = 255;
-		msg_vars[1].hops = 1;
-		msg_vars[1].var_id = 254;
-
-		pred->variables_details = msg_vars;
+		pred->variables_details[0].hops = 2;
+		pred->variables_details[0].var_id = 255;
+		pred->variables_details[1].hops = 1;
+		pred->variables_details[1].var_id = 254;
 
 		pred->bytecode = (ubyte *)malloc(sizeof(ubyte) * bytecode_length);
 		memcpy(pred->bytecode, program_bytecode, sizeof(ubyte) * bytecode_length);
@@ -806,11 +804,19 @@ static void data_evaluation(void * ptr)
 		unique_array_clear(&acquired_nodes);
 	}
 
-	// Remove the data we no longer need
-	map_remove(&received_data, &pred_round_count);
-	map_remove(&neighbour_info, &pred_round_count);
+	int contains1 = map_get(&received_data, &pred_round_count) != NULL;
 
-	printf("Round: finishing=%d |received_data|=%d |neighbour_info|=%d\n",
+	// NOTE: I have found that map_remove will never end up removing anything
+	// so the map must instead be cleared!
+
+	// Remove the data we no longer need
+	//map_remove(&received_data, &pred_round_count);
+	//map_remove(&neighbour_info, &pred_round_count);
+
+	map_clear(&received_data);
+	map_clear(&neighbour_info);
+
+	printf("Round: finishing=%u |received_data|=%u |neighbour_info|=%u\n",
 		pred_round_count, map_length(&received_data), map_length(&neighbour_info));
 	
 	++pred_round_count;

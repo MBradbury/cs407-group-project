@@ -18,7 +18,8 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 
 CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format -Werror=return-type
 
-CFLAGS += -DNDEBUG
+#CFLAGS += -DNDEBUG
+CFLAGS += -DNDEBUGVM
 
 # Disable uip
 #CONTIKI_NO_NET=1

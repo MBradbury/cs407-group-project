@@ -406,28 +406,23 @@ PROCESS_THREAD(hsendProcess, ev, data)
 			// Generate array of all the data
 			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
+			// Position in all_neighbour_data
+			unsigned int count = 0;
+
 			uint8_t i;
 			for (i = 1; i <= max_hops; ++i)
 			{
 				map_t * hop_map = get_hop_map(i);
 
-				unsigned int length = map_length(hop_map);
-
-				// Position in all_neighbour_data
-				unsigned int count = 0;
-
-				if (length > 0)
+				map_elem_t elem;
+				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 				{
-					map_elem_t elem;
-					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
-					{
-						node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
-						memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
-						++count;
-					}
+					node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
+					memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
+					++count;
 				}
 
-				printf("i=%d Count=%d length=%d\n", i, count, length);
+				printf("i=%d Count=%d length=%d\n", i, count, map_length(hop_map));
 			}
 		}
 

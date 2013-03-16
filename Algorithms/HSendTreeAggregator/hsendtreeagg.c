@@ -704,6 +704,7 @@ static void data_evaluation(void * ptr)
 							max_size++;
 							printf("Eval: Max_size increased to %d\n", max_size);
 						}
+
 						memcpy(stored, nd, sizeof(node_data_t));
 					}
 				}
@@ -725,13 +726,13 @@ static void data_evaluation(void * ptr)
 		// Generate array of all the data
 		node_data_t * all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
+		// Position in all_neighbour_data
+		unsigned int count = 0;
+
 		uint8_t i;
 		for (i = 1; i <= max_hops; ++i)
 		{
 			map_t * hop_map = get_hop_map(i);
-
-			// Position in all_neighbour_data
-			unsigned int count = 0;
 
 			array_list_elem_t elem;
 			for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))

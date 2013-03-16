@@ -7,8 +7,13 @@
 static linked_list_elem_t create_elem(void * data)
 {
 	linked_list_elem_t e = (linked_list_elem_t)malloc(sizeof(struct linked_list_elem));
-	e->data = data;
-	e->next = NULL;
+
+	if (e != NULL)
+	{
+		e->data = data;
+		e->next = NULL;
+	}
+
 	return e;
 }
 
@@ -84,6 +89,11 @@ bool linked_list_append(linked_list_t * list, void * data)
 	if (list->head == NULL)
 	{
 		list->head = create_elem(data);
+
+		if (list->head == NULL)
+		{
+			return false;
+		}
 	}
 	else
 	{
@@ -95,6 +105,11 @@ bool linked_list_append(linked_list_t * list, void * data)
 		}
 
 		last->next = create_elem(data);
+
+		if (last->next == NULL)
+		{
+			return false;
+		}
 	}
 
 	return true;

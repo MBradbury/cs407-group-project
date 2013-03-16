@@ -379,7 +379,7 @@ void tree_agg_close(tree_agg_conn_t * conn)
 
 void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length)
 {
-	if (conn != NULL && data != NULL)
+	if (conn != NULL && data != NULL && length != 0)
 	{
 		printf("Tree Agg: Sending data to best parent %s with length %d\n", addr2str(&conn->best_parent), length);
 		multipacket_send(&conn->mc, &conn->best_parent, data, length);

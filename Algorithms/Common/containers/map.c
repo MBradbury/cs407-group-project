@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_cleanup_t cleanup)
 {

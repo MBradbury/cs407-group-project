@@ -153,8 +153,21 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 		printf("Tree Agg: We're sink, got message from %s length:%u, sending to user\n",
 			addr2str(originator), length);
 
+		// We need to apply the sink's data to the received data
+		(*conn->callbacks.store_packet)(conn, msg, length);
+		(*conn->callbacks.aggregate_own)(conn, conn->data);
+
+		void * data;
+		size_t data_length;
+
+		// Copy aggregation data into the packet
+		(*conn->callbacks.write_data_to_packet)(conn, &data, &data_length);
+
 		// Pass this messge up to the user
-		(*conn->callbacks.recv)(conn, originator, msg, length);
+		(*conn->callbacks.recv)(conn, originator, data, data_length);
+
+		// Free the allocated data
+		free(data);
 	}
 	else
 	{

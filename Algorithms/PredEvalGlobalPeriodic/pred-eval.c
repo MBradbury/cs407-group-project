@@ -132,6 +132,33 @@ static void const * get_humidity(void const * ptr)
 	return &((node_data_t const *)ptr)->humidity;
 }
 
+static void our_node_data(void * data)
+{
+	if (data != NULL)
+	{
+		node_data_t * nd = (node_data_t *)data;
+
+		// Store the current nodes address
+		rimeaddr_copy(&nd->addr, &rimeaddr_node_addr);
+
+		SENSORS_ACTIVATE(sht11_sensor);
+		int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
+		int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
+		SENSORS_DEACTIVATE(sht11_sensor);
+
+		nd->temp = sht11_temperature(raw_temperature);
+		nd->humidity = sht11_relative_humidity_compensated(raw_humidity, nd->temp);
+
+		/*SENSORS_ACTIVATE(light_sensor);
+		int raw_light1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+		int raw_light2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+		SENSORS_DEACTIVATE(light_sensor);
+
+		nd->light1 = (nint)s1087_light1(raw_light1);
+		nd->light2 = (nint)s1087_light1(raw_light2);*/
+	}
+}
+
 // This function would typically just return the current nodes data
 // however because we are evaluating a predicate from a different node
 // we need to return that node's data
@@ -139,13 +166,11 @@ static void node_data(void * data)
 {
 	if (data != NULL)
 	{
-		node_data_t * nd = (node_data_t *)data;
-
 		node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&received_data, &pred_round_count); //map for that round
 
 		node_data_t * stored_data = (node_data_t *)map_get(&st->data, &pred_simulated_node);
 
-		memcpy(nd, stored_data, sizeof(node_data_t));
+		memcpy(data, stored_data, sizeof(node_data_t));
 	}
 }
 ///
@@ -336,16 +361,9 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 
 	unique_array_t * data = &((aggregation_data_t *)ptr)->list;
 
+	// Allocate and fill in our data
 	node_data_t * msg = (node_data_t *)malloc(sizeof(node_data_t));
-
-	SENSORS_ACTIVATE(sht11_sensor);
-	int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-	int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
-	SENSORS_DEACTIVATE(sht11_sensor);
-
-	msg->temp = sht11_temperature(raw_temperature);
-	msg->humidity = sht11_relative_humidity_compensated(raw_humidity, msg->temp);	
-	rimeaddr_copy(&msg->addr, &rimeaddr_node_addr);
+	our_node_data(msg);
 
 	unique_array_append(data, msg);
 }
@@ -537,16 +555,9 @@ PROCESS_THREAD(send_data_process, ev, data)
 			msg->round_count = round_count;
 			msg->length = 1;
 
-			SENSORS_ACTIVATE(sht11_sensor);
-			int raw_temperature = sht11_sensor.value(SHT11_SENSOR_TEMP);
-			int raw_humidity = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
-			SENSORS_DEACTIVATE(sht11_sensor);
-			
-			node_data_t * msgdata = (node_data_t *)(msg + 1); //get the pointer after the message
-			
-			msgdata->temp = sht11_temperature(raw_temperature);
-			msgdata->humidity = sht11_relative_humidity_compensated(raw_humidity, msgdata->temp);
-			rimeaddr_copy(&msgdata->addr, &rimeaddr_node_addr);
+			// Get the pointer after the message that will contain the nodes data
+			node_data_t * msgdata = (node_data_t *)(msg + 1);
+			our_node_data(msgdata);
 
 			tree_agg_send(&aggconn, msg, data_length);
 
@@ -764,4 +775,3 @@ static void data_evaluation(void * ptr)
 
 	ctimer_set(&ct_data_eval, ROUND_LENGTH, &data_evaluation, ptr);
 }
-

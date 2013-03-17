@@ -8,7 +8,13 @@
 //#define MAIN_FUNC
 //#define NDEBUG
 
-#ifndef NDEBUG
+// Contiki doesn't implement fprintf, so just direct to printf
+#ifdef CONTIKI
+#	define fprintf(s, ...) printf(__VA_ARGS__)
+#endif
+
+
+#ifndef NDEBUGVM
 #	define DEBUG_PRINT(...) do { printf(__VA_ARGS__); } while(false)
 #	define DEBUG_ERR_PRINT(...) do { fprintf(stderr, __VA_ARGS__); } while(false)
 #else
@@ -482,7 +488,7 @@ typedef enum {
 
 } opcode;
 
-#ifndef NDEBUG
+#ifndef NDEBUGVM
 static const char * opcode_names[] = {
 	"HALT", // Stop evaluation
 
@@ -1296,7 +1302,7 @@ static bool run_program_from_file(int argc, char ** argv, ubyte ** program_start
 
 	char const * filename = argv[1];
 
-#ifndef NDEBUG
+#ifndef NDEBUGVM
 	fprintf(stderr, "Filename: %s\n", filename);
 #endif
 
@@ -1352,7 +1358,7 @@ int main(int argc, char * argv[])
 	bind_input(255, data, 10);
 	bind_input(254, data, 20);
 
-#ifndef NDEBUG
+#ifndef NDEBUGVM
 	fprintf(stderr, "sizeof(void *): %u\n", sizeof(void *));
 	fprintf(stderr, "sizeof(int): %u\n", sizeof(nint));
 	fprintf(stderr, "sizeof(float): %u\n", sizeof(nfloat));

@@ -25,26 +25,35 @@ bool unique_array_append(unique_array_t * list, void * data)
 	{
 		if (!array_list_append(&list->list, data))
 		{
-			list->list.cleanup(data);
+			if (list->list.cleanup != NULL)
+			{
+				list->list.cleanup(data);
+			}
+
 			return false;
 		}
 	}
 	else
 	{
-		// Free the data past to the unique array
-		list->list.cleanup(data);
+		if (list->list.cleanup != NULL)
+		{
+			// Free the data given to the unique array
+			list->list.cleanup(data);
+		}
 	}
 
 	// Already in list, so succeeded
 	return true;
 }
 
-bool unique_array_merge(unique_array_t * first, unique_array_t const * second, unique_array_copy_t copy)
+bool unique_array_merge(unique_array_t * first, unique_array_t * second, unique_array_copy_t copy)
 {
-	if (first == NULL || second == NULL || copy == NULL)
+	if (first == NULL || second == NULL)
 	{
 		return false;
 	}
+
+	bool result = true;
 
 	unique_array_elem_t elem;
 	for (elem = unique_array_first(second); unique_array_continue(second, elem); elem = unique_array_next(elem))
@@ -59,21 +68,54 @@ bool unique_array_merge(unique_array_t * first, unique_array_t const * second, u
 		if (!unique_array_contains(first, item))
 		{
 			// We need a clone of this item to put in the other list
-			void * item_copy = copy(item);
+			// If we are stealing do not attempt a copy as copy will be NULL
+			void * item_copy = copy == NULL ? item : copy(item);
 
 			// We have already checked that it is not
 			// in the list, so just use the array_list operation
 			if (!array_list_append(&first->list, item_copy))
 			{
-				// Tidy up the copy we made to prevent memory leaks
-				first->list.cleanup(item_copy);
+				if (copy == NULL)
+				{
+					if (second->list.cleanup != NULL)
+					{
+						// Tidy up the copy we made to prevent memory leaks
+						second->list.cleanup(item_copy);
+					}
+				}
+				else
+				{
+					if (first->list.cleanup != NULL)
+					{
+						// Tidy up the copy we made to prevent memory leaks
+						first->list.cleanup(item_copy);
+					}
+				}
 
-				return false;
+				result = false;
+			}
+		}
+		else
+		{
+			// If we are stealing memory, we need to free the item
+			// that we are not going to use
+			if (copy == NULL)
+			{
+				if (second->list.cleanup != NULL)
+				{
+					second->list.cleanup(item);
+				}
 			}
 		}
 	}
 
-	return true;
+	// We are stealing the memory, so now need to clear the second list
+	if (copy == NULL)
+	{
+		second->list.count = 0;
+	}
+
+	return result;
 }
 
 bool unique_array_remove(unique_array_t * list, unique_array_elem_t elem)

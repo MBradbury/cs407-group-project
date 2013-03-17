@@ -1,6 +1,7 @@
-#include "array-list.h"
-#include "linked-list.h"
-#include "unique-array.h"
+#include "containers/array-list.h"
+#include "containers/linked-list.h"
+#include "containers/unique-array.h"
+#include "containers/map.h"
 
 #include <stdio.h>
 #include <stddef.h>
@@ -164,18 +165,44 @@ static bool compare_int(void const * left, void const * right)
 	return l == r;
 }
 
+static void * copy_int(void const * data)
+{
+	int * newdata = (int *)malloc(sizeof(int));
+	*newdata = *(int const *)data;
+	return newdata;
+}
+
 static char const * unique_array_test(void)
 {
-	unique_array_t list;
+	unique_array_t list, mergelist;
 
-	if (!unique_array_init(&list, &compare_int, NULL)) return "Failed: Init";
+	if (!unique_array_init(&list, &compare_int, &free)) return "Failed: Init";
+	if (!unique_array_init(&mergelist, &compare_int, &free)) return "Failed: Init";
 
-	int values[] = { 1, 1, 2, 3, 4, 5, 9, 2, 3 };
+	int * values[] = { (int *)malloc(sizeof(int)), 
+					   (int *)malloc(sizeof(int)),
+					   (int *)malloc(sizeof(int)),
+					   (int *)malloc(sizeof(int)),
+					   (int *)malloc(sizeof(int)),
+					   (int *)malloc(sizeof(int)),
+					   (int *)malloc(sizeof(int)),
+					   (int *)malloc(sizeof(int)),
+					   (int *)malloc(sizeof(int)) };
+
+	*values[0] = 1;
+	*values[1] = 1;
+	*values[2] = 2;
+	*values[3] = 3;
+	*values[4] = 4;
+	*values[5] = 5;
+	*values[6] = 9;
+	*values[7] = 2;
+	*values[8] = 3;
 
 	unsigned int i;
 	for (i = 0; i != 9; ++i)
 	{
-		if (!unique_array_append(&list, &values[i])) return "Failed: Append";
+		if (!unique_array_append(&list, values[i])) return "Failed: Append";
 	}
 
 	int expected[] = { 1, 2, 3, 4, 5, 9 };
@@ -203,10 +230,85 @@ static char const * unique_array_test(void)
 		++i;
 	}
 
+	unique_array_merge(&mergelist, &list, &copy_int);
+
+	if (!unique_array_clear(&mergelist)) return "Failed: Clear";
 	if (!unique_array_clear(&list)) return "Failed: Clear";
 
 	return "Succeeded";
 }
+
+
+typedef struct
+{
+	int key;
+	int value;
+} map_entry_t;
+
+static map_entry_t * create_map_entry(int key, double value)
+{
+	map_entry_t * data = (map_entry_t *)malloc(sizeof(map_entry_t));
+	data->key = key;
+	data->value = value;
+	return data;
+}
+
+
+static char const * map_test(void)
+{
+	map_t m;
+
+	if (!map_init(&m, &compare_int, &free)) return "Failed: Init";
+
+	map_entry_t * values[] = { create_map_entry(2, 7),
+							   create_map_entry(3, 6),
+							   create_map_entry(3, 5),
+							   create_map_entry(8, 99),
+							   create_map_entry(2, 7),
+							   create_map_entry(6, 44) };
+
+	unsigned int i;
+	for (i = 0; i != 6; ++i)
+	{
+		if (!map_put(&m, values[i])) return "Failed: Append";
+	}
+
+	if (map_length(&m) != 4) return "Failed: Length 1";
+
+	int expected_keys[]   = { 2, 3, 8,   6 };
+	int expected_values[] = { 7, 6, 99, 44 };
+
+	for (i = 0; i != 4; ++i)
+	{
+		map_entry_t * data = (map_entry_t *)map_get(&m, &expected_keys[i]);
+
+		if (data == NULL) return "Failed: Data Non-NULL";
+
+		if (data->value != expected_values[i]) return "Failed: Data not as Expected";
+	}
+
+	int to_remove = 2;
+
+	if (!map_remove(&m, &to_remove)) return "Failed: remove";
+
+
+	if (map_length(&m) != 3) return "Failed: Length 2";
+
+	for (i = 1; i != 4; ++i)
+	{
+		map_entry_t * data = (map_entry_t *)map_get(&m, &expected_keys[i]);
+
+		if (data == NULL) return "Failed: Data Non-NULL";
+
+		if (data->value != expected_values[i]) return "Failed: Data not as Expected";
+	}
+
+	if (!map_clear(&m)) return "Failed: Clear";
+
+	return "Succeeded";
+}
+
+
 
 int main(int argc, char ** argv)
 {
@@ -215,6 +317,8 @@ int main(int argc, char ** argv)
 	printf("Array List Test: %s\n", array_list_test());
 
 	printf("Unique Array Test: %s\n", unique_array_test());
+
+	printf("Map Test: %s\n", map_test());
 
 	return 0;
 }

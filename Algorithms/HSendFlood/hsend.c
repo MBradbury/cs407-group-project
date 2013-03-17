@@ -178,25 +178,6 @@ static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
-
-static uint8_t maximum_hop_data_request(var_elem_t const * variables, unsigned int length)
-{
-	uint8_t max_hops = 0;
-
-	unsigned int i;
-	for (i = 0; i < length; ++i)
-	{
-		if (variables[i].hops > max_hops)
-		{
-			max_hops = variables[i].hops;
-		}
-
-		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
-	}
-
-	return max_hops;
-}
-
 static uint8_t max_hops = 0;
 
 static void predicate_manager_update_callback(struct predicate_manager_conn * conn)
@@ -212,7 +193,7 @@ static void predicate_manager_update_callback(struct predicate_manager_conn * co
 
 		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
 		{
-			uint8_t local_max_hops = maximum_hop_data_request(pe->variables_details, pe->variables_details_length);
+			uint8_t local_max_hops = predicate_manager_max_hop(pe);
 
 			if (local_max_hops > max_hops)
 			{
@@ -421,22 +402,19 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 			printf("Finished collecting hop data.\n");
 
-
-			// Generate array of all the data
-			all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
-
-			uint8_t i;
-			for (i = 1; i <= max_hops; ++i)
+			if (max_size > 0)
 			{
-				map_t * hop_map = get_hop_map(i);
-
-				unsigned int length = map_length(hop_map);
+				// Generate array of all the data
+				all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
 
 				// Position in all_neighbour_data
 				unsigned int count = 0;
 
-				if (length > 0)
+				uint8_t i;
+				for (i = 1; i <= max_hops; ++i)
 				{
+					map_t * hop_map = get_hop_map(i);
+
 					map_elem_t elem;
 					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 					{
@@ -444,9 +422,9 @@ PROCESS_THREAD(hsendProcess, ev, data)
 						memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
 						++count;
 					}
-				}
 
-				printf("i=%d Count=%d length=%d\n", i, count, length);
+					printf("i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+				}
 			}
 		}
 

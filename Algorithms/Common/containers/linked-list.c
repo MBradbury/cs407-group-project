@@ -7,8 +7,13 @@
 static linked_list_elem_t create_elem(void * data)
 {
 	linked_list_elem_t e = (linked_list_elem_t)malloc(sizeof(struct linked_list_elem));
-	e->data = data;
-	e->next = NULL;
+
+	if (e != NULL)
+	{
+		e->data = data;
+		e->next = NULL;
+	}
+
 	return e;
 }
 
@@ -84,17 +89,28 @@ bool linked_list_append(linked_list_t * list, void * data)
 	if (list->head == NULL)
 	{
 		list->head = create_elem(data);
-		return true;
+
+		if (list->head == NULL)
+		{
+			return false;
+		}
 	}
-
-	linked_list_elem_t last = linked_list_last(list);
-
-	if (last == NULL)
+	else
 	{
-		return false;
-	}
+		linked_list_elem_t last = linked_list_last(list);
 
-	last->next = create_elem(data);
+		if (last == NULL)
+		{
+			return false;
+		}
+
+		last->next = create_elem(data);
+
+		if (last->next == NULL)
+		{
+			return false;
+		}
+	}
 
 	return true;
 }
@@ -122,7 +138,11 @@ bool linked_list_pop(linked_list_t * list)
 
 	list->head = first->next;
 
-	list->cleanup(first->data);
+	if (list->cleanup != NULL)
+	{
+		list->cleanup(first->data);
+	}
+
 	free(first);
 	
 	return true;
@@ -171,5 +191,4 @@ void * linked_list_data(linked_list_t const * list, linked_list_elem_t elem)
 {
 	return elem == NULL ? NULL : elem->data;
 }
-
 

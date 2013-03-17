@@ -13,7 +13,7 @@
 struct event_update_conn;
 
 typedef void (*data_generation_fn)(void * data);
-typedef bool (*data_differs_fn)(void * data1, void * data2);
+typedef bool (*data_differs_fn)(void const * data1, void const * data2);
 
 typedef void (*update_fn)(struct event_update_conn * c, rimeaddr_t const * from, uint8_t distance, uint8_t previous_distance);
 

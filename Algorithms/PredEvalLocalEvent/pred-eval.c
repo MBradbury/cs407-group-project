@@ -94,10 +94,10 @@ static void node_data(void * data)
 // This is simply an arbitrary comparison that sees if data
 // has significantly changed. What is significant is up to the
 // application to decide.
-static bool node_data_differs(void * data1, void * data2)
+static bool node_data_differs(void const * data1, void const * data2)
 {
-	node_data_t * nd1 = (node_data_t *)data1;
-	node_data_t * nd2 = (node_data_t *)data2;
+	node_data_t const * nd1 = (node_data_t const *)data1;
+	node_data_t const * nd2 = (node_data_t const *)data2;
 
 	if (nd1 == NULL && nd2 == NULL)
 	{
@@ -128,12 +128,12 @@ static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uin
 {
 	node_data_t const * nd = (node_data_t const *)packetbuf_dataptr();
 
-	printf("Obtained information from %s hops:%u (prev:%d), T:%d H:%d%%\n",
+	printf("PE LE: Obtained information from %s hops:%u (prev:%d), T:%d H:%d%%\n",
 		addr2str(from),
 		hops, previous_hops,
 		(int)nd->temp, (int)nd->humidity);
 
-	/*printf("Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",
+	/*printf("PE LE: Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",
 		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
 		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
 		hops,
@@ -191,7 +191,7 @@ static void mesh_receiver_rcv(struct mesh_conn *c, rimeaddr_t const * from, uint
 {
 	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("Response received from %s, %u hops away. ", addr2str(from), hops);
+	printf("PE LE: Response received from %s, %u hops away. ", addr2str(from), hops);
 	printf("Failed predicate %u.\n", response->predicate_id);
 }
 
@@ -201,17 +201,17 @@ static void mesh_receiver_sent(struct mesh_conn * c)
 
 static void mesh_receiver_timeout(struct mesh_conn * c)
 {
-	printf("Mesh timedout, so start sending again\n");
+	printf("PE LE: Mesh timedout, so start sending again\n");
 	// We timedout, so start sending again
 	mesh_send(&meshreceiver, &baseStationAddr);
 }
 
 static const struct mesh_callbacks meshreceiver_callbacks = { &mesh_receiver_rcv, &mesh_receiver_sent, &mesh_receiver_timeout };
 
-PROCESS(mainProcess, "MAIN Process");
-PROCESS(hsendProcess, "HSEND Process");
+PROCESS(initProcess, "Init Process");
+PROCESS(mainProcess, "Main Process");
 
-AUTOSTART_PROCESSES(&mainProcess, &hsendProcess);
+AUTOSTART_PROCESSES(&initProcess, &mainProcess);
 
 
 static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
@@ -236,7 +236,7 @@ static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 		var_details, var_details_length);
 }
 
-PROCESS_THREAD(mainProcess, ev, data)
+PROCESS_THREAD(initProcess, ev, data)
 {
 	static struct etimer et;
 	static rimeaddr_t destination;
@@ -264,7 +264,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &destination))
 	{
-		printf("Is Destination.\n");
+		printf("PE LE: Is Destination.\n");
 	}
 
 	predicate_manager_open(&predconn, 121, trickle_interval, &predicate_manager_update_callback);
@@ -273,41 +273,29 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	if (!event_update_start(&euc, 149, &node_data, &node_data_differs, sizeof(node_data_t), CLOCK_SECOND * 10, &receieved_data))
 	{
-		printf("nhopreq start function failed\n");
+		printf("PE LE: nhopreq start function failed\n");
 	}
 
 	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr)) // Sink
 	{
-		printf("Is the base station!\n");
+		printf("PE LE: Is the base station!\n");
 
 		send_example_predicate(&destination, 0);
 		send_example_predicate(&destination, 1);
 
 		leds_on(LEDS_BLUE);
-
-		while (true)
-		{
-			etimer_set(&et, 10 * CLOCK_SECOND);
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-		}
 	}
 	else
 	{
 		leds_on(LEDS_GREEN);
-
-		while (true)
-		{
-			etimer_set(&et, 10 * CLOCK_SECOND);
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-		}
 	}	
 
 exit:
-	printf("Exiting MAIN Process...\n");
-	hop_manager_free(&hop_data);
+	printf("PE LE: Exiting init Process.\n");
+	/*hop_manager_free(&hop_data);
 	event_update_stop(&euc);
 	predicate_manager_close(&predconn);
-	mesh_close(&meshreceiver);
+	mesh_close(&meshreceiver);*/
 	PROCESS_END();
 }
 
@@ -332,14 +320,14 @@ static bool evaluate_predicate(
 		// including all of the closer hop's data length
 		unsigned int length = hop_manager_length(&hop_data, &variables[i]);
 
-		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		printf("PE LE: Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
 	}
 
 	return evaluate(program, program_length);
 }
 
-PROCESS_THREAD(hsendProcess, ev, data)
+PROCESS_THREAD(mainProcess, ev, data)
 {
 	static struct etimer et;
 	static node_data_t * all_neighbour_data = NULL;
@@ -347,7 +335,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	
-	printf("HSEND Process Started.\n");
+	printf("PE LE: Process Started.\n");
 
 	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
@@ -355,12 +343,12 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 	while (true)
 	{
-		printf("HSEND: Starting long wait...\n");
+		printf("PE LE: Starting long wait...\n");
 
 		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-		printf("HSEND: Wait finished!\n");
+		printf("PE LE: Wait finished!\n");
 	
 		const unsigned int max_size = hop_manager_max_size(&hop_data);
 
@@ -386,7 +374,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 					++count;
 				}
 
-				printf("i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+				printf("PE LE: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
@@ -399,7 +387,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
 			{
-				printf("Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
+				printf("PE LE: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 	
 				bool evaluation_result = evaluate_predicate(
 					pe->bytecode, pe->bytecode_length,
@@ -408,11 +396,11 @@ PROCESS_THREAD(hsendProcess, ev, data)
 
 				if (evaluation_result)
 				{
-					printf("Pred: TRUE\n");
+					printf("PE LE: Pred: TRUE\n");
 				}
 				else
 				{
-					printf("Pred: FAILED due to error: %s\n", error_message());
+					printf("PE LE: Pred: FAILED due to error: %s\n", error_message());
 				}
 
 				unsigned int packet_length = sizeof(failure_response_t) +
@@ -453,7 +441,7 @@ PROCESS_THREAD(hsendProcess, ev, data)
 	}
 
 exit:
-	printf("Exiting HSEND Process...\n");
+	printf("PE LE: Exiting Process...\n");
 	PROCESS_END();
 }
 

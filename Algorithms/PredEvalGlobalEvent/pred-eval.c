@@ -38,7 +38,7 @@
 static void data_evaluation(void * ptr);
 
 static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
-static const clock_time_t HSEND_INITIAL_ROUND_LENGTH = 7 * 60 * CLOCK_SECOND;
+static const clock_time_t INITIAL_ROUND_LENGTH = 7 * 60 * CLOCK_SECOND;
 
 // Map containing neighbour_map_elem_t
 static map_t neighbour_info;
@@ -202,7 +202,7 @@ static bool neighbour_map_key_compare(void const * x, void const * y)
 /* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
-	printf("Handling neighbour data - HSend round=%u length=%u\n", round_count, length);
+	printf("PE GE: Handling neighbour data round=%u length=%u\n", round_count, length);
 	// Use a map based on round_count, map contains a unique array list of all the neighbour pairs
 
 	// Check if round is in map already, if not create new unique array list
@@ -298,12 +298,12 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 		map_put(&received_data, st);
 	}
 
-	printf("HSend Agg: Adding %u pieces of data in round %u\n", length, msg->round_count);
+	printf("PE GE: Adding %u pieces of data in round %u\n", length, msg->round_count);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		printf("HSend Agg: Data Node: %s Temp:%d, Humidity: %d in %p\n",
+		printf("PE GE: Data Node: %s Temp:%d, Humidity: %d in %p\n",
 			addr2str(&msgdata[i].addr),
 			(int)msgdata[i].temp,
 			msgdata[i].humidity,
@@ -319,11 +319,11 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 {
-	printf("HSend Agg: Setup finsihed\n");
+	printf("PE GE: Setup finsihed\n");
 
 	if (tree_agg_is_leaf(conn))
 	{
-		printf("HSend Agg: Is leaf starting data aggregation\n");
+		printf("PE GE: Is leaf starting data aggregation\n");
 
 		leds_on(LEDS_RED);
 
@@ -333,7 +333,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 
 static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void const * to_apply, unsigned int to_apply_length)
 {
-	printf("HSend Agg: Update local data\n");
+	printf("PE GE: Update local data\n");
 
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
@@ -357,7 +357,7 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void
 // Add our own one hop data to the list
 static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
-	printf("HSend Agg: Update local data with own data\n");
+	printf("PE GE: Update local data with own data\n");
 
 	unique_array_t * data = &((aggregation_data_t *)ptr)->list;
 
@@ -372,7 +372,7 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 //Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
-	printf("HSend Agg: Store Packet - length=%u\n", length);
+	printf("PE GE: Store Packet - length=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -397,7 +397,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 // Write the data structure to the outbout packet buffer
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, size_t * packet_length)
 {
-	printf("Writing data to packet - HSend\n"); 
+	printf("PE GE: Writing data to packet\n"); 
 	//take all data, write a struct to the buffer at the start, 
 	//containing the length of the packet (as the number of node_data_t)
 	//write the each one to memory
@@ -413,7 +413,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("Writing packet, length:%d data length:%d - HSend\n", msg->length, *packet_length);
+	printf("PE GE: Writing packet, length:%d data length:%d\n", msg->length, *packet_length);
 
 	// Get the pointer after the message
 	node_data_t * msgdata = (node_data_t *)(msg + 1);
@@ -465,7 +465,7 @@ PROCESS_THREAD(data_gather, ev, data)
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
 	{
-		printf("We are sink node.\n");
+		printf("PE GE: We are sink node.\n");
 	}
 
 	// We need to set the random number generator here
@@ -478,7 +478,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	// Setup the map
 	map_init(&neighbour_info, &neighbour_map_key_compare, &neighbour_map_elem_free);
 
-	printf("Starting HSend Aggregation - HSend\n");
+	printf("PE GE: Starting Aggregation\n");
 
 	tree_agg_open(&aggconn, &sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 
@@ -524,16 +524,43 @@ PROCESS_THREAD(data_gather, ev, data)
 		pred_round_count = 0;
 		
 		// Start the evauluation method
-		ctimer_set(&ct_data_eval, HSEND_INITIAL_ROUND_LENGTH, &data_evaluation, NULL);
+		ctimer_set(&ct_data_eval, INITIAL_ROUND_LENGTH, &data_evaluation, NULL);
 	}
 
 	PROCESS_END();
+}
+
+// This is an arbitrary difference function that the user should define
+static bool node_data_differs(void const * data1, void const * data2)
+{
+	node_data_t const * nd1 = (node_data_t const *)data1;
+	node_data_t const * nd2 = (node_data_t const *)data2;
+
+	if (nd1 == NULL && nd2 == NULL)
+	{
+		return false;
+	}
+	else if (nd1 == NULL || nd2 == NULL)
+	{
+		return true;
+	}
+	else
+	{
+		double temp_diff = nd1->temp - nd2->temp;
+		if (temp_diff < 0) temp_diff = -temp_diff;
+
+		int humidity_diff = nd1->humidity - nd2->humidity;
+		if (humidity_diff < 0) humidity_diff = -humidity_diff;
+
+		return temp_diff > 3 || humidity_diff > 5;
+	}
 }
 
 PROCESS_THREAD(send_data_process, ev, data)
 {
 	static struct etimer et;
 	static uint8_t round_count;
+	static node_data_t current_data, previous_data;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -544,11 +571,20 @@ PROCESS_THREAD(send_data_process, ev, data)
 	{
 		etimer_set(&et, ROUND_LENGTH);
 
-		// Leaf nodes start tree aggregation
-		if (tree_agg_is_leaf(&aggconn))
+		// Find the current data
+		our_node_data(&current_data);
+
+		// Usually we would have leaf nodes starting sending data back up the tree
+		// instead any node may do so, but only if its data has changed.
+		// However, for the first round, we only let the leaves do the sending to save on
+		// energy
+		if (
+			(round_count == 0 && tree_agg_is_leaf(&aggconn)) ||
+			(round_count > 0 && node_data_differs(&current_data, &previous_data))
+		   )
 		{
-			//HSend should be set up by now
-			//Start sending data up the tree
+			// We should be set up by now
+			// Start sending data up the tree
 
 			size_t data_length = sizeof(collected_data_t) + sizeof(node_data_t);
 			collected_data_t * msg = (collected_data_t *)malloc(data_length);
@@ -556,9 +592,12 @@ PROCESS_THREAD(send_data_process, ev, data)
 			msg->round_count = round_count;
 			msg->length = 1;
 
-			// Get the pointer after the message that will contain the nodes data
+			// Get the pointer after the message that will contain the nodes data and fill it
 			node_data_t * msgdata = (node_data_t *)(msg + 1);
-			our_node_data(msgdata);
+			memcpy(msgdata, &current_data, sizeof(node_data_t));
+
+			// Remember the changed data
+			memcpy(&previous_data, &current_data, sizeof(node_data_t));
 
 			tree_agg_send(&aggconn, msg, data_length);
 
@@ -588,7 +627,7 @@ static bool evaluate_predicate(
 	register_function(2, &get_temp, TYPE_FLOATING);
 	register_function(3, &get_humidity, TYPE_INTEGER);
 
-	printf("Binding variables using %p %d\n", all_neighbour_data, variables_length);
+	printf("PE GE: Binding variables using %p %d\n", all_neighbour_data, variables_length);
 
 	// Bind the variables to the VM
 	unsigned int i;
@@ -598,7 +637,7 @@ static bool evaluate_predicate(
 		// including all of the closer hop's data length
 		unsigned int length = hop_manager_length(&hop_data, &variables[i]);
 
-		printf("Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		printf("PE GE: Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
 	}
 
@@ -607,7 +646,7 @@ static bool evaluate_predicate(
 
 static void data_evaluation(void * ptr)
 {
-	printf("Eval: Beginning Evaluation\n");
+	printf("PE GE: Eval: Beginning Evaluation\n");
 
 	// For each predicate		
 	array_list_elem_t pred_elem;
@@ -654,13 +693,13 @@ static void data_evaluation(void * ptr)
 				target = unique_array_next(target))
 			{
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-				printf("Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
+				printf("PE GE: Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
 				// Get the neighbours of the node
 				unique_array_t neighbours;
 				unique_array_init(&neighbours, &rimeaddr_equality, &free);
 				get_neighbours(t, pred_round_count, &neighbours);
-				printf("Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
+				printf("PE GE: Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
 
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbours_elem;
@@ -671,7 +710,7 @@ static void data_evaluation(void * ptr)
 					// The neighbour found
 					rimeaddr_t * neighbour = unique_array_data(&neighbours, neighbours_elem);
 
-					printf("Eval: Checking neighbour %s\n", addr2str(neighbour));
+					printf("PE GE: Eval: Checking neighbour %s\n", addr2str(neighbour));
 
 					// If the neighbour hasn't been seen before
 					if (!unique_array_contains(&seen_nodes, neighbour)) 
@@ -681,7 +720,7 @@ static void data_evaluation(void * ptr)
 
 						if (st == NULL)
 						{
-							printf("ERROR: received no data in round %d\n", pred_round_count);
+							printf("PE GE: ERROR: received no data in round %d\n", pred_round_count);
 						}
 						else
 						{
@@ -733,7 +772,7 @@ static void data_evaluation(void * ptr)
 					++count;
 				}
 
-				printf("Eval: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+				printf("PE GE: Eval: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
@@ -744,11 +783,11 @@ static void data_evaluation(void * ptr)
 
 		if (evaluation_result)
 		{
-			printf("Pred: TRUE\n");
+			printf("PE GE: Pred: TRUE\n");
 		}
 		else
 		{
-			printf("Pred: FAILED due to error: %s\n", error_message());
+			printf("PE GE: Pred: FAILED due to error: %s\n", error_message());
 		}
 
 		free(all_neighbour_data);
@@ -769,7 +808,7 @@ static void data_evaluation(void * ptr)
 	map_clear(&received_data);
 	map_clear(&neighbour_info);
 
-	printf("Round: finishing=%u |received_data|=%u |neighbour_info|=%u\n",
+	printf("PE GE: Round: finishing=%u |received_data|=%u |neighbour_info|=%u\n",
 		pred_round_count, map_length(&received_data), map_length(&neighbour_info));
 	
 	++pred_round_count;

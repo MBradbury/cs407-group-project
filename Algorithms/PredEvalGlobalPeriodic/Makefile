@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = hsendtreeagg
+CONTIKI_PROJECT = pred-eval
 all: $(CONTIKI_PROJECT)
 
 PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers \

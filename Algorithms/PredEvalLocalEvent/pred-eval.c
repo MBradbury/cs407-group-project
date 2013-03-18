@@ -280,6 +280,9 @@ PROCESS_THREAD(initProcess, ev, data)
 	{
 		printf("PE LE: Is the base station!\n");
 
+		// As we are the base station we need to start reading the serial input
+		predicate_manager_start_serial_input(&predconn);
+
 		send_example_predicate(&destination, 0);
 		send_example_predicate(&destination, 1);
 

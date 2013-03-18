@@ -10,6 +10,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+#include <stdint.h>
+
+#define UINT8_MIN 0
 
 PROCESS(predicate_input_process, "PredManager Read Input");
 
@@ -175,7 +179,7 @@ bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn)
 		return false;
 	}
 
-	process_start(&predicate_input_process, NULL);
+	process_start(&predicate_input_process, (void *)conn);
 
 	return true;
 }
@@ -303,7 +307,16 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 
 PROCESS_THREAD(predicate_input_process, ev, data)
 {
+	static predicate_manager_conn_t * conn;
+	static predicate_detail_entry_t current;
+	static int state;
+
 	PROCESS_BEGIN();
+
+	conn = (predicate_manager_conn_t *)data;
+
+	memset(&current, 0, sizeof(predicate_detail_entry_t));
+	state = 0;
 
 	while (true)
 	{
@@ -313,7 +326,177 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		char const * line = (char const *)data;
 		unsigned int length = strlen(line);
 
-		printf("received line: `%s' of length %u\n", line, length);
+		printf("Predicate Manager: received line: `%s' of length %u\n", line, length);
+
+		switch (state)
+		{
+		// Initial state looking for start line
+		case 0:
+			{
+				if (strcmp(line, "["))
+				{
+					state = 1;
+				}
+			} break;
+
+		// Read in the predicate id
+		case 1:
+			{
+				int value = atoi(line);
+
+				if (value >= UINT8_MIN && value <= UINT8_MAX)
+				{
+					current.id = (uint8_t)value;
+					state = 2;
+				}
+				else
+				{
+					state = 99;
+					continue;
+				}
+			} break;
+
+		// Read in the predicate target
+		case 2:
+			{
+				char buffer[4];
+
+				char const * position = strchr(line, '.');
+				unsigned int first_length = position - line;
+
+				memcpy(buffer, line, first_length);
+				buffer[first_length] = '\0';
+
+				// Before dot
+				current.target.u8[0] = atoi(buffer);
+
+				// After dot
+				current.target.u8[1] = atoi(position + 1);
+
+				state = 3;
+
+			} break;
+
+		// Read in the variable ids or bytecode
+		case 3:
+			{
+				if (line[0] == 'b')
+				{
+					unsigned int bytecode_count = (length - 1) / 2;
+					ubyte * starting = NULL;
+
+					if (current.bytecode == NULL)
+					{
+						current.bytecode = malloc(sizeof(ubyte) * ((length - 1) / 2));
+
+						starting = current.bytecode;
+					}
+					else
+					{
+						ubyte * new = malloc(sizeof(ubyte) * (bytecode_count + current.bytecode_length));
+						memcpy(new, current.bytecode, sizeof(ubyte) * current.bytecode_length);
+						free(current.bytecode);
+						current.bytecode = new;
+
+						starting = current.bytecode + current.bytecode_length;
+					}
+
+					char const * current_pair = line + 1;
+
+					unsigned int i = 0;
+					for (i = 0; i != bytecode_count; ++i)
+					{
+						char buffer[3];
+						memcpy(buffer, current_pair, sizeof(char) * 2);
+						buffer[2] = '\0';
+
+						starting[i] = (ubyte) strtol(buffer, NULL, 16);
+
+						current_pair += 2;
+					}
+
+					// Record the newly added bytecode
+					current.bytecode_length += bytecode_count;
+				}
+				else if (line[0] == 'v')
+				{
+					var_elem_t * to_store_at = NULL;
+					if (current.variables_details == NULL)
+					{
+						current.variables_details = malloc(sizeof(var_elem_t));
+						to_store_at = current.variables_details;
+					}
+					else
+					{
+						var_elem_t * new = malloc(sizeof(var_elem_t) * (1 + current.variables_details_length));
+						memcpy(new, current.variables_details, sizeof(var_elem_t) * current.variables_details_length);
+						free(current.variables_details);
+						current.variables_details = new;
+
+						to_store_at = current.variables_details + current.variables_details_length;
+					}
+
+					char const * start = line + 1;
+
+					char buffer[4];
+
+					char const * position = strchr(start, '.');
+					unsigned int first_length = position - start;
+
+					memcpy(buffer, line, first_length);
+					buffer[first_length] = '\0';
+
+					// Before dot
+					to_store_at->hops = atoi(buffer);
+
+					// After dot
+					to_store_at->var_id = atoi(position + 1);
+
+
+					current.variables_details_length += 1;
+
+				}
+				else if (strcmp(line, "]"))
+				{
+					if (current.bytecode_length == 0)
+					{
+						state = 99;
+						continue;
+					}
+
+					predicate_manager_create(conn,
+						current.id, &current.target,
+						current.bytecode, current.bytecode_length,
+						current.variables_details, current.variables_details_length);
+
+					free(current.bytecode);
+					free(current.variables_details);
+					memset(&current, 0, sizeof(predicate_detail_entry_t));
+
+					state = 0;
+				}
+				else
+				{
+					state = 99;
+					continue;
+				}
+
+			} break;
+
+		// Error state
+		case 99:
+			{
+				free(current.variables_details);
+				free(current.bytecode);
+				memset(&current, 0, sizeof(predicate_detail_entry_t));
+				printf("Predicate Manager: Error occured in parsing input\n");
+			} break;
+
+		default:
+			printf("Predicate Manager: Not sure what to do with state %d and line %s\n", state, line);
+			break;
+		}
+
 	}
 
 	PROCESS_END();

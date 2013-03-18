@@ -69,7 +69,7 @@ Initially we found that this tool would not build, so a patch was created to fix
 
 We found that Cooja's default settings when run using \verb|ant run| were suitable for smaller networks. However when running more memory intensive applications on the simulator of the hardware in Cooja or when running larger networks, Cooja itself can run out of memory. The simple solution is to simply run Cooja using \verb|ant run_bigmem| which supplies a flag limiting the maximum about of memory to 1536MB instead of 512MB when running normally \cite{?}.
 
-As Cooja is written in Java \cite{?} it means that all of Java's configuration flags are also up for modification. This however, means that the \verb|ant| build script at \verb|~/contiki/tools/cooja/build.xml| will need to be modified to include the flags that need to be passed to java.
+As Cooja is written in Java \cite{?} it means that all of Java's configuration flags are also up for modification. This however, means that the \verb|ant| build script at \verb|~/contiki/tools/cooja/build.xml| will need to be modified to include the flags that need to be passed to Java. We modified the build script to add the following arguments (\verb|-XX:+OptimizeStringConcat| \verb|-XX:UseSSE=3| \verb|-XX:+UseFastAccessorMethods| \verb|-XX:+UseLargePages|) but did not see much improvement of performance.
 
 Finally, there is one other useful mode, and that is the ability to run Cooja without a GUI. This is done by changing the run command to \verb|ant run_nogui|. Running in this mode is very useful when running many simulations to obtain results from them as fast as possible.
 

@@ -2,6 +2,7 @@
 
 #include "contiki.h"
 #include "dev/leds.h"
+#include "dev/serial-line.h"
 
 #include "debug-helper.h"
 
@@ -9,6 +10,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+
+PROCESS(predicate_input_process, "PredManager Read Input");
 
 // Struct recieved from base station that contains a predicate to be evaluated by this node.
 typedef struct 
@@ -165,10 +168,28 @@ bool predicate_manager_open(
 	return false;
 }
 
+bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn)
+{
+	if (conn == NULL)
+	{
+		return false;
+	}
+
+	process_start(&predicate_input_process, NULL);
+
+	return true;
+}
+
 void predicate_manager_close(predicate_manager_conn_t * conn)
 {
 	if (conn != NULL)
 	{
+		// Shut down the serial input process if it is running
+		if (process_is_running(&predicate_input_process))
+		{
+			process_exit(&predicate_input_process);
+		}
+
 		trickle_close(&conn->tc);
 
 		map_free(&conn->predicates);
@@ -276,4 +297,24 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 	}
 
 	return max_hops;
+}
+
+
+
+PROCESS_THREAD(predicate_input_process, ev, data)
+{
+	PROCESS_BEGIN();
+
+	while (true)
+	{
+		// Let others do work until we have a line to process
+		PROCESS_YIELD_UNTIL(ev == serial_line_event_message);
+
+		char const * line = (char const *)data;
+		unsigned int length = strlen(line);
+
+		printf("received line: `%s' of length %u\n", line, length);
+	}
+
+	PROCESS_END();
 }

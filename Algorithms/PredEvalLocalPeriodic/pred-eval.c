@@ -231,11 +231,11 @@ PROCESS_THREAD(initProcess, ev, data)
 	destination.u8[0] = 5;
 	destination.u8[1] = 0;
 
-	if (rimeaddr_cmp(&rimeaddr_node_addr,&destination))
+	if (rimeaddr_cmp(&rimeaddr_node_addr, &destination))
 	{
 		printf("PE LP: Is Destination.\n");
 	}
-
+	
 	predicate_manager_open(&predconn, 121, trickle_interval, &predicate_manager_update_callback);
 
 	mesh_open(&meshreceiver, 126, &meshreceiver_callbacks);
@@ -249,6 +249,9 @@ PROCESS_THREAD(initProcess, ev, data)
 	{
 		printf("PE LP: Is the base station!\n");
 
+		// As we are the base station we need to start reading the serial input
+		predicate_manager_start_serial_input(&predconn);
+
 		send_example_predicate(&destination, 0);
 		send_example_predicate(&destination, 1);
 
@@ -257,7 +260,7 @@ PROCESS_THREAD(initProcess, ev, data)
 	else
 	{
 		leds_on(LEDS_GREEN);
-	}	
+	}
 
 exit:
 	printf("PE LP: Exiting init Process.\n");

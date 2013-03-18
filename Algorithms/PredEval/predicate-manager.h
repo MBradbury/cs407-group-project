@@ -48,6 +48,8 @@ bool predicate_manager_open(
 	predicate_manager_conn_t * conn, uint16_t ch,
 	clock_time_t trickle_interval, predicate_manager_updated_fn updated);
 
+bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn);
+
 void predicate_manager_close(predicate_manager_conn_t * conn);
 
 bool predicate_manager_create(predicate_manager_conn_t * conn,

@@ -22,8 +22,7 @@
 #	define DEBUG_ERR_PRINT(...) (void)0
 #endif
 
-
-#define STACK_SIZE (1 * 512)
+#define STACK_SIZE (1 * 256)
 
 #define MAXIMUM_FUNCTIONS 5
 #define MAXIMUM_VARIABLES 10
@@ -34,7 +33,7 @@
 #define THIS_VAR_ID 0
 
 
-static ubyte stack[STACK_SIZE];
+static nuint stack[STACK_SIZE];
 
 static ubyte * stack_ptr = NULL;
 static ubyte * heap_ptr = NULL;
@@ -128,7 +127,7 @@ static inline bool float_push_stack(nfloat f)
 
 static inline nuint stack_size(void)
 {
-	return (stack + STACK_SIZE) - stack_ptr;
+	return (char *)(stack + STACK_SIZE) - (char *)stack_ptr;
 }
 
 static bool require_stack_size(nuint size)
@@ -136,7 +135,8 @@ static bool require_stack_size(nuint size)
 	if (stack_size() < size)
 	{
 		snprintf(error, ERROR_MESSAGE_LENGTH, "STACK UNDERFLOW");
-		DEBUG_PRINT("Stack too small is %d bytes needed %d bytes\n", (stack + STACK_SIZE) - stack_ptr, size);
+		DEBUG_PRINT("Stack too small is %d bytes needed %d bytes\n",
+			(char *)(stack + STACK_SIZE) - (char *)stack_ptr, size);
 		return false;
 	}
 	return true;
@@ -155,7 +155,7 @@ static inline bool pop_stack(nuint size)
 static void inspect_stack(void)
 {
 	printf("Stack values:\n");
-	ubyte * max = stack + STACK_SIZE;
+	ubyte * max = (ubyte *)(stack + STACK_SIZE);
 	ubyte * ptr;
 	for (ptr = stack_ptr; ptr < max; ++ptr)
 	{
@@ -211,8 +211,8 @@ static variable_reg_t * create_variable(variable_id_t id, variable_type_t type)
 		return NULL;
 	}
 
-	size_t i = 0;
-	for (; i != variable_regs_count; ++i)
+	size_t i;
+	for (i = 0; i != variable_regs_count; ++i)
 	{
 		if (variable_regs[i].id == id)
 		{
@@ -269,8 +269,8 @@ static variable_reg_t * create_array(variable_id_t id, variable_type_t type, nui
 		return NULL;
 	}
 
-	size_t i = 0;
-	for (; i != variable_regs_count; ++i)
+	size_t i;
+	for (i = 0; i != variable_regs_count; ++i)
 	{
 		if (variable_regs[i].id == id)
 		{
@@ -322,8 +322,8 @@ static bool alloc_array(variable_reg_t * variable)
 
 static variable_reg_t * get_variable(variable_id_t id)
 {
-	nuint i = 0;
-	for (; i != variable_regs_count; ++i)
+	nuint i;
+	for (i = 0; i != variable_regs_count; ++i)
 	{
 		variable_reg_t * variable = &variable_regs[i];
 
@@ -383,8 +383,8 @@ bool register_function(function_id_t id, data_access_fn fn, variable_type_t type
 		return false;
 	}
 
-	size_t i = 0;
-	for (; i != function_regs_count; ++i)
+	size_t i;
+	for (i = 0; i != function_regs_count; ++i)
 	{
 		if (functions_regs[i].id == id)
 		{
@@ -406,8 +406,8 @@ bool register_function(function_id_t id, data_access_fn fn, variable_type_t type
 
 static function_reg_t const * get_function(function_id_t id)
 {
-	nuint i = 0;
-	for (; i != function_regs_count; ++i)
+	nuint i;
+	for (i = 0; i != function_regs_count; ++i)
 	{
 		if (functions_regs[i].id == id)
 		{
@@ -543,12 +543,12 @@ static const char * opcode_names[] = {
 #define OPERATION_ARRAY(code, array_fn, end_array_fn) \
 	case code: \
 		{ \
-			variable_id_t array_id = *(variable_id_t const *)(current + 1); \
+			variable_id_t array_id = variable_id_t_from_bytecode(current + 1); \
 			current += sizeof(variable_id_t); \
 			DEBUG_ERR_PRINT("Array id %u\n", array_id); \
 			 \
-			variable_id_t fn_id = *(variable_id_t const *)(current + 1); \
-			current += sizeof(variable_id_t); \
+			function_id_t fn_id = function_id_t_from_bytecode(current + 1); \
+			current += sizeof(function_id_t); \
 			DEBUG_ERR_PRINT("FN id %u\n", fn_id); \
 			 \
 			variable_reg_t const * var_reg = get_variable(array_id); \
@@ -620,6 +620,37 @@ static inline void array_min_fn(float * out, float in)
 }
 
 
+// Accessing values stored in bytecode is problematic because there is
+// the possibility that we may be trying to extract them when they are badly aligned.
+//
+// For example imagine you had memory in the following situation:
+// 0      1      2      4
+// | Byte | Byte | Byte |
+// | code | integer val |
+//
+// When trying to access the integer value it is not on an even memory location
+// so accessing it can potentially go wrong!
+// This means it is important that we copy out the memory byte-by-byte and then
+// return this bit of well aligned memory
+
+#define X_FROM_BYTECODE(X) \
+	static inline X X##_from_bytecode(ubyte const * bytecode) \
+	{ \
+		X ret; \
+		memcpy(&ret, bytecode, sizeof(X)); \
+		return ret; \
+	}
+
+X_FROM_BYTECODE(nint);
+X_FROM_BYTECODE(nfloat);
+X_FROM_BYTECODE(variable_id_t);
+X_FROM_BYTECODE(function_id_t);
+
+static inline ubyte ubyte_from_bytecode(ubyte const * bytecode)
+{
+	return *bytecode;
+}
+
 
 nbool evaluate(ubyte const * start, nuint program_length)
 {
@@ -638,11 +669,11 @@ nbool evaluate(ubyte const * start, nuint program_length)
 			if (!require_stack_size(sizeof(nbool)))
 				return false;
 
-			return *(int *)stack_ptr;
+			return *(nbool *)stack_ptr;
 
 		case IPUSH:
-			DEBUG_ERR_PRINT("Pushing int %d onto the stack\n", *(nint const*)(current + 1));
-			if (!int_push_stack(*(nint const*)(current + 1)))
+			DEBUG_ERR_PRINT("Pushing int %d onto the stack\n", nint_from_bytecode(current + 1));
+			if (!int_push_stack(nint_from_bytecode(current + 1)))
 				return false;
 			current += sizeof(nint);
 			break;
@@ -653,8 +684,8 @@ nbool evaluate(ubyte const * start, nuint program_length)
 			break;
 
 		case FPUSH:
-			DEBUG_ERR_PRINT("Pushing float %f onto the stack\n", *(nfloat const*)(current + 1));
-			if (!float_push_stack(*(nfloat const*)(current + 1)))
+			DEBUG_ERR_PRINT("Pushing float %f onto the stack\n", nfloat_from_bytecode(current + 1));
+			if (!float_push_stack(nfloat_from_bytecode(current + 1)))
 				return false;
 			current += sizeof(nfloat);
 			break;
@@ -666,7 +697,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 		case IFETCH:
 			{
-				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
+				nint * var = get_variable_as_int(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -682,7 +713,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				if (!require_stack_size(sizeof(nint)))
 					return false;
 
-				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
+				nint * var = get_variable_as_int(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -694,7 +725,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 		case FFETCH:
 			{
-				nfloat * var = get_variable_as_float(*(variable_id_t const *)(current + 1));
+				nfloat * var = get_variable_as_float(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -710,7 +741,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				if (!require_stack_size(sizeof(nfloat)))
 					return false;
 
-				nfloat * var = get_variable_as_float(*(variable_id_t const *)(current + 1));
+				nfloat * var = get_variable_as_float(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -725,7 +756,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				if (!require_stack_size(sizeof(nint)))
 					return false;
 
-				variable_reg_t * var = get_variable(*(variable_id_t const *)(current + 1));
+				variable_reg_t * var = get_variable(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -743,7 +774,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 		case ALEN:
 			{
-				variable_reg_t * var = get_variable(*(variable_id_t const *)(current + 1));
+				variable_reg_t * var = get_variable(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -765,7 +796,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 					return false;
 
 				variable_type_t type;
-				void const * data = call_function(*(function_id_t const *)(current + 1), stack_ptr, &type);
+				void const * data = call_function(function_id_t_from_bytecode(current + 1), stack_ptr, &type);
 				current += sizeof(function_id_t);
 
 				if (data == NULL)
@@ -810,7 +841,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 			} break;
 
 		case JMP:
-			current = start + *(ubyte const *)(current + 1) - 1;
+			current = start + ubyte_from_bytecode(current + 1) - 1;
 			DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			break;
 
@@ -820,7 +851,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 			if (((nint *)stack_ptr)[0] == 0)
 			{
-				current = start + *(ubyte const *)(current + 1) - 1;
+				current = start + ubyte_from_bytecode(current + 1) - 1;
 				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			}
 			else
@@ -839,7 +870,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 			if (((nint *)stack_ptr)[0] != 0)
 			{
-				current = start + *(ubyte const *)(current + 1) - 1;
+				current = start + ubyte_from_bytecode(current + 1) - 1;
 				DEBUG_ERR_PRINT("Jumping to %d\n", (current + 1) - start);
 			}
 			else
@@ -924,7 +955,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 		case IVAR:
 			{
-				variable_id_t id = *(variable_id_t const *)(current + 1);
+				variable_id_t id = variable_id_t_from_bytecode(current + 1);
 
 				if (create_variable(id, TYPE_INTEGER) == NULL)
 				{
@@ -936,7 +967,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 		case FVAR:
 			{
-				variable_id_t id = *(variable_id_t const *)(current + 1);
+				variable_id_t id = variable_id_t_from_bytecode(current + 1);
 
 				if (create_variable(id, TYPE_FLOATING) == NULL)
 				{
@@ -1007,7 +1038,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 		// ISTORE x
 		case VIINC:
 			{
-				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
+				nint * var = get_variable_as_int(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -1027,7 +1058,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 		// ISTORE x
 		case VIDEC:
 			{
-				nint * var = get_variable_as_int(*(variable_id_t const *)(current + 1));
+				nint * var = get_variable_as_int(variable_id_t_from_bytecode(current + 1));
 
 				if (var == NULL)
 					return false;
@@ -1047,13 +1078,13 @@ nbool evaluate(ubyte const * start, nuint program_length)
 		// CALL z
 		case VIFAFC:
 			{
-				nint const * idx = get_variable_as_int(*(variable_id_t const *)(current + 1));
+				nint const * idx = get_variable_as_int(variable_id_t_from_bytecode(current + 1));
 				current += sizeof(variable_id_t);
 
 				if (idx == NULL)
 					return false;
 
-				variable_reg_t const * var = get_variable(*(variable_id_t const *)(current + 1));
+				variable_reg_t const * var = get_variable(variable_id_t_from_bytecode(current + 1));
 				current += sizeof(variable_id_t);
 
 				if (var == NULL)
@@ -1062,7 +1093,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				void * inputdata = (char *)var->location + (*idx * variable_type_size(var->type));
 
 				variable_type_t type;
-				void const * data = call_function(*(function_id_t const *)(current + 1), inputdata, &type);
+				void const * data = call_function(function_id_t_from_bytecode(current + 1), inputdata, &type);
 				current += sizeof(function_id_t);
 
 				if (data == NULL)
@@ -1124,12 +1155,12 @@ bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 	data_size = given_data_size;
 
 	// Reset the stack and heap positions
-	stack_ptr = &stack[STACK_SIZE];
-	heap_ptr = stack;
+	stack_ptr = (ubyte *)&stack[STACK_SIZE];
+	heap_ptr = (ubyte *)stack;
 
 	// Lets memset the stack to a certain pattern
 	// This makes if obvious if we have memory issues
-	memset(stack, 0xEE, STACK_SIZE);
+	memset(stack, 0xEE, sizeof(stack));
 
 
 	// Reset function and variable records

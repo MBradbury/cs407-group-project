@@ -56,8 +56,6 @@ class NodeCommsResponder implements NodeCommsCallback {
  * @author Tim
  */
 public class WSNMonitor {
-    private volatile boolean running = false;
-    
     private final List<NetworkUpdateListener> listeners;
     
     private final Map<Integer, NetworkState> states;
@@ -72,6 +70,11 @@ public class WSNMonitor {
         comms = new NodeComms(comPort);
         
         comms.connect(new NodeCommsResponder(this));
+    }
+    
+    public void close()
+    {
+        comms.close();
     }
     
     public Map<Integer, NetworkState> getStates() {

@@ -1,5 +1,6 @@
 package predvis;
 
+import com.google.common.base.Strings;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -69,17 +70,54 @@ public class NodeComms {
         }
     }
     
-    public void writeln(String line) throws Exception
+    public void writeln(String line)
+            throws RuntimeException, IOException
     {
        char[] characters = (line + '\n').toCharArray();
        
        if (characters.length > bufferSize)
        {
-           throw new Exception("Message is too long.");
+           throw new RuntimeException("Message is too long.");
        }
         
         output.write(characters);
         output.flush();
+    }
+    
+    public void writePredicate(int id, String target, int[] bytecode, VariableDetails[] vars)
+            throws RuntimeException, IOException
+    {
+        writeln("[");
+        
+        writeln(Integer.toString(id));
+        
+        writeln(target);
+        
+        String toWrite = "b";
+        int written = 0;
+        
+        for (int i = 0; i < bytecode.length; ++i)
+        {
+            String inHex = Integer.toHexString(bytecode[i]);
+            String padded = Strings.padStart(inHex, 2, '0');
+            toWrite += padded;
+            written += 1;
+            
+            if (written == bufferSize || (i + 1) == bytecode.length)
+            {
+                writeln(toWrite);
+                written = 0;
+                toWrite = "b";
+            }
+        }
+        
+        for (VariableDetails vd : vars)
+        {
+            writeln("v" + vd.getHops() + "." + vd.getId());
+        }
+        
+        
+        writeln("]");
     }
     
     public void close()

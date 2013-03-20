@@ -16,6 +16,8 @@
 
 #undef NDEBUG
 
+static const uint8_t RUNICAST_MAX_RETX = 4;
+
 typedef union
 {
 	uint32_t i32;
@@ -91,8 +93,18 @@ static void send_reply(
 	nhopreq_conn_t * hc, rimeaddr_t const * sender, rimeaddr_t const * target_receiver,
 	message_id_t message_id, uint8_t hops, void const * data);
 
-static message_id_t get_message_id(nhopreq_conn_t * conn);
 
+// Get an id that contains the address of the node sending
+// the message and the number of messages that node has sent.
+static message_id_t get_message_id(nhopreq_conn_t * conn)
+{
+	message_id_t id;
+
+	rimeaddr_copy(&id.node.addr, &rimeaddr_node_addr);
+	id.node.id = conn->message_id++;
+
+	return id;
+}
 
 // STUBBORN BROADCAST
 static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
@@ -201,7 +213,8 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 {
 	nhopreq_conn_t * conn = conncvt_runicast(c);
 
-	printf("nhopreq: runicast received from %s\n", addr2str(from));
+	printf("nhopreq: runicast received from %s of length %u\n",
+		addr2str(from), packetbuf_datalen());
 
 	// When receive message, forward the message on to the originator
 	// if the final originator, do something with the value
@@ -370,7 +383,7 @@ send_reply(
 			memcpy(data_dest, data, hc->data_size);
 		}
 
-		runicast_send(&hc->ru, target_receiver, 5);
+		runicast_send(&hc->ru, target_receiver, RUNICAST_MAX_RETX);
 	}
 }
 
@@ -410,10 +423,10 @@ static bool map_elem_key_equal(void const * left, void const * right)
 	if (left == NULL || right == NULL)
 		return false;
 
-	sent_elem_t const * l = (sent_elem_t const *)left;
-	sent_elem_t const * r = (sent_elem_t const *)right;
+	uint32_t const * l = (uint32_t const *)left;
+	uint32_t const * r = (uint32_t const *)right;
 
-	return l->message_id.i32 == r->message_id.i32;
+	return *l == *r;
 }
 
 // Initialise multi-hop predicate checking
@@ -464,7 +477,7 @@ bool nhopreq_end(nhopreq_conn_t * conn)
 	stbroadcast_close(&conn->bc);
 
 	// Free List
-	map_clear(&conn->messages);
+	map_free(&conn->messages);
 
 	return true;
 }
@@ -490,17 +503,5 @@ void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops)
 	send_n_hop_data_request(
 		conn, &rimeaddr_node_addr,
 		delivered_msg->message_id, delivered_msg->hops);
-}
-
-// Get an id that contains the address of the node sending
-// the message and the number of messages that node has sent.
-static message_id_t get_message_id(nhopreq_conn_t * conn)
-{
-	message_id_t id;
-
-	rimeaddr_copy(&id.node.addr, &rimeaddr_node_addr);
-	id.node.id = conn->message_id++;
-
-	return id;
 }
 

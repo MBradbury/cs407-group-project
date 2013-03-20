@@ -21,5 +21,5 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 
 CFLAGS += -Werror=bad-function-cast -Werror=format
 
-CONTIKI = $(HOME)/contiki-2.6
+CONTIKI = ../../contiki
 include $(CONTIKI)/Makefile.include

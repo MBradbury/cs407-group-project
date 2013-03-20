@@ -19,6 +19,6 @@ CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werro
 
 CFLAGS += -DNEIGHBOUR_AGG_APPLICATION
 
-CONTIKI = $(HOME)/contiki-2.6
+CONTIKI = ../../contiki
 include $(CONTIKI)/Makefile.include
 

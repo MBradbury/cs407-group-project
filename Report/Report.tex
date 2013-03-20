@@ -168,15 +168,13 @@ Acknowledgements
 \tableofcontents
 \clearpage
 
-
 \input{Introduction}
-
 \clearpage
 
-\input{LiteraryReview}
-
+\input{LiteratureReview}
 \clearpage
 
+\begin{comment}
 \section{Required Tools}
 
 A simulator and operating system needs to be chosen that will allow us to test our code locally, then provide functionality to deploy that code to the network easily. We will now provide a comparison between the two primary operating systems, Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}, and their respective simulators with a view to deciding which system best suits this projects goals and motivations.
@@ -194,19 +192,15 @@ We have chosen to use Contiki and COOJA for this project because it provides the
 With the sensor nodes, we as a group have been given responsibility over them. This means we need to be very careful when transferring then between home and university. We must make sure that they are carried safely, packed away properly and protected from the environment when transferring (for example from rain).
 
 \clearpage
+\end{comment}
 
 \input{Contiki}
-
-\clearpage
-
-\input{PracticalExperience}
-
 \clearpage
 
 \input{ImplementedAlgorithms}
-
 \clearpage
 
+\begin{comment}
 \section{Knowledge Gained}
 \begin{enumerate}
 	\item Not possible to write WSN applications in Java and have them run on the WSN nodes. Only possible to write in C and have that code run on the physical hardware. Java code will only run in the Cooja simulator for the Contiki OS.
@@ -233,35 +227,25 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 	\item Make logging reliable (TCP/IP?) even at the expense of energy
 \end{enumerate}
 
-
 \clearpage
+\end{comment}
 
 \input{Predicates}
+\clearpage
 
+\input{Results}
+\clearpage
 
+\input{PracticalExperience}
 \clearpage
 
 \input{ProjectManagement}
-
 \clearpage
 
-\section{Future Work}
-
-\subsection{Improve memory Management}
-
-We use malloc to dynamically allocate memory when needed as this simplified development. This meant that we did not have to learn alternative memory allocators. However, we could use these alternate allocators to optimise the code to minimise (i) internal memory fragmentation (ii) external memory fragmentation (iii) performance (as malloc should not be used in RTS like WSNs due to \ldots) and (iv) memory usage.
-
-
-\subsection{Improve C Containers Developed}
-
-To aid in the development of our applications (and to ease developers from other languages such as Java to C) we developed a library of containers. These containers are very simple with the aim of having low memory usage. However, the complexity of certain operations could be improved. For example the \verb|map| container's time complexity for retrieval of an element given a key is O(n) where n is the number of elements in the container as the underlying container is simply an array. This could be improved to O(log(n)) by sorting the elements in the underlying array, or improved further to amortized O(1) by using a hash table. Although, whatever improved container is chosen, the importance of memory usage (including issues such as fragmentation) should be taken into account.
-
+\input{FutureWork}
 \clearpage
 
-
-\section{Conclusions}
-
-
+\input{Conclusions}
 \clearpage
 
 

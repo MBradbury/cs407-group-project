@@ -315,7 +315,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 
 	conn = (predicate_manager_conn_t *)data;
 
-	memset(&current, 0, sizeof(predicate_detail_entry_t));
+	memset(&current, 0, sizeof(current));
 	state = 0;
 
 	while (true)
@@ -326,15 +326,16 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		char const * line = (char const *)data;
 		unsigned int length = strlen(line);
 
-		printf("Predicate Manager: received line: `%s' of length %u\n", line, length);
+		printf("Predicate Manager: received line: `%s' of length %u in state %d\n", line, length, state);
 
 		switch (state)
 		{
 		// Initial state looking for start line
 		case 0:
 			{
-				if (strcmp(line, "["))
+				if (strcmp(line, "[") == 0)
 				{
+					printf("Predicate Manager: Starting predicate input...\n");
 					state = 1;
 				}
 			} break;
@@ -351,6 +352,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else
 				{
+					printf("Predicate Manager: going to error handler\n");
 					state = 99;
 					continue;
 				}
@@ -382,14 +384,13 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 			{
 				if (line[0] == 'b')
 				{
-					unsigned int bytecode_count = (length - 1) / 2;
-					ubyte * starting = NULL;
+					printf("Predicate Manager: processing bytecode\n");
 
+					unsigned int bytecode_count = (length - 1) / 2;
+					
 					if (current.bytecode == NULL)
 					{
-						current.bytecode = malloc(sizeof(ubyte) * ((length - 1) / 2));
-
-						starting = current.bytecode;
+						current.bytecode = malloc(sizeof(ubyte) * bytecode_count);
 					}
 					else
 					{
@@ -397,10 +398,11 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 						memcpy(new, current.bytecode, sizeof(ubyte) * current.bytecode_length);
 						free(current.bytecode);
 						current.bytecode = new;
-
-						starting = current.bytecode + current.bytecode_length;
 					}
 
+					ubyte * starting = current.bytecode + current.bytecode_length;
+
+					// Start looking at characters after the first b
 					char const * current_pair = line + 1;
 
 					unsigned int i = 0;
@@ -420,6 +422,8 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else if (line[0] == 'v')
 				{
+					printf("Predicate Manager: processing variable details\n");
+
 					var_elem_t * to_store_at = NULL;
 					if (current.variables_details == NULL)
 					{
@@ -456,10 +460,11 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 					current.variables_details_length += 1;
 
 				}
-				else if (strcmp(line, "]"))
+				else if (strcmp(line, "]") == 0)
 				{
 					if (current.bytecode_length == 0)
 					{
+						printf("Predicate Manager: going to error handler\n");
 						state = 99;
 						continue;
 					}
@@ -471,12 +476,13 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 
 					free(current.bytecode);
 					free(current.variables_details);
-					memset(&current, 0, sizeof(predicate_detail_entry_t));
+					memset(&current, 0, sizeof(current));
 
 					state = 0;
 				}
 				else
 				{
+					printf("Predicate Manager: going to error handler\n");
 					state = 99;
 					continue;
 				}
@@ -488,7 +494,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 			{
 				free(current.variables_details);
 				free(current.bytecode);
-				memset(&current, 0, sizeof(predicate_detail_entry_t));
+				memset(&current, 0, sizeof(current));
 				printf("Predicate Manager: Error occured in parsing input\n");
 			} break;
 

@@ -68,6 +68,7 @@ public class PredVis extends JFrame {
             @Override
             public void windowClosing(WindowEvent ev) {
                 dispose();
+                wsnMonitor.close();
             }
         });
         

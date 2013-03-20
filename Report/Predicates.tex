@@ -267,70 +267,78 @@ using Neighbours(1) as onehopn in
 \begin{verbatim}
 _ is either I for int or F for float
 
+For binary operations the order the operands are used is specified as x op x.
+When x is 0 the value on the top of the stack is used. When x is 1 the
+value after the one on the top of the stack is used.
+
 HALT
-    Halts execution
+    Halts execution.
+    The stack should always have at least one integer on it when halting.
 
 _PUSH (_)
-    Pushes an _ onto the stack
+    Pushes an _ onto the stack.
 
 _POP
-    Pops the stack by sizeof(_) bytes
+    Pops the stack by sizeof(_) bytes.
 
 _FETCH (variable id - ubyte)
     Fetches the value of the given variable and pushes the
-    first sizeof(_) bytes of it onto the stack
+    first sizeof(_) bytes of it onto the stack.
 
 _STORE (variable id - ubyte)
     Stores the first sizeof(_) bytes in the variable
-    of the given name
+    of the given name.
 
 AFETCH (variable id - ubyte)
     Fetches the value of the array named in the parameter
-    at the integer index at the top of the stack
+    at the integer index at the top of the stack.
 
 ALEN (variable id - ubyte)
     Pushes an integer onto the stack containing the length
-    of the named array
+    of the named array.
 	
-ASUM (variable id - ubyte) (function id - ubyte)
+ASUM  (variable id - ubyte) (function id - ubyte)
+AMEAN
+AMAX
+AMIN
     Over the user defined array stored in the variable whose
     name is the first parameter, transform it using the function
     whose name is the second parameter. On this transformed data
-    calculate the mean and push the result as a float onto the
-    top of the stack.
+    calculate the array operation and push the result as a float
+    onto the top of the stack.
 
 CALL (function id - ubyte)
     Calls the named function on the data on top of the stack.
-    The data this is called on is popped and the result
-    is pushed onto the stack.
+    Pop's the data that was given to the function off the top of
+    the stack and pushes the result onto the top of the stack.
 
 ICASTF
     Pops an integer off the stack, casts it to a float
-    then stores it back on the stack
+    then stores it back on the stack.
 
 FCASTI
     Pops a float off the stack, casts it to a integer
-    then stores it back on the stack
+    then stores it back on the stack.
 
-JMP (int)
+JMP (ubyte)
     Jumps to a position in the code relative to the start
-    of the program
+    of the program.
 
-JZ (int)
-    Reads the top of the stack as an integer, if it is 0
+JZ (ubyte)
+    Pops and reads the top of the stack as an integer, if it is 0
+    the program jumps to the location, otherwise evaluation
+    continues.
+
+JNZ (ubyte)
+    Pops and reads the top of the stack as an integer, if it is not 0
     the program jumps to the location, otherwise evaluation
     continues
 
-JNZ (int)
-    Reads the top of the stack as an integer, if it is not 0
-    the program jumps to the location, otherwise evaluation
-    continues
-
-_ADD     1 = 0 op 1
-_SUB     1 = 0 op 1
-_MUL     1 = 0 op 1
-_DIV1    1 = 0 op 1
-_DIV2    1 = 1 op 0
+_ADD        1 op 0
+_SUB        1 op 0
+_MUL        1 op 0
+_DIV1       0 op 1
+_DIV2       1 op 0
     Performs a mathematical operations on the first two sizeof(_)
     values on the stack. Pops both values off the stack, stores
     the result in the same type back on the stack.
@@ -339,19 +347,21 @@ IINC
     Pops the top of the stack by sizeof(int) bytes, increments
     the value as an integer. Pushes the result back on the stack
 
-_EQ	     1 = 0 op 1
-_NEQ     1 = 0 op 1
-_ILT     1 = 0 op 1
-_LEQ     1 = 0 op 1
-_GT	     1 = 0 op 1
-_GEQ     1 = 0 op 1
+_EQ	        1 op 0
+_NEQ        1 op 0
+_ILT        1 op 0
+_LEQ        1 op 0
+_GT	        1 op 0
+_GEQ        1 op 0
     Performs a mathematical operations on the first two sizeof(_)
     values on the stack. Pops both values off the stack, stores
     the result in an integer on the stack.
 
-AND     1 = 0 op 1
-OR      1 = 0 op 1
-XOR	    1 = 0 op 1
+AND         1 op 0
+OR          1 op 0
+XOR	        1 op 0
+EQUIVALENT  1 op 0
+IMPLIES     1 op 0
     Performs a logical operation on the first two values on the
     stack. These are not bitwise operations and the expected
     formats of the values are integers. 0 is false, 1 is true.
@@ -366,3 +376,34 @@ _VAR (variable id - ubyte)
     Creates a variable of type _ with the id set to the given
     unsigned byte.
 \end{verbatim}
+
+
+\subsubsection{Bytecode}
+
+One of the most important aims of the predicate language's bytecode was to be as small as possible. The reason for this was to support sending as much program information in the limited length of a network packet. To achieve this aim it meant that we needed to make the virtual machine handle more abstract representations of its components. For example, initially the bytecode for calling a function contained a byte for the opcode of \verb|CALL| and then a string of characters which contained the name of the function to call. At minimum this would cost 2 bytes - one for the character of the function's name and one for the NUL character. To improve this the string was replaced with a single byte, which means that the number of functions callable by the virtual machine ends up being limited to 256. The same was true for the variable ids as well and as the variable id is contained with an unsigned byte, they to are limited to 256.
+
+
+When developing the virtual machine what also became important was the fact that the bytecode was a string of unsigned bytes, where sequences of them could end up representing a 16 bit integer or a 32 bit float. This is important because it could mean that we would try to perform unaligned reads which the CPU of our motes could potentially get wrong\footnote{\url{http://permalink.gmane.org/gmane.os.contiki.devel/1462}}, this is due to the restrictions the CPU has on the alignment of words ``Bytes are located at even or odd addresses. Words are only located at even addresses \ldots. When using word instructions, only even addresses may be used. The low byte of a word is always an even address'' \cite[Section~1.4.5 (p.~28)]{msp430usersguide}.
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[scale=0.75]{Diagrams/byte-alignment.eps}
+\caption{Alignment Issues}
+\label{fig:alignment-issues}
+\end{figure}
+
+\begin{figure}[ht!]
+\begin{verbatim}
+[java] **** Illegal read - misaligned word from $2c01 at $80de
+[java] Stack Trace: number of calls: 4 PC: $80de
+[java] evaluate (errno.c) called from PC: $7166 (elapsed: 164446)
+[java] process_thread_mainProcess (local in pred-eval.c) called from PC: $bf12 (elapsed: 536355)
+[java] call_process (local in process.c) called from PC: $c0b2 (elapsed: 536391)
+[java] process_run (errno.c) called from PC: $4250 (elapsed: 536996)
+\end{verbatim}
+\caption{Example of the error messages produced by MSPSim in Cooja that led to the discovery of this bug}
+\end{figure}
+
+As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead.
+
+

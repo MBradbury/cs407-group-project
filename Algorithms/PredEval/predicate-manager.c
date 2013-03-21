@@ -80,7 +80,7 @@ static void trickle_recv(struct trickle_conn * tc)
 		// Add or update entry
 		predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&conn->predicates, &msg->predicate_id);
 
-		if (stored)
+		if (stored != NULL)
 		{
 			printf("Predicate Manager: Updating predicate with id %d.\n", msg->predicate_id);
 
@@ -211,6 +211,12 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 	// Send the request message
 	unsigned int packet_size = sizeof(eval_pred_req_t) + (sizeof(ubyte) * bytecode_length) + (sizeof(var_elem_t) * var_details_length);
 
+	if (packet_size > PACKETBUF_SIZE)
+	{
+		printf("Predicate Manager: Predicate packet it too long to be sent.\n");
+		return false;
+	}
+
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_size);
 	debug_packet_size(packet_size);
@@ -233,7 +239,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 	// Debug check to make sure that we have done sane things!
 	if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
 	{
-		printf("Failed to copy data correctly got=%ld expected=%u!\n",
+		printf("Predicate Manager: Failed to copy data correctly got=%ld expected=%u!\n",
 			(void *)(msg_bytecode + bytecode_length) - (void *)msg,
 			packet_size);
 	}
@@ -311,6 +317,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 	static predicate_detail_entry_t current;
 	static int state;
 
+	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 	conn = (predicate_manager_conn_t *)data;
@@ -504,6 +511,10 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		}
 
 	}
+
+exit:
+	free(current.variables_details);
+	free(current.bytecode);
 
 	PROCESS_END();
 }

@@ -43,7 +43,7 @@ static const clock_time_t INITIAL_ROUND_LENGTH = 7 * 60 * CLOCK_SECOND;
 // Map containing neighbour_map_elem_t
 static map_t neighbour_info;
 
-// Map containing node_data_map_elem_t
+// Map containing node_data_t
 static map_t received_data;
 
 // List of predicate_detail_entry_t
@@ -92,27 +92,10 @@ static void neighbour_map_elem_free(void * ptr)
 {
 	neighbour_map_elem_t * item = (neighbour_map_elem_t *)ptr;
 
-	unique_array_clear(&item->data);
+	unique_array_free(&item->data);
 	free(item);
 }
 
-
-typedef struct
-{
-	unsigned int key;
-
-	// Map of node_data_t
-	map_t data;
-
-} node_data_map_elem_t; 
-
-static void node_data_map_elem_free(void * ptr)
-{
-	node_data_map_elem_t * item = (node_data_map_elem_t *)ptr;
-
-	map_free(&item->data);
-	free(item);
-}
 
 ///
 /// Start VM Helper Functions
@@ -166,9 +149,7 @@ static void node_data(void * data)
 {
 	if (data != NULL)
 	{
-		node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&received_data, &pred_round_count); //map for that round
-
-		node_data_t * stored_data = (node_data_t *)map_get(&st->data, &pred_simulated_node);
+		node_data_t * stored_data = (node_data_t *)map_get(&received_data, &pred_simulated_node);
 
 		memcpy(data, stored_data, sizeof(node_data_t));
 	}
@@ -285,35 +266,25 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); // Get the pointer after the message
 
-	node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&received_data, &msg->round_count); // Map for that round
-
-	if (st == NULL)
-	{
-		st = (node_data_map_elem_t *)malloc(sizeof(node_data_map_elem_t));
-
-		st->key = msg->round_count;
-		map_init(&st->data, &rimeaddr_equality, &free);
-
-		// Add it to the main map
-		map_put(&received_data, st);
-	}
-
 	printf("PE GP: Adding %u pieces of data in round %u\n", length, msg->round_count);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		printf("PE GP: Data Node: %s Temp:%d, Humidity: %d in %p\n",
+		printf("PE GP: Data Node: %s Temp:%d, Humidity: %d\n",
 			addr2str(&msgdata[i].addr),
 			(int)msgdata[i].temp,
-			msgdata[i].humidity,
-			&st->data);
+			msgdata[i].humidity);
 
-		node_data_t * nd = (node_data_t *)malloc(sizeof(node_data_t));
-		memcpy(nd, &msgdata[i], sizeof(node_data_t));
+		node_data_t * stored = map_get(&received_data, &msgdata[i]);
 
-		// Add the data to the map 
-		map_put(&st->data, nd);
+		if (stored == NULL)
+		{
+			stored = (node_data_t *)malloc(sizeof(node_data_t));
+			map_put(&received_data, stored);
+		}
+
+		memcpy(stored, &msgdata[i], sizeof(node_data_t));
 	}
 }
 
@@ -493,7 +464,7 @@ PROCESS_THREAD(data_gather, ev, data)
 		// Create and save example predicates
 		array_list_init(&predicates, &predicate_detail_entry_cleanup);
 	
-		map_init(&received_data, &neighbour_map_key_compare, &node_data_map_elem_free);
+		map_init(&received_data, &rimeaddr_equality, &free);
 
 		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 		//create the predicate
@@ -644,6 +615,9 @@ static void data_evaluation(void * ptr)
 	    unique_array_t acquired_nodes;
 	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
 
+	    unique_array_t neighbours;
+		unique_array_init(&neighbours, &rimeaddr_equality, &free);
+
 	    // Get the data for each hop level
 		uint8_t hops;
 		for (hops = 1; hops <= max_hops; ++hops)
@@ -658,8 +632,6 @@ static void data_evaluation(void * ptr)
 				printf("PE GP: Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
 				// Get the neighbours of the node
-				unique_array_t neighbours;
-				unique_array_init(&neighbours, &rimeaddr_equality, &free);
 				get_neighbours(t, pred_round_count, &neighbours);
 				printf("PE GP: Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
 
@@ -677,17 +649,14 @@ static void data_evaluation(void * ptr)
 					// If the neighbour hasn't been seen before
 					if (!unique_array_contains(&seen_nodes, neighbour)) 
 					{
-						// Get the data map for that round
-						node_data_map_elem_t * st = (node_data_map_elem_t *)map_get(&received_data, &pred_round_count);
+						node_data_t * nd = (node_data_t *)map_get(&received_data, neighbour);
 
-						if (st == NULL)
+						if (nd == NULL)
 						{
-							printf("PE GP: ERROR: received no data in round %d\n", pred_round_count);
+							printf("PE GE: ERROR: received no info on %s\n", addr2str(neighbour));
 						}
 						else
 						{
-							node_data_t * nd = (node_data_t *)map_get(&st->data, neighbour);
-
 							// Add the node to the target nodes for the next round
 							unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
 
@@ -696,8 +665,8 @@ static void data_evaluation(void * ptr)
 					}
 				}
 
-				// Free the returned neighbours array
-				unique_array_free(&neighbours);
+				// Empty neighbours array
+				unique_array_clear(&neighbours);
 			}
 
 			// Been through targets add them to the seen nodes
@@ -758,20 +727,14 @@ static void data_evaluation(void * ptr)
 		unique_array_free(&target_nodes);
 		unique_array_free(&seen_nodes);
 		unique_array_free(&acquired_nodes);
+		unique_array_free(&neighbours);
 	}
 
-	// NOTE: I have found that map_remove will never end up removing anything
-	// so the map must instead be cleared!
-
-	// Remove the data we no longer need
-	//map_remove(&received_data, &pred_round_count);
-	//map_remove(&neighbour_info, &pred_round_count);
-
+	// Empty details received and let the next round fill them up
 	map_clear(&received_data);
 	map_clear(&neighbour_info);
 
-	printf("PE GP: Round: finishing=%u |received_data|=%u |neighbour_info|=%u\n",
-		pred_round_count, map_length(&received_data), map_length(&neighbour_info));
+	printf("PE GP: Round: finishing=%u\n", pred_round_count);
 	
 	++pred_round_count;
 

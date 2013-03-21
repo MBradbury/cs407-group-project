@@ -92,7 +92,7 @@ static void neighbour_map_elem_free(void * ptr)
 {
 	neighbour_map_elem_t * item = (neighbour_map_elem_t *)ptr;
 
-	unique_array_clear(&item->data);
+	unique_array_free(&item->data);
 	free(item);
 }
 
@@ -653,6 +653,9 @@ static void data_evaluation(void * ptr)
 	    unique_array_t acquired_nodes;
 	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
 
+	    unique_array_t neighbours;
+		unique_array_init(&neighbours, &rimeaddr_equality, &free);
+
 	    // Get the data for each hop level
 		uint8_t hops;
 		for (hops = 1; hops <= max_hops; ++hops)
@@ -667,8 +670,6 @@ static void data_evaluation(void * ptr)
 				printf("PE GE: Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
 				// Get the neighbours of the node
-				unique_array_t neighbours;
-				unique_array_init(&neighbours, &rimeaddr_equality, &free);
 				get_neighbours(t, pred_round_count, &neighbours);
 				printf("PE GE: Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
 
@@ -686,7 +687,6 @@ static void data_evaluation(void * ptr)
 					// If the neighbour hasn't been seen before
 					if (!unique_array_contains(&seen_nodes, neighbour)) 
 					{
-						// Get the data map for that round
 						node_data_t * nd = (node_data_t *)map_get(&received_data, neighbour);
 
 						if (nd == NULL)
@@ -704,7 +704,7 @@ static void data_evaluation(void * ptr)
 				}
 
 				// Free the returned neighbours array
-				unique_array_free(&neighbours);
+				unique_array_clear(&neighbours);
 			}
 
 			// Been through targets add them to the seen nodes
@@ -765,19 +765,15 @@ static void data_evaluation(void * ptr)
 		unique_array_free(&target_nodes);
 		unique_array_free(&seen_nodes);
 		unique_array_free(&acquired_nodes);
+		unique_array_free(&neighbours);
 	}
 
-	// NOTE: I have found that map_remove will never end up removing anything
-	// so the map must instead be cleared!
-
-	// Remove the data we no longer need
-	//map_remove(&received_data, &pred_round_count);
-	//map_remove(&neighbour_info, &pred_round_count);
-
+	// Empty details received and let the next round fill them up
+	// We do not clear received_data, as that is sent only when it changes
 	map_clear(&neighbour_info);
 
-	printf("PE GE: Round: finishing=%u |received_data|=%u |neighbour_info|=%u\n",
-		pred_round_count, map_length(&received_data), map_length(&neighbour_info));
+	printf("PE GE: Round: finishing=%u |received_data|=%u\n",
+		pred_round_count, map_length(&received_data));
 	
 	++pred_round_count;
 

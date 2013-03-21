@@ -24,36 +24,36 @@ static void data_check(void * p)
 
 	bool has_changed = false;
 
-	// Allocate some memory for the current data
-	void * tmp = malloc(conn->data_size);
-	conn->data_fn(tmp);
-
 	// Check to see if we have any data currently stored
 	if (conn->data_loc != NULL)
 	{
+		// Allocate some memory for the current data
+		void * tmp = malloc(conn->data_size);
+		conn->data_fn(tmp);
+
 		has_changed = conn->differs_fn(conn->data_loc, tmp);
 
 		// Data has changed, we are about to send it
 		// so record the new data
 		if (has_changed)
 		{
-			void * swap = tmp;
-			tmp = conn->data_loc;
-			conn->data_loc = swap;
+			free(conn->data_loc);
+			conn->data_loc = tmp;
+		}
+		else
+		{
+			free(tmp);
 		}
 	}
 	else
 	{
 		// No data currently stored
 		// so set the stored data to the recently gained data
-		conn->data_loc = tmp;
-		tmp = NULL;
+		conn->data_loc = malloc(conn->data_size);
+		conn->data_fn(conn->data_loc);
 
 		has_changed = true;
 	}
-
-	free(tmp);
-	tmp = NULL;
 
 
 	// Data has changed so send update message

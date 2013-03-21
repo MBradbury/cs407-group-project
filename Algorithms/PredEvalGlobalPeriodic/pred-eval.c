@@ -721,6 +721,9 @@ static void data_evaluation(void * ptr)
 			printf("PE GP: Pred: FAILED due to error: %s\n", error_message());
 		}
 
+		//predicate_manager_send_response(&predconn, &hop_data,
+		//	pe, all_neighbour_data, sizeof(node_data_t), max_size);
+
 		free(all_neighbour_data);
 
 		hop_manager_reset(&hop_data);

@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-typedef struct
+typedef struct hop_data
 {
 	array_list_t maps;
 	unsigned int max_size;

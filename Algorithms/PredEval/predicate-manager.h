@@ -4,11 +4,28 @@
 #include "containers/map.h"
 
 #include "trickle.h"
+#include "mesh.h"
 
 #include "predlang.h"
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+
+typedef struct
+{
+	uint8_t predicate_id;
+	uint8_t num_hops_positions;
+	uint8_t data_length;
+} failure_response_t;
+
+typedef struct
+{
+	uint8_t hops;
+	uint8_t var_id;
+	uint8_t length;
+} hops_position_t;
+
 
 // Struct for the list of bytecode_variables. It contains the variable_id and hop count.
 typedef struct
@@ -16,6 +33,8 @@ typedef struct
 	uint8_t hops;
 	uint8_t var_id;
 } var_elem_t;
+
+struct hop_data;
 
 typedef struct
 {
@@ -32,21 +51,29 @@ typedef struct
 
 struct predicate_manager_conn;
 
-typedef void (* predicate_manager_updated_fn)(struct predicate_manager_conn * conn);
+typedef struct
+{
+	void (* updated)(struct predicate_manager_conn * conn);
+
+	void (* recv_response)(struct predicate_manager_conn * conn, rimeaddr_t const * from, uint8_t hops);
+} predicate_manager_callbacks_t;
 
 typedef struct predicate_manager_conn
 {
 	struct trickle_conn tc;
+	struct mesh_conn mc;
 
 	map_t predicates;
 
-	predicate_manager_updated_fn updated;
+	rimeaddr_t basestation;
+
+	predicate_manager_callbacks_t const * callbacks;
 
 } predicate_manager_conn_t;
 
 bool predicate_manager_open(
-	predicate_manager_conn_t * conn, uint16_t ch,
-	clock_time_t trickle_interval, predicate_manager_updated_fn updated);
+	predicate_manager_conn_t * conn, uint16_t ch1, uint16_t ch2, rimeaddr_t const * basestation,
+	clock_time_t trickle_interval, predicate_manager_callbacks_t const * callbacks);
 
 bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn);
 
@@ -59,6 +86,11 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 bool predicate_manager_cancel(predicate_manager_conn_t * conn,
 	uint8_t id, rimeaddr_t const * destination);
+
+
+bool predicate_manager_send_response(predicate_manager_conn_t * conn, struct hop_data * hop_data,
+	predicate_detail_entry_t const * pe, void * data, size_t data_size, size_t data_length);
+
 
 map_t const * predicate_manager_get_map(predicate_manager_conn_t * conn);
 

@@ -5,6 +5,7 @@
 #include "dev/serial-line.h"
 
 #include "debug-helper.h"
+#include "hop-data-manager.h"
 
 #include <stdlib.h>
 #include <stddef.h>
@@ -55,10 +56,22 @@ static bool predicate_id_equal(void const * left, void const * right)
 }
 
 
+static inline predicate_manager_conn_t * conncvt_trickle(struct trickle_conn * conn)
+{
+	return (predicate_manager_conn_t *)conn;
+}
+
+static inline predicate_manager_conn_t * conncvt_mesh(struct mesh_conn * conn)
+{
+	return (predicate_manager_conn_t *)
+		(((char *)conn) - sizeof(struct trickle_conn));
+}
+
+
 
 static void trickle_recv(struct trickle_conn * tc)
 {
-	predicate_manager_conn_t * conn = (predicate_manager_conn_t *)tc;
+	predicate_manager_conn_t * conn = conncvt_trickle(tc);
 
 	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
@@ -147,24 +160,61 @@ static void trickle_recv(struct trickle_conn * tc)
 	}
 
 	// Call the updated callback
-	conn->updated(conn);
+	if (conn->callbacks->updated != NULL)
+	{
+		conn->callbacks->updated(conn);
+	}
 }
 
 static const struct trickle_callbacks tc_callbacks = { &trickle_recv };
 
 
-bool predicate_manager_open(
-	predicate_manager_conn_t * conn, uint16_t ch,
-	clock_time_t trickle_interval, predicate_manager_updated_fn updated)
+
+
+// Used to handle receiving predicate failure messages
+static void mesh_rcv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 {
-	if (conn != NULL && updated != NULL)
+	predicate_manager_conn_t * conn = conncvt_mesh(c);
+
+	if (conn->callbacks->recv_response != NULL)
 	{
-		conn->updated = updated;
+		conn->callbacks->recv_response(conn, from, hops);
+	}
+}
+
+static void mesh_sent(struct mesh_conn * c)
+{
+}
+
+static void mesh_timeout(struct mesh_conn * c)
+{
+	predicate_manager_conn_t * conn = conncvt_mesh(c);
+
+	printf("Predicate Manager: Mesh timedout\n");
+
+	// We timedout, so start sending again
+	//mesh_send(c, &conn->basestation);
+}
+
+static const struct mesh_callbacks mc_callbacks = { &mesh_rcv, &mesh_sent, &mesh_timeout };
+
+
+bool predicate_manager_open(
+	predicate_manager_conn_t * conn, uint16_t ch1, uint16_t ch2, rimeaddr_t const * basestation,
+	clock_time_t trickle_interval, predicate_manager_callbacks_t const * callbacks)
+{
+	if (conn != NULL && callbacks != NULL)
+	{
+		conn->callbacks = callbacks;
+
+		rimeaddr_copy(&conn->basestation, basestation);
 
 		map_init(&conn->predicates, &predicate_id_equal, &predicate_detail_entry_cleanup);
 
-		trickle_open(&conn->tc, trickle_interval, ch, &tc_callbacks);
-		channel_set_attributes(ch, trickle_attributes);
+		trickle_open(&conn->tc, trickle_interval, ch1, &tc_callbacks);
+		channel_set_attributes(ch1, trickle_attributes);
+
+		mesh_open(&conn->mc, ch2, &mc_callbacks);
 
 		return true;
 	}
@@ -195,6 +245,8 @@ void predicate_manager_close(predicate_manager_conn_t * conn)
 		}
 
 		trickle_close(&conn->tc);
+
+		mesh_close(&conn->mc);
 
 		map_free(&conn->predicates);
 	}
@@ -276,6 +328,68 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimea
 	msg->num_of_bytecode_var = 0;
 
 	trickle_send(&conn->tc);
+
+	return true;
+}
+
+bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t * hop_data,
+	predicate_detail_entry_t const * pe, void * data, size_t data_size, size_t data_length)
+{
+	if (conn == NULL || pe == NULL)
+	{
+		return false;
+	}
+
+	unsigned int packet_length = sizeof(failure_response_t) +
+								 sizeof(hops_position_t) * pe->variables_details_length +
+								 data_size * data_length;
+
+	if (packet_length > PACKETBUF_SIZE)
+	{
+		printf("Predicate Manager: Predicate reply is too long (%u > %d)\n",
+			packet_length, PACKETBUF_SIZE);
+
+		return false;
+	}
+
+	// TODO: Switch to using ruldolph1 or our own multipacket
+
+	packetbuf_clear();
+	packetbuf_set_datalen(packet_length);
+	debug_packet_size(packet_length);
+	failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
+	memset(msg, 0, packet_length);
+
+	msg->predicate_id = pe->id;
+	msg->num_hops_positions = pe->variables_details_length;
+	msg->data_length = data_length;
+
+	hops_position_t * hops_details = (hops_position_t *)(msg + 1);
+
+	uint8_t i;
+	for (i = 0; i < msg->num_hops_positions; ++i)
+	{
+		hops_details[i].hops = pe->variables_details[i].hops;
+		hops_details[i].var_id = pe->variables_details[i].var_id;
+		hops_details[i].length = hop_manager_length(&hop_data, &pe->variables_details[i]);
+	}
+
+	void * msg_neighbour_data = (void *)(hops_details + pe->variables_details_length);
+
+	memcpy(msg_neighbour_data, data, data_size * data_length);
+
+	// TODO: test with global evaluators
+	/*if (rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
+	{
+		if (conn->callbacks->recv_response != NULL)
+		{
+			conn->callbacks->recv_response(conn, &rimeaddr_node_addr, 0);
+		}
+	}
+	else*/
+	{
+		mesh_send(&conn->mc, &conn->basestation);
+	}
 
 	return true;
 }

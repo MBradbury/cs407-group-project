@@ -33,20 +33,6 @@ typedef struct
 	//nint light2;
 } node_data_t;
 
-typedef struct
-{
-	uint8_t hops;
-	uint8_t var_id;
-	uint8_t length;
-} hops_position_t;
-
-typedef struct
-{
-	uint8_t predicate_id;
-	uint8_t num_hops_positions;
-	uint8_t data_length;
-} failure_response_t;
-
 ///
 /// Start VM Helper Functions
 ///
@@ -124,14 +110,13 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 
 static nhopreq_conn_t hc;
 static predicate_manager_conn_t predconn;
-static struct mesh_conn meshreceiver;
 static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 
 static uint8_t max_hops = 0;
 
-static void predicate_manager_update_callback(struct predicate_manager_conn * conn)
+static void pm_update_callback(predicate_manager_conn_t * conn)
 {
 	map_t const * predicate_map = predicate_manager_get_map(conn);
 
@@ -154,28 +139,17 @@ static void predicate_manager_update_callback(struct predicate_manager_conn * co
 	}
 }
 
-// Used to handle receiving predicate failure messages
-static void mesh_receiver_rcv(struct mesh_conn *c, rimeaddr_t const * from, uint8_t hops)
+static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
 {
 	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PE LP: Response received from %s, %u hops away. ", addr2str(from), hops);
+	printf("PE LP: Response received from %s, of length %u, %u hops away. ",
+		addr2str(from), packetbuf_datalen(), hops);
+
 	printf("Failed predicate %u.\n", response->predicate_id);
 }
 
-static void mesh_receiver_sent(struct mesh_conn * c)
-{
-}
-
-static void mesh_receiver_timeout(struct mesh_conn * c)
-{
-	printf("PE LP: Mesh timedout, so start sending again\n");
-
-	// We timedout, so start sending again
-	mesh_send(&meshreceiver, &baseStationAddr);
-}
-
-static const struct mesh_callbacks meshreceiver_callbacks = { &mesh_receiver_rcv, &mesh_receiver_sent, &mesh_receiver_timeout };
+static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback, &pm_predicate_failed };
 
 PROCESS(initProcess, "Init Process");
 PROCESS(mainProcess, "main Process");
@@ -236,9 +210,7 @@ PROCESS_THREAD(initProcess, ev, data)
 		printf("PE LP: Is Destination.\n");
 	}
 	
-	predicate_manager_open(&predconn, 121, trickle_interval, &predicate_manager_update_callback);
-
-	mesh_open(&meshreceiver, 126, &meshreceiver_callbacks);
+	predicate_manager_open(&predconn, 121, 126, &baseStationAddr, trickle_interval, &pm_callbacks);
 
 	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
 	{
@@ -266,8 +238,7 @@ exit:
 	printf("PE LP: Exiting init Process.\n");
 	/*hop_manager_free(&hop_data);
 	nhopreq_end(&hc);
-	predicate_manager_close(&predconn);
-	mesh_close(&meshreceiver);*/
+	predicate_manager_close(&predconn);*/
 
 	PROCESS_END();
 }
@@ -394,35 +365,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 					printf("PE LP: Pred: FAILED due to error: %s\n", error_message());
 				}
 
-				unsigned int packet_length = sizeof(failure_response_t) +
-											 sizeof(hops_position_t) * pe->variables_details_length +
-											 sizeof(node_data_t) * max_size;
-
-				packetbuf_clear();
-				packetbuf_set_datalen(packet_length);
-				debug_packet_size(packet_length);
-				failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
-				memset(msg, 0, packet_length);
-
-				msg->predicate_id = pe->id;
-				msg->num_hops_positions = pe->variables_details_length;
-				msg->data_length = max_size;
-
-				hops_position_t * hops_details = (hops_position_t *)(msg + 1);
-
-				unsigned int i;
-				for (i = 0; i < msg->num_hops_positions; ++i)
-				{
-					hops_details[i].hops = pe->variables_details[i].hops;
-					hops_details[i].var_id = pe->variables_details[i].var_id;
-					hops_details[i].length = hop_manager_length(&hop_data, &pe->variables_details[i]);
-				}
-
-				node_data_t * msg_neighbour_data = (node_data_t *)(hops_details + pe->variables_details_length);
-
-				memcpy(msg_neighbour_data, all_neighbour_data, sizeof(node_data_t) * max_size);
-
-				mesh_send(&meshreceiver, &baseStationAddr);
+				predicate_manager_send_response(&predconn, &hop_data,
+					pe, all_neighbour_data, sizeof(node_data_t), max_size);
 			}
 		}
 

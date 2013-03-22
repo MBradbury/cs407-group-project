@@ -34,7 +34,7 @@ bool tree_agg_is_sink(tree_agg_conn_t const * conn)
 
 
 // The amount of subborn broadcasts to allow time for
-static const unsigned int STUBBORN_WAIT_COUNT = 4;
+static const unsigned int STUBBORN_WAIT_COUNT = 5;
 
 // Time to gather aggregations over
 static const clock_time_t AGGREGATION_WAIT = 45 * CLOCK_SECOND;

@@ -16,7 +16,8 @@
 
 #undef NDEBUG
 
-static const uint8_t RUNICAST_MAX_RETX = 4;
+static const uint8_t RUNICAST_MAX_RETX = 3;
+static const clock_time_t STUBBORN_SEND_REPEATS = 3;
 
 typedef union
 {
@@ -408,11 +409,14 @@ send_n_hop_data_request(
 	// often we send messages
 	clock_time_t random_send_time = random_time(2, 4, 0.1);
 
-	printf("nhopreq: Starting sbcast every %lu/%lu second(s) for %d seconds\n", random_send_time, CLOCK_SECOND, 20);
+	clock_time_t send_limit = random_send_time * STUBBORN_SEND_REPEATS;
+
+	printf("nhopreq: Starting sbcast every %lu/%lu second(s) for %lu/%lu seconds\n",
+		random_send_time, CLOCK_SECOND, send_limit, CLOCK_SECOND);
 
 	stbroadcast_send_stubborn(&conn->bc, random_send_time);
 
-	ctimer_set(&conn->datareq_stbroadcast_stop_timer, 20 * CLOCK_SECOND, &datareq_stbroadcast_callback_cancel, conn);
+	ctimer_set(&conn->datareq_stbroadcast_stop_timer, send_limit, &datareq_stbroadcast_callback_cancel, conn);
 }
 
 

@@ -9,22 +9,19 @@ TIMEOUT(1000000);
 //file for rimestats
 rimestats = new FileWriter("log_rimestats.txt", false);
 
- 
- // Use JavaScript object as an associative array
+// Use JavaScript object as an associative array
 outputs = [];
 
 file = new FileWriter("log_data.txt", false);
 
 while (true) {
-
 	if (msg.contains("Pred:")) {
-	 	//Has the output file been created.
-
 	   	log.log(time + " " + id.toString() + " " + msg + "\n");
 
 	   	round = new Object();
 	   	
 	   	round["data"] = [];
+
 	   	if (msg.toLowerCase().contains("true"))
 	   	{
 	   		round["pred"] = "true";
@@ -34,6 +31,7 @@ while (true) {
 	   		round["pred"] = "false";
 	   	}
 
+	   	//get all the data from the nodes and place into objects
 	   	goThroughNodes(function(m) {
 	   		temp = "" + m.getInterfaces().get("Temperature").getTemperature();
 	   		hum = "" + m.getInterfaces().get("Humidity").getHumidity();
@@ -48,24 +46,22 @@ while (true) {
 	   	});
 
 	   	outputs.push(round);
-		message = JSON.stringify(outputs);
+
+		//close and open the file to overwrite what was there previously
 		file.close();
 		file = new FileWriter("log_data.txt", false);
-	   	file.write(message + "\n");
+	   	file.write(JSON.stringify(outputs) + "\n");
 	 	
-	   	rimestats.close();
-		rimestats = new FileWriter("log_rimestats.txt", false);
-
 	 	//Save all the rimestats
 	 	rimes = [];
-
 	 	allmotes = sim.getMotes();
-
 		for(var i = 0; i < allmotes.length; i++) {
 			rimes.push(getRimeStats(allmotes[i]));
 		}
 
-		
+		//close and open the file, to overwrite what was there previously
+		rimestats.close();
+		rimestats = new FileWriter("log_rimestats.txt", false);
 		rimestats.write(JSON.stringify(rimes) + "\n");
 	}
  	try{

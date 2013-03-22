@@ -38,6 +38,7 @@
 
 \subsubsection{Forest Fires}
 \cite{libeliumForestFires}
+\cite{FireWxNet}
 
 \subsubsection{Great Duck Island}
 \cite{SzewczykPMC04}
@@ -57,6 +58,89 @@
 
 \subsection{Predicates}
 
+\subsubsection*{NodeMD}
+\cite{NodeMD}
+
+\subsubsection*{Sympathy}
+
+One of the projects that is summarised by \cite{herbert2007adaptive} is a method for identifying and localizing failures called Sympathy \cite{ramanathan2005sympathy}. Sympathy is intended to be run either in pre- or post-deployment environments where it collects data from distributed nodes at a sink. When insufficient data is received it is taken to imply that there exists a problem (insufficient data is component defined). The idea is that by monitoring data (both actively and passively) between components the system can identify what kind of failure occurred in a certain area of the network. Both of which are very useful when trying to debug a failure.
+
+It does, however, have some downsides. The first is that there is assumed to be no traffic and thus no application traffic or network congestion. These are real issues especially when applying this kind of debugging to a high throughput sensor network. There are also a number of spurious failure notification, which the authors are working on reducing, by applying a Bayes engine.
+
+\subsection {DICAS: Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks}
+
+Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks (DICAS) \cite{dicaspaper} is a lightweight distributed protocol for Wireless Sensor Networks that mitigates the effects of a wide-range of control traffic attacks. DICAS does this by utilizing a unique property of a wireless sensor network, this is that each node is able to monitor a part of their neighbours network traffic. Using DICAS the authors were able to create LSR a lightweight secure routing algorithm for Wireless Sensor Networks.
+
+In DICAS nodes maintain a data structure of their first hop neighbours for local monitoring to detect malicious nodes and in local response to isolate these nodes. When a node is deployed it finds and authenticates all of its 1 hop neighbours using a pairwise shared key. These neighbours communicate their neighbours, 2 hop neighbours to the original node, and their own commitment key, which is generated using a random seed, to the newly deployed node. Each node will then have knowledge of all of its 1 hop neighbours as well as their commitment keys and all of its 2 hop neighbours.
+
+Using this knowledge the DICAS protocol can enact a collaborative detection strategy where every node monitors the traffic going in and out of it's neighbours. Each node that is within transmission range of both the sending(X) and receiving(A) nodes of a packet are considered guard nodes of A over the link from X to A. These nodes maintain a watch buffer of packets sent from X to A, the duration and information stored are determined by the attack type under consideration by the system. Each guard node maintains a malicious counter for each link it is monitoring, if A drops, delays, changes or fabricates a packet from X then the guard node will increase its malicious counter. If the malicious counter exceeds a predefined threshold the node is considered to be malicious and is removed from the neighbours list. The guard node propagates this knowledge to all the other nodes in its neighbour list. When another node receives enough authenticated alerts about the malicious node it is excluded from its neighbours list. Once all 1 hop nodes have excluded the malicious node then it is effectively isolated from the system and all packets from or to that node are ignored.      
+
+The authors tested the DICAS algorithm against 5 sets of attacks, these are:
+\begin{enumerate}
+
+\item Route Traffic Manipulation
+
+\item ID Spoofing and Sybil Attacks
+
+\item Wormhole Attacks
+
+\item Sinkhole
+
+\item Rushing Attack
+
+\end{enumerate}
+
+Additionally, the paper describes a cost analysis on the DICAS algorithm, these are the results: 
+\begin{itemize}
+\item Memory Overhead:
+
+The memory overhead is the most pressing of the overheads created by the DICAS algorithm. The algorithm must store several data structures on each node: a neighbours list, a watch buffer, a commitment key list and the alert list. These structures are variable on sizes dependent on the number of nodes in the network, the network layout and the MAC layer delay for acquiring a channel. Any implementation must consider the memory cost of the algorithm seriously.
+
+\item Computation Overhead:
+
+With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbour list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbour list structure are relatively small, the computation time required for these operations is negligible.
+
+\item Bandwith Overhead:
+
+When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases make up a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
+\end{itemize}
+
+\subsection{H-SEND: Hierachichal SEnsor Network Debugging}
+
+H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{?}
+
+There are 4 main steps involved in H-SEND:
+
+\begin{enumerate}
+	\item Developer specifies invariants when writing the software
+	\item Invariant checking code is (semi--)automatically inserted during compilation
+	\item If an invariant is violated at runtime, actions are taken (such as increased logging frequency, or an error message to the base station)
+	\item Developer can use the information to fix the software, and then upload the patched version
+\end{enumerate}
+
+There are a variety of different types of invariants that can be specified, typically characterised by the following three dichotomies:
+
+\begin{itemize}
+	\item Local vs. Multi--node invariants
+	
+	Invariants dependent on state on a single node are called local, as they don't require and messaging to check. If the state of multiple nodes is required for checking, the invariant is said to be multi--node.
+
+	\item Stateless vs. Stateful invariants
+	
+	An invariant is stateless is it doesn't depend on a node's execution state, and stateful otherwise.
+
+	\item Compile--time vs. Run--time invariants
+
+	Compile--time invariants are those involving comparisons against values that do not change, whereas runtime invariants are more flexible. Runtime invariants can compare against spatial and temporal trends ---  the state of surrounding nodes, and previous states respectively.
+\end{itemize}
+
+A grammar is specified which can be used to insert invariants into source code. Existential and universal quantifiers are supported.
+
+H-SEND is optimised for WSNs in a variety of ways. For example, it minimises overhead by buffering messages it needs to send, and piggybacking them on the existing network traffic. Due to the hierarchical nature of the protocol, multinode-invariants can be checked efficiently at the closest parent node with all the required information.
+
+\subsubsection*{Dynamic Invariant Detection $\cup$ Checking Engine (DIDUCE)}
+
+DIDUCE \cite{diduce} is a tool which employs machine learning to dynamically generate hypotheses of invariants for a system at run-time; the invariants begin extremely strict, and are relaxed over time to allow for new correct behaviour. The machine learning aspect means that developers do not have to specify invariants themselves, which proves beneficial as accurately pinpointing the values necessary for fault-free operation is non-trivial. DIDUCE checks against the invariants continually during a program's operation and reports all violations detected at the end of the run, whereas Daicon merely presents the user with invariants found. For all its apparent usefulness, unfortunately DIDUCE was designed for large, complex systems rather than lightweight distributed systems with constrained resources (i.e. WSNs), so it is likely to prove infeasible to use this tool for GPD.
 
 
 \begin{comment}
@@ -151,88 +235,4 @@ After describing the operation of SMAC (as above), the authors highlights the pr
 The basic operation of QSMAC involves examining the average increase rate of data packets in a node's buffer queue. When this rate is more than one per second, packets are arriving faster than they can be processed using the default SMAC cycle, so the cycle duration is halved to double its effective processing speed. When the buffer is almost empty, the default cycle is restored.
 
 Simulations show performance greater than that of SMAC in terms of packets' delay, energy consumption, packet reception ratio and network throughput. As above, if these benefits translate to real hardware, QSMAC potentially offers a real improvement over existing wireless MAC protocols. However, its use in our network will have to be carefully considered, as it is currently unknown whether fluctuating traffic loads will be a likely scenario.
-
-
-\subsection{Global Predicate Detection}
-
-\subsubsection*{Sympathy}
-
-One of the projects that is summarised by \cite{herbert2007adaptive} is a method for identifying and localizing failures called Sympathy \cite{ramanathan2005sympathy}. Sympathy is intended to be run either in pre- or post-deployment environments where it collects data from distributed nodes at a sink. When insufficient data is received it is taken to imply that there exists a problem (insufficient data is component defined). The idea is that by monitoring data (both actively and passively) between components the system can identify what kind of failure occurred in a certain area of the network. Both of which are very useful when trying to debug a failure.
-
-It does, however, have some downsides. The first is that there is assumed to be no traffic and thus no application traffic or network congestion. These are real issues especially when applying this kind of debugging to a high throughput sensor network. There are also a number of spurious failure notification, which the authors are working on reducing, by applying a Bayes engine.
-
-\subsection {DICAS: Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks}%\cite{dicaspaper}}
-
-Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks (DICAS) is a lightweight distributed protocol for Wireless Sensor Networks that mitigates the effects of a wide-range of control traffic attacks. DICAS does this by utilizing a unique property of a wireless sensor network, this is that each node is able to monitor a part of their neighbours network traffic. Using DICAS the authors were able to create LSR a lightweight secure routing algorithm for Wireless Sensor Networks.
-
-In DICAS nodes maintain a data structure of their first hop neighbours for local monitoring to detect malicious nodes and in local response to isolate these nodes. When a node is deployed it finds and authenticates all of its 1 hop neighbours using a pairwise shared key. These neighbours communicate their neighbours, 2 hop neighbours to the original node, and their own commitment key, which is generated using a random seed, to the newly deployed node. Each node will then have knowledge of all of its 1 hop neighbours as well as their commitment keys and all of its 2 hop neighbours.
-
-Using this knowledge the DICAS protocol can enact a collaborative detection strategy where every node monitors the traffic going in and out of it's neighbours. Each node that is within transmission range of both the sending(X) and receiving(A) nodes of a packet are considered guard nodes of A over the link from X to A. These nodes maintain a watch buffer of packets sent from X to A, the duration and information stored are determined by the attack type under consideration by the system. Each guard node maintains a malicious counter for each link it is monitoring, if A drops, delays, changes or fabricates a packet from X then the guard node will increase its malicious counter. If the malicious counter exceeds a predefined threshold the node is considered to be malicious and is removed from the neighbours list. The guard node propagates this knowledge to all the other nodes in its neighbour list. When another node receives enough authenticated alerts about the malicious node it is excluded from its neighbours list. Once all 1 hop nodes have excluded the malicious node then it is effectively isolated from the system and all packets from or to that node are ignored.      
-
-The authors tested the DICAS algorithm against 5 sets of attacks, these are:
-\begin{enumerate}
-
-\item Route Traffic Manipulation
-
-\item ID Spoofing and Sybil Attacks
-
-\item Wormhole Attacks
-
-\item Sinkhole
-
-\item Rushing Attack
-
-\end{enumerate}
-
-Additionally, the paper describes a cost analysis on the DICAS algorithm, these are the results: 
-\begin{itemize}
-\item Memory Overhead:
-
-The memory overhead is the most pressing of the overheads created by the DICAS algorithm. The algorithm must store several data structures on each node: a neighbours list, a watch buffer, a commitment key list and the alert list. These structures are variable on sizes dependent on the number of nodes in the network, the network layout and the MAC layer delay for acquiring a channel. Any implementation must consider the memory cost of the algorithm seriously.
-
-\item Computation Overhead:
-
-With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbour list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbour list structure are relatively small, the computation time required for these operations is negligible.
-
-\item Bandwith Overhead:
-
-When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases make up a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
-\end{itemize}
-
-\subsection{H-SEND: Hierachichal SEnsor Network Debugging}
-
-H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{?}
-
-There are 4 main steps involved in H-SEND:
-
-\begin{enumerate}
-	\item Developer specifies invariants when writing the software
-	\item Invariant checking code is (semi--)automatically inserted during compilation
-	\item If an invaamssymbriant is violated at runtime, actions are taken (such as increased logging frequency, or an error message to the base station)
-	\item Developer can use the information to fix the software, and then upload the patched version
-\end{enumerate}
-
-There are a variety of different types of invariants that can be specified, typically characterised by the following three dichotomies:
-
-\begin{itemize}
-	\item Local vs. Multi--node invariants
-	
-	Invariants dependent on state on a single node are called local, as they don't require and messaging to check. If the state of multiple nodes is required for checking, the invariant is said to be multi--node.
-
-	\item Stateless vs. Stateful invariants
-	
-	An invariant is stateless is it doesn't depend on a node's execution state, and stateful otherwise.
-
-	\item Compile--time vs. Run--time invariants
-
-	Compile--time invariants are those involving comparisons against values that do not change, whereas runtime invariants are more flexible. Runtime invariants can compare against spatial and temporal trends ---  the state of surrounding nodes, and previous states respectively.
-\end{itemize}
-
-A grammar is specified which can be used to insert invariants into source code. Existential and universal quantifiers are supported.
-
-H-SEND is optimised for WSNs in a variety of ways. For example, it minimises overhead by buffering messages it needs to send, and piggybacking them on the existing network traffic. Due to the hierarchical nature of the protocol, multinode-invariants can be checked efficiently at the closest parent node with all the required information.
-
-\subsubsection*{Dynamic Invariant Detection $\cup$ Checking Engine (DIDUCE)}
-
-DIDUCE is a tool which employs machine learning to dynamically generate hypotheses of invariants for a system at run-time; the invariants begin extremely strict, and are relaxed over time to allow for new correct behaviour. The machine learning aspect means that developers do not have to specify invariants themselves, which proves beneficial as accurately pinpointing the values necessary for fault-free operation is nontrivial. DIDUCE checks against the invariants continually during a program's operation and reports all violations detected at the end of the run, whereas Daicon merely presents the user with invariants found. For all its apparent usefulness, unfortunately DIDUCE was designed for large, complex systems rather than lightweight distributed systems with constrained resources (i.e. WSNs), so it is likely to prove infeasible to use this tool for GPD. \cite{diduce}
 \end{comment}

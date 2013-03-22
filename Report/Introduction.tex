@@ -2,3 +2,18 @@
 \section{Introduction}
 
 Wireless Sensor Networks (WSNs) are becoming increasingly prevalent due to decreasing hardware costs and hardware size \cite{TankBible}. Therefore, it is important that we consider issues with them now, so we are prepared for when they become widely used. A major issue with any system is that it may contain bugs, fortunately, there are many well known methodologies for detecting and eliminating bugs \cite{1382572, 749477, ?}. However, in distributed systems there are additional challenges to overcome \cite{5010224} and there are additional challenges to overcome with WSNs due to the energy constrained environment they work in \cite{?}.
+
+What can be meant by `detecting bugs', in non-distributed systems there are many different classes of bugs \cite{?}, when we consider distributed systems many of those bugs have new vectors in which they can arise. For example deadlock can now occur across motes if both motes are waiting on receiving a message the other mote should be sending. The fact that these systems are distributed means that debugging these kind of problems becomes harder \cite{?}. Also there are new ways bugs can arise, for example in the routing of information, if a message being sent is stuck being transmitted in a cycle of nodes it will never reach its destination. This type of problem requires lots of resources (either memory or large messages) to be able to effectively debug \cite{?}.
+
+So, for our project we focus on a subset of the problem. Instead of handling many low level faults (that has been approached before \cite{NodeMD}), we are instead going to focus on bugs that occur in the applications that users develop for WSNs. It is important that good debugging tools are available for the platform being developed on because they will help improve the quality of the software developed for those platforms \cite{?}.
+
+\begin{mydef}
+\emph{Stateless Predicate}: Without state. A stateless predicate will only be able to evaluate some truth from some data based on what it knows at that instance. It does not have any history of the data it has used to evaluate the predicate in the past, so cannot evaluate a relationship between current data and past data.
+\end{mydef}
+
+\begin{mydef}
+\emph{Application Predicate}: A predicate that evaluates some data on a running application.
+\end{mydef}
+
+So we intend to deal with \emph{stateless} \emph{application} predicates. An few examples of these are: (1) checking that there is one and only one cluster head, (2) that in an aggregations tree your parent is closer than your children, and (3) checking that the average temperature of the nodes surrounding yourself is within some tolerance of your temperature. The idea here being that developers can check their application is in a state that is correct and also can be told that their application is in an incorrect state. This last point is useful because, for example, in the case of clustering if a node reports it has no cluster head, then the manager of the network can simply run a reconfiguration phase.
+

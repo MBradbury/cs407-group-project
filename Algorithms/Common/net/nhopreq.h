@@ -27,7 +27,7 @@ typedef struct
 	data_generation_fn data_fn;
 	data_receive_fn receive_fn;
 
-	map_t messages;
+	map_t mote_records;
 
 	struct ctimer runicast_timer;
 	struct ctimer forward_timer;

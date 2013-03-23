@@ -514,6 +514,58 @@
   location = {http://ieeexplore.ieee.org//xpl/articleDetails.jsp?tp=&arnumber=5010224}
 }
 
+@ARTICLE{553309,
+  author = {Garg, V.K. and Waldecker, B.},
+  title = {Detection of strong unstable predicates in distributed programs},
+  journal = {Parallel and Distributed Systems, IEEE Transactions on},
+  year = {1996},
+  volume = {7},
+  pages = {1323-1333},
+  number = {12},
+  doi = {10.1109/71.553309},
+  issn = {1045-9219},
+  keywords = {distributed algorithms;program debugging;distributed programs;global
+	predicates;global sequences;sequential traces;unstable predicates;Computer
+	Society;Debugging;Distributed algorithms;Distributed computing;Monitoring;Safety;Senior
+	members;State-space methods;Testing}
+}
+
+@ARTICLE{277788,
+  author = {Garg, V.K. and Waldecker, B.},
+  title = {Detection of weak unstable predicates in distributed programs},
+  journal = {Parallel and Distributed Systems, IEEE Transactions on},
+  year = {1994},
+  volume = {5},
+  pages = {299-307},
+  number = {3},
+  abstract = {This paper discusses detection of global predicates in a distributed
+	program. Earlier algorithms for detection of global predicates proposed
+	by Chandy and Lamport (1985) work only for stable predicates. A predicate
+	is stable if it does not turn false once it becomes true. Our algorithms
+	detect even unstable predicates, without excessive overhead. In the
+	past, such predicates have been regarded as too difficult to detect.
+	The predicates are specified by using a logic described formally
+	in this paper. We discuss detection of weak conjunctive predicates
+	that are formed by conjunction of predicates local to processes in
+	the system. Our detection methods will detect whether such a predicate
+	is true for any interleaving of events in the system, regardless
+	of whether the predicate is stable. Also, any predicate that can
+	be reduced to a set of weak conjunctive predicates is detectable.
+	This class of predicates captures many global predicates that are
+	of interest to a programmer. The message complexity of our algorithm
+	is bounded by the number of messages used by the program. The main
+	applications of our results are in debugging and testing of distributed
+	programs. Our algorithms have been incorporated in a distributed
+	debugger that runs on a network of Sun workstations in UNIX},
+  doi = {10.1109/71.277788},
+  issn = {1045-9219},
+  keywords = {Unix;communication complexity;distributed memory systems;program debugging;program
+	testing;Sun workstations;UNIX;debugging;distributed algorithms;distributed
+	debugger;distributed programs;global predicates;message complexity;testing;weak
+	conjunctive predicates;weak unstable predicates;Communication networks;Debugging;Distributed
+	computing;Event detection;Interleaved codes;Logic;Programming profession;Sun;Testing;Workstations}
+}
+
 @INPROCEEDINGS{6023235,
   author = {Yingchao Han and Hongmei Li and Jinghui Qiu},
   title = {The analysis and summary about energy saving technologies of wireless
@@ -1146,6 +1198,39 @@
   owner = {Matt},
   timestamp = {2012.10.19},
   url = {http://www2.warwick.ac.uk/fac/soc/wbs/subjects/om/teaching/teaching/projman/}
+}
+
+@ARTICLE{345831,
+  author = {Venkatesan, S. and Dathan, B.},
+  title = {Testing and debugging distributed programs using global predicates},
+  journal = {Software Engineering, IEEE Transactions on},
+  year = {1995},
+  volume = {21},
+  pages = {163-177},
+  number = {2},
+  abstract = {Testing and debugging programs are more involved in distributed systems
+	than in uniprocessor systems because of the presence of the communication
+	medium and the inherent concurrency. Past research has established
+	that predicate testing is an approach that can alleviate some of
+	the problems in this area. However, checking whether a general predicate
+	is true in a particular distributed execution appears to be a computationally
+	hard problem. This paper considers a class of predicates called conjunctive
+	form predicates (CFP) that is quite useful in distributed program
+	development, but can be tested efficiently. We develop fully-distributed
+	algorithms to test CFP's, prove that these algorithms are correct,
+	and analyze them for their message complexity. The analysis shows
+	that our techniques incur a fairly low overhead on the distributed
+	system},
+  doi = {10.1109/32.345831},
+  issn = {0098-5589},
+  keywords = {distributed algorithms;parallel programming;program debugging;program
+	testing;programming theory;computationally hard problem;concurrency;conjunctive
+	form predicates;distributed program debugging;distributed program
+	development;distributed program testing;distributed systems;fully-distributed
+	algorithms;global predicates;low overhead;message complexity;predicate
+	testing;uniprocessor systems;Algorithm design and analysis;Clouds;Communication
+	networks;Computer networks;Computer science;Concurrent computing;Debugging;Distributed
+	computing;Software engineering;System testing}
 }
 
 @INPROCEEDINGS{dunkels2009efficient,

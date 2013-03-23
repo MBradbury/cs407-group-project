@@ -6,6 +6,8 @@
 
 #include "contiki.h"
 
+#include "lib/random.h"
+
 #include "sys/node-id.h"
 
 #include "dev/leds.h"
@@ -146,7 +148,7 @@ static rimeaddr_t baseStationAddr;
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
 static const clock_time_t EVENT_CHECK_PERIOD = 30 * CLOCK_SECOND;
 
-static const double CHANCE_OF_EVENT_UPDATE = 0.05;
+static const double CHANCE_OF_EVENT_UPDATE = 0.01;
 
 
 static uint8_t max_comm_hops = 0;
@@ -260,6 +262,9 @@ PROCESS_THREAD(mainProcess, ev, data)
 #ifdef POWER_LEVEL
 	cc2420_set_txpower(POWER_LEVEL);
 #endif
+
+	// We need to set the random number generator here
+	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
 	hop_manager_init(&hop_data);
 

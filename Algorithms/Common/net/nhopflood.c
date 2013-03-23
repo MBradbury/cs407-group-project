@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "net/rimeaddr-helpers.h"
 #include "random-range.h"
 #include "debug-helper.h"
 
@@ -94,13 +95,6 @@ typedef struct
 	uint8_t hops;
 } last_seen_t;
 
-static bool rimeaddr_equality(void const * left, void const * right)
-{
-	if (left == NULL || right == NULL)
-		return false;
-
-	return rimeaddr_cmp((rimeaddr_t const *)left, (rimeaddr_t const *)right);
-}
 
 static inline nhopflood_conn_t * conncvt_broadcast(struct broadcast_conn * conn)
 {
@@ -114,6 +108,9 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 	nhopflood_conn_t * conn = conncvt_broadcast(c);
 
 	rimeaddr_t const * originator = packetbuf_addr(PACKETBUF_ADDR_ESENDER);
+	const uint8_t packet_id = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
+	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS);
+	const uint8_t ttl = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_TTL);
 
 	// Get the last seen entry for the end-point sender
 	last_seen_t * last = map_get(&conn->latest_message_seen, originator);
@@ -129,23 +126,22 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		// We need to record that we have seen a packet from this sender
 		last = (last_seen_t *)malloc(sizeof(last_seen_t));
 		rimeaddr_copy(&last->from, originator);
-		last->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
-		last->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+		last->id = packet_id;
+		last->hops = hops;
 
 		map_put(&conn->latest_message_seen, last);
 	}
 	// Not seen this message before, but have received from this node before
-	else if (last->id < packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) || 
-			(packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) == 0 && last->id > 240) // Handle integer overflow
+	else if (last->id < packet_id || 
+			(packet_id == 0 && last->id > 240) // Handle integer overflow
 			)
 	{
 		seenbefore = false;
-		last->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
-		last->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+		last->id = packet_id;
+		last->hops = hops;
 	}
 	// Seen before but this is from a shorter route
-	else if (last->id == packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID) &&
-			 last->hops < packetbuf_attr(PACKETBUF_ATTR_HOPS))
+	else if (last->id == packet_id && last->hops < hops)
 	{
 		// Have seen before, but re-deliver
 		conn->receive_fn(
@@ -165,17 +161,17 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 
 			if (rimeaddr_cmp(&data->sender, originator) && data->id == last->id)
 			{
-				uint8_t hops_diff = data->hops - packetbuf_attr(PACKETBUF_ATTR_HOPS);
+				uint8_t hops_diff = data->hops - hops;
 
 				// Update the hops
-				data->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+				data->hops = hops;
 
 				// As we have updated the hops we also need to update the TTL
 				data->ttl = (hops_diff > data->ttl) ? 0 : data->ttl - hops_diff;
 			}
 		}
 
-		last->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
+		last->hops = hops;
 	}
 
 	if (!seenbefore)
@@ -183,13 +179,13 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		conn->receive_fn(
 			conn,
 			originator, 
-			packetbuf_attr(PACKETBUF_ATTR_HOPS),
+			hops,
 			0
 		);
 
 		// Add this packet to the queue if it needs to be forwarded
 		// and we have not seen it before.
-		if (packetbuf_attr(PACKETBUF_ATTR_TTL) != 0)
+		if (ttl != 0)
 		{
 			//printf("Adding received message to queue\n");
 			packet_details_t * details = packet_details_from_packetbuf();

@@ -132,9 +132,9 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 
 	rimeaddr_copy(&originator, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 	rimeaddr_copy(&sender, packetbuf_addr(PACKETBUF_ADDR_SENDER));
-	uint16_t message_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
-	uint8_t hop_limit = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_TTL);
-	uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS);
+	const uint16_t message_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
+	const uint8_t hop_limit = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_TTL);
+	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS);
 
 	// We don't want to do anything if the message we sent
 	// has got back to ourselves
@@ -247,7 +247,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 
 	rimeaddr_copy(&sender, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 	rimeaddr_copy(&target, packetbuf_addr(PACKETBUF_ADDR_ERECEIVER));
-	uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS) + 1;
+	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS) + 1;
 
 	//printf("nhopreq: runicast received from %s of length %u, ",
 	//	addr2str(from), packetbuf_datalen());

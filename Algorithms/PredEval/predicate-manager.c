@@ -49,10 +49,10 @@ static bool predicate_id_equal(void const * left, void const * right)
 	if (left == NULL || right == NULL)
 		return false;
 
-	predicate_detail_entry_t const * l = (predicate_detail_entry_t const *)left;
-	predicate_detail_entry_t const * r = (predicate_detail_entry_t const *)right;
+	uint8_t const * l = (uint8_t const *)left;
+	uint8_t const * r = (uint8_t const *)right;
 
-	return l->id == r->id;
+	return *l == *r;
 }
 
 
@@ -261,7 +261,10 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 		return false;
 
 	// Send the request message
-	unsigned int packet_size = sizeof(eval_pred_req_t) + (sizeof(ubyte) * bytecode_length) + (sizeof(var_elem_t) * var_details_length);
+	const unsigned int packet_size =
+		sizeof(eval_pred_req_t) +
+		(sizeof(ubyte) * bytecode_length) +
+		(sizeof(var_elem_t) * var_details_length);
 
 	if (packet_size > PACKETBUF_SIZE)
 	{
@@ -313,13 +316,12 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimea
 	if (conn == NULL || destination == NULL)
 		return false;
 
-	unsigned int packet_size = sizeof(eval_pred_req_t);
+	const unsigned int packet_size = sizeof(eval_pred_req_t);
 
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_size);
 	debug_packet_size(packet_size);
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_size);
 
 	// Set eventual destination in header
 	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
@@ -361,7 +363,6 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	packetbuf_set_datalen(packet_length);
 	debug_packet_size(packet_length);
 	failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_length);
 
 	msg->predicate_id = pe->id;
 	msg->num_hops_positions = pe->variables_details_length;
@@ -381,15 +382,12 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 
 	memcpy(msg_neighbour_data, data, data_size * data_length);
 
-	// TODO: test with global evaluators
-	/*if (rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
+	// If the target is the current node, just deliver the message
+	if (rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
 	{
-		if (conn->callbacks->recv_response != NULL)
-		{
-			conn->callbacks->recv_response(conn, &rimeaddr_node_addr, 0);
-		}
+		mesh_rcv(&conn->mc, &rimeaddr_node_addr, 0);
 	}
-	else*/
+	else
 	{
 		mesh_send(&conn->mc, &conn->basestation);
 	}
@@ -448,7 +446,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		PROCESS_YIELD_UNTIL(ev == serial_line_event_message);
 
 		char const * line = (char const *)data;
-		unsigned int length = strlen(line);
+		const unsigned int length = strlen(line);
 
 		printf("Predicate Manager: received line: `%s' of length %u in state %d\n", line, length, state);
 

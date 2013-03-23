@@ -6,6 +6,8 @@
 
 #include "contiki.h"
 
+#include "lib/random.h"
+
 #include "net/rime.h"
 
 #include "sys/node-id.h"
@@ -228,6 +230,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 #ifdef POWER_LEVEL
 	cc2420_set_txpower(POWER_LEVEL);
 #endif
+
+	// We need to set the random number generator here
+	random_init(*(uint16_t*)(&rimeaddr_node_addr));
+
 
 	hop_manager_init(&hop_data);
 

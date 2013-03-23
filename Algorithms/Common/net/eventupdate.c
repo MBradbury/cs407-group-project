@@ -30,7 +30,7 @@ static void data_check(void * p)
 	if (force)
 	{
 		printf("eventupdate: Randomly forcing an update %d <= %d\n",
-			(int)(rnd * 100), (int)(conn->chance * 100));
+			(int)(rnd * 10000), (int)(conn->chance * 10000));
 	}
 
 	bool has_changed = false;

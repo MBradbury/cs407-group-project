@@ -63,7 +63,6 @@ bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, 
 			return false;
 		}
 
-
 		hop_data->max_size++;
 	}
 	else
@@ -109,7 +108,7 @@ map_t * hop_manager_get(hop_data_t * hop_data, uint8_t hop)
 		return NULL;
 	}
 
-	unsigned int length = array_list_length(&hop_data->maps);
+	const unsigned int length = array_list_length(&hop_data->maps);
 
 	// Map doesn't exist so create it
 	if (length < hop)

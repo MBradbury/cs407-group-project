@@ -144,6 +144,9 @@ static predicate_manager_conn_t predconn;
 static rimeaddr_t baseStationAddr;
 
 static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
+static const clock_time_t EVENT_CHECK_PERIOD = 30 * CLOCK_SECOND;
+
+static const double CHANCE_OF_EVENT_UPDATE = 0.05;
 
 
 static uint8_t max_comm_hops = 0;
@@ -266,7 +269,11 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	predicate_manager_open(&predconn, 121, 126, &baseStationAddr, trickle_interval, &pm_callbacks);
 
-	if (!event_update_start(&euc, 149, &node_data, &node_data_differs, sizeof(node_data_t), CLOCK_SECOND * 10, &receieved_data))
+	if (!event_update_start(
+			&euc, 149, &node_data, &node_data_differs,
+			sizeof(node_data_t), EVENT_CHECK_PERIOD, &receieved_data,
+			CHANCE_OF_EVENT_UPDATE)
+		)
 	{
 		printf("PE LE: nhopreq start function failed\n");
 	}

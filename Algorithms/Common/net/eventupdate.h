@@ -43,13 +43,21 @@ typedef struct event_update_conn
 	// This function is called whenever we receive new information from a node
 	update_fn update;
 
+	// The chance that we will send an update anyway, even if the data
+	// the same from the last check
+	float chance;
+
 	// The event timer
 	struct ctimer check_timer;
 
 } event_update_conn_t;
 
 
-bool event_update_start(event_update_conn_t * conn, uint8_t ch, data_generation_fn data_fn, data_differs_fn differs_fn, size_t data_size, clock_time_t generate_period, update_fn update);
+bool event_update_start(
+	event_update_conn_t * conn, uint8_t ch, data_generation_fn data_fn,
+	data_differs_fn differs_fn, size_t data_size, clock_time_t generate_period,
+	update_fn update, float chance);
+
 void event_update_stop(event_update_conn_t * conn);
 
 void event_update_set_distance(event_update_conn_t * conn, uint8_t distance);

@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "debug-helper.h"
+#include "random-range.h"
 
 static void flood_recv(struct nhopflood_conn * c, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops)
 {
@@ -22,6 +23,16 @@ static void data_check(void * p)
 {
 	event_update_conn_t * conn = (event_update_conn_t *)p;
 
+	// Check if we should force sending
+	double rnd = random_range_double(0, 1);
+	bool force = rnd <= conn->chance;
+
+	if (force)
+	{
+		printf("eventupdate: Randomly forcing an update %d <= %d\n",
+			(int)(rnd * 100), (int)(conn->chance * 100));
+	}
+
 	bool has_changed = false;
 
 	// Check to see if we have any data currently stored
@@ -31,7 +42,7 @@ static void data_check(void * p)
 		void * tmp = malloc(conn->data_size);
 		conn->data_fn(tmp);
 
-		has_changed = conn->differs_fn(conn->data_loc, tmp);
+		has_changed = force || conn->differs_fn(conn->data_loc, tmp);
 
 		// Data has changed, we are about to send it
 		// so record the new data
@@ -77,7 +88,10 @@ static void data_check(void * p)
 }
 
 
-bool event_update_start(event_update_conn_t * conn, uint8_t ch, data_generation_fn data_fn, data_differs_fn differs_fn, size_t data_size, clock_time_t generate_period, update_fn update)
+bool event_update_start(
+	event_update_conn_t * conn, uint8_t ch, data_generation_fn data_fn,
+	data_differs_fn differs_fn, size_t data_size, clock_time_t generate_period,
+	update_fn update, float chance)
 {
 	if (conn != NULL && data_fn != NULL && data_size != 0 && generate_period != 0 && update != NULL)
 	{
@@ -91,6 +105,7 @@ bool event_update_start(event_update_conn_t * conn, uint8_t ch, data_generation_
 		conn->data_loc = NULL;
 		conn->generate_period = generate_period;
 		conn->update = update;
+		conn->chance = chance;
 
 		ctimer_set(&conn->check_timer, generate_period, &data_check, conn);
 

@@ -32,7 +32,6 @@ We also developed containers that helped abstract certain concepts (such as list
 
 Finally, all of these custom containers are tested by a test suite that checks for functional correctness. Also the test suite was run using \verb|valgrind|\footnote{\url{http://valgrind.org/info/tools.html}} to check for memory leaks and corruption.
 
-
 \subsection{Network Library}
 
 \subsubsection{Event Update}
@@ -41,12 +40,20 @@ Finally, all of these custom containers are tested by a test suite that checks f
 
 In Contiki sending a single packet has its limits, there is only so much data you can get in a single packet. There are two C macros that are relevant to this \verb|PACKETBUF_HDR_SIZE| which is set to 48 bytes and \verb|PACKETBUF_SIZE| which is set to 128 bytes\footnote{packetbuf.h \url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}. This means that in general we will only be able to send a packet containing 128 bytes of information, but what if we have a data structure that spans 300 bytes? Then we will need to have a way to send multiple packets and a receiver that can put the packets back together in the correct way to deliver the data.
 
-Contiki's data transfer primitives for their RIME protocols are fairly hidden because of their focus on uIPv6. We found \verb|ruldolph0| first \footnote{ruldolph0 \url{http://contiki.sourceforge.net/docs/2.6/a01735.html}} and then \verb|rucb| (Reliable Unicast Bulk Transfer) much later \footnote{rucb \url{http://contiki.sourceforge.net/docs/2.6/a00365.html}}. However, both of them have problems, the API is very convoluted and seems more geared towards sending very large files across the network. This is very different to our aim, which is to send relatively small packets of data to a specific neighbour. So we wrote our own API that would split data of any given size and reassemble it once received, our API was not focused on processing data chunks like \verb|ruldolph0| or \verb|rucb|, but simply operated on a block of memory given to it. This is a case where a simpler API made development much easier for us. Admittedly because our implementation uses dynamic memory allocation it could potentially perform worse, but because the energy of sending and receiving messages dwarfs the energy usage of the CPU, we feel that easier development tradeoff it worth it. Also, now that code has been written to use this API, the \verb|multipacket| library itself could always be rewritten to use \verb|rucb| as a base to run more efficiently.
+Contiki's data transfer primitives for their RIME protocols are fairly hidden because of their focus on uIPv6. We found \verb|ruldolph0| first \footnote{ruldolph0 \url{http://contiki.sourceforge.net/docs/2.6/a01735.html}} and then \verb|rucb| (Reliable Unicast Bulk Transfer) much later \footnote{rucb \url{http://contiki.sourceforge.net/docs/2.6/a00365.html}}. However, both of them have problems, the API is very convoluted and seems more geared towards sending very large files across the network. This is very different to our aim, which is to send relatively small packets of data to a specific neighbour. So we wrote our own API that would split data of any given size and reassemble it once received, our API was not focused on processing data chunks like \verb|ruldolph0| or \verb|rucb|, but simply operated on a block of memory given to it. This is a case where a simpler API made development much easier for us. Admittedly because our implementation uses dynamic memory allocation it could potentially perform worse, but because the energy of sending and receiving messages dwarfs the energy usage of the CPU, we feel that easier development tradeoff made it worth it. Also, now that code has been written to use this API, the \verb|multipacket| library itself could always be rewritten to use \verb|rucb| as a base to run more efficiently.
 
+\subsubsection{N-Hop Request}
+We developed the N-Hop Request communication layer early in the project because we needed a way to pass predicate evaluation messages between nodes, these messages needed to be able to travel multiple hops in the network and also contain routing information for the receiver so that they could respond after they've evaluated the predicate. This was a very specific task, unsurprisingly there were no libraries in Contiki suitable for this so instead we developed our own communication layer and API to handle the routing of these messages. 
+
+We used the base level Contiki libraries broadcast, unicast and ctimers. Rime protocol.
+
+The N-Hop Request communication layer was initially heavily influenced by the H-Send\cite{HSEND}.
+
+Node receives a request to evaluate a predicate
 
 \subsubsection{N-Hop Flood}
 
-\subsubsection{Neighbour Detect}
+\subsubsection{Neighbour Detection}
 
 \begin{figure}[ht!]
 \centering
@@ -63,13 +70,9 @@ Contiki's data transfer primitives for their RIME protocols are fairly hidden be
 \subfigure[Logical Tree imposed on network]{\includegraphics[width=0.75\textwidth]{Diagrams/neighbour-tree-structure}}
 \end{figure}
 
-
 \subsection{Clustering}
 
 \subsection{Hierarchical Clustering}
-
-
-
 
 \subsection{Predicate Evaluation}
 
@@ -88,7 +91,6 @@ Contiki's data transfer primitives for their RIME protocols are fairly hidden be
 		\item[] If each node waits (e.g.) 10 seconds, then messages will be lost as they go backwards, as the originating node will have already sent its message back
 	\end{itemize}	
 \end{itemize}
-
 
 \subsection{LEACH}
 \cite{LEACH}

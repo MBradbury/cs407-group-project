@@ -300,6 +300,9 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	printf("Predicate Manager: Sent packet length %d\n", packet_size);
 
+	// We need to receive the predicate so we know of it
+	trickle_recv(&conn->tc);
+
 	trickle_send(&conn->tc);
 
 	return true;

@@ -24,6 +24,9 @@
 #define EVENT_CHECK_PERIOD ((clock_time_t)30 * CLOCK_SECOND)
 #define CHANCE_OF_EVENT_UPDATE 0.01
 
+#define NODE_DATA_INDEX(array, index, size) \
+	(((char *)array) + ((index) * (size)))
+
 static inline pele_conn_t * conncvt_event_update(event_update_conn_t * conn)
 {
 	return (pele_conn_t *)conn;
@@ -143,7 +146,7 @@ PROCESS_THREAD(pele_process, ev, data)
 				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 				{
 					void * mapdata = map_data(hop_map, elem);
-					memcpy(((char *)all_neighbour_data) + (count * pelp->data_size), mapdata, pele->data_size);
+					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pelp->data_size), mapdata, pele->data_size);
 					++count;
 				}
 

@@ -446,7 +446,7 @@ bool evaluate_predicate(
 		// including all of the closer hop's data length
 		unsigned int length = hop_manager_length(hop_data, &variables[i]);
 
-		printf("PE LE: Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		printf("PredMan: Binding vars: id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
 	}
 

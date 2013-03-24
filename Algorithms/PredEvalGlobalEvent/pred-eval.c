@@ -33,12 +33,12 @@
 #	define PEDPRINTF(...)
 #endif
 
-static void data_evaluation(pege_conn_t * pege);
-
 #define ROUND_LENGTH (clock_time_t)(5 * 60 * CLOCK_SECOND)
 #define INITIAL_ROUND_LENGTH (clock_time_t)(7 * 60 * CLOCK_SECOND)
 #define TRICKLE_INTERVAL (clock_time_t)(2 * CLOCK_SECOND)
 
+#define NODE_DATA_INDEX(array, index, size) \
+	(((char *)array) + ((index) * (size)))
 
 typedef struct
 {
@@ -238,7 +238,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 		elem = unique_array_next(elem))
 	{
 		void * original = unique_array_data(&conn_data->list, elem);
-		memcpy(((char *)msgdata) + (i * pege->data_size), original, pege->data_size);
+		memcpy(NODE_DATA_INDEX(msgdata, i, pege->data_size), original, pege->data_size);
 
 		++i;
 	}
@@ -475,7 +475,7 @@ static void data_evaluation(pege_conn_t * pege)
 				for (aelem = map_first(hop_map); map_continue(hop_map, aelem); aelem = map_next(aelem))
 				{
 					void * mapdata = map_data(hop_map, aelem);
-					memcpy(((char *)all_neighbour_data) + (count * pege->data_size), mapdata, pege->data_size);
+					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pege->data_size), mapdata, pege->data_size);
 					++count;
 				}
 

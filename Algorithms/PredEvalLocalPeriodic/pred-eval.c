@@ -26,6 +26,9 @@
 
 #define trickle_interval ((clock_time_t) 2 * CLOCK_SECOND)
 
+#define NODE_DATA_INDEX(array, index, size) \
+	(((char *)array) + ((index) * (size)))
+
 
 static inline pelp_conn_t * conncvt_nhopreq(nhopreq_conn_t * conn)
 {
@@ -157,7 +160,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 					{
 						void * mapdata = map_data(hop_map, elem);
-						memcpy(((char *)all_neighbour_data) + (count * pelp->data_size), mapdata, pelp->data_size);
+						memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pelp->data_size), mapdata, pelp->data_size);
 						++count;
 					}
 

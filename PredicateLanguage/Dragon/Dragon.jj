@@ -20,6 +20,8 @@ options {
 
 PARSER_BEGIN(Dragon)
 
+package predvis.dragon;
+
 import java.io.*;
 import java.util.*;
 import com.google.common.io.LittleEndianDataOutputStream;

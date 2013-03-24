@@ -139,14 +139,15 @@ public class PredVis extends JFrame {
                 File scriptFile = null;
                 final JFileChooser fileDialog = new JFileChooser();
                 int retval = fileDialog.showOpenDialog(frame);
-                if(retval == JFileChooser.APPROVE_OPTION) {
+                if (retval == JFileChooser.APPROVE_OPTION) {
                     scriptFile = fileDialog.getSelectedFile();
                 } else {
                     //No script chosen, abort.
                     return;
                 }
 
-                predicateListModel.addElement(new Predicate(predicateName, scriptFile));
+                Predicate newPred = new Predicate(predicateName, scriptFile);
+                predicateListModel.addElement(newPred);
             }
         });
         
@@ -163,6 +164,7 @@ public class PredVis extends JFrame {
                     updateNetworkView(networkstates.get(currentRound));
                 }
                 // TODO: Work out what the java 6 alternative of this is!
+                // it doesn't work anyway... still need to figure it out - tim
                 //revalidate();
                 repaint();
             }

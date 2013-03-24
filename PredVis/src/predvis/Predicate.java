@@ -1,6 +1,7 @@
 package predvis;
 
 import java.io.File;
+import predvis.hoppy.Hoppy;
 
 /**
  *
@@ -9,6 +10,8 @@ import java.io.File;
 public class Predicate {
     private String name;
     private File scriptFile;
+    
+    private int[] bytecode;
     
     public Predicate()
     {
@@ -36,6 +39,15 @@ public class Predicate {
     
     public void setScriptFile(File scriptFile) {
         this.scriptFile = scriptFile;
+    }
+    
+    public boolean isSatisfied() {
+        //TODO: query network, is predicate satisfied?
+        return false;
+    }
+    
+    private void compileScript() {
+        //TODO: run hoppy/dragon on script, store bytecode
     }
     
     @Override

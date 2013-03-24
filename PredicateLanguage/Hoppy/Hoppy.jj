@@ -20,6 +20,8 @@ options {
 
 PARSER_BEGIN(Hoppy)
 
+package predvis.hoppy;
+
 import java.io.PrintStream;
 import java.util.*;
 

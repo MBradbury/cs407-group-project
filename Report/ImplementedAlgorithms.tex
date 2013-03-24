@@ -48,6 +48,12 @@ Contiki's data transfer primitives for their RIME protocols are fairly hidden be
 \subsubsection{N-Hop Flood}
 
 \subsubsection{N-Hop Request}
+Contiki provides broadcast primitives to allow the flooding of messages through the network, however the \verb|trickle|\cite{Levis04trickle} primitive only allows a single source node\footnote{trickle.h \url{http://contiki.sourceforge.net/docs/2.6/a00381.html}}, which presents a problem, when multiple nodes are attempting to send a message N-hops away. 
+In some cases \verb|reliable unicast| could be used to target the specific nodes for which the message is intended. This, however, is not suitable when the identifies of the nodes is not known, or in situations when storing routing tables is not appropiate. 
+
+Our response to this was to develop a primitive which would flood the network, a fixed number of hops from the source, whilst allowing multiple nodes to use the same primitive, with different messages. Our implementation uses a \verb|stubborn broadcast| to pass the message along a chain, only rebroadcasting the message when the hop limit (the number of hops the message is intended to travel) has not been reached. If a message has been seen before by a node (and the number of hops left is lower than before) it is simply ignored and not passed on. In the case where the hop limit for a 
+duplicate message is higher than the previously seen limit, it is then rebroadcast, so that all the intended recipiets will recieve the message.  
+%TODO: Note about performance maybe?
 
 \subsubsection{Neighbour Detect}
 
@@ -87,7 +93,7 @@ To counter the given disadvantages of our basic clustering implementation, we de
 	\end{itemize}	
 	\item[] Started work on Multi-hop local based predicates
 	\begin{itemize}
-		\item stubborn broadcast to reliably broadcast to one hop neighbours, who would then rebroadcast the message to their neighbours until the hop limit was reached.
+		\item used N-Hop Req to send initial message down the chain
 		\item We tried using trickle to return the results back to the originating node. However, due to trickles implementation, only one message could be flooded through the network at one time. 
 		\item due to collisions, we used ctimers to delay the responses to messages sent back to the originator node.
 		\item next step is to re-implement the algorithm, so that nodes send messages directly back along the chain of nodes they recieved the predicated check message from. This way the messages will be more reliably returned to the orignator node. This also allows for multiple messages to be sent this way.

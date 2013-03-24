@@ -267,7 +267,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 
 	unique_array_init(&conn_data->list, &rimeaddr_equality, &free);
 
-	// TODO: review this change
+	// Store the received data
 	tree_aggregate_update(conn, conn_data, packet, length);
 }
 
@@ -399,7 +399,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	neighbour_aggregate_open(&nconn, &sink, 121, 110, 150, &neighbour_callbacks);
 
 	// Wait for some time to let process start up and perform neighbour detect
-	etimer_set(&et, 60 * CLOCK_SECOND);
+	etimer_set(&et, 120 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 

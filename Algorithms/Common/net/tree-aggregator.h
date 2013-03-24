@@ -55,7 +55,8 @@ typedef struct tree_agg_conn
 	struct ctimer ctrecv;
 	struct ctimer aggregate_ct;
 	struct ctimer ct_parent_detect;
-	struct ctimer ct_open_or_wait;
+	struct ctimer ct_open;
+	struct ctimer ct_wait_finished;
 } tree_agg_conn_t;
 
 

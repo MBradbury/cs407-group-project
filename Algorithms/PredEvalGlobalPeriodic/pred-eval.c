@@ -35,6 +35,12 @@
 #include "predicate-manager.h"
 #include "hop-data-manager.h"
 
+#ifdef PE_DEBUG
+#	define PEDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define PEDPRINTF(...)
+#endif
+
 static void data_evaluation(void);
 
 #define ROUND_LENGTH ((clock_time_t) 5 * 60 * CLOCK_SECOND)
@@ -150,7 +156,7 @@ static void predicate_detail_entry_cleanup(void * item)
 
 static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
-	printf("PE GE: Handling neighbour data round=%u length=%u\n", round_count, length);
+	printf("PE GP: Handling neighbour data round=%u length=%u\n", round_count, length);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -210,7 +216,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1); // Get the pointer after the message
 
-	printf("PE GP: Adding %u pieces of data in round %u\n", length, msg->round_count);
+	PEDPRINTF("PE GP: Adding %u pieces of data in round %u\n", length, msg->round_count);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -234,11 +240,11 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 {
-	printf("PE GP: Setup finsihed\n");
+	PEDPRINTF("PE GP: Setup finsihed\n");
 
 	if (tree_agg_is_leaf(conn))
 	{
-		printf("PE GP: Is leaf starting data aggregation\n");
+		PEDPRINTF("PE GP: Is leaf starting data aggregation\n");
 
 		leds_on(LEDS_RED);
 
@@ -248,7 +254,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 
 static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void const * to_apply, unsigned int to_apply_length)
 {
-	printf("PE GP: Update local data\n");
+	PEDPRINTF("PE GP: Update local data\n");
 
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
@@ -272,7 +278,7 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void
 // Add our own one hop data to the list
 static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
-	printf("PE GP: Update local data with own data\n");
+	PEDPRINTF("PE GP: Update local data with own data\n");
 
 	unique_array_t * data = &((aggregation_data_t *)ptr)->list;
 
@@ -287,7 +293,7 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 // Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
-	printf("PE GP: Store Packet - length=%u\n", length);
+	printf("PE GP: Store Packet length=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -297,27 +303,18 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 
 	unique_array_init(&conn_data->list, &rimeaddr_equality, &free);
 	
+	// Store the received data
 	tree_aggregate_update(conn, conn_data, packet, length);
-	/*// Get the pointer after the message
-	node_data_t const * msgdata = (node_data_t const *)(msg + 1);
-	
-	unsigned int i;
-	for (i = 0; i < msg->length; ++i)
-	{
-		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
-		memcpy(tmp, &msgdata[i], sizeof(node_data_t));
-		unique_array_append(&conn_data->list, tmp);
-	}*/
 }
 
 // Write the data structure to the outbout packet buffer
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, size_t * packet_length)
 {
-	printf("PE GP: Writing data to packet\n");
+	PEDPRINTF("PE GP: Writing data to packet\n");
 
-	//take all data, write a struct to the buffer at the start, 
-	//containing the length of the packet (as the number of node_data_t)
-	//write the each one to memory
+	// Take all data, write a struct to the buffer at the start, 
+	// containing the length of the packet (as the number of node_data_t)
+	// write the each one to memory
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
 	aggregation_data_t * conn_data = (aggregation_data_t *)conn->data;
@@ -356,10 +353,8 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t cons
 {
 	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PE LE: Response received from %s, %u, %u hops away. ",
-		addr2str(from), packetbuf_datalen(), hops);
-
-	printf("Failed predicate %u.\n", response->predicate_id);
+	printf("PE GP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
+		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
 }
 
 static const predicate_manager_callbacks_t pm_callbacks = { NULL, &pm_predicate_failed };
@@ -424,7 +419,7 @@ PROCESS_THREAD(data_gather, ev, data)
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
 	{
-		printf("PE GE: We are sink node.\n");
+		PEDPRINTF("PE GP: We are sink node.\n");
 
 		predicate_manager_start_serial_input(&predconn);
 	}
@@ -436,16 +431,16 @@ PROCESS_THREAD(data_gather, ev, data)
 	// Setup the map
 	unique_array_init(&neighbour_info, &rimeaddr_pair_equality, &free);
 
-	printf("PE GP: Starting Neighbour Aggregation\n");
+	PEDPRINTF("PE GP: Starting Neighbour Aggregation\n");
 
 	neighbour_aggregate_open(&nconn, &sink, 121, 110, 150, &neighbour_callbacks);
 
 	// Wait for some time to let process start up and perform neighbour detect
-	etimer_set(&et, 60 * CLOCK_SECOND);
+	etimer_set(&et, 120 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 
-	printf("PE GP: Starting Data Aggregation\n");
+	PEDPRINTF("PE GP: Starting Data Aggregation\n");
 
 	tree_agg_open(&aggconn, &sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 	
@@ -637,7 +632,7 @@ static void data_evaluation(void)
 
 							if (nd == NULL)
 							{
-								printf("PE GE: ERROR: received no info on %s\n", addr2str(neighbour));
+								printf("PE GP: ERROR: received no info on %s\n", addr2str(neighbour));
 							}
 							else
 							{

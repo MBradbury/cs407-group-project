@@ -23,6 +23,8 @@ CFLAGS += -DNDEBUGVM
 
 CFLAGS += -fdata-sections
 
+CFLAGS += -DPELP_APPLICATION
+
 # Disable uip
 #CONTIKI_NO_NET=1
 

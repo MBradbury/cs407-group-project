@@ -1,5 +1,5 @@
-#include <stdbool.h>
-#include <stdint.h>
+#include "pelp.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -20,10 +20,267 @@
 #include "net/rimeaddr-helpers.h"
 #include "predicate-manager.h"
 #include "hop-data-manager.h"
-#include "nhopreq.h"
-#include "predlang.h"
+
 #include "sensor-converter.h"
 #include "debug-helper.h"
+
+#define trickle_interval ((clock_time_t) 2 * CLOCK_SECOND)
+
+
+static inline pelp_conn_t * conncvt_nhopreq(nhopreq_conn_t * conn)
+{
+	return (pelp_conn_t *)conn;
+}
+
+static inline pelp_conn_t * conncvt_predicate_manager(predicate_manager_conn_t * conn)
+{
+	return (pelp_conn_t *)
+		(((char *)conn) - sizeof(nhopreq_conn_t));
+}
+
+static inline pelp_conn_t * conncvt_hop_data(hop_data_t * conn)
+{
+	return (pelp_conn_t *)
+		(((char *)conn) - sizeof(nhopreq_conn_t) - sizeof(predicate_manager_conn_t));
+}
+
+
+static void nhopreq_data_fn(nhopreq_conn_t * conn, void * data)
+{
+	pelp_conn_t * pelp = conncvt_nhopreq(conn);
+
+	pelp->data_fn(data);
+}
+
+static void receieved_data(nhopreq_conn_t * conn, rimeaddr_t const * from, uint8_t hops, void const * data)
+{
+	pelp_conn_t * pelp = conncvt_nhopreq(conn);
+
+	printf("PE LP: Obtained information from %s hops:%u\n", addr2str(from), hops);
+
+	hop_manager_record(&pelp->hop_data, hops, data, pelp->data_size);
+}
+
+
+static void pm_update_callback(predicate_manager_conn_t * conn)
+{
+	pelp_conn_t * pelp = conncvt_predicate_manager(conn);
+
+	map_t const * predicate_map = predicate_manager_get_map(conn);
+
+	pelp->max_comm_hops = 0;
+
+	map_elem_t elem;
+	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+	{
+		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+
+		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+		{
+			uint8_t local_max_hops = predicate_manager_max_hop(pe);
+
+			if (local_max_hops > pelp->max_comm_hops)
+			{
+				pelp->max_comm_hops = local_max_hops;
+			}
+		}
+	}
+}
+
+static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+{
+	pelp_conn_t * pelp = conncvt_predicate_manager(conn);
+
+	pelp->predicate_failed(pelp, from, hops);
+}
+
+static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback, &pm_predicate_failed };
+
+static const nhopreq_callbacks_t nhopreq_callbacks = { &nhopreq_data_fn, &receieved_data };
+
+PROCESS(pelp_process, "PE LP Process");
+PROCESS_THREAD(pelp_process, ev, data)
+{
+	static pelp_conn_t * pelp;
+	static struct etimer et;
+	static void * all_neighbour_data = NULL;
+
+	PROCESS_EXITHANDLER(goto exit;)
+	PROCESS_BEGIN();
+
+	pelp = (pelp_conn_t *)data;
+	
+	printf("PE LP: Process Started.\n");
+	
+	// Wait for other nodes to initialize.
+	etimer_set(&et, 20 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+	while (true)
+	{
+		printf("PE LP: Starting long wait...\n");
+
+		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+		printf("PE LP: Wait finished! About to ask for data!\n");
+
+		// Only ask for data if the predicate needs it
+		if (pelp->max_comm_hops != 0)
+		{
+			printf("PE LP: Starting request for %d hops of data...\n", pelp->max_comm_hops);
+
+			nhopreq_request_info(&pelp->nhr, pelp->max_comm_hops);
+	
+			// Get as much information as possible within a given time bound
+			etimer_set(&et, 120 * CLOCK_SECOND);
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+			printf("PE LP: Finished collecting hop data.\n");
+
+			const unsigned int max_size = hop_manager_max_size(&pelp->hop_data);
+
+			if (max_size > 0)
+			{
+				// Generate array of all the data
+				all_neighbour_data = malloc(pelp->data_size * max_size);
+
+				// Position in all_neighbour_data
+				unsigned int count = 0;
+
+				uint8_t i;
+				for (i = 1; i <= pelp->max_comm_hops; ++i)
+				{
+					map_t * hop_map = hop_manager_get(&pelp->hop_data, i);
+
+					map_elem_t elem;
+					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
+					{
+						void * mapdata = map_data(hop_map, elem);
+						memcpy(((char *)all_neighbour_data) + (count * pelp->data_size), mapdata, pelp->data_size);
+						++count;
+					}
+
+					printf("PE LP: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+				}
+			}
+		}
+
+		const unsigned int max_size = hop_manager_max_size(&pelp->hop_data);
+
+		map_t const * predicate_map = predicate_manager_get_map(&pelp->predconn);
+
+		map_elem_t elem;
+		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+		{
+			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+
+			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+			{
+				printf("PE LP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
+		
+				bool evaluation_result = evaluate_predicate(
+					pelp->data_fn, pelp->data_size,
+					pelp->function_details, pelp->functions_count,
+					&pelp->hop_data,
+					pe->bytecode, pe->bytecode_length,
+					all_neighbour_data,
+					pe->variables_details, pe->variables_details_length);
+
+				if (evaluation_result)
+				{
+					printf("PE LP: Pred: TRUE\n");
+				}
+				else
+				{
+					printf("PE LP: Pred: FAILED due to error: %s\n", error_message());
+				}
+
+				predicate_manager_send_response(&pelp->predconn, &pelp->hop_data,
+					pe, all_neighbour_data, pelp->data_size, max_size);
+			}
+		}
+
+		// Free the allocated neighbour data
+		free(all_neighbour_data);
+		all_neighbour_data = NULL;
+
+		// We want to remove all the data we gathered,
+		// this is important to do so as if a node dies
+		// we do not want to keep using its last piece of data
+		// we want that lack of data to be picked up on.
+		hop_manager_reset(&pelp->hop_data);
+	}
+
+exit:
+	(void)0;
+	PROCESS_END();
+}
+
+
+bool pelp_start(pelp_conn_t * conn,
+	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
+	pelp_predicate_failed_fn predicate_failed,
+	function_details_t const * function_details, uint8_t functions_count)
+{
+	if (conn == NULL || predicate_failed == NULL || data_fn == NULL ||
+		sink == NULL || data_size == 0)
+	{
+		return false;
+	}
+
+	conn->sink = sink;
+	conn->data_fn = data_fn;
+	conn->data_size = data_size;
+	conn->max_comm_hops = 0;
+	conn->predicate_failed = predicate_failed;
+
+	conn->function_details = function_details;
+	conn->functions_count = functions_count;
+
+	hop_manager_init(&conn->hop_data);
+
+	predicate_manager_open(&conn->predconn, 121, 126, sink, trickle_interval, &pm_callbacks);
+
+	if (!nhopreq_start(&conn->nhr, 149, 132, conn->data_size, &nhopreq_callbacks))
+	{
+		printf("PE LP: nhopreq start function failed\n");
+	}
+
+	if (rimeaddr_cmp(sink, &rimeaddr_node_addr)) // Sink
+	{
+		printf("PE LP: Is the base station!\n");
+
+		// As we are the base station we need to start reading the serial input
+		predicate_manager_start_serial_input(&conn->predconn);
+
+		leds_on(LEDS_BLUE);
+	}
+	else
+	{
+		leds_on(LEDS_GREEN);
+	}
+
+	process_start(&pelp_process, (void *)conn);
+
+	return true;
+}
+
+void pelp_stop(pelp_conn_t * conn)
+{
+	if (conn != NULL)
+	{
+		process_exit(&pelp_process);
+
+		hop_manager_free(&conn->hop_data);
+		nhopreq_stop(&conn->nhr);
+		predicate_manager_close(&conn->predconn);
+	}
+}
+
+
+
+#ifdef PELP_APPLICATION
 
 // Struct for the list of node_data. It contains owner_addr, temperature and humidity. 
 typedef struct
@@ -53,6 +310,13 @@ static void const * get_humidity(void const * ptr)
 	return &((node_data_t const *)ptr)->humidity;
 }
 
+static const function_details_t func_det[] =
+{
+	{ 0, TYPE_INTEGER, &get_addr },
+	{ 2, TYPE_FLOATING, &get_temp },
+	{ 3, TYPE_INTEGER, &get_humidity },
+};
+
 static void node_data(void * data)
 {
 	if (data != NULL)
@@ -79,77 +343,10 @@ static void node_data(void * data)
 		nd->light2 = (nint)s1087_light1(raw_light2);*/
 	}
 }
-///
-/// End VM Helper Functions
-///
 
-static hop_data_t hop_data;
-
-static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * data)
+static bool send_example_predicate(pelp_conn_t * pelp, rimeaddr_t const * destination, uint8_t id)
 {
-	node_data_t const * nd = (node_data_t const *)data;
-
-	printf("PE LP: Obtained information from %s hops:%u, T:%d H:%d%%\n",
-		addr2str(&nd->addr), hops, (int)nd->temp, (int)nd->humidity);
-
-	hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
-}
-
-
-
-static nhopreq_conn_t hc;
-static predicate_manager_conn_t predconn;
-static rimeaddr_t baseStationAddr;
-
-static const clock_time_t trickle_interval = 2 * CLOCK_SECOND;
-
-static uint8_t max_hops = 0;
-
-static void pm_update_callback(predicate_manager_conn_t * conn)
-{
-	map_t const * predicate_map = predicate_manager_get_map(conn);
-
-	max_hops = 0;
-
-	map_elem_t elem;
-	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
-	{
-		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
-
-		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
-		{
-			uint8_t local_max_hops = predicate_manager_max_hop(pe);
-
-			if (local_max_hops > max_hops)
-			{
-				max_hops = local_max_hops;
-			}
-		}
-	}
-}
-
-static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
-{
-	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
-
-	printf("PE LP: Response received from %s, of length %u, %u hops away. ",
-		addr2str(from), packetbuf_datalen(), hops);
-
-	printf("Failed predicate %u.\n", response->predicate_id);
-}
-
-static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback, &pm_predicate_failed };
-
-static const nhopreq_callbacks_t nhopreq_callbacks = { &node_data, &receieved_data };
-
-PROCESS(mainProcess, "main Process");
-
-AUTOSTART_PROCESSES(&mainProcess);
-
-
-static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
-{
-	if (destination == NULL)
+	if (pelp == NULL || destination == NULL)
 		return false;
 
 	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
@@ -163,55 +360,36 @@ static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 	uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
 	uint8_t var_details_length = 2;
 
-	return predicate_manager_create(&predconn,
+	return predicate_manager_create(&pelp->predconn,
 		id, destination,
 		program_bytecode, bytecode_length,
 		var_details, var_details_length);
 }
 
-static bool evaluate_predicate(
-	ubyte const * program, unsigned int program_length,
-	node_data_t const * all_neighbour_data,
-	var_elem_t const * variables, unsigned int variables_length)
+static void predicate_failed(pelp_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
 {
-	// Set up the predicate language VM
-	init_pred_lang(&node_data, sizeof(node_data_t));
+	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	// Register the data functions 
-	register_function(0, &get_addr, TYPE_INTEGER);
-	register_function(2, &get_temp, TYPE_FLOATING);
-	register_function(3, &get_humidity, TYPE_INTEGER);
-
-	printf("PE LP: Binding variables using %p\n", all_neighbour_data);
-
-	// Bind the variables to the VM
-	unsigned int i;
-	for (i = 0; i < variables_length; ++i)
-	{
-		// Get the length of this hop's data
-		// including all of the closer hop's data length
-		unsigned int length = hop_manager_length(&hop_data, &variables[i]);
-
-		printf("PE LP: Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
-		bind_input(variables[i].var_id, all_neighbour_data, length);
-	}
-
-	return evaluate(program, program_length);
+	printf("PE LP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
+		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
 }
+
+PROCESS(mainProcess, "Main Process");
+
+AUTOSTART_PROCESSES(&mainProcess);
 
 PROCESS_THREAD(mainProcess, ev, data)
 {
+	static rimeaddr_t sink;
+	static pelp_conn_t pelp;
 	static struct etimer et;
-	static node_data_t * all_neighbour_data = NULL;
-	static map_t const * predicate_map = NULL;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	
 	printf("PE LP: Process Started.\n");
 
-
-	// Init Code
+	// Init code
 #ifdef NODE_ID
 	node_id_burn(NODE_ID);
 #endif
@@ -223,151 +401,35 @@ PROCESS_THREAD(mainProcess, ev, data)
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
-
-	hop_manager_init(&hop_data);
-
 	// Set the address of the base station
-	baseStationAddr.u8[0] = 1;
-	baseStationAddr.u8[1] = 0;
+	sink.u8[0] = 1;
+	sink.u8[1] = 0;
 
-	predicate_manager_open(&predconn, 121, 126, &baseStationAddr, trickle_interval, &pm_callbacks);
+	pelp_start(&pelp,
+		&sink, &node_data, sizeof(node_data_t), &predicate_failed,
+		func_det, sizeof(func_det)/sizeof(func_det[0]));
 
-	if (!nhopreq_start(&hc, 149, 132, sizeof(node_data_t), &nhopreq_callbacks))
+	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
 	{
-		printf("PE LP: nhopreq start function failed\n");
-	}
-
-	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr)) // Sink
-	{
-		printf("PE LP: Is the base station!\n");
-
-		// As we are the base station we need to start reading the serial input
-		predicate_manager_start_serial_input(&predconn);
-
-		// Set the predicate evaluation target
 		rimeaddr_t destination;
 		destination.u8[0] = 5;
 		destination.u8[1] = 0;
 
-		if (rimeaddr_cmp(&rimeaddr_node_addr, &destination))
-		{
-			printf("PE LE: Is Destination.\n");
-		}
-
-		send_example_predicate(&destination, 0);
-		send_example_predicate(&destination, 1);
-
-		leds_on(LEDS_BLUE);
+		send_example_predicate(&pelp, &destination, 0);
 	}
-	else
-	{
-		leds_on(LEDS_GREEN);
-	}
-	// Init End
 
-	// Wait for other nodes to initialize.
-	etimer_set(&et, 20 * CLOCK_SECOND);
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
+	// This is where the application would be
 	while (true)
 	{
-		printf("PE LP: Starting long wait...\n");
-
-		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
+		// Wait for other nodes to initialize.
+		etimer_set(&et, 20 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-		printf("PE LP: Wait finished! About to ask for data!\n");
-
-		// Only ask for data if the predicate needs it
-		if (max_hops != 0)
-		{
-			printf("PE LP: Starting request for %d hops of data...\n", max_hops);
-
-			nhopreq_request_info(&hc, max_hops);
-	
-			// Get as much information as possible within a given time bound
-			etimer_set(&et, 120 * CLOCK_SECOND);
-			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-			printf("PE LP: Finished collecting hop data.\n");
-
-			const unsigned int max_size = hop_manager_max_size(&hop_data);
-
-			if (max_size > 0)
-			{
-				// Generate array of all the data
-				all_neighbour_data = (node_data_t *) malloc(sizeof(node_data_t) * max_size);
-
-				// Position in all_neighbour_data
-				unsigned int count = 0;
-
-				uint8_t i;
-				for (i = 1; i <= max_hops; ++i)
-				{
-					map_t * hop_map = hop_manager_get(&hop_data, i);
-
-					map_elem_t elem;
-					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
-					{
-						node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
-						memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
-						++count;
-					}
-
-					printf("PE LP: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
-				}
-			}
-		}
-
-		const unsigned int max_size = hop_manager_max_size(&hop_data);
-
-		predicate_map = predicate_manager_get_map(&predconn);
-
-		map_elem_t elem;
-		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
-		{
-			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
-
-			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
-			{
-				printf("PE LP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
-		
-				bool evaluation_result = evaluate_predicate(
-					pe->bytecode, pe->bytecode_length,
-					all_neighbour_data,
-					pe->variables_details, pe->variables_details_length);
-
-				if (evaluation_result)
-				{
-					printf("PE LP: Pred: TRUE\n");
-				}
-				else
-				{
-					printf("PE LP: Pred: FAILED due to error: %s\n", error_message());
-				}
-
-				predicate_manager_send_response(&predconn, &hop_data,
-					pe, all_neighbour_data, sizeof(node_data_t), max_size);
-			}
-		}
-
-		// Free the allocated neighbour data
-		free(all_neighbour_data);
-		all_neighbour_data = NULL;
-
-		// We want to remove all the data we gathered,
-		// this is important to do so as if a node dies
-		// we do not want to keep using its last piece of data
-		// we want that lack of data to be picked up on.
-		hop_manager_reset(&hop_data);
 	}
 
 exit:
-	printf("PE LP: Exiting Process...\n");
-	hop_manager_free(&hop_data);
-	nhopreq_end(&hc);
-	predicate_manager_close(&predconn);
+	pelp_stop(&pelp);
 
 	PROCESS_END();
 }
 
+#endif

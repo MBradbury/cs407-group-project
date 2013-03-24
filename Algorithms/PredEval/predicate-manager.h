@@ -14,6 +14,13 @@
 
 typedef struct
 {
+	uint8_t id;
+	uint8_t return_type;
+	void const * (* fn)(void const * ptr);
+} function_details_t;
+
+typedef struct
+{
 	uint8_t predicate_id;
 	uint8_t num_hops_positions;
 	uint8_t data_length;
@@ -95,6 +102,15 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, struct hop
 #define predicate_manager_get_map(conn) ((conn) == NULL ? NULL : &(conn)->predicates)
 
 uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe);
+
+
+bool evaluate_predicate(
+	node_data_fn data_fn, size_t data_size,
+	function_details_t const * function_details, size_t functions_count,
+	struct hop_data * hop_data,
+	ubyte const * program, unsigned int program_length,
+	void const * all_neighbour_data,
+	var_elem_t const * variables, unsigned int variables_length);
 
 
 #endif /*CS407_PREDICATE_MANAGER_H*/

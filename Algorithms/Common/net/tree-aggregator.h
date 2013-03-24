@@ -49,14 +49,13 @@ typedef struct tree_agg_conn
 	void * data;
 	size_t data_length;
 
-	tree_agg_callbacks_t callbacks;
+	tree_agg_callbacks_t const * callbacks;
 
 	// ctimers
 	struct ctimer ctrecv;
 	struct ctimer aggregate_ct;
 	struct ctimer ct_parent_detect;
-	struct ctimer ct_open;
-	struct ctimer ct_wait_finished;
+	struct ctimer ct_open_or_wait;
 } tree_agg_conn_t;
 
 
@@ -70,9 +69,8 @@ void tree_agg_close(tree_agg_conn_t * conn);
 
 void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length);
 
-bool tree_agg_is_sink(tree_agg_conn_t const * conn);
-bool tree_agg_is_leaf(tree_agg_conn_t const * conn);
-bool tree_agg_is_collecting(tree_agg_conn_t const * conn);
+#define tree_agg_is_sink(conn) ((conn) != NULL && rimeaddr_cmp(&(conn)->sink, &rimeaddr_node_addr))
+#define tree_agg_is_leaf(conn) ((conn) != NULL && (conn)->is_leaf_node)
+#define tree_agg_is_collecting(conn) ((conn) != NULL && (conn)->is_collecting)
 
 #endif /*CS407_TREE_AGGREGATOR_H*/
-

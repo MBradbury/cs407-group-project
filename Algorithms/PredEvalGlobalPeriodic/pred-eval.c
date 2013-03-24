@@ -37,11 +37,11 @@
 
 static void data_evaluation(void * ptr);
 
-static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
-static const clock_time_t INITIAL_ROUND_LENGTH = 7 * 60 * CLOCK_SECOND;
+#define ROUND_LENGTH ((clock_time_t) 5 * 60 * CLOCK_SECOND)
+#define INITIAL_ROUND_LENGTH ((clock_time_t) 7 * 60 * CLOCK_SECOND)
 
-// Map containing neighbour_map_elem_t
-static map_t neighbour_info;
+// Map containing rimeaddr_pair_t
+static unique_array_t neighbour_info;
 
 // Map containing node_data_t
 static map_t received_data;
@@ -79,23 +79,6 @@ typedef struct
 	//nint light1;
 	//nint light2;
 } node_data_t;
-
-typedef struct
-{
-	unsigned int key;
-
-	// List of rimeaddr_t
-	unique_array_t data;
-} neighbour_map_elem_t;
-
-static void neighbour_map_elem_free(void * ptr)
-{
-	neighbour_map_elem_t * item = (neighbour_map_elem_t *)ptr;
-
-	unique_array_free(&item->data);
-	free(item);
-}
-
 
 ///
 /// Start VM Helper Functions
@@ -167,74 +150,37 @@ static void predicate_detail_entry_cleanup(void * item)
 	free(entry);
 }
 
-static bool neighbour_map_key_compare(void const * x, void const * y)
-{
-	if (x == NULL || y == NULL)
-		return false;
-
-	unsigned int const * a = (unsigned int const *)x;
-	unsigned int const * b = (unsigned int const *)y;
-
-	return *a == *b;
-}
-
-
-//TODO: add clearing of previous neighbour information
-/* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
-	printf("PE GP: Handling neighbour data round=%u length=%u\n", round_count, length);
-	// Use a map based on round_count, map contains a unique array list of all the neighbour pairs
-
-	// Check if round is in map already, if not create new unique array list
-
-	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
-
-	// Not saved before
-	if (stored == NULL)
-	{
-		stored = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
-		
-		stored->key = round_count;
-		unique_array_init(&stored->data, &rimeaddr_pair_equality, &free);
-
-		map_put(&neighbour_info, stored);
-	}
+	printf("PE GE: Handling neighbour data round=%u length=%u\n", round_count, length);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-		memcpy(p, &pairs[i], sizeof(rimeaddr_pair_t));
-		unique_array_append(&stored->data, p);
+		if (!unique_array_contains(&neighbour_info, &pairs[i]))
+		{
+			rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
+			*p = pairs[i];
+			unique_array_append(&neighbour_info, p);
+		}
 	}
 }
 
 /* Gets the neighbours of a given node */
-static void get_neighbours(rimeaddr_t const * target, unsigned int round_count, unique_array_t * output)
+static void get_neighbours(rimeaddr_t const * target, unique_array_t * output)
 {
 	if (output == NULL || target == NULL)
 	{
 		return;
 	}
 
-	// Pairs of neighbours for a given round
-	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
-	
-	// Saved before
-	if (stored == NULL) 
-	{
-		// No data, return empty array
-		return; 
-	}
-
 	// Go through each pair
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(&stored->data); 
-		unique_array_continue(&stored->data, elem); 
+	for (elem = unique_array_first(&neighbour_info); 
+		unique_array_continue(&neighbour_info, elem); 
 		elem = unique_array_next(elem))
 	{
-		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(&stored->data, elem);
+		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(&neighbour_info, elem);
 		
 		// If either match, add the other to the list
 		if (rimeaddr_cmp(&data->first, target) && !unique_array_contains(output, &data->second))
@@ -276,11 +222,11 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 			(int)msgdata[i].temp,
 			msgdata[i].humidity);
 
-		node_data_t * stored = map_get(&received_data, &msgdata[i]);
+		void * stored = map_get(&received_data, &msgdata[i]);
 
 		if (stored == NULL)
 		{
-			stored = (node_data_t *)malloc(sizeof(node_data_t));
+			stored = malloc(sizeof(node_data_t));
 			map_put(&received_data, stored);
 		}
 
@@ -318,7 +264,7 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void
 	{
 		if (!unique_array_contains(data, &msgdata[i]))
 		{
-			node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
+			void * tmp = malloc(sizeof(node_data_t));
 			memcpy(tmp, &msgdata[i], sizeof(node_data_t));
 			unique_array_append(data, tmp);
 		}
@@ -339,8 +285,8 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 	unique_array_append(data, msg);
 }
 
-//store an inbound packet to the datastructure
-//Arguments are: Connection, Packet, packet length
+// Store an inbound packet to the datastructure
+// Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
 	printf("PE GP: Store Packet - length=%u\n", length);
@@ -353,7 +299,8 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 
 	unique_array_init(&conn_data->list, &rimeaddr_equality, &free);
 	
-	// Get the pointer after the message
+	tree_aggregate_update(conn, conn_data, packet, length);
+	/*// Get the pointer after the message
 	node_data_t const * msgdata = (node_data_t const *)(msg + 1);
 	
 	unsigned int i;
@@ -362,7 +309,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
 		memcpy(tmp, &msgdata[i], sizeof(node_data_t));
 		unique_array_append(&conn_data->list, tmp);
-	}
+	}*/
 }
 
 // Write the data structure to the outbout packet buffer
@@ -396,7 +343,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 		unique_array_continue(&conn_data->list, elem);
 		elem = unique_array_next(elem))
 	{
-		node_data_t * original = (node_data_t *)unique_array_data(&conn_data->list, elem);
+		void * original = unique_array_data(&conn_data->list, elem);
 		memcpy(&msgdata[i], original, sizeof(node_data_t));
 
 		++i;
@@ -414,6 +361,8 @@ static const tree_agg_callbacks_t callbacks = {
 
 static neighbour_agg_conn_t nconn;
 static const neighbour_agg_callbacks_t neighbour_callbacks = {&handle_neighbour_data};
+
+static predicate_manager_conn_t predconn;
 static struct ctimer ct_data_eval;
 
 PROCESS_THREAD(data_gather, ev, data)
@@ -448,7 +397,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	// Setup the map
-	map_init(&neighbour_info, &neighbour_map_key_compare, &neighbour_map_elem_free);
+	unique_array_init(&neighbour_info, &rimeaddr_pair_equality, &free);
 
 	printf("PE GP: Starting Neighbour Aggregation\n");
 
@@ -535,7 +484,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 			msg->length = 1;
 
 			// Get the pointer after the message that will contain the nodes data
-			node_data_t * msgdata = (node_data_t *)(msg + 1);
+			void * msgdata = (void *)(msg + 1);
 			our_node_data(msgdata);
 
 			tree_agg_send(&aggconn, msg, data_length);
@@ -621,9 +570,6 @@ static void data_evaluation(void * ptr)
 	    unique_array_t acquired_nodes;
 	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
 
-	    unique_array_t neighbours;
-		unique_array_init(&neighbours, &rimeaddr_equality, &free);
-
 	    // Get the data for each hop level
 		uint8_t hops;
 		for (hops = 1; hops <= max_hops; ++hops)
@@ -637,42 +583,50 @@ static void data_evaluation(void * ptr)
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
 				printf("PE GP: Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
-				// Get the neighbours of the node
-				get_neighbours(t, pred_round_count, &neighbours);
-				printf("PE GP: Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
-
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbours_elem;
-				for (neighbours_elem = unique_array_first(&neighbours); 
-					unique_array_continue(&neighbours, neighbours_elem); 
+				for (neighbours_elem = unique_array_first(&neighbour_info); 
+					unique_array_continue(&neighbour_info, neighbours_elem); 
 					neighbours_elem = unique_array_next(neighbours_elem))
 				{
 					// The neighbour found
-					rimeaddr_t * neighbour = unique_array_data(&neighbours, neighbours_elem);
+					rimeaddr_pair_t * neighbours = unique_array_data(&neighbour_info, neighbours_elem);
 
-					printf("PE GP: Eval: Checking neighbour %s\n", addr2str(neighbour));
+					rimeaddr_t * neighbour = NULL;
 
-					// If the neighbour hasn't been seen before
-					if (!unique_array_contains(&seen_nodes, neighbour)) 
+					if (rimeaddr_cmp(&neighbours->first, t))
 					{
-						node_data_t * nd = (node_data_t *)map_get(&received_data, neighbour);
+						neighbour = &neighbours->second;
+					}
 
-						if (nd == NULL)
-						{
-							printf("PE GE: ERROR: received no info on %s\n", addr2str(neighbour));
-						}
-						else
-						{
-							// Add the node to the target nodes for the next round
-							unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
+					if (rimeaddr_cmp(&neighbours->second, t))
+					{
+						neighbour = &neighbours->first;
+					}
 
-							hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
+					if (neighbour != NULL)
+					{
+						printf("PE GP: Eval: Checking neighbour %s\n", addr2str(neighbour));
+
+						// If the neighbour hasn't been seen before
+						if (!unique_array_contains(&seen_nodes, neighbour)) 
+						{
+							void * nd = map_get(&received_data, neighbour);
+
+							if (nd == NULL)
+							{
+								printf("PE GE: ERROR: received no info on %s\n", addr2str(neighbour));
+							}
+							else
+							{
+								// Add the node to the target nodes for the next round
+								unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
+
+								hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
+							}
 						}
 					}
 				}
-
-				// Empty neighbours array
-				unique_array_clear(&neighbours);
 			}
 
 			// Been through targets add them to the seen nodes
@@ -736,12 +690,11 @@ static void data_evaluation(void * ptr)
 		unique_array_free(&target_nodes);
 		unique_array_free(&seen_nodes);
 		unique_array_free(&acquired_nodes);
-		unique_array_free(&neighbours);
 	}
 
 	// Empty details received and let the next round fill them up
 	map_clear(&received_data);
-	map_clear(&neighbour_info);
+	unique_array_clear(&neighbour_info);
 
 	printf("PE GP: Round: finishing=%u\n", pred_round_count);
 	

@@ -14,6 +14,12 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+#ifdef TREE_AGG_DEBUG
+#	define TADPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define TADPRINTF(...)
+#endif
+
 
 static inline tree_agg_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
 {
@@ -26,29 +32,16 @@ static inline tree_agg_conn_t * conncvt_multipacket(struct multipacket_conn * co
 		(((char *)conn) - sizeof(struct stbroadcast_conn));
 }
 
-bool tree_agg_is_sink(tree_agg_conn_t const * conn)
-{
-	return conn != NULL &&
-		rimeaddr_cmp(&conn->sink, &rimeaddr_node_addr);
-}
-
 
 // The amount of subborn broadcasts to allow time for
-static const unsigned int STUBBORN_WAIT_COUNT = 5;
+#define STUBBORN_WAIT_COUNT 5u
 
 // Time to gather aggregations over
-static const clock_time_t AGGREGATION_WAIT = 45 * CLOCK_SECOND;
+#define AGGREGATION_WAIT (clock_time_t)(45 * CLOCK_SECOND)
 
 // Time to wait to detect parents
-static const clock_time_t PARENT_DETECT_WAIT = 35 * CLOCK_SECOND;
+#define PARENT_DETECT_WAIT (clock_time_t)(35 * CLOCK_SECOND)
 
-
-static void stbroadcast_cancel_void(void * ptr)
-{
-	stbroadcast_cancel((struct stbroadcast_conn *)ptr);
-
-	printf("Tree Agg: Stubborn bcast canceled\n");
-}
 
 static void stbroadcast_cancel_void_and_callback(void * ptr)
 {
@@ -59,7 +52,7 @@ static void stbroadcast_cancel_void_and_callback(void * ptr)
 	printf("Tree Agg: Stubborn bcast canceled, setup complete\n");
 
 	// Start the data generation process
-	(*conn->callbacks.setup_complete)(conn);
+	(*conn->callbacks->setup_complete)(conn);
 }
 
 typedef struct
@@ -75,7 +68,7 @@ static void parent_detect_finished(void * ptr)
 {
 	tree_agg_conn_t * conn = (tree_agg_conn_t *)ptr;
 
-	printf("Tree Agg: Timer on %s expired\n",
+	TADPRINTF("Tree Agg: Timer on %s expired\n",
 		addr2str(&rimeaddr_node_addr));
 
 	printf("Tree Agg: Found Parent:%s Hop:%u\n",
@@ -85,9 +78,7 @@ static void parent_detect_finished(void * ptr)
 	// of this node.
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-	debug_packet_size(sizeof(setup_tree_msg_t));
 	setup_tree_msg_t * msg = (setup_tree_msg_t *)packetbuf_dataptr();
-	memset(msg, 0, sizeof(setup_tree_msg_t));
 
 	// We set the parent of this node to be the best
 	// parent we heard
@@ -124,13 +115,13 @@ static void finish_aggregate_collect(void * ptr)
 {
 	tree_agg_conn_t * conn = (tree_agg_conn_t *)ptr;
 
-	(*conn->callbacks.aggregate_own)(conn, conn->data);
+	(*conn->callbacks->aggregate_own)(conn, conn->data);
 
 	void * data;
 	size_t length;
 
 	// Copy aggregation data into the packet
-	(*conn->callbacks.write_data_to_packet)(conn, &data, &length);
+	(*conn->callbacks->write_data_to_packet)(conn, &data, &length);
 
 	multipacket_send(&conn->mc, &conn->best_parent, data, length);
 
@@ -158,17 +149,17 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 			addr2str(originator), length);
 
 		// We need to apply the sink's data to the received data
-		(*conn->callbacks.store_packet)(conn, msg, length);
-		(*conn->callbacks.aggregate_own)(conn, conn->data);
+		(*conn->callbacks->store_packet)(conn, msg, length);
+		(*conn->callbacks->aggregate_own)(conn, conn->data);
 
 		void * data;
 		size_t data_length;
 
 		// Copy aggregation data into the packet
-		(*conn->callbacks.write_data_to_packet)(conn, &data, &data_length);
+		(*conn->callbacks->write_data_to_packet)(conn, &data, &data_length);
 
 		// Pass this messge up to the user
-		(*conn->callbacks.recv)(conn, originator, data, data_length);
+		(*conn->callbacks->recv)(conn, originator, data, data_length);
 
 		// Free the allocated data
 		free(data);
@@ -180,7 +171,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 		{
 			printf("Tree Agg: Cont Agg With: %s of length %u\n", addr2str(originator), length);
 
-			(*conn->callbacks.aggregate_update)(conn, conn->data, msg, length);
+			(*conn->callbacks->aggregate_update)(conn, conn->data, msg, length);
 		}
 		else
 		{
@@ -188,7 +179,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 
 			// We need to copy the users data into our memory,
 			// So we can apply future aggregtions to it.
-			(*conn->callbacks.store_packet)(conn, msg, length);
+			(*conn->callbacks->store_packet)(conn, msg, length);
 
 			// We have started collection
 			conn->is_collecting = true;
@@ -220,7 +211,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	// it doesn't need a parent as it is the root.
 	if (tree_agg_is_sink(conn))
 	{
-		printf("Tree Agg: We are the sink node, so should not listen for parents.\n");
+		TADPRINTF("Tree Agg: We are the sink node, so should not listen for parents.\n");
 		return;
 	}
 
@@ -237,7 +228,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 		// done detecting parents.
 		ctimer_set(&conn->ctrecv, PARENT_DETECT_WAIT, &parent_detect_finished, conn);
 
-		printf("Tree Agg: Not seen setup message before, so setting timer...\n");
+		TADPRINTF("Tree Agg: Not seen setup message before, so setting timer...\n");
 	}
 
 	// As we have received a message we need to record the node
@@ -281,11 +272,8 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	}
 }
 
-static void sent_stbroadcast(struct stbroadcast_conn * c) { }
-
-
 static const struct stbroadcast_callbacks callbacks_setup =
-	{ &recv_setup, &sent_stbroadcast };
+	{ &recv_setup, NULL };
 
 static const struct multipacket_callbacks callbacks_aggregate =
 	{ &recv_aggregate, &multipacket_sent };
@@ -301,9 +289,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	// aggregation tree
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
-	debug_packet_size(sizeof(setup_tree_msg_t));
 	setup_tree_msg_t * msg = (setup_tree_msg_t *)packetbuf_dataptr();
-	memset(msg, 0, sizeof(setup_tree_msg_t));
 
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->parent, &rimeaddr_null);
@@ -318,7 +304,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	stbroadcast_send_stubborn(&conn->bc, send_period);
 
 	// Wait for a bit to allow a few messages to be sent
-	ctimer_set(&conn->ct_wait_finished, wait_period, &stbroadcast_cancel_void, conn);
+	ctimer_set(&conn->ct_open_or_wait, wait_period, &stbroadcast_cancel, &conn->bc);
 }
  
 
@@ -351,34 +337,35 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		// Make sure memory allocation was successful
 		if (conn->data == NULL)
 		{
-			printf("Tree Agg: Starting Failed: Memory allocation!\n");
+			TADPRINTF("Tree Agg: Starting Failed: Memory allocation!\n");
 			return false;
 		}
 
 		conn->data_length = data_size;
 
-		memcpy(&conn->callbacks, callbacks, sizeof(tree_agg_callbacks_t));
+		conn->callbacks = callbacks;
 
 		if (tree_agg_is_sink(conn))
 		{
-			printf("Tree Agg: Starting aggregation tree setup...\n");
+			TADPRINTF("Tree Agg: Starting aggregation tree setup...\n");
 
 			// Wait a bit to allow processes to start up
-			ctimer_set(&conn->ct_open, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
+			ctimer_set(&conn->ct_open_or_wait, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
 		}
 
-		printf("Tree Agg: Starting Succeeded!\n");
+		TADPRINTF("Tree Agg: Starting Succeeded!\n");
 
 		return true;
 	}
 	
-	printf("Tree Agg: Starting Failed: Parameters Invalid!\n");
+	TADPRINTF("Tree Agg: Starting Failed: Parameters Invalid!\n");
+
 	return false;
 }
 
 void tree_agg_close(tree_agg_conn_t * conn)
 {
-	printf("Tree Agg: Closing connection.\n");
+	TADPRINTF("Tree Agg: Closing connection.\n");
 
 	if (conn != NULL)
 	{
@@ -394,8 +381,7 @@ void tree_agg_close(tree_agg_conn_t * conn)
 		ctimer_stop(&conn->ctrecv);
 		ctimer_stop(&conn->aggregate_ct);
 		ctimer_stop(&conn->ct_parent_detect);
-		ctimer_stop(&conn->ct_open);
-		ctimer_stop(&conn->ct_wait_finished);
+		ctimer_stop(&conn->ct_open_or_wait);
 	}
 }
 
@@ -408,12 +394,3 @@ void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length)
 	}
 }
 
-bool tree_agg_is_leaf(tree_agg_conn_t const * conn)
-{
-	return conn != NULL && conn->is_leaf_node;
-}
-
-bool tree_agg_is_collecting(tree_agg_conn_t const * conn)
-{
-	return conn != NULL && conn->is_collecting;
-}

@@ -17,7 +17,11 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
-#undef NDEBUG
+#ifdef NHOPREQ_DEBUG
+#	define NHRDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define NHRDPRINTF(...)
+#endif
 
 #ifndef STBROADCAST_ATTRIBUTES
 #	define STBROADCAST_ATTRIBUTES BROADCAST_ATTRIBUTES
@@ -121,7 +125,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 {
 	nhopreq_conn_t * conn = conncvt_datareq_bcast(c);
 
-#ifndef NDEBUG
+#ifdef NHRDPRINTF
 	if (packetbuf_datalen() != sizeof(request_data_msg_t))
 	{
 		printf("nhopreq: Packet length not as expected\n");
@@ -182,7 +186,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 		// This is a newer message, so we need to respond to it.
 		if (message_id > record->id)
 		{
-			printf("nhopreq: Seen a newer message from %s (%u), so we will need to repond with our data.\n",
+			printf("nhopreq: Seen a newer message from %s (%u), so we will need to respond with our data.\n",
 				addr2str(&originator), message_id);
 
 			record->id = message_id;
@@ -217,19 +221,6 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	}
 }
 
-static void datareq_stbroadcast_sent(struct stbroadcast_conn *c)
-{
-	//printf("I've sent!\n");
-}
-
-static void datareq_stbroadcast_callback_cancel(void * ptr)
-{
-	nhopreq_conn_t * conn = (nhopreq_conn_t *)ptr;
-
-	printf("nhopreq: Canceling Stubborn Broadcast.\n");
-	stbroadcast_cancel(&conn->bc);
-}
-
 // TODO: need to collate responses, then send the on,
 // right now messages collide while a node is trying to forward
 // RELIABLE UNICAST
@@ -249,10 +240,6 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	rimeaddr_copy(&target, packetbuf_addr(PACKETBUF_ADDR_ERECEIVER));
 	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS) + 1;
 
-	//printf("nhopreq: runicast received from %s of length %u, ",
-	//	addr2str(from), packetbuf_datalen());
-	//printf("ESender=%s ", addr2str(&sender));
-	//printf("ETarget=%s, traveled=%u\n", addr2str(&target), hops);
 
 	void * msgdata = tmpBuffer;
 	
@@ -277,11 +264,6 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	}
 }
 
-static void runicast_sent(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
-{
-	//printf("runicast sent\n");
-}
-
 static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
 	printf("nhopreq: Runicast timed out to:%s retransmissions:%u\n", addr2str(to), retransmissions);
@@ -290,21 +272,19 @@ static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, u
 
 // Callbacks
 static const struct runicast_callbacks runicastCallbacks =
-	{ &runicast_recv, &runicast_sent, &runicast_timedout };
+	{ &runicast_recv, NULL, &runicast_timedout };
 
 static const struct stbroadcast_callbacks datareq_stbroadcastCallbacks =
-	{ &datareq_stbroadcast_recv, &datareq_stbroadcast_sent };
+	{ &datareq_stbroadcast_recv, NULL };
 
 
 // Methods
 static void delayed_reply_data(void * ptr)
 {
-	printf("Starting delayed send of node data\n");
-
 	delayed_reply_data_params_t * p =
 		(delayed_reply_data_params_t *)ptr;
 
-	printf("nhopreq: Forwarding message to %s\n", addr2str(&p->target));
+	printf("nhopreq: Starting delayed send of node data to %s\n", addr2str(&p->target));
 
 	send_reply(
 		p->conn,
@@ -417,9 +397,7 @@ static bool send_n_hop_data_request(
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(request_data_msg_t));
-	debug_packet_size(sizeof(request_data_msg_t));
 	request_data_msg_t * msg = (request_data_msg_t *)packetbuf_dataptr();
-	memset(msg, 0, sizeof(request_data_msg_t));
 
 	packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, originator);
 	packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &rimeaddr_node_addr);
@@ -438,7 +416,7 @@ static bool send_n_hop_data_request(
 
 	stbroadcast_send_stubborn(&conn->bc, random_send_time);
 
-	ctimer_set(&conn->datareq_stbroadcast_stop_timer, send_limit, &datareq_stbroadcast_callback_cancel, conn);
+	ctimer_set(&conn->datareq_stbroadcast_stop_timer, send_limit, &stbroadcast_cancel, &conn->bc);
 
 	return true;
 }
@@ -453,7 +431,6 @@ bool nhopreq_start(
 		data_fn == NULL || ch1 == ch2 || data_size == 0 ||
 		receive_fn == NULL)
 	{
-		printf("nhopreq: start failed!\n");
 		return false;
 	}
 

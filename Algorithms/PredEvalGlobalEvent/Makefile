@@ -1,6 +1,8 @@
 CONTIKI_PROJECT = pred-eval
 all: $(CONTIKI_PROJECT)
 
+CONTIKI = $(CS407DIR)/contiki
+
 PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers \
 $(CS407DIR)/Algorithms/Common/net $(CS407DIR)/PredicateLanguage \
 $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourAggregate \
@@ -17,16 +19,19 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code -Wmissing-field-initializers \
 -Wno-int-to-pointer-cast -Winit-self -Wstrict-aliasing -Wno-unused-parameter \
 -Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration \
--Wunused -Wno-unused-value -Wreturn-type
+-Wunused -Wno-unused-value -Wreturn-type -Winline
 
 CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
 
 #CFLAGS += -DNDEBUG
 CFLAGS += -DNDEBUGVM
 
+#CFLAGS += -Wl,-static -fvtable-gc -fdata-sections -ffunction-sections -Wl,-s
+#LDFLAGS += -Wl,-static -fvtable-gc -fdata-sections -ffunction-sections -Wl,-s
+
 # Disable uip
 #CONTIKI_NO_NET=1
 
-CONTIKI = $(CS407DIR)/contiki
-include $(CONTIKI)/Makefile.include
+CFLAGS += -DPROCESS_CONF_NO_PROCESS_NAMES=1
 
+include $(CONTIKI)/Makefile.include

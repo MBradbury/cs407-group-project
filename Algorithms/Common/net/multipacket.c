@@ -7,6 +7,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef MULTIPACKET_DEBUG
+#	define MPDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define MPDPRINTF(...)
+#endif
+
 // From: http://stackoverflow.com/questions/3437404/min-and-max-in-c
 #define min(a, b) \
    ({ __typeof__ (a) _a = (a); \
@@ -128,10 +134,8 @@ static void send_loop_callback(void * ptr)
 
 		packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->source);
 
-#ifdef MPDEBUG
-		printf("multipacket: Sending a packet of sublength:%d/%d to %s with id %d and seqno %d\n",
+		MPDPRINTF("multipacket: Sending a packet of sublength:%d/%d to %s with id %d and seqno %d\n",
 			to_send, details->length, addr2str(&details->target), details->id, details->seqno);
-#endif
 		
 		runicast_send(&conn->rc, &details->target, MAX_REXMITS);
 
@@ -142,10 +146,8 @@ static void send_loop_callback(void * ptr)
 		// Check to see if we have finished sending
 		if (details->sent == details->length)
 		{
-#ifdef MPDEBUG
-			printf("multipacket: Finished sending a packet of length:%d to %s with id %d\n",
+			MPDPRINTF("multipacket: Finished sending a packet of length:%d to %s with id %d\n",
 				details->length, addr2str(&details->target), details->id);
-#endif
 
 			conn->callbacks->sent(conn, &details->target, details->data, details->length);
 
@@ -186,10 +188,8 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 		if (seq == 0)
 		{
 			// We have not received this message before!
-#ifdef MPDEBUG
-			printf("multipacket: Recv'd a new packet from %s with id %d and length %d/%d\n",
+			MPDPRINTF("multipacket: Recv'd a new packet from %s with id %d and length %d/%d\n",
 				addr2str(from), packet_id, recv_length, data_length);
-#endif
 
 			// OPTIMISATION: avoid allocating memory when we will free it shortly
 			// this is the case when we have an entire message in a single packet
@@ -219,10 +219,8 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 		// Check that this is the next packet that we want
 		if (seq == details->last_seqno + 1)
 		{
-#ifdef MPDEBUG
-			printf("multipacket: Recv'd a new part of a packet from %s with id %d seqno:%d and length %d/%d\n",
+			MPDPRINTF("multipacket: Recv'd a new part of a packet from %s with id %d seqno:%d and length %d/%d\n",
 				addr2str(from), packet_id, seq, recv_length, details->length);
-#endif
 
 			void * data_ptr = (char *)(details->data) + details->data_received;
 
@@ -246,10 +244,8 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	// Check to see if we have fully received this packet
 	if (data_to_pass_onwards != NULL)
 	{
-#ifdef MPDEBUG
-		printf("multipacket: delivering packet from %s with id %d and length %d\n",
+		MPDPRINTF("multipacket: delivering packet from %s with id %d and length %d\n",
 			addr2str(from), packet_id, length_of_data_to_pass_onwards);
-#endif
 
 		conn->callbacks->recv(conn, source, data_to_pass_onwards, length_of_data_to_pass_onwards);
 
@@ -261,18 +257,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	}
 }
 
-static void sent_by_runicast(struct runicast_conn * rc, rimeaddr_t const * to, uint8_t retransmissions)
-{
-}
-
-static void runicast_timedout(struct runicast_conn * rc, rimeaddr_t const * to, uint8_t retransmissions)
-{
-#ifdef MPDEBUG
-	printf("multipacket: runicast time'd out sending to %s\n", addr2str(to));
-#endif
-}
-
-static const struct runicast_callbacks rccallbacks = {&recv_from_runicast, &sent_by_runicast, &runicast_timedout};
+static const struct runicast_callbacks rccallbacks = {&recv_from_runicast, NULL, NULL};
 
 bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_callbacks_t const * callbacks)
 {
@@ -325,8 +310,6 @@ void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void
 	// Add to the queue to send
 	linked_list_append(&conn->sending_packets, details);
 
-#ifdef MPDEBUG
-	printf("multipacket: Adding data of length %d to send to %s with id %d. %u packets queued.\n",
+	MPDPRINTF("multipacket: Adding data of length %d to send to %s with id %d. %u packets queued.\n",
 		length, addr2str(target), details->id, linked_list_length(&conn->sending_packets));
-#endif
 }

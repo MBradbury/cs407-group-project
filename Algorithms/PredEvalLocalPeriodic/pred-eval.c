@@ -89,21 +89,8 @@ static void receieved_data(rimeaddr_t const * from, uint8_t hops, void const * d
 {
 	node_data_t const * nd = (node_data_t const *)data;
 
-	char from_str[RIMEADDR_STRING_LENGTH];
-	char addr_str[RIMEADDR_STRING_LENGTH];
-
-	printf("PE LP: Obtained information from %s (%s) hops:%u, T:%d H:%d%%\n",
-		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
-		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
-		hops,
-		(int)nd->temp, (int)nd->humidity);
-
-	/*printf("PE LP: Obtained information from %s (%s) hops:%u, T:%d H:%d%% L1:%d L2:%d\n",
-		addr2str_r(from, from_str, RIMEADDR_STRING_LENGTH),
-		addr2str_r(&nd->addr, addr_str, RIMEADDR_STRING_LENGTH),
-		hops,
-		(int)nd->temp, (int)nd->humidity,
-		(int)nd->light1, (int)nd->light2);*/
+	printf("PE LP: Obtained information from %s hops:%u, T:%d H:%d%%\n",
+		addr2str(&nd->addr), hops, (int)nd->temp, (int)nd->humidity);
 
 	hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
 }

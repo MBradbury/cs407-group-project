@@ -147,7 +147,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		conn->receive_fn(
 			conn,
 			originator, 
-			packetbuf_attr(PACKETBUF_ATTR_HOPS),
+			hops,
 			last->hops
 		);
 
@@ -161,7 +161,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 
 			if (rimeaddr_cmp(&data->sender, originator) && data->id == last->id)
 			{
-				uint8_t hops_diff = data->hops - hops;
+				const uint8_t hops_diff = data->hops - hops;
 
 				// Update the hops
 				data->hops = hops;

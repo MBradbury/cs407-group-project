@@ -12,22 +12,6 @@ bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_clea
 	return unique_array_init(map, key_equality, cleanup);
 }
 
-bool map_free(map_t * map)
-{
-	return unique_array_free(map);
-}
-
-// Add / Remove items from list
-bool map_put(map_t * map, void * keyanddata)
-{
-	return unique_array_append(map, keyanddata);
-}
-
-bool map_clear(map_t * map)
-{
-	return unique_array_clear(map);
-}
-
 bool map_remove(map_t * map, void const * key)
 {
 	if (map == NULL || key == NULL)
@@ -70,32 +54,4 @@ void * map_get(map_t const * map, void const * key)
 
 	return NULL;
 }
-
-// Get list length
-unsigned int map_length(map_t const * map)
-{
-	return unique_array_length(map);
-}
-
-// List iteration 
-map_elem_t map_first(map_t const * map)
-{
-	return unique_array_first(map);
-}
-
-map_elem_t map_next(unique_array_elem_t elem)
-{
-	return unique_array_next(elem);
-}
-
-bool map_continue(map_t const * map, map_elem_t elem)
-{
-	return unique_array_continue(map, elem);
-}
-
-void * map_data(map_t const * map, map_elem_t elem)
-{
-	return unique_array_data(map, elem);
-}
-
 

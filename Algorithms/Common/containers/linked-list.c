@@ -165,30 +165,3 @@ unsigned int linked_list_length(linked_list_t const * list)
 
 	return length;
 }
-
-bool linked_list_is_empty(linked_list_t const * list)
-{
-	return list != NULL && list->head == NULL;
-}
-
-
-linked_list_elem_t linked_list_first(linked_list_t const * list)
-{
-	return list == NULL ? NULL : list->head;
-}
-
-linked_list_elem_t linked_list_next(linked_list_elem_t elem)
-{
-	return elem == NULL ? NULL : elem->next;
-}
-
-bool linked_list_continue(linked_list_t const * list, linked_list_elem_t elem)
-{
-	return elem != NULL;
-}
-
-void * linked_list_data(linked_list_t const * list, linked_list_elem_t elem)
-{
-	return elem == NULL ? NULL : elem->data;
-}
-

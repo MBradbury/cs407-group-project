@@ -37,19 +37,14 @@
 
 static void data_evaluation(void * ptr);
 
-static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
-static const clock_time_t INITIAL_ROUND_LENGTH = 7 * 60 * CLOCK_SECOND;
+#define ROUND_LENGTH (clock_time_t)(5 * 60 * CLOCK_SECOND)
+#define INITIAL_ROUND_LENGTH (clock_time_t)(7 * 60 * CLOCK_SECOND)
 
-// Map containing neighbour_map_elem_t
-static map_t neighbour_info;
+// Map containing rimeaddr_pair_t
+static unique_array_t neighbour_info;
 
 // Map containing node_data_t
 static map_t received_data;
-
-// List of predicate_detail_entry_t
-static array_list_t predicates;
-
-static hop_data_t hop_data;
 
 // Used for simulating evaluating a predicate on a node
 static rimeaddr_t pred_simulated_node;
@@ -79,22 +74,6 @@ typedef struct
 	//nint light1;
 	//nint light2;
 } node_data_t;
-
-typedef struct
-{
-	unsigned int key;
-
-	// List of rimeaddr_t
-	unique_array_t data;
-} neighbour_map_elem_t;
-
-static void neighbour_map_elem_free(void * ptr)
-{
-	neighbour_map_elem_t * item = (neighbour_map_elem_t *)ptr;
-
-	unique_array_free(&item->data);
-	free(item);
-}
 
 
 ///
@@ -158,93 +137,21 @@ static void node_data(void * data)
 /// End VM Helper Functions
 ///
 
-static void predicate_detail_entry_cleanup(void * item)
-{
-	predicate_detail_entry_t * entry = (predicate_detail_entry_t *)item;
-
-	free(entry->variables_details);
-	free(entry->bytecode);
-	free(entry);
-}
-
-static bool neighbour_map_key_compare(void const * x, void const * y)
-{
-	if (x == NULL || y == NULL)
-		return false;
-
-	unsigned int const * a = (unsigned int const *)x;
-	unsigned int const * b = (unsigned int const *)y;
-
-	return *a == *b;
-}
-
 
 //TODO: add clearing of previous neighbour information
 /* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
 	printf("PE GE: Handling neighbour data round=%u length=%u\n", round_count, length);
-	// Use a map based on round_count, map contains a unique array list of all the neighbour pairs
-
-	// Check if round is in map already, if not create new unique array list
-
-	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
-
-	// Not saved before
-	if (stored == NULL)
-	{
-		stored = (neighbour_map_elem_t *)malloc(sizeof(neighbour_map_elem_t));
-		
-		stored->key = round_count;
-		unique_array_init(&stored->data, &rimeaddr_pair_equality, &free);
-
-		map_put(&neighbour_info, stored);
-	}
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-		memcpy(p, &pairs[i], sizeof(rimeaddr_pair_t));
-		unique_array_append(&stored->data, p);
-	}
-}
-
-/* Gets the neighbours of a given node */
-static void get_neighbours(rimeaddr_t const * target, unsigned int round_count, unique_array_t * output)
-{
-	if (output == NULL || target == NULL)
-	{
-		return;
-	}
-
-	// Pairs of neighbours for a given round
-	neighbour_map_elem_t * stored = map_get(&neighbour_info, &round_count);
-	
-	// Saved before
-	if (stored == NULL) 
-	{
-		// No data, return empty array
-		return; 
-	}
-
-	// Go through each pair
-	unique_array_elem_t elem;
-	for (elem = unique_array_first(&stored->data); 
-		unique_array_continue(&stored->data, elem); 
-		elem = unique_array_next(elem))
-	{
-		rimeaddr_pair_t * data = (rimeaddr_pair_t *)unique_array_data(&stored->data, elem);
-		
-		// If either match, add the other to the list
-		if (rimeaddr_cmp(&data->first, target) && !unique_array_contains(output, &data->second))
+		if (!unique_array_contains(&neighbour_info, &pairs[i]))
 		{
-			unique_array_append(output, rimeaddr_clone(&data->second));
-		}
-
-		if (rimeaddr_cmp(&data->second, target) && !unique_array_contains(output, &data->first))
-		{
-			unique_array_append(output, rimeaddr_clone(&data->first));
+			rimeaddr_pair_t * p = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
+			*p = pairs[i];
+			unique_array_append(&neighbour_info, p);
 		}
 	}
 }
@@ -276,11 +183,11 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 			(int)msgdata[i].temp,
 			msgdata[i].humidity);
 
-		node_data_t * stored = map_get(&received_data, &msgdata[i]);
+		void * stored = map_get(&received_data, &msgdata[i]);
 
 		if (stored == NULL)
 		{
-			stored = (node_data_t *)malloc(sizeof(node_data_t));
+			stored = malloc(sizeof(node_data_t));
 			map_put(&received_data, stored);
 		}
 
@@ -318,7 +225,7 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void
 	{
 		if (!unique_array_contains(data, &msgdata[i]))
 		{
-			node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
+			void * tmp = malloc(sizeof(node_data_t));
 			memcpy(tmp, &msgdata[i], sizeof(node_data_t));
 			unique_array_append(data, tmp);
 		}
@@ -339,11 +246,11 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 	unique_array_append(data, msg);
 }
 
-//store an inbound packet to the datastructure
-//Arguments are: Connection, Packet, packet length
+// Store an inbound packet to the datastructure
+// Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
-	printf("PE GE: Store Packet - length=%u\n", length);
+	printf("PE GE: Store Packet length=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -352,26 +259,19 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 	conn_data->round_count = msg->round_count;
 
 	unique_array_init(&conn_data->list, &rimeaddr_equality, &free);
-	
-	// Get the pointer after the message
-	node_data_t const * msgdata = (node_data_t const *)(msg + 1);
-	
-	unsigned int i;
-	for (i = 0; i < msg->length; ++i)
-	{
-		node_data_t * tmp = (node_data_t *)malloc(sizeof(node_data_t));
-		memcpy(tmp, &msgdata[i], sizeof(node_data_t));
-		unique_array_append(&conn_data->list, tmp);
-	}
+
+	// TODO: review this change
+	tree_aggregate_update(conn, conn_data, packet, length);
 }
 
 // Write the data structure to the outbout packet buffer
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, size_t * packet_length)
 {
 	printf("PE GE: Writing data to packet\n"); 
-	//take all data, write a struct to the buffer at the start, 
-	//containing the length of the packet (as the number of node_data_t)
-	//write the each one to memory
+
+	// Take all data, write a struct to the buffer at the start, 
+	// containing the length of the packet (as the number of node_data_t)
+	// write the each one to memory
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 
 	aggregation_data_t * conn_data = (aggregation_data_t *)conn->data;
@@ -405,6 +305,20 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	unique_array_free(&conn_data->list);
 }
 
+
+static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+{
+	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
+
+	printf("PE LE: Response received from %s, %u, %u hops away. ",
+		addr2str(from), packetbuf_datalen(), hops);
+
+	printf("Failed predicate %u.\n", response->predicate_id);
+}
+
+static const predicate_manager_callbacks_t pm_callbacks = { NULL, &pm_predicate_failed };
+
+
 static tree_agg_conn_t aggconn;
 static const tree_agg_callbacks_t callbacks = {
 	&tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update,
@@ -413,13 +327,39 @@ static const tree_agg_callbacks_t callbacks = {
 
 static neighbour_agg_conn_t nconn;
 static const neighbour_agg_callbacks_t neighbour_callbacks = {&handle_neighbour_data};
-static struct ctimer ct_data_eval;
+
+static predicate_manager_conn_t predconn;
+
+#define TRICKLE_INTERVAL (clock_time_t)(2 * CLOCK_SECOND)
+
+static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
+{
+	if (destination == NULL)
+		return false;
+
+	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
+	
+	static var_elem_t var_details[2];
+	var_details[0].hops = 2;
+	var_details[0].var_id = 255;
+	var_details[1].hops = 1;
+	var_details[1].var_id = 254;
+
+	const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+	const uint8_t var_details_length = 2;
+
+	return predicate_manager_create(&predconn,
+		id, destination,
+		program_bytecode, bytecode_length,
+		var_details, var_details_length);
+}
 
 PROCESS_THREAD(data_gather, ev, data)
 {
 	static rimeaddr_t sink;
 	static struct etimer et;
 
+	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 #ifdef NODE_ID
@@ -442,14 +382,16 @@ PROCESS_THREAD(data_gather, ev, data)
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
+	predicate_manager_open(&predconn, 135, 129, &sink, TRICKLE_INTERVAL, &pm_callbacks);
+
 	// Wait for some time to let process start up and perform neighbour detect
 	etimer_set(&et, 10 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	// Setup the map
-	map_init(&neighbour_info, &neighbour_map_key_compare, &neighbour_map_elem_free);
+	unique_array_init(&neighbour_info, &rimeaddr_pair_equality, &free);
 
-	printf("PE GE: Starting Neighbour Aggregation\n");
+	//printf("PE GE: Starting Neighbour Aggregation\n");
 
 	neighbour_aggregate_open(&nconn, &sink, 121, 110, 150, &neighbour_callbacks);
 
@@ -465,45 +407,33 @@ PROCESS_THREAD(data_gather, ev, data)
 
 	// If sink start the evaluation process to run in the background
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
-	{
-		// Create and save example predicates
-		array_list_init(&predicates, &predicate_detail_entry_cleanup);
-	
+	{	
 		map_init(&received_data, &rimeaddr_equality, &free);
 
-		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
-		//create the predicate
-		uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
-		uint8_t var_details = 2;
-		rimeaddr_t dest;
-		dest.u8[0] = 2;
-		dest.u8[1] = 0;
-
-		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t));
-		rimeaddr_copy(&pred->target, &dest);
-		pred->id = 1;
-		pred->bytecode_length = bytecode_length;
-		pred->variables_details_length = var_details;
-		
-		pred->variables_details = (var_elem_t *)malloc(sizeof(var_elem_t) * var_details);
-
-		pred->variables_details[0].hops = 2;
-		pred->variables_details[0].var_id = 255;
-		pred->variables_details[1].hops = 1;
-		pred->variables_details[1].var_id = 254;
-
-		pred->bytecode = (ubyte *)malloc(sizeof(ubyte) * bytecode_length);
-		memcpy(pred->bytecode, program_bytecode, sizeof(ubyte) * bytecode_length);
-
-		// Add it to the list
-		array_list_append(&predicates, pred);
+		rimeaddr_t target;
+		target.u8[0] = 5;
+		target.u8[1] = 0;
+		send_example_predicate(&target, 0);
 
 		pred_round_count = 0;
 		
 		// Start the evauluation method
-		ctimer_set(&ct_data_eval, INITIAL_ROUND_LENGTH, &data_evaluation, NULL);
+		while (true)
+		{
+			etimer_set(&et, INITIAL_ROUND_LENGTH);
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+			data_evaluation(NULL);
+		}
+
+		map_free(&received_data);
 	}
 
+exit:
+	tree_agg_close(&aggconn);
+	neighbour_aggregate_close(&nconn);
+	unique_array_free(&neighbour_info);
+	predicate_manager_close(&predconn);
 	PROCESS_END();
 }
 
@@ -594,7 +524,8 @@ exit:
 static bool evaluate_predicate(
 	ubyte const * program, unsigned int program_length,
 	node_data_t * all_neighbour_data,
-	var_elem_t const * variables, unsigned int variables_length)
+	var_elem_t const * variables, unsigned int variables_length,
+	hop_data_t * hop_data)
 {
 	// Set up the predicate language VM
 	init_pred_lang(&node_data, sizeof(node_data_t));
@@ -612,7 +543,7 @@ static bool evaluate_predicate(
 	{
 		// Get the length of this hop's data
 		// including all of the closer hop's data length
-		unsigned int length = hop_manager_length(&hop_data, &variables[i]);
+		unsigned int length = hop_manager_length(hop_data, &variables[i]);
 
 		printf("PE GE: Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
@@ -625,13 +556,12 @@ static void data_evaluation(void * ptr)
 {
 	printf("PE GE: Eval: Beginning Evaluation\n");
 
-	// For each predicate		
-	array_list_elem_t pred_elem;
-	for (pred_elem = array_list_first(&predicates); 
-		array_list_continue(&predicates, pred_elem); 
-		pred_elem = array_list_next(pred_elem))
+	map_t const * predicate_map = predicate_manager_get_map(&predconn);
+
+	map_elem_t elem;
+	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
 	{
-		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)array_list_data(&predicates, pred_elem);
+		predicate_detail_entry_t const * pred = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
 		
 		// Copy in the simulated node
 	    rimeaddr_copy(&pred_simulated_node, &pred->target);
@@ -639,6 +569,7 @@ static void data_evaluation(void * ptr)
 	    // Get the maximum number of hops needed for this predcate
 	    const uint8_t max_hops = predicate_manager_max_hop(pred);
 
+	    hop_data_t hop_data;
 		hop_manager_init(&hop_data);
 
 		// Array of nodes that have been seen and checked so far
@@ -659,9 +590,6 @@ static void data_evaluation(void * ptr)
 	    unique_array_t acquired_nodes;
 	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
 
-	    unique_array_t neighbours;
-		unique_array_init(&neighbours, &rimeaddr_equality, &free);
-
 	    // Get the data for each hop level
 		uint8_t hops;
 		for (hops = 1; hops <= max_hops; ++hops)
@@ -675,42 +603,50 @@ static void data_evaluation(void * ptr)
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
 				printf("PE GE: Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
 
-				// Get the neighbours of the node
-				get_neighbours(t, pred_round_count, &neighbours);
-				printf("PE GE: Eval: got neighbours of size: %d\n", unique_array_length(&neighbours));
-
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbours_elem;
-				for (neighbours_elem = unique_array_first(&neighbours); 
-					unique_array_continue(&neighbours, neighbours_elem); 
+				for (neighbours_elem = unique_array_first(&neighbour_info); 
+					unique_array_continue(&neighbour_info, neighbours_elem); 
 					neighbours_elem = unique_array_next(neighbours_elem))
 				{
 					// The neighbour found
-					rimeaddr_t * neighbour = unique_array_data(&neighbours, neighbours_elem);
+					rimeaddr_pair_t * neighbours = unique_array_data(&neighbour_info, neighbours_elem);
 
-					printf("PE GE: Eval: Checking neighbour %s\n", addr2str(neighbour));
+					rimeaddr_t * neighbour = NULL;
 
-					// If the neighbour hasn't been seen before
-					if (!unique_array_contains(&seen_nodes, neighbour)) 
+					if (rimeaddr_cmp(&neighbours->first, t))
 					{
-						node_data_t * nd = (node_data_t *)map_get(&received_data, neighbour);
+						neighbour = &neighbours->second;
+					}
 
-						if (nd == NULL)
-						{
-							printf("PE GE: ERROR: received no info on %s\n", addr2str(neighbour));
-						}
-						else
-						{
-							// Add the node to the target nodes for the next round
-							unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
+					if (rimeaddr_cmp(&neighbours->second, t))
+					{
+						neighbour = &neighbours->first;
+					}
 
-							hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
+					if (neighbour != NULL)
+					{
+						printf("PE GE: Eval: Checking neighbour %s\n", addr2str(neighbour));
+
+						// If the neighbour hasn't been seen before
+						if (!unique_array_contains(&seen_nodes, neighbour)) 
+						{
+							node_data_t * nd = (node_data_t *)map_get(&received_data, neighbour);
+
+							if (nd == NULL)
+							{
+								printf("PE GE: ERROR: received no info on %s\n", addr2str(neighbour));
+							}
+							else
+							{
+								// Add the node to the target nodes for the next round
+								unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
+
+								hop_manager_record(&hop_data, hops, nd, sizeof(node_data_t));
+							}
 						}
 					}
 				}
-
-				// Free the returned neighbours array
-				unique_array_clear(&neighbours);
 			}
 
 			// Been through targets add them to the seen nodes
@@ -739,10 +675,10 @@ static void data_evaluation(void * ptr)
 			{
 				map_t * hop_map = hop_manager_get(&hop_data, i);
 
-				array_list_elem_t elem;
-				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
+				array_list_elem_t aelem;
+				for (aelem = map_first(hop_map); map_continue(hop_map, aelem); aelem = map_next(aelem))
 				{
-					node_data_t * mapdata = (node_data_t *)map_data(hop_map, elem);
+					node_data_t * mapdata = (node_data_t *)map_data(hop_map, aelem);
 					memcpy(&all_neighbour_data[count], mapdata, sizeof(node_data_t));
 					++count;
 				}
@@ -754,7 +690,8 @@ static void data_evaluation(void * ptr)
 		bool evaluation_result = evaluate_predicate(
 			pred->bytecode, pred->bytecode_length,
 			all_neighbour_data,
-			pred->variables_details, pred->variables_details_length);
+			pred->variables_details, pred->variables_details_length,
+			&hop_data);
 
 		if (evaluation_result)
 		{
@@ -765,8 +702,8 @@ static void data_evaluation(void * ptr)
 			printf("PE GE: Pred: FAILED due to error: %s\n", error_message());
 		}
 
-		//predicate_manager_send_response(&predconn, &hop_data,
-		//	pred, all_neighbour_data, sizeof(node_data_t), max_size);
+		predicate_manager_send_response(&predconn, &hop_data,
+			pred, all_neighbour_data, sizeof(node_data_t), max_size);
 
 		free(all_neighbour_data);
 
@@ -774,17 +711,14 @@ static void data_evaluation(void * ptr)
 		unique_array_free(&target_nodes);
 		unique_array_free(&seen_nodes);
 		unique_array_free(&acquired_nodes);
-		unique_array_free(&neighbours);
 	}
 
 	// Empty details received and let the next round fill them up
 	// We do not clear received_data, as that is sent only when it changes
-	map_clear(&neighbour_info);
+	unique_array_clear(&neighbour_info);
 
 	printf("PE GE: Round: finishing=%u |received_data|=%u\n",
 		pred_round_count, map_length(&received_data));
 	
 	++pred_round_count;
-
-	ctimer_set(&ct_data_eval, ROUND_LENGTH, &data_evaluation, ptr);
 }

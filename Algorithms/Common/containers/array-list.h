@@ -38,13 +38,21 @@ bool array_list_clear(array_list_t * list);
 bool array_list_remove(array_list_t * list, array_list_elem_t elem);
 
 // Get list length
-unsigned int array_list_length(array_list_t const * list);
+#define array_list_length(list) \
+	((list) == NULL ? 0u : (list)->count)
 
-// List iteration 
-array_list_elem_t array_list_first(array_list_t const * list);
-array_list_elem_t array_list_next(array_list_elem_t elem);
-bool array_list_continue(array_list_t const * list, array_list_elem_t elem);
-void * array_list_data(array_list_t const * list, array_list_elem_t elem);
+// List iteration
+
+#define array_list_first(list) ((array_list_elem_t)0)
+#define array_list_next(elem) ((array_list_elem_t)(elem + 1))
+
+#define array_list_continue(list, elem) \
+	((list) != NULL && (elem) < (list)->count)
+
+
+#define array_list_data(list, elem) \
+	(((list) == NULL || (elem) >= (list)->count) \
+		? NULL : (list)->data[(elem)])
 
 // Iteration example:
 // array_list_t list;

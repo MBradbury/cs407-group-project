@@ -24,6 +24,7 @@ package predvis.hoppy;
 
 import java.io.PrintStream;
 import java.util.*;
+import java.io.*;
 
 public class Hoppy
 {
@@ -35,12 +36,27 @@ public class Hoppy
 		compile(program);
 	}
 
+    public static void run(FileInputStream in, FileOutputStream out) throws Exception
+    {
+        Hoppy parser = new Hoppy(in);
+        Program program = parser.Input();
+        compile(program, out);
+    }
+
 	private static void compile(Program program) throws Exception
 	{
 		System.out.println("//" + program.toString());
 		System.out.println("//TARGETING " + program.getPredicateTarget());
 
 		(new Compiler()).visit(program.getSyntaxTree());
+	}
+
+	private static void compile(Program program, OutputStream out) throws Exception
+	{
+		System.out.println("//" + program.toString());
+		System.out.println("//TARGETING " + program.getPredicateTarget());
+
+		(new Compiler(out)).visit(program.getSyntaxTree());
 	}
 }
 
@@ -144,11 +160,21 @@ final class Compiler implements ISyntaxTreeVisitor
 	private int arrVariableId = 255;
 
 	private boolean writtenHalt = false;
+
+    private PrintStream out = System.out;
+    
+    public Compiler()
+    {
+		// The this variable is implicitly in the scope
+		variableScope.put("this", new ArrIds(variableId++, 0));
+    }
 	
-	public Compiler()
+	public Compiler(OutputStream out)
 	{
 		// The this variable is implicitly in the scope
 		variableScope.put("this", new ArrIds(variableId++, 0));
+
+        this.out = new PrintStream(out);
 	}
 	
 	public Compiler(Compiler other)
@@ -163,42 +189,42 @@ final class Compiler implements ISyntaxTreeVisitor
 
 	private void write(String code)
 	{
-		System.out.println(code);
+		out.println(code);
 	}
 
 	private void write(String code, String label)
 	{
-		System.out.println(code + " " + label);
+		out.println(code + " " + label);
 	}
 
 	private void write(String code, int arg)
 	{
-		System.out.println(code + " " + arg);
+		out.println(code + " " + arg);
 	}
 
 	private void write(String code, int arg1, int arg2)
 	{
-		System.out.println(code + " " + arg1 + " " + arg2);
+		out.println(code + " " + arg1 + " " + arg2);
 	}
 
 	private void write(String code, int arg1, int arg2, int arg3)
 	{
-		System.out.println(code + " " + arg1 + " " + arg2 + " " + arg3);
+		out.println(code + " " + arg1 + " " + arg2 + " " + arg3);
 	}
 
 	private void write(String code, float arg)
 	{
-		System.out.println(code + " " + arg);
+		out.println(code + " " + arg);
 	}
 
 	private void label(String l)
 	{
-		System.out.print(l + ": ");
+		out.print(l + ": ");
 	}
 
 	private void comment(String c)
 	{
-		System.out.println("//" + c);
+		out.println("//" + c);
 	}
 
 

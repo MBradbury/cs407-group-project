@@ -1,6 +1,6 @@
 package predvis;
 
-import java.io.File;
+import java.io.*;
 import predvis.hoppy.Hoppy;
 
 /**
@@ -21,6 +21,8 @@ public class Predicate {
     public Predicate(String name, File scriptFile) {
         this.name = name;
         this.scriptFile = scriptFile;
+        
+        compileScript();
     }
     
     public String getName()
@@ -47,7 +49,16 @@ public class Predicate {
     }
     
     private void compileScript() {
-        //TODO: run hoppy/dragon on script, store bytecode
+        try {
+            
+            Hoppy.run(new FileInputStream(scriptFile), new FileOutputStream(scriptFile.getAbsolutePath() + ".compiled"));
+        }
+        catch (FileNotFoundException e) {
+            //TODO
+        }
+        catch (Exception e) {
+            //TODO
+        }
     }
     
     @Override

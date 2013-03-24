@@ -35,10 +35,11 @@
 #include "predicate-manager.h"
 #include "hop-data-manager.h"
 
-static void data_evaluation(void * ptr);
+static void data_evaluation(void);
 
 #define ROUND_LENGTH (clock_time_t)(5 * 60 * CLOCK_SECOND)
 #define INITIAL_ROUND_LENGTH (clock_time_t)(7 * 60 * CLOCK_SECOND)
+#define TRICKLE_INTERVAL (clock_time_t)(2 * CLOCK_SECOND)
 
 // Map containing rimeaddr_pair_t
 static unique_array_t neighbour_info;
@@ -330,8 +331,6 @@ static const neighbour_agg_callbacks_t neighbour_callbacks = {&handle_neighbour_
 
 static predicate_manager_conn_t predconn;
 
-#define TRICKLE_INTERVAL (clock_time_t)(2 * CLOCK_SECOND)
-
 static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 {
 	if (destination == NULL)
@@ -374,15 +373,17 @@ PROCESS_THREAD(data_gather, ev, data)
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 
-	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
-	{
-		printf("PE GE: We are sink node.\n");
-	}
-
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
 	predicate_manager_open(&predconn, 135, 129, &sink, TRICKLE_INTERVAL, &pm_callbacks);
+
+	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
+	{
+		printf("PE GE: We are sink node.\n");
+
+		predicate_manager_start_serial_input(&predconn);
+	}
 
 	// Wait for some time to let process start up and perform neighbour detect
 	etimer_set(&et, 10 * CLOCK_SECOND);
@@ -423,7 +424,7 @@ PROCESS_THREAD(data_gather, ev, data)
 			etimer_set(&et, INITIAL_ROUND_LENGTH);
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-			data_evaluation(NULL);
+			data_evaluation();
 		}
 
 		map_free(&received_data);
@@ -434,6 +435,7 @@ exit:
 	neighbour_aggregate_close(&nconn);
 	unique_array_free(&neighbour_info);
 	predicate_manager_close(&predconn);
+
 	PROCESS_END();
 }
 
@@ -469,7 +471,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 	static uint8_t round_count;
 	static node_data_t current_data, previous_data;
 
-	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	
 	round_count = 0;
@@ -516,8 +517,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 		++round_count;
 	}
 
-exit:
-	tree_agg_close(&aggconn);
 	PROCESS_END();
 }
 
@@ -552,7 +551,7 @@ static bool evaluate_predicate(
 	return evaluate(program, program_length);
 }
 
-static void data_evaluation(void * ptr)
+static void data_evaluation(void)
 {
 	printf("PE GE: Eval: Beginning Evaluation\n");
 

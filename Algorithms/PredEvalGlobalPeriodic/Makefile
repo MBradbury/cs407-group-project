@@ -17,7 +17,7 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code -Wmissing-field-initializers \
 -Wno-int-to-pointer-cast -Winit-self -Wstrict-aliasing -Wno-unused-parameter \
 -Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration \
--Wunused -Wno-unused-value -Wreturn-type
+-Wunused -Wno-unused-value -Wreturn-type -Winline
 
 CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
 

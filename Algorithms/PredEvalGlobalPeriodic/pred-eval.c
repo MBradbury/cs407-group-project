@@ -35,19 +35,17 @@
 #include "predicate-manager.h"
 #include "hop-data-manager.h"
 
-static void data_evaluation(void * ptr);
+static void data_evaluation(void);
 
 #define ROUND_LENGTH ((clock_time_t) 5 * 60 * CLOCK_SECOND)
 #define INITIAL_ROUND_LENGTH ((clock_time_t) 7 * 60 * CLOCK_SECOND)
+#define TRICKLE_INTERVAL (clock_time_t)(2 * CLOCK_SECOND)
 
 // Map containing rimeaddr_pair_t
 static unique_array_t neighbour_info;
 
 // Map containing node_data_t
 static map_t received_data;
-
-// List of predicate_detail_entry_t
-static array_list_t predicates;
 
 static hop_data_t hop_data;
 
@@ -353,6 +351,20 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	unique_array_free(&conn_data->list);
 }
 
+
+static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+{
+	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
+
+	printf("PE LE: Response received from %s, %u, %u hops away. ",
+		addr2str(from), packetbuf_datalen(), hops);
+
+	printf("Failed predicate %u.\n", response->predicate_id);
+}
+
+static const predicate_manager_callbacks_t pm_callbacks = { NULL, &pm_predicate_failed };
+
+
 static tree_agg_conn_t aggconn;
 static const tree_agg_callbacks_t callbacks = {
 	&tree_agg_recv, &tree_agg_setup_finished, &tree_aggregate_update,
@@ -363,7 +375,28 @@ static neighbour_agg_conn_t nconn;
 static const neighbour_agg_callbacks_t neighbour_callbacks = {&handle_neighbour_data};
 
 static predicate_manager_conn_t predconn;
-static struct ctimer ct_data_eval;
+
+static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
+{
+	if (destination == NULL)
+		return false;
+
+	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
+	
+	static var_elem_t var_details[2];
+	var_details[0].hops = 2;
+	var_details[0].var_id = 255;
+	var_details[1].hops = 1;
+	var_details[1].var_id = 254;
+
+	const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+	const uint8_t var_details_length = 2;
+
+	return predicate_manager_create(&predconn,
+		id, destination,
+		program_bytecode, bytecode_length,
+		var_details, var_details_length);
+}
 
 PROCESS_THREAD(data_gather, ev, data)
 {
@@ -384,13 +417,17 @@ PROCESS_THREAD(data_gather, ev, data)
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 
-	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
-	{
-		printf("PE GP: We are sink node.\n");
-	}
-
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
+
+	predicate_manager_open(&predconn, 135, 129, &sink, TRICKLE_INTERVAL, &pm_callbacks);
+
+	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
+	{
+		printf("PE GE: We are sink node.\n");
+
+		predicate_manager_start_serial_input(&predconn);
+	}
 
 	// Wait for some time to let process start up and perform neighbour detect
 	etimer_set(&et, 10 * CLOCK_SECOND);
@@ -415,44 +452,33 @@ PROCESS_THREAD(data_gather, ev, data)
 
 	// If sink start the evaluation process to run in the background
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
-	{
-		// Create and save example predicates
-		array_list_init(&predicates, &predicate_detail_entry_cleanup);
-	
+	{	
 		map_init(&received_data, &rimeaddr_equality, &free);
 
-		static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
-		//create the predicate
-		uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
-		uint8_t var_details = 2;
-		rimeaddr_t dest;
-		dest.u8[0] = 2;
-		dest.u8[1] = 0;
-
-		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)malloc(sizeof(predicate_detail_entry_t));
-		rimeaddr_copy(&pred->target, &dest);
-		pred->id = 1;
-		pred->bytecode_length = bytecode_length;
-		pred->variables_details_length = var_details;
-		
-		pred->variables_details = (var_elem_t *)malloc(sizeof(var_elem_t) * var_details);
-
-		pred->variables_details[0].hops = 2;
-		pred->variables_details[0].var_id = 255;
-		pred->variables_details[1].hops = 1;
-		pred->variables_details[1].var_id = 254;
-
-		pred->bytecode = (ubyte *)malloc(sizeof(ubyte) * bytecode_length);
-		memcpy(pred->bytecode, program_bytecode, sizeof(ubyte) * bytecode_length);
-
-		// Add it to the list
-		array_list_append(&predicates, pred);
+		rimeaddr_t target;
+		target.u8[0] = 5;
+		target.u8[1] = 0;
+		send_example_predicate(&target, 0);
 
 		pred_round_count = 0;
 		
 		// Start the evauluation method
-		ctimer_set(&ct_data_eval, INITIAL_ROUND_LENGTH, &data_evaluation, NULL);
+		while (true)
+		{
+			etimer_set(&et, INITIAL_ROUND_LENGTH);
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+			data_evaluation();
+		}
+
+		map_free(&received_data);
 	}
+
+exit:
+	tree_agg_close(&aggconn);
+	neighbour_aggregate_close(&nconn);
+	unique_array_free(&neighbour_info);
+	predicate_manager_close(&predconn);
 
 	PROCESS_END();
 }
@@ -462,7 +488,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 	static struct etimer et;
 	static uint8_t round_count;
 
-	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	
 	round_count = 0;
@@ -497,8 +522,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 		++round_count;
 	}
 
-exit:
-	tree_agg_close(&aggconn);
 	PROCESS_END();
 }
 
@@ -532,17 +555,16 @@ static bool evaluate_predicate(
 	return evaluate(program, program_length);
 }
 
-static void data_evaluation(void * ptr)
+static void data_evaluation(void)
 {
 	printf("PE GP: Eval: Beginning Evaluation\n");
 
-	// For each predicate		
-	array_list_elem_t pred_elem;
-	for (pred_elem = array_list_first(&predicates); 
-		array_list_continue(&predicates, pred_elem); 
-		pred_elem = array_list_next(pred_elem))
+	map_t const * predicate_map = predicate_manager_get_map(&predconn);
+
+	map_elem_t elem;
+	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
 	{
-		predicate_detail_entry_t * pred = (predicate_detail_entry_t *)array_list_data(&predicates, pred_elem);
+		predicate_detail_entry_t const * pred = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
 		
 		// Copy in the simulated node
 	    rimeaddr_copy(&pred_simulated_node, &pred->target);
@@ -699,6 +721,4 @@ static void data_evaluation(void * ptr)
 	printf("PE GP: Round: finishing=%u\n", pred_round_count);
 	
 	++pred_round_count;
-
-	ctimer_set(&ct_data_eval, ROUND_LENGTH, &data_evaluation, ptr);
 }

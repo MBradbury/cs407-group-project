@@ -1,8 +1,6 @@
 CONTIKI_PROJECT = pred-eval
 all: $(CONTIKI_PROJECT)
 
-CONTIKI = $(CS407DIR)/contiki
-
 PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers \
 $(CS407DIR)/Algorithms/Common/net $(CS407DIR)/PredicateLanguage \
 $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourAggregate \
@@ -34,4 +32,5 @@ CFLAGS += -DNDEBUGVM
 
 CFLAGS += -DPROCESS_CONF_NO_PROCESS_NAMES=1
 
+CONTIKI = $(CS407DIR)/contiki
 include $(CONTIKI)/Makefile.include

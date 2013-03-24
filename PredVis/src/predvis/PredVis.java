@@ -8,6 +8,7 @@ import edu.uci.ics.jung.visualization.renderers.Renderer.VertexLabel.Position;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Paint;
 import java.awt.Shape;
 import java.awt.event.ActionEvent;
@@ -19,20 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JList;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JSlider;
-import javax.swing.JTabbedPane;
-import javax.swing.SwingUtilities;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ListDataEvent;
-import javax.swing.event.ListDataListener;
+import javax.swing.*;
+import javax.swing.event.*;
 import org.apache.commons.collections15.Transformer;
 
 /**
@@ -40,6 +29,10 @@ import org.apache.commons.collections15.Transformer;
  * @author Tim
  */
 public class PredVis extends JFrame {
+    public static final Font MONOSPACE_FONT = new Font(Font.MONOSPACED, Font.PLAIN, 12);
+    public static final Font SANS_FONT = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
+    public static final Font SERIF_FONT = new Font(Font.SERIF, Font.PLAIN, 12);
+    
     //Predicate data.
     private DefaultListModel/*<Predicate>*/ predicateListModel = null;
     
@@ -54,6 +47,7 @@ public class PredVis extends JFrame {
     private JTabbedPane tabbedPane = null;
     private JPanel predicatePanel = null;
     private JList predicateList = null;
+    private JTextField predicateScriptEditor = null;
     private JButton addPredicateButton = null;
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
@@ -91,12 +85,12 @@ public class PredVis extends JFrame {
         predicateListModel.addListDataListener(new ListDataListener() {
             @Override
             public void intervalAdded(ListDataEvent e) {
-                throw new UnsupportedOperationException("Not supported yet.");
+                
             }
 
             @Override
             public void intervalRemoved(ListDataEvent e) {
-                throw new UnsupportedOperationException("Not supported yet.");
+                
             }
 
             @Override
@@ -115,8 +109,13 @@ public class PredVis extends JFrame {
         predicatePanel = new JPanel();
         
         predicateList = new JList(predicateListModel);
-        predicateList.setPreferredSize(new Dimension(600, 600));
+        predicateList.setPreferredSize(new Dimension(300, 600));
         predicatePanel.add(predicateList);
+        
+        predicateScriptEditor = new JTextField("Predicate script...", 20);
+        predicateScriptEditor.setFont(MONOSPACE_FONT);
+        predicateScriptEditor.setPreferredSize(new Dimension(300, 600));
+        predicatePanel.add(predicateScriptEditor);
         
         addPredicateButton = new JButton("Add Predicate");
         
@@ -148,6 +147,15 @@ public class PredVis extends JFrame {
 
                 Predicate newPred = new Predicate(predicateName, scriptFile);
                 predicateListModel.addElement(newPred);
+                
+                String script = null;
+                try {
+                    script = newPred.getScript();
+                    predicateScriptEditor.setText(script);
+                }
+                catch (IOException ioe) {
+                    //TODO
+                }
             }
         });
         
@@ -187,8 +195,8 @@ public class PredVis extends JFrame {
                     handleNetworkUpdated(wsnMonitor.getStates());
                 }
             }
-            
         });
+        
         historySlider.setPaintLabels(true);
         historySlider.setPaintTicks(true);
         networkPanel.add(historySlider);

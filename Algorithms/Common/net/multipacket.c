@@ -19,9 +19,8 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-static const uint8_t MAX_REXMITS = 4;
-
-static const clock_time_t send_period = 1 * CLOCK_SECOND;
+#define MAX_REXMITS 4
+#define SEND_PERIOD ((clock_time_t) 1 * CLOCK_SECOND)
 
 typedef struct
 {
@@ -123,7 +122,7 @@ static void send_loop_callback(void * ptr)
 
 		packetbuf_clear();
 		packetbuf_set_datalen(to_send);
-		debug_packet_size(to_send);
+		//debug_packet_size(to_send);
 		void * msg = packetbuf_dataptr();
 		memcpy(msg, send_start, to_send);
 
@@ -270,7 +269,7 @@ bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_c
 
 		conn->callbacks = callbacks;
 
-		ctimer_set(&conn->ct_sender, send_period, &send_loop_callback, conn);
+		ctimer_set(&conn->ct_sender, SEND_PERIOD, &send_loop_callback, conn);
 
 		linked_list_init(&conn->sending_packets, &sending_packet_cleanup);
 

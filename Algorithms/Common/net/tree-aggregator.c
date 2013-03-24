@@ -235,6 +235,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	// it came from, if it is closer to the sink.
 	if (msg.hop_count < conn->best_hop)
 	{
+#ifdef TREE_AGG_DEBUG
 		char firstaddr[RIMEADDR_STRING_LENGTH];
 		char secondaddr[RIMEADDR_STRING_LENGTH];
 
@@ -242,6 +243,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 			addr2str_r(&msg.source, firstaddr, RIMEADDR_STRING_LENGTH), msg.hop_count,
 			addr2str_r(&conn->best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->best_hop
 		);
+#endif
 
 		// Set the best parent, and the hop count of that node
 		rimeaddr_copy(&conn->best_parent, &msg.source);
@@ -249,6 +251,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	}
 	else
 	{
+#ifdef TREE_AGG_DEBUG
 		char firstaddr[RIMEADDR_STRING_LENGTH];
 		char secondaddr[RIMEADDR_STRING_LENGTH];
 
@@ -256,6 +259,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 			addr2str_r(&msg.source, firstaddr, RIMEADDR_STRING_LENGTH), msg.hop_count,
 			addr2str_r(&conn->best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->best_hop
 		);
+#endif
 	}
 
 	
@@ -298,7 +302,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	clock_time_t send_period = random_time(2, 4, 0.1);
 	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
 
-	printf("Tree Agg: IsSink, sending initial message... (send=%lu/%lu, wait = %lu/%lu)\n",
+	printf("Tree Agg: IsSink, sending initial message... (send=%lu/%lu, wait=%lu/%lu)\n",
 		send_period, CLOCK_SECOND, wait_period, CLOCK_SECOND);
 
 	stbroadcast_send_stubborn(&conn->bc, send_period);
@@ -337,7 +341,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 		// Make sure memory allocation was successful
 		if (conn->data == NULL)
 		{
-			TADPRINTF("Tree Agg: Starting Failed: Memory allocation!\n");
+			TADPRINTF("Tree Agg: MAF!\n");
 			return false;
 		}
 
@@ -347,18 +351,16 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 
 		if (tree_agg_is_sink(conn))
 		{
-			TADPRINTF("Tree Agg: Starting aggregation tree setup...\n");
+			TADPRINTF("Tree Agg: Starting...\n");
 
 			// Wait a bit to allow processes to start up
 			ctimer_set(&conn->ct_open_or_wait, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
 		}
 
-		TADPRINTF("Tree Agg: Starting Succeeded!\n");
-
 		return true;
 	}
 	
-	TADPRINTF("Tree Agg: Starting Failed: Parameters Invalid!\n");
+	TADPRINTF("Tree Agg: FAIL!\n");
 
 	return false;
 }
@@ -389,7 +391,7 @@ void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length)
 {
 	if (conn != NULL && data != NULL && length != 0)
 	{
-		printf("Tree Agg: Sending data to best parent %s with length %d\n", addr2str(&conn->best_parent), length);
+		printf("Tree Agg: Sending to %s, length=%d\n", addr2str(&conn->best_parent), length);
 		multipacket_send(&conn->mc, &conn->best_parent, data, length);
 	}
 }

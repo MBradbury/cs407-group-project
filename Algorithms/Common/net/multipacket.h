@@ -19,7 +19,7 @@ typedef struct multipacket_callbacks
 
 typedef struct multipacket_conn
 {
-	// Kepp connection in this order!
+	// Keep connection in this order!
 	struct runicast_conn rc;
 
 	uint16_t id;

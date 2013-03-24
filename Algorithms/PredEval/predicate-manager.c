@@ -158,7 +158,8 @@ static void trickle_recv(struct trickle_conn * tc)
 		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&conn->predicates, elem);
 
 		// Set the led to be red if this node will evaluate a predicate
-		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) ||
+			rimeaddr_cmp(&pe->target, &rimeaddr_null))
 		{
 			leds_on(LEDS_RED);
 			break;
@@ -192,7 +193,7 @@ static void mesh_timeout(struct mesh_conn * c)
 {
 	predicate_manager_conn_t * conn = conncvt_mesh(c);
 
-	printf("PredMan: Mesh timedout\n");
+	PMDPRINTF("PredMan: Mesh timedout\n");
 
 	// We timedout, so start sending again
 	//mesh_send(c, &conn->basestation);
@@ -224,16 +225,12 @@ bool predicate_manager_open(
 	return false;
 }
 
-bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn)
+void predicate_manager_start_serial_input(predicate_manager_conn_t * conn)
 {
-	if (conn == NULL)
+	if (conn != NULL)
 	{
-		return false;
+		process_start(&predicate_input_process, (void *)conn);
 	}
-
-	process_start(&predicate_input_process, (void *)conn);
-
-	return true;
 }
 
 void predicate_manager_close(predicate_manager_conn_t * conn)
@@ -270,7 +267,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	if (packet_size > PACKETBUF_SIZE)
 	{
-		printf("PredMan: Predicate packet it too long to be sent.\n");
+		printf("PredMan: Predicate packet is too long\n");
 		return false;
 	}
 
@@ -520,17 +517,10 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 
 					unsigned int bytecode_count = (length - 1) / 2;
 					
-					if (current.bytecode == NULL)
-					{
-						current.bytecode = malloc(sizeof(ubyte) * bytecode_count);
-					}
-					else
-					{
-						ubyte * new = malloc(sizeof(ubyte) * (bytecode_count + current.bytecode_length));
-						memcpy(new, current.bytecode, sizeof(ubyte) * current.bytecode_length);
-						free(current.bytecode);
-						current.bytecode = new;
-					}
+					ubyte * new = malloc(sizeof(ubyte) * (bytecode_count + current.bytecode_length));
+					memcpy(new, current.bytecode, sizeof(ubyte) * current.bytecode_length);
+					free(current.bytecode);
+					current.bytecode = new;
 
 					ubyte * starting = current.bytecode + current.bytecode_length;
 
@@ -560,21 +550,12 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				{
 					PMDPRINTF("PredMan: processing variable details\n");
 
-					var_elem_t * to_store_at = NULL;
-					if (current.variables_details == NULL)
-					{
-						current.variables_details = malloc(sizeof(var_elem_t));
-						to_store_at = current.variables_details;
-					}
-					else
-					{
-						var_elem_t * new = malloc(sizeof(var_elem_t) * (1 + current.variables_details_length));
-						memcpy(new, current.variables_details, sizeof(var_elem_t) * current.variables_details_length);
-						free(current.variables_details);
-						current.variables_details = new;
+					var_elem_t * new = malloc(sizeof(var_elem_t) * (1 + current.variables_details_length));
+					memcpy(new, current.variables_details, sizeof(var_elem_t) * current.variables_details_length);
+					free(current.variables_details);
+					current.variables_details = new;
 
-						to_store_at = current.variables_details + current.variables_details_length;
-					}
+					var_elem_t * to_store_at = current.variables_details + current.variables_details_length;
 
 					char const * start = line + 1;
 
@@ -635,7 +616,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 			} break;
 
 		default:
-			printf("PredMan: Not sure what to do with state %d and line %s\n", state, line);
+			printf("PredMan: Not sure what to do state=%d, line=%s\n", state, line);
 			break;
 		}
 

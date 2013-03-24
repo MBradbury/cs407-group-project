@@ -24,8 +24,7 @@ CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werro
 #CFLAGS += -DNDEBUG
 CFLAGS += -DNDEBUGVM
 
-#CFLAGS += -Wl,-static -fvtable-gc -fdata-sections -ffunction-sections -Wl,-s
-#LDFLAGS += -Wl,-static -fvtable-gc -fdata-sections -ffunction-sections -Wl,-s
+CFLAGS += -fdata-sections
 
 # Disable uip
 #CONTIKI_NO_NET=1

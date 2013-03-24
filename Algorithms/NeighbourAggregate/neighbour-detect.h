@@ -25,7 +25,7 @@ typedef struct neighbour_detect_conn_t
 
 	unique_array_t results;
 
-	neighbour_detect_callbacks_t callbacks;
+	neighbour_detect_callbacks_t const * callbacks;
 	
 	map_t round_map;
 

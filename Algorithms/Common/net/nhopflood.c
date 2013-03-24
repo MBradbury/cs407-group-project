@@ -12,6 +12,12 @@
 #include "random-range.h"
 #include "debug-helper.h"
 
+#ifdef NHOP_FLOOD_DEBUG
+#	define NHFDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define NHFDPRINTF(...)
+#endif
+
 static void nhopflood_delayed_start_sending(void * ptr);
 
 // The custom headers we use
@@ -279,21 +285,17 @@ bool nhopflood_start(nhopflood_conn_t * conn, uint8_t ch, nhopflood_recv_fn rece
 }
 
 // Shutdown n-hop data flooding.
-bool nhopflood_stop(nhopflood_conn_t * conn)
+void nhopflood_stop(nhopflood_conn_t * conn)
 {
-	if (conn == NULL)
+	if (conn != NULL)
 	{
-		return false;
+		ctimer_stop(&conn->send_timer);
+
+		map_free(&conn->latest_message_seen);
+		linked_list_free(&conn->packet_queue);
+
+		broadcast_close(&conn->bc);
 	}
-
-	ctimer_stop(&conn->send_timer);
-
-	map_free(&conn->latest_message_seen);
-	linked_list_free(&conn->packet_queue);
-
-	broadcast_close(&conn->bc);
-
-	return true;
 }
 
 // Register a request to send this nodes data n hops next round
@@ -309,7 +311,7 @@ bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 	// do nothing
 	if (hops == 0)
 	{
-		printf("nhopflood: Nowhere to send data to as hops=0\n");
+		NHFDPRINTF("nhopflood: Nowhere to send data to as hops=0\n");
 		return true;
 	}
 
@@ -319,7 +321,7 @@ bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 	// Record the details to be sent
 	linked_list_append(&conn->packet_queue, details);
 
-	printf("nhopflood: Added a packet to be sent, now %u packets queued.\n",
+	NHFDPRINTF("nhopflood: Added a packet to be sent, now %u packets queued.\n",
 		linked_list_length(&conn->packet_queue));
 
 	return true;

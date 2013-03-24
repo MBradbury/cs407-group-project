@@ -49,7 +49,7 @@ static void stbroadcast_cancel_void_and_callback(void * ptr)
 
 	stbroadcast_cancel(&conn->bc);
 
-	printf("Tree Agg: Stubborn bcast canceled, setup complete\n");
+	TADPRINTF("Tree Agg: Stubborn bcast canceled, setup complete\n");
 
 	// Start the data generation process
 	(*conn->callbacks->setup_complete)(conn);
@@ -71,7 +71,7 @@ static void parent_detect_finished(void * ptr)
 	TADPRINTF("Tree Agg: Timer on %s expired\n",
 		addr2str(&rimeaddr_node_addr));
 
-	printf("Tree Agg: Found Parent:%s Hop:%u\n",
+	TADPRINTF("Tree Agg: Found Parent:%s Hop:%u\n",
 		addr2str(&conn->best_parent), conn->best_hop);
 
 	// Send a message that is to be received by the children
@@ -100,7 +100,7 @@ static void parent_detect_finished(void * ptr)
 	clock_time_t send_period = random_time(2, 4, 0.1);
 	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
 
-	printf("Sending setup message onwards with hop count=%u, send=%lu/%lu, wait = %lu/%lu\n",
+	TADPRINTF("Sending setup message onwards with hop count=%u, send=%lu/%lu, wait = %lu/%lu\n",
 		msg->hop_count, send_period, CLOCK_SECOND, wait_period, CLOCK_SECOND);
 
 	stbroadcast_send_stubborn(&conn->bc, send_period);
@@ -125,7 +125,7 @@ static void finish_aggregate_collect(void * ptr)
 
 	multipacket_send(&conn->mc, &conn->best_parent, data, length);
 
-	printf("Tree Agg: Send Agg\n");
+	TADPRINTF("Tree Agg: Send Agg\n");
 
 	toggle_led_for(LEDS_GREEN, 1 * CLOCK_SECOND);
 
@@ -145,7 +145,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 
 	if (tree_agg_is_sink(conn))
 	{
-		printf("Tree Agg: We're sink, got message from %s length:%u, sending to user\n",
+		TADPRINTF("Tree Agg: We're sink, got message from %s length:%u, sending to user\n",
 			addr2str(originator), length);
 
 		// We need to apply the sink's data to the received data
@@ -169,13 +169,13 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 		// Apply some aggregation function
 		if (tree_agg_is_collecting(conn))
 		{
-			printf("Tree Agg: Cont Agg With: %s of length %u\n", addr2str(originator), length);
+			TADPRINTF("Tree Agg: Cont Agg With: %s of length %u\n", addr2str(originator), length);
 
 			(*conn->callbacks->aggregate_update)(conn, conn->data, msg, length);
 		}
 		else
 		{
-			printf("Tree Agg: Start Agg Addr: %s of length %u\n", addr2str(originator), length);
+			TADPRINTF("Tree Agg: Start Agg Addr: %s of length %u\n", addr2str(originator), length);
 
 			// We need to copy the users data into our memory,
 			// So we can apply future aggregtions to it.
@@ -192,7 +192,7 @@ static void recv_aggregate(struct multipacket_conn * ptr, rimeaddr_t const * ori
 
 static void multipacket_sent(struct multipacket_conn * c, rimeaddr_t const * to, void * sent_data, unsigned int sent_length)
 {
-	printf("Tree Agg: Sent %u bytes to %s\n", sent_length, addr2str(to));
+	TADPRINTF("Tree Agg: Sent %u bytes to %s\n", sent_length, addr2str(to));
 }
 
 /** The function that will be executed when a message is received */
@@ -205,7 +205,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	setup_tree_msg_t msg;
 	memcpy(&msg, packetbuf_dataptr(), sizeof(setup_tree_msg_t));
 
-	printf("Tree Agg: Got setup message from %s\n", addr2str(&msg.source));
+	TADPRINTF("Tree Agg: Got setup message from %s\n", addr2str(&msg.source));
 
 	// If the sink received a setup message, then do nothing
 	// it doesn't need a parent as it is the root.
@@ -267,7 +267,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	// then we are not a leaf
 	if (conn->is_leaf_node && rimeaddr_cmp(&msg.parent, &rimeaddr_node_addr))
 	{
-		printf("Tree Agg: Node (%s) is our child, we are not a leaf.\n",
+		TADPRINTF("Tree Agg: Node (%s) is our child, we are not a leaf.\n",
 			addr2str(&msg.source));
 
 		conn->is_leaf_node = false;
@@ -302,7 +302,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	clock_time_t send_period = random_time(2, 4, 0.1);
 	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
 
-	printf("Tree Agg: IsSink, sending initial message... (send=%lu/%lu, wait=%lu/%lu)\n",
+	TADPRINTF("Tree Agg: IsSink, sending initial message... (send=%lu/%lu, wait=%lu/%lu)\n",
 		send_period, CLOCK_SECOND, wait_period, CLOCK_SECOND);
 
 	stbroadcast_send_stubborn(&conn->bc, send_period);
@@ -391,7 +391,7 @@ void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length)
 {
 	if (conn != NULL && data != NULL && length != 0)
 	{
-		printf("Tree Agg: Sending to %s, length=%d\n", addr2str(&conn->best_parent), length);
+		TADPRINTF("Tree Agg: Sending to %s, length=%d\n", addr2str(&conn->best_parent), length);
 		multipacket_send(&conn->mc, &conn->best_parent, data, length);
 	}
 }

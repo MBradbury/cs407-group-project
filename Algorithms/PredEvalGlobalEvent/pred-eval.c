@@ -35,6 +35,12 @@
 #include "predicate-manager.h"
 #include "hop-data-manager.h"
 
+#ifdef PE_DEBUG
+#	define PEDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define PEDPRINTF(...)
+#endif
+
 static void data_evaluation(void);
 
 #define ROUND_LENGTH (clock_time_t)(5 * 60 * CLOCK_SECOND)
@@ -143,7 +149,7 @@ static void node_data(void * data)
 /* to be called when neighbour aggregate gets some data to add */
 static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
-	printf("PE GE: Handling neighbour data round=%u length=%u\n", round_count, length);
+	PEDPRINTF("PE GE: Handling neighbour data round=%u length=%u\n", round_count, length);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -198,11 +204,11 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 
 static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 {
-	printf("PE GE: Setup finsihed\n");
+	PEDPRINTF("PE GE: Setup finsihed\n");
 
 	if (tree_agg_is_leaf(conn))
 	{
-		printf("PE GE: Is leaf starting data aggregation\n");
+		PEDPRINTF("PE GE: Is leaf starting data aggregation\n");
 
 		leds_on(LEDS_RED);
 
@@ -212,7 +218,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 
 static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void const * to_apply, unsigned int to_apply_length)
 {
-	printf("PE GE: Update local data\n");
+	PEDPRINTF("PE GE: Update local data\n");
 
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
@@ -236,7 +242,7 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void
 // Add our own one hop data to the list
 static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
-	printf("PE GE: Update local data with own data\n");
+	PEDPRINTF("PE GE: Update local data with own data\n");
 
 	unique_array_t * data = &((aggregation_data_t *)ptr)->list;
 
@@ -251,7 +257,7 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 // Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
 {
-	printf("PE GE: Store Packet length=%u\n", length);
+	PEDPRINTF("PE GE: Store Packet length=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -268,8 +274,6 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 // Write the data structure to the outbout packet buffer
 static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, size_t * packet_length)
 {
-	printf("PE GE: Writing data to packet\n"); 
-
 	// Take all data, write a struct to the buffer at the start, 
 	// containing the length of the packet (as the number of node_data_t)
 	// write the each one to memory
@@ -311,10 +315,8 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t cons
 {
 	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PE LE: Response received from %s, %u, %u hops away. ",
-		addr2str(from), packetbuf_datalen(), hops);
-
-	printf("Failed predicate %u.\n", response->predicate_id);
+	printf("PE LE: Response from %s, %u, %u hops away. Failed predicate %u.\n",
+		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
 }
 
 static const predicate_manager_callbacks_t pm_callbacks = { NULL, &pm_predicate_failed };
@@ -380,7 +382,7 @@ PROCESS_THREAD(data_gather, ev, data)
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &sink))
 	{
-		printf("PE GE: We are sink node.\n");
+		PEDPRINTF("PE GE: We are sink node.\n");
 
 		predicate_manager_start_serial_input(&predconn);
 	}
@@ -401,7 +403,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 
-	printf("PE GE: Starting Data Aggregation\n");
+	PEDPRINTF("PE GE: Starting Data Aggregation\n");
 
 	tree_agg_open(&aggconn, &sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 
@@ -553,7 +555,7 @@ static bool evaluate_predicate(
 
 static void data_evaluation(void)
 {
-	printf("PE GE: Eval: Beginning Evaluation\n");
+	PEDPRINTF("PE GE: Eval: Beginning Evaluation\n");
 
 	map_t const * predicate_map = predicate_manager_get_map(&predconn);
 
@@ -634,7 +636,7 @@ static void data_evaluation(void)
 
 							if (nd == NULL)
 							{
-								printf("PE GE: ERROR: received no info on %s\n", addr2str(neighbour));
+								printf("PE GE: ERROR: no info on %s\n", addr2str(neighbour));
 							}
 							else
 							{
@@ -716,7 +718,7 @@ static void data_evaluation(void)
 	// We do not clear received_data, as that is sent only when it changes
 	unique_array_clear(&neighbour_info);
 
-	printf("PE GE: Round: finishing=%u |received_data|=%u\n",
+	printf("PE GE: Round: finishing=%u received_data=%u\n",
 		pred_round_count, map_length(&received_data));
 	
 	++pred_round_count;

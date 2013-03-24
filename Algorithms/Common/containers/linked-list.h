@@ -41,15 +41,41 @@ bool linked_list_pop(linked_list_t * list);
 // Get list length
 unsigned int linked_list_length(linked_list_t const * list);
 
-#define linked_list_is_empty(list) ((list) != NULL && (list)->head == NULL)
+#ifdef CONTAINERS_CHECKED
 
-// List iteration 
-#define linked_list_first(list) ((list) == NULL ? NULL : (list)->head)
-#define linked_list_next(elem) ((elem) == NULL ? NULL : (elem)->next)
+#	define linked_list_is_empty(list) \
+		((list) != NULL && (list)->head == NULL)
 
-#define linked_list_continue(list, elem) ((elem) != NULL)
+#	define linked_list_first(list) \
+		((list) == NULL ? NULL : (list)->head)
 
-#define linked_list_data(list, elem) ((elem) == NULL ? NULL : (elem)->data)
+#	define linked_list_next(elem) \
+		((elem) == NULL ? NULL : (elem)->next)
+
+#	define linked_list_continue(list, elem) \
+		((elem) != NULL)
+
+#	define linked_list_data(list, elem) \
+		((elem) == NULL ? NULL : (elem)->data)
+
+#else
+
+#	define linked_list_is_empty(list) \
+		((list)->head == NULL)
+
+#	define linked_list_first(list) \
+		((list)->head)
+
+#	define linked_list_next(elem) \
+		((elem)->next)
+
+#	define linked_list_continue(list, elem) \
+		((elem) != NULL)
+
+#	define linked_list_data(list, elem) \
+		((elem)->data)
+
+#endif
 
 // Iteration example:
 // linked_list_t list;

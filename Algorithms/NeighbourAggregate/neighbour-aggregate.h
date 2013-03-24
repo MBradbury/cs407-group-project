@@ -20,7 +20,7 @@ typedef struct neighbour_agg_conn
 	
 	unique_array_t one_hop_neighbours;
 
-	neighbour_agg_callbacks_t callbacks;
+	neighbour_agg_callbacks_t const * callbacks;
 
 	unsigned int round_count;
 	

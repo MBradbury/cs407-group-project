@@ -32,3 +32,9 @@ void * rimeaddr_clone(void const * addr)
 	return ptr;
 }
 
+void * rimeaddr_pair_clone(void const * addrs)
+{
+	rimeaddr_pair_t * ptr = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
+	memcpy(ptr, addrs, sizeof(rimeaddr_pair_t));
+	return ptr;
+}

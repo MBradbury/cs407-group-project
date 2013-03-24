@@ -25,13 +25,16 @@
 typedef struct
 {
 	uint16_t id;
+	
 	rimeaddr_t target;
 	rimeaddr_t source;
 
-	void * data;
 	unsigned int length;
 
 	unsigned int sent;
+
+	void * data;
+
 	uint8_t seqno;
 
 } multipacket_sending_packet_t;
@@ -51,10 +54,11 @@ typedef struct
 {
 	recv_key_t key;
 
-	void * data;
 	unsigned int length;
 
 	unsigned int data_received;
+
+	void * data;
 
 	uint8_t last_seqno;
 

@@ -113,13 +113,6 @@ static void send_reply(
 	rimeaddr_t const * eventual_target, uint8_t hops, void const * data);
 
 
-// Get an id that contains the address of the node sending
-// the message and the number of messages that node has sent.
-static inline uint16_t get_message_id(nhopreq_conn_t * conn)
-{
-	return conn->message_id++;
-}
-
 // STUBBORN BROADCAST
 static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 {
@@ -248,7 +241,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	{
 		// The target node has received the required data,
 		// so provide it to the upper layer
-		(*conn->receive_fn)(&sender, hops, msgdata);
+		conn->callbacks->receive_fn(&sender, hops, msgdata);
 	}
 	else
 	{
@@ -333,7 +326,7 @@ static void send_reply(
 		if (data == NULL)
 		{
 			// Call data get functions and store result in outwards bound packet
-			conn->data_fn(data_dest);
+			conn->callbacks->data_fn(data_dest);
 		}
 		else
 		{
@@ -362,7 +355,7 @@ static void send_reply(
 		if (data == NULL)
 		{
 			// Call data get functions and store result in outwards bound packet
-			conn->data_fn(data_dest);
+			conn->callbacks->data_fn(data_dest);
 		}
 		else
 		{
@@ -424,12 +417,12 @@ static bool send_n_hop_data_request(
 
 // Initialise multi-hop predicate checking
 bool nhopreq_start(
-	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * base_station_addr,
-	data_generation_fn data_fn, unsigned int data_size, data_receive_fn receive_fn)
+	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2,
+	unsigned int data_size, nhopreq_callbacks_t const * callbacks)
 {
-	if (conn == NULL || base_station_addr == NULL ||
-		data_fn == NULL || ch1 == ch2 || data_size == 0 ||
-		receive_fn == NULL)
+	if (conn == NULL || callbacks == NULL ||
+		callbacks->data_fn == NULL || ch1 == ch2 || data_size == 0 ||
+		callbacks->receive_fn == NULL)
 	{
 		return false;
 	}
@@ -443,13 +436,11 @@ bool nhopreq_start(
 	runicast_open(&conn->ru, ch2, &runicastCallbacks);
 	channel_set_attributes(ch2, runicast_attributes);
 
-	rimeaddr_copy(&conn->base_station_addr, base_station_addr);
-
 	conn->message_id = 1;
 
-	conn->data_fn = data_fn;
+	conn->callbacks = callbacks;
+
 	conn->data_size = data_size;
-	conn->receive_fn = receive_fn;
 
 	map_init(&conn->mote_records, &rimeaddr_equality, &free);
 
@@ -477,14 +468,8 @@ bool nhopreq_end(nhopreq_conn_t * conn)
 	return true;
 }
 
-
-bool is_base_station(nhopreq_conn_t const * conn)
-{
-	return conn != NULL && rimeaddr_cmp(&rimeaddr_node_addr, &conn->base_station_addr);
-}
-
 void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops)
 {
-	send_n_hop_data_request(conn, &rimeaddr_node_addr, get_message_id(conn), hops, 0);
+	send_n_hop_data_request(conn, &rimeaddr_node_addr, conn->message_id++, hops, 0);
 }
 

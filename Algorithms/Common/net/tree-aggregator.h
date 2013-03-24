@@ -69,8 +69,28 @@ void tree_agg_close(tree_agg_conn_t * conn);
 
 void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length);
 
-#define tree_agg_is_sink(conn) ((conn) != NULL && rimeaddr_cmp(&(conn)->sink, &rimeaddr_node_addr))
-#define tree_agg_is_leaf(conn) ((conn) != NULL && (conn)->is_leaf_node)
-#define tree_agg_is_collecting(conn) ((conn) != NULL && (conn)->is_collecting)
+#ifdef CONTAINERS_CHECKED
+
+#	define tree_agg_is_sink(conn) \
+		((conn) != NULL && rimeaddr_cmp(&(conn)->sink, &rimeaddr_node_addr))
+
+#	define tree_agg_is_leaf(conn) \
+		((conn) != NULL && (conn)->is_leaf_node)
+
+#	define tree_agg_is_collecting(conn) \
+		((conn) != NULL && (conn)->is_collecting)
+
+#else
+
+#	define tree_agg_is_sink(conn) \
+		(rimeaddr_cmp(&(conn)->sink, &rimeaddr_node_addr))
+		
+#	define tree_agg_is_leaf(conn) \
+		((conn)->is_leaf_node)
+
+#	define tree_agg_is_collecting(conn) \
+		((conn)->is_collecting)
+
+#endif
 
 #endif /*CS407_TREE_AGGREGATOR_H*/

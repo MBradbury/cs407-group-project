@@ -140,6 +140,8 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t cons
 
 static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback, &pm_predicate_failed };
 
+static const nhopreq_callbacks_t nhopreq_callbacks = { &node_data, &receieved_data };
+
 PROCESS(mainProcess, "main Process");
 
 AUTOSTART_PROCESSES(&mainProcess);
@@ -230,7 +232,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	predicate_manager_open(&predconn, 121, 126, &baseStationAddr, trickle_interval, &pm_callbacks);
 
-	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
+	if (!nhopreq_start(&hc, 149, 132, sizeof(node_data_t), &nhopreq_callbacks))
 	{
 		printf("PE LP: nhopreq start function failed\n");
 	}

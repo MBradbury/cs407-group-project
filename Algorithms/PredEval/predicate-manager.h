@@ -75,7 +75,7 @@ bool predicate_manager_open(
 	predicate_manager_conn_t * conn, uint16_t ch1, uint16_t ch2, rimeaddr_t const * basestation,
 	clock_time_t trickle_interval, predicate_manager_callbacks_t const * callbacks);
 
-bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn);
+void predicate_manager_start_serial_input(predicate_manager_conn_t * conn);
 
 void predicate_manager_close(predicate_manager_conn_t * conn);
 

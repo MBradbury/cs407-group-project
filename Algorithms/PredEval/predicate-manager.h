@@ -92,7 +92,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, struct hop
 	predicate_detail_entry_t const * pe, void * data, size_t data_size, size_t data_length);
 
 
-map_t const * predicate_manager_get_map(predicate_manager_conn_t * conn);
+#define predicate_manager_get_map(conn) ((conn) == NULL ? NULL : &(conn)->predicates)
 
 uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe);
 

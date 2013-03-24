@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 #include <limits.h>
 #include <stdint.h>
 
@@ -376,7 +375,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	{
 		hops_details[i].hops = pe->variables_details[i].hops;
 		hops_details[i].var_id = pe->variables_details[i].var_id;
-		hops_details[i].length = hop_manager_length(&hop_data, &pe->variables_details[i]);
+		hops_details[i].length = hop_manager_length(hop_data, &pe->variables_details[i]);
 	}
 
 	void * msg_neighbour_data = (void *)(hops_details + pe->variables_details_length);
@@ -394,11 +393,6 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	}
 
 	return true;
-}
-
-map_t const * predicate_manager_get_map(predicate_manager_conn_t * conn)
-{
-	return conn == NULL ? NULL : &conn->predicates;
 }
 
 
@@ -425,13 +419,28 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 	return max_hops;
 }
 
+#define HEX_CHAR_TO_NUM(ch) (((ch) >= '0' && (ch) <= '9') ? (ch) - '0' : (ch) - 'A')
+
+// From: http://www.techinterview.org/post/526339864/int-atoi-char-pstr
+static unsigned int myatoi(char const * str)
+{
+	unsigned int result = 0;
+
+	while (*str && *str >= '0' && *str <= '9')
+	{
+		result = (result * 10) + (*str - '0');
+		++str;
+	}
+	
+	return result;
+}
 
 
 PROCESS_THREAD(predicate_input_process, ev, data)
 {
 	static predicate_manager_conn_t * conn;
 	static predicate_detail_entry_t current;
-	static int state;
+	static unsigned int state;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -449,7 +458,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		char const * line = (char const *)data;
 		const unsigned int length = strlen(line);
 
-		PMDPRINTF("PredMan: received line: `%s' of length %u in state %d\n", line, length, state);
+		PMDPRINTF("PredMan: line:`%s' of length %u in state %d\n", line, length, state);
 
 		switch (state)
 		{
@@ -466,7 +475,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		// Read in the predicate id
 		case 1:
 			{
-				int value = atoi(line);
+				unsigned int value = myatoi(line);
 
 				if (value >= UINT8_MIN && value <= UINT8_MAX)
 				{
@@ -493,10 +502,10 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				buffer[first_length] = '\0';
 
 				// Before dot
-				current.target.u8[0] = atoi(buffer);
+				current.target.u8[0] = (uint8_t)myatoi(buffer);
 
 				// After dot
-				current.target.u8[1] = atoi(position + 1);
+				current.target.u8[1] = (uint8_t)myatoi(position + 1);
 
 				state = 3;
 
@@ -531,12 +540,15 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 					unsigned int i = 0;
 					for (i = 0; i != bytecode_count; ++i)
 					{
-						char buffer[3];
+						starting[i] = HEX_CHAR_TO_NUM(current_pair[0]) * 16 + HEX_CHAR_TO_NUM(current_pair[1]);
+
+						// Nice code is below, compared to CHAR_TO_NUM
+						/*char buffer[3];
 						buffer[0] = current_pair[0];
 						buffer[1] = current_pair[1];
 						buffer[2] = '\0';
 
-						starting[i] = (ubyte) strtol(buffer, NULL, 16);
+						starting[i] = (ubyte) strtol(buffer, NULL, 16);*/
 
 						current_pair += 2;
 					}
@@ -575,10 +587,10 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 					buffer[first_length] = '\0';
 
 					// Before dot
-					to_store_at->hops = atoi(buffer);
+					to_store_at->hops = (uint8_t)myatoi(buffer);
 
 					// After dot
-					to_store_at->var_id = atoi(position + 1);
+					to_store_at->var_id = (uint8_t)myatoi(position + 1);
 
 
 					current.variables_details_length += 1;

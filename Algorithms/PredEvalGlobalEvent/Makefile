@@ -24,6 +24,8 @@ CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werro
 #CFLAGS += -DNDEBUG
 CFLAGS += -DNDEBUGVM
 
+CFLAGS += -DPEGE_APPLICATION
+
 CFLAGS += -fdata-sections
 
 # Disable uip

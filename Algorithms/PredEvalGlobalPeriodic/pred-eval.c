@@ -1,3 +1,5 @@
+#include "pegp.h"
+
 #include "contiki.h"
 
 #include "net/netstack.h"
@@ -398,6 +400,7 @@ PROCESS_THREAD(data_gather, ev, data)
 	static rimeaddr_t sink;
 	static struct etimer et;
 
+	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 #ifdef NODE_ID
@@ -483,6 +486,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 	static struct etimer et;
 	static uint8_t round_count;
 
+	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	
 	round_count = 0;
@@ -517,40 +521,12 @@ PROCESS_THREAD(send_data_process, ev, data)
 		++round_count;
 	}
 
+exit:
+	(void)0;
 	PROCESS_END();
 }
 
-static bool evaluate_predicate(
-	ubyte const * program, unsigned int program_length,
-	node_data_t * all_neighbour_data,
-	var_elem_t const * variables, unsigned int variables_length)
-{
-	// Set up the predicate language VM
-	init_pred_lang(&node_data, sizeof(node_data_t));
-
-	// Register the data functions 
-	register_function(0, &get_addr, TYPE_INTEGER);
-	register_function(2, &get_temp, TYPE_FLOATING);
-	register_function(3, &get_humidity, TYPE_INTEGER);
-
-	printf("PE GP: Binding variables using %p %d\n", all_neighbour_data, variables_length);
-
-	// Bind the variables to the VM
-	unsigned int i;
-	for (i = 0; i < variables_length; ++i)
-	{
-		// Get the length of this hop's data
-		// including all of the closer hop's data length
-		unsigned int length = hop_manager_length(&hop_data, &variables[i]);
-
-		printf("PE GP: Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
-		bind_input(variables[i].var_id, all_neighbour_data, length);
-	}
-
-	return evaluate(program, program_length);
-}
-
-static void data_evaluation(void)
+tatic void data_evaluation(void)
 {
 	printf("PE GP: Eval: Beginning Evaluation\n");
 

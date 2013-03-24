@@ -28,6 +28,13 @@
 #include "containers/unique-array.h"
 
 
+#ifdef NEIGHBOUR_AGG_DEBUG
+#	define NADPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define NADPRINTF(...)
+#endif
+
+
 #define INITIAL_INTERVAL ((clock_time_t) 15 * CLOCK_SECOND)
 #define MIN_INTERVAL ((clock_time_t) 5 * CLOCK_SECOND)
 #define MAX_INTERVAL ((clock_time_t) 120 * CLOCK_SECOND)
@@ -116,7 +123,7 @@ static void neighbour_agg_round_complete(neighbour_detect_conn_t * nd, unique_ar
 	// Get main conn, for the array of one_hop_neighbours
 	neighbour_agg_conn_t * conn = conncvt_neighbourdetect_conn(nd);
 
-	printf("NAgg: Merging neighbour data round:%u len:%u\n",
+	NADPRINTF("NAgg: Merging neighbour data round:%u len:%u\n",
 		round_count, unique_array_length(neighbours));
 	
 	// Empty current one_hop_neighbours
@@ -155,31 +162,29 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, vo
 	printf("\n");
 	
 	// Call the callback
-	(*conn->callbacks->data_callback_fn)(neighbours, length, msg->round_count);
+	(*conn->callbacks->data_callback_fn)(conn, neighbours, length, msg->round_count);
 }
 
 static void tree_agg_setup_finished(tree_agg_conn_t * tconn)
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("NAgg: Setup finsihed\n");
+	NADPRINTF("NAgg: Setup finsihed\n");
 
 	if (tree_agg_is_leaf(tconn))
 	{
-		printf("NAgg: Is leaf starting data aggregation\n");
-
 		leds_on(LEDS_GREEN);
-
-		// Start sending data if we are a leaf
-		neighbour_agg_send_data(conn);
 	}
+
+	// Start sending loop
+	neighbour_agg_send_data(conn);
 }
 
 static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void const * to_apply, unsigned int length)
 {
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-	printf("NAgg: Update local data\n");
+	NADPRINTF("NAgg: Update local data\n");
 
 	unique_array_t * data = &((aggregation_data_t *)voiddata)->list;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
@@ -203,7 +208,7 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("NAgg: Update local with own len=%u\n",
+	NADPRINTF("NAgg: Update with own len=%u\n",
 		unique_array_length(&conn->one_hop_neighbours));
 
 	unique_array_t * conn_list = &((aggregation_data_t *)ptr)->list;
@@ -232,7 +237,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("NAgg: Store packet\n");
+	NADPRINTF("NAgg: Store packet\n");
 
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 	

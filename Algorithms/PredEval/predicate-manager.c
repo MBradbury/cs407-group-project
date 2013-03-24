@@ -92,7 +92,7 @@ static void trickle_recv(struct trickle_conn * tc)
 		// evaluating this predicate
 		map_remove(&conn->predicates, &msg->predicate_id);
 
-		printf("PredMan: Removed predicate with id %d\n", msg->predicate_id);
+		printf("PredMan: Removed pred %d\n", msg->predicate_id);
 	}
 	else
 	{
@@ -101,7 +101,7 @@ static void trickle_recv(struct trickle_conn * tc)
 
 		if (stored != NULL)
 		{
-			printf("PredMan: Updating predicate with id %d.\n", msg->predicate_id);
+			printf("PredMan: Updating pred %d.\n", msg->predicate_id);
 
 			// Re-allocate data structures if needed
 
@@ -119,7 +119,7 @@ static void trickle_recv(struct trickle_conn * tc)
 		}
 		else
 		{
-			printf("PredMan: Creating predicate with id %d.\n", msg->predicate_id);
+			printf("PredMan: Creating pred %d.\n", msg->predicate_id);
 
 			// Allocate memory for the data
 			stored = malloc(sizeof(predicate_detail_entry_t));
@@ -292,7 +292,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 	// Debug check to make sure that we have done sane things!
 	if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
 	{
-		printf("PredMan: Failed to copy data correctly got=%ld expected=%u!\n",
+		printf("PredMan: Failed copy got=%ld expected=%u!\n",
 			(void *)(msg_bytecode + bytecode_length) - (void *)msg,
 			packet_size);
 	}
@@ -300,7 +300,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	memcpy(msg_bytecode, bytecode, sizeof(ubyte) * bytecode_length);
 
-	printf("PredMan: Sent packet length %d\n", packet_size);
+	printf("PredMan: Sent %d\n", packet_size);
 
 	// We need to receive the predicate so we know of it
 	trickle_recv(&conn->tc);
@@ -349,7 +349,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 
 	if (packet_length > PACKETBUF_SIZE)
 	{
-		printf("PredMan: Predicate reply is too long (%u > %d)\n",
+		printf("PredMan: Pred reply too long %u > %d\n",
 			packet_length, PACKETBUF_SIZE);
 
 		return false;
@@ -402,7 +402,7 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 
 	uint8_t max_hops = 0;
 
-	unsigned int i;
+	uint8_t i;
 	for (i = 0; i < pe->variables_details_length; ++i)
 	{
 		if (pe->variables_details[i].hops > max_hops)
@@ -457,13 +457,13 @@ bool evaluate_predicate(
 #define HEX_CHAR_TO_NUM(ch) (((ch) >= '0' && (ch) <= '9') ? (ch) - '0' : (ch) - 'A')
 
 // From: http://www.techinterview.org/post/526339864/int-atoi-char-pstr
-static unsigned int myatoi(char const * str)
+static uint8_t myatoi(char const * str)
 {
-	unsigned int result = 0;
+	uint8_t result = 0;
 
 	while (*str && *str >= '0' && *str <= '9')
 	{
-		result = (result * 10) + (*str - '0');
+		result = (result * 10u) + (*str - '0');
 		++str;
 	}
 	

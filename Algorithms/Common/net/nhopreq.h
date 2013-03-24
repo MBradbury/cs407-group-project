@@ -15,9 +15,9 @@ struct nhopreq_conn;
 
 typedef struct
 {
-	void (* data_fn)(void * data);
+	void (* data_fn)(struct nhopreq_conn * conn, void * data);
 
-	void (* receive_fn)(rimeaddr_t const * from, uint8_t hops, void const * data);
+	void (* receive_fn)(struct nhopreq_conn * conn, rimeaddr_t const * from, uint8_t hops, void const * data);
 
 } nhopreq_callbacks_t;
 
@@ -46,7 +46,7 @@ bool nhopreq_start(
 	unsigned int data_size, nhopreq_callbacks_t const * callbacks);
 
 // Shutdown multi-hop predicate checking
-bool nhopreq_end(nhopreq_conn_t * conn);
+bool nhopreq_stop(nhopreq_conn_t * conn);
 
 void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops);
 

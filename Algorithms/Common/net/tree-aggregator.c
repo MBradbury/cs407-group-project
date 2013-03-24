@@ -308,7 +308,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	stbroadcast_send_stubborn(&conn->bc, send_period);
 
 	// Wait for a bit to allow a few messages to be sent
-	ctimer_set(&conn->ct_open_or_wait, wait_period, &stbroadcast_cancel, &conn->bc);
+	ctimer_set(&conn->ct_wait_finished, wait_period, &stbroadcast_cancel, &conn->bc);
 }
  
 
@@ -354,7 +354,7 @@ bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 			TADPRINTF("Tree Agg: Starting...\n");
 
 			// Wait a bit to allow processes to start up
-			ctimer_set(&conn->ct_open_or_wait, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
+			ctimer_set(&conn->ct_open, 10 * CLOCK_SECOND, &tree_agg_setup_wait_finished, conn);
 		}
 
 		return true;
@@ -383,7 +383,8 @@ void tree_agg_close(tree_agg_conn_t * conn)
 		ctimer_stop(&conn->ctrecv);
 		ctimer_stop(&conn->aggregate_ct);
 		ctimer_stop(&conn->ct_parent_detect);
-		ctimer_stop(&conn->ct_open_or_wait);
+		ctimer_stop(&conn->ct_open);
+		ctimer_stop(&conn->ct_wait_finished);
 	}
 }
 

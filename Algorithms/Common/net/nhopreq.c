@@ -241,7 +241,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	{
 		// The target node has received the required data,
 		// so provide it to the upper layer
-		conn->callbacks->receive_fn(&sender, hops, msgdata);
+		conn->callbacks->receive_fn(conn, &sender, hops, msgdata);
 	}
 	else
 	{
@@ -326,7 +326,7 @@ static void send_reply(
 		if (data == NULL)
 		{
 			// Call data get functions and store result in outwards bound packet
-			conn->callbacks->data_fn(data_dest);
+			conn->callbacks->data_fn(conn, data_dest);
 		}
 		else
 		{
@@ -355,7 +355,7 @@ static void send_reply(
 		if (data == NULL)
 		{
 			// Call data get functions and store result in outwards bound packet
-			conn->callbacks->data_fn(data_dest);
+			conn->callbacks->data_fn(conn, data_dest);
 		}
 		else
 		{
@@ -448,7 +448,7 @@ bool nhopreq_start(
 }
 
 // Shutdown multi-hop predicate checking
-bool nhopreq_end(nhopreq_conn_t * conn)
+bool nhopreq_stop(nhopreq_conn_t * conn)
 {
 	if (conn == NULL)
 	{

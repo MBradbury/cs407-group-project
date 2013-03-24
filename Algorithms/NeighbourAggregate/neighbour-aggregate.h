@@ -25,7 +25,6 @@ typedef struct neighbour_agg_conn
 	unsigned int round_count;
 	
 	struct ctimer ct_send_data;
-	struct ctimer ct_initial_wait;
 
 } neighbour_agg_conn_t;
 

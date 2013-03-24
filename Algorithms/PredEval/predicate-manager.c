@@ -416,6 +416,44 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 	return max_hops;
 }
 
+
+bool evaluate_predicate(
+	node_data_fn data_fn, size_t data_size,
+	function_details_t const * function_details, size_t functions_count,
+	hop_data_t * hop_data,
+	ubyte const * program, unsigned int program_length,
+	void const * all_neighbour_data,
+	var_elem_t const * variables, unsigned int variables_length)
+{
+	unsigned int i;
+
+	// Set up the predicate language VM
+	init_pred_lang(data_fn, data_size);
+
+	// Register the data functions
+
+	for (i = 0; i < functions_count; ++i)
+	{
+		function_details_t const * fund = &function_details[i];
+
+		register_function(fund->id, fund->fn, fund->return_type);
+	}
+
+	// Bind the variables to the VM
+	for (i = 0; i < variables_length; ++i)
+	{
+		// Get the length of this hop's data
+		// including all of the closer hop's data length
+		unsigned int length = hop_manager_length(hop_data, &variables[i]);
+
+		printf("PE LE: Binding variables: var_id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		bind_input(variables[i].var_id, all_neighbour_data, length);
+	}
+
+	return evaluate(program, program_length);
+}
+
+
 #define HEX_CHAR_TO_NUM(ch) (((ch) >= '0' && (ch) <= '9') ? (ch) - '0' : (ch) - 'A')
 
 // From: http://www.techinterview.org/post/526339864/int-atoi-char-pstr

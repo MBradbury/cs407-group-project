@@ -38,6 +38,63 @@ Finally, all of these custom containers are tested by a test suite that checks f
 
 \subsubsection{Event Update}
 
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \verb|eventupdate|\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \% The distance we need to send information to, this is changed by the user\\
+    \null\qq \var{distance}: int init 0;\\~\\
+    %
+    \null\qq \var{period}: timer init $P_{generate}$;\\~\\
+    %
+    \null\qq \% The previous node data sent to the network\\
+    \null\qq \var{previous}: struct init $\bot$;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Generate Period, how often we should check for a change in the data\\
+    \null\qq \var{$P_{generate}$}: time;\\~\\
+    %
+    \null\qq \% Checks if the data differs\\
+    \null\qq \var{differs}: function takes (struct, struct) returns boolean;\\~\\
+    %
+    \null\qq \% Gets the data of the current node\\
+    \null\qq \var{data}: function takes () returns struct;\\~\\
+    %
+    \null\qq \% The probability of sending our data, even if no change occurred\\
+    \null\qq \var{chance}: real;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Check for changes\\
+    \null\qq \emph{check}::~\res{timeout}(\var{period}) $\rightarrow$\\
+    \null\qq\qq $\var{force} \assign \res{RandReal}(0, 1) \leq \var{chance}$;\\
+    \null\qq\qq $\var{changed} \assign \var{previous} = \bot \lor \var{differs}(\var{data}(), \var{previous})$;\\
+    \null\qq\qq \res{if} ($\var{force} \lor \var{changed}$) \res{then}\\
+    \null\qq\qq\qq $\var{previous} \assign \var{data}()$;\\
+    \null\qq\qq\qq \res{nhopflood}.\res{BCAST}$\langle j, \var{previous}\rangle$;\\
+    \null\qq\qq \res{fi}; \\
+    \null\qq\qq \res{set}($\mathit{period}$, $P_{generate}$); \\~\\
+    %
+    %
+    \null\qq \% Receiving Change message\\
+    \null\qq \emph{receive}::~\res{nhopflood}.\res{RECV}$\langle source, data\rangle \rightarrow$\\
+    \null\qq\qq \% Prevent delivery if being told that the current node's data has changed\\
+    \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
+    \null\qq\qq\qq \% Inform library caller of data change\\
+    \null\qq\qq \res{fi}; \\~\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Event Update Broadcast Algorithm}
+\end{figure}
+
+
 \subsubsection{Multi-Packet}
 
 In Contiki sending a single packet has its limits, there is only so much data you can get in a single packet. There are two C macros that are relevant to this \verb|PACKETBUF_HDR_SIZE| which is set to 48 bytes and \verb|PACKETBUF_SIZE| which is set to 128 bytes\footnote{packetbuf.h \url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}. This means that in general we will only be able to send a packet containing 128 bytes of information, but what if we have a data structure that spans 300 bytes? Then we will need to have a way to send multiple packets and a receiver that can put the packets back together in the correct way to deliver the data.

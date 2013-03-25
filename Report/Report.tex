@@ -5,6 +5,7 @@
 \usepackage{amssymb, amsmath}
 \newtheorem{mydef}{Definition}
 
+\usepackage{boxedminipage}
 % This needs to occur before hyperref and minted
 \usepackage{float}
 
@@ -46,6 +47,12 @@
 
 % A better tilde (~)
 \newcommand{\mytilde}{\raise.17ex\hbox{$\scriptstyle\mathtt{\sim}$} }
+
+% For distributed algorithms
+\newcommand{\res}[1]{\mbox{\textbf{#1}}}% for reserved words
+\newcommand{\qq}{\qquad}% for spacing
+\newcommand{\assign}{\mathrel{:=}}% for assigning variables
+\newcommand{\var}[1]{\mbox{\emph{#1}}}% for variables
 
 % For use in the title page
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}

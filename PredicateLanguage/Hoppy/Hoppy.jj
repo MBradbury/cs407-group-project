@@ -1,8 +1,8 @@
 options {
   LOOKAHEAD = 1;
+  STATIC = true;
   CHOICE_AMBIGUITY_CHECK = 2;
   OTHER_AMBIGUITY_CHECK = 1;
-  STATIC = true;
   DEBUG_PARSER = false;
   DEBUG_LOOKAHEAD = false;
   DEBUG_TOKEN_MANAGER = false;
@@ -36,10 +36,9 @@ public class Hoppy
 		compile(program);
 	}
 
-    public static void run(FileInputStream in, FileOutputStream out) throws Exception
+    public void run(FileInputStream in, FileOutputStream out) throws Exception
     {
-        Hoppy parser = new Hoppy(in);
-        Program program = parser.Input();
+        Program program = Input();
         compile(program, out);
     }
 

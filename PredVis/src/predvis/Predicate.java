@@ -11,6 +11,9 @@ import predvis.hoppy.Hoppy;
  * @author Tim
  */
 public class Predicate {
+    //Static parser so single instance only, call ReInit() between executions.
+    private static Hoppy parser = null;
+    
     private String name;
     private File scriptFile;
     
@@ -38,15 +41,7 @@ public class Predicate {
         this.name = name;
     }
     
-    public File getScriptFile() {
-        return scriptFile;
-    }
-    
-    public void setScriptFile(File scriptFile) {
-        this.scriptFile = scriptFile;
-    }
-    
-    public String getScript() throws IOException {
+    public String getScript() {
         FileInputStream stream = null;
         try {
             stream = new FileInputStream(scriptFile);
@@ -54,8 +49,21 @@ public class Predicate {
             MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
             return Charset.defaultCharset().decode(bb).toString();
         }
-        finally {
-            stream.close();
+        catch (IOException e) {
+            //TODO
+            return "";
+        }
+    }
+    
+    public void setScript(String script) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(scriptFile));
+            writer.write(script);
+            writer.close();
+        }
+        catch (IOException e) {
+            //TODO
         }
     }
     
@@ -66,8 +74,13 @@ public class Predicate {
     
     private void compileScript() {
         try {
-            
-            Hoppy.run(new FileInputStream(scriptFile), new FileOutputStream(scriptFile.getAbsolutePath() + ".compiled"));
+            if (parser != null) {
+                parser = new Hoppy(new FileInputStream(scriptFile));
+            }
+            else {
+                parser.ReInit(new FileInputStream(scriptFile));
+            }
+            parser.run(new FileInputStream(scriptFile), new FileOutputStream(scriptFile.getAbsolutePath() + ".compiled"));
         }
         catch (FileNotFoundException e) {
             //TODO
@@ -80,6 +93,6 @@ public class Predicate {
     @Override
     public String toString()
     {
-        return name + " (" + scriptFile.getAbsolutePath() + ")";
+        return name;
     }
 }

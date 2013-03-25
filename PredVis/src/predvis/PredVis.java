@@ -35,6 +35,7 @@ public class PredVis extends JFrame {
     
     //Predicate data.
     private DefaultListModel/*<Predicate>*/ predicateListModel = null;
+    private Predicate currentPredicate = null;
     
     //Network data.
     private Layout<NodeId, String> layout = null;
@@ -46,8 +47,10 @@ public class PredVis extends JFrame {
     //GUI widgets.
     private JTabbedPane tabbedPane = null;
     private JPanel predicatePanel = null;
+    private JPanel predicateControlsPanel = null;
     private JList predicateList = null;
     private JTextField predicateScriptEditor = null;
+    private JButton savePredicateScriptButton = null;
     private JButton addPredicateButton = null;
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
@@ -106,23 +109,42 @@ public class PredVis extends JFrame {
     }
     
     private void initPredicateViewer() {
-        predicatePanel = new JPanel();
+        final JFrame frame = this;
         
+        //Main panel init
+        predicatePanel = new JPanel(new BorderLayout());
+        
+        //List init
         predicateList = new JList(predicateListModel);
         predicateList.setPreferredSize(new Dimension(300, 600));
-        predicatePanel.add(predicateList);
+        predicatePanel.add(predicateList, BorderLayout.WEST);
         
+        //Controls panel
+        predicateControlsPanel = new JPanel(new BorderLayout());
+        
+        //Script editor
         predicateScriptEditor = new JTextField("Predicate script...", 20);
         predicateScriptEditor.setFont(MONOSPACE_FONT);
-        predicateScriptEditor.setPreferredSize(new Dimension(300, 600));
-        predicatePanel.add(predicateScriptEditor);
+        predicateScriptEditor.setPreferredSize(new Dimension(250, 300));
+        predicateControlsPanel.add(predicateScriptEditor, BorderLayout.NORTH);
         
+        //Script editor save button
+        savePredicateScriptButton = new JButton("Save Script");
+        predicateControlsPanel.add(savePredicateScriptButton, BorderLayout.AFTER_LINE_ENDS);
+        savePredicateScriptButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                currentPredicate.setScript(predicateScriptEditor.getText());
+            }
+        });
+        
+        //Add predicate button
         addPredicateButton = new JButton("Add Predicate");
-        
-        final JFrame frame = this;
+        predicateControlsPanel.add(addPredicateButton, BorderLayout.SOUTH);
         addPredicateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                //Ask for predicate name
                 final String predicateName = (String)JOptionPane.showInputDialog(
                     frame,
                     "Give the predicate a name: ",
@@ -135,8 +157,9 @@ public class PredVis extends JFrame {
                     return;
                 }
                 
+                //Get user to locate script file
                 File scriptFile = null;
-                final JFileChooser fileDialog = new JFileChooser();
+                final JFileChooser fileDialog = new JFileChooser(".");
                 int retval = fileDialog.showOpenDialog(frame);
                 if (retval == JFileChooser.APPROVE_OPTION) {
                     scriptFile = fileDialog.getSelectedFile();
@@ -145,22 +168,17 @@ public class PredVis extends JFrame {
                     return;
                 }
 
-                Predicate newPred = new Predicate(predicateName, scriptFile);
-                predicateListModel.addElement(newPred);
+                //Set new predicate as current
+                currentPredicate = new Predicate(predicateName, scriptFile);
+                predicateListModel.addElement(currentPredicate);
                 
-                String script = null;
-                try {
-                    script = newPred.getScript();
-                    predicateScriptEditor.setText(script);
-                }
-                catch (IOException ioe) {
-                    //TODO
-                }
+                //Load script into editor
+                predicateScriptEditor.setText(currentPredicate.getScript());
             }
         });
         
-        predicatePanel.add(addPredicateButton);
-        
+        //Fill panels
+        predicatePanel.add(predicateControlsPanel, BorderLayout.EAST);
         tabbedPane.addTab("Predicates", null, predicatePanel, "View Predicate List");
     }
     

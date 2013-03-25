@@ -112,7 +112,20 @@ PROCESS_THREAD(proc, ev, data)
 
 \subsection{Firmware Size}
 
+Reducing firmware size is a very important issue for WSN applications. As there is a small amount of space for firmware \cite{?} the smaller the compile code the more functionality that can be included in it. The Contiki wiki\footnote{\url{https://github.com/contiki-os/contiki/wiki/Reducing-Contiki-OS-firmware-size}} has a number of techniques that they have included in Contiki to optimise the code size. As these are already done, to reduce code size further it is the responsibility of the system developer to reduce the code size. The following are a number of techniques that were used to reduce the firmware size of the code that was developed:
 
+\begin{enumerate}
+\item Remove as many static strings as possible. Static strings take up lots of space in the ROM and are only helpful for debugging. Once debugging is finished these strings should be removed.
+\item Remove as many unneeded function calls as possible.
+\begin{itemize}
+\item \verb|printf| - This is linked to removing static strings
+\item \verb|memset| - If you memset memory to a set value after allocating it then remove the memset call and just fill in the data structure as is appropriate
+\item \verb|memcpy| - If possible copy the data by hand. GCC tends to inline \verb|memcpy| for small sizes \cite{?}, but as will all optimisations it is best to test than rely on this \cite{?}.
+\item Avoid string functions and other C library functions. If you do not use them it is possible that the object they are contained within will not be linked and thus space will be saved. \cite{?}
+\end{itemize}
+\end{enumerate}
+
+The most important thing is to make small changes at a time and then test every change that is made. This way the impact of the change on the program's size can be observed and if it made the size larger, then the change can be reverted. Doing multiple changes at once, may be faster to code, but may not lead to the desired result quicker.
 
 
 

@@ -1,0 +1,8 @@
+[all]
+function 0 as addr returning int in
+function 1 as slot returning int in
+	using Neighbours(1) as onehopn in
+    	@(a : onehopn ~
+    	    @(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
+    	    & slot(a) != slot(this)
+    	)

@@ -210,36 +210,6 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 \input{ImplementedAlgorithms}
 \clearpage
 
-\begin{comment}
-\section{Knowledge Gained}
-\begin{enumerate}
-	\item Not possible to write WSN applications in Java and have them run on the WSN nodes. Only possible to write in C and have that code run on the physical hardware. Java code will only run in the Cooja simulator for the Contiki OS.
-	\item A Cooja plug-in that monitors and records network traffic would be specific only to the simulator and would not be possible to apply to physical nodes
-	\item Always worth waiting for a period of time before starting protocol, to allow for nodes to set up
-\end{enumerate}
-
-\subsection{Types of Predicates}
-\begin{enumerate}
-	\item Checking sensor values are within an expected range
-	\item Check that the network is not partitioned
-	\item Check for node crashes
-	\item Check for inconsistent state caused by lost messages
-	\item Check that routing is optimal
-	\begin{enumerate}
-		\item Shortest distance from source to sink
-		\item No loops
-	\end{enumerate}
-\end{enumerate}
-
-\subsection{Logging Ideas}
-\begin{enumerate}
-	\item Keep a short message send/received history. This could be combined with other node's knowledge as log is forwarded)
-	\item Make logging reliable (TCP/IP?) even at the expense of energy
-\end{enumerate}
-
-\clearpage
-\end{comment}
-
 \input{Predicates}
 \clearpage
 

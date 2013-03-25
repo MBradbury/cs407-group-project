@@ -36,7 +36,7 @@ public class Hoppy
 		compile(program);
 	}
 
-    public void run(FileInputStream in, FileOutputStream out) throws Exception
+    public void run(FileOutputStream out) throws Exception
     {
         Program program = Input();
         compile(program, out);
@@ -52,8 +52,8 @@ public class Hoppy
 
 	private static void compile(Program program, OutputStream out) throws Exception
 	{
-		System.out.println("//" + program.toString());
-		System.out.println("//TARGETING " + program.getPredicateTarget());
+		out.println("//" + program.toString());
+		out.println("//TARGETING " + program.getPredicateTarget());
 
 		(new Compiler(out)).visit(program.getSyntaxTree());
 	}

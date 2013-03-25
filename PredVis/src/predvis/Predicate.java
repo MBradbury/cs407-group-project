@@ -14,9 +14,12 @@ public class Predicate {
     //Static parser so single instance only, call ReInit() between executions.
     private static Hoppy parser = null;
     
+    //Primary state
     private String name;
     private File scriptFile;
     
+    //Secondary state
+    private String script;
     private int[] bytecode;
     
     public Predicate()
@@ -42,27 +45,30 @@ public class Predicate {
     }
     
     public String getScript() {
-        FileInputStream stream = null;
+        if (script != null) {
+            return script;
+        }
+        
         try {
-            stream = new FileInputStream(scriptFile);
+            FileInputStream stream = new FileInputStream(scriptFile);
             FileChannel fc = stream.getChannel();
             MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-            return Charset.defaultCharset().decode(bb).toString();
-        }
-        catch (IOException e) {
+            script = Charset.defaultCharset().decode(bb).toString();
+        } catch (IOException e) {
             //TODO
-            return "";
         }
+        
+        return script;
     }
     
     public void setScript(String script) {
-        BufferedWriter writer = null;
+        this.script = script;
+        
         try {
-            writer = new BufferedWriter(new FileWriter(scriptFile));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile));
             writer.write(script);
             writer.close();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             //TODO
         }
     }
@@ -76,16 +82,13 @@ public class Predicate {
         try {
             if (parser != null) {
                 parser = new Hoppy(new FileInputStream(scriptFile));
-            }
-            else {
+            } else {
                 parser.ReInit(new FileInputStream(scriptFile));
             }
             parser.run(new FileInputStream(scriptFile), new FileOutputStream(scriptFile.getAbsolutePath() + ".compiled"));
-        }
-        catch (FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             //TODO
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             //TODO
         }
     }

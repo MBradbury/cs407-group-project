@@ -92,7 +92,7 @@ static void trickle_recv(struct trickle_conn * tc)
 		// evaluating this predicate
 		map_remove(&conn->predicates, &msg->predicate_id);
 
-		printf("PredMan: Removed pred %d\n", msg->predicate_id);
+		printf("PredMan: Remove %d\n", msg->predicate_id);
 	}
 	else
 	{
@@ -101,7 +101,7 @@ static void trickle_recv(struct trickle_conn * tc)
 
 		if (stored != NULL)
 		{
-			printf("PredMan: Updating pred %d.\n", msg->predicate_id);
+			printf("PredMan: Update %d\n", msg->predicate_id);
 
 			// Re-allocate data structures if needed
 
@@ -119,7 +119,7 @@ static void trickle_recv(struct trickle_conn * tc)
 		}
 		else
 		{
-			printf("PredMan: Creating pred %d.\n", msg->predicate_id);
+			printf("PredMan: Create %d\n", msg->predicate_id);
 
 			// Allocate memory for the data
 			stored = malloc(sizeof(predicate_detail_entry_t));
@@ -267,7 +267,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	if (packet_size > PACKETBUF_SIZE)
 	{
-		printf("PredMan: Predicate packet is too long\n");
+		printf("PredMan: Packet too long\n");
 		return false;
 	}
 
@@ -300,7 +300,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	memcpy(msg_bytecode, bytecode, sizeof(ubyte) * bytecode_length);
 
-	printf("PredMan: Sent %d\n", packet_size);
+	PMDPRINTF("PredMan: Sent %d\n", packet_size);
 
 	// We need to receive the predicate so we know of it
 	trickle_recv(&conn->tc);
@@ -315,10 +315,8 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimea
 	if (conn == NULL || destination == NULL)
 		return false;
 
-	const unsigned int packet_size = sizeof(eval_pred_req_t);
-
 	packetbuf_clear();
-	packetbuf_set_datalen(packet_size);
+	packetbuf_set_datalen(sizeof(eval_pred_req_t));
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
 
 	// Set eventual destination in header
@@ -343,9 +341,10 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 		return false;
 	}
 
-	unsigned int packet_length = sizeof(failure_response_t) +
-								 sizeof(hops_position_t) * pe->variables_details_length +
-								 data_size * data_length;
+	const unsigned int packet_length =
+		sizeof(failure_response_t) +
+		sizeof(hops_position_t) * pe->variables_details_length +
+		data_size * data_length;
 
 	if (packet_length > PACKETBUF_SIZE)
 	{
@@ -446,7 +445,7 @@ bool evaluate_predicate(
 		// including all of the closer hop's data length
 		unsigned int length = hop_manager_length(hop_data, &variables[i]);
 
-		printf("PredMan: Binding vars: id=%d hop=%d length=%d\n", variables[i].var_id, variables[i].hops, length);
+		printf("PredMan: Binding vars: id=%d hop=%d len=%d\n", variables[i].var_id, variables[i].hops, length);
 		bind_input(variables[i].var_id, all_neighbour_data, length);
 	}
 
@@ -493,7 +492,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		char const * line = (char const *)data;
 		const unsigned int length = strlen(line);
 
-		PMDPRINTF("PredMan: line:`%s' of length %u in state %d\n", line, length, state);
+		PMDPRINTF("PredMan: line:`%s' (%u) in %d\n", line, length, state);
 
 		switch (state)
 		{

@@ -1,11 +1,7 @@
 #include "pegp.h"
 
 #include "contiki.h"
-
-#include "net/netstack.h"
 #include "net/rime.h"
-#include "net/rime/stbroadcast.h"
-#include "contiki-net.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -83,7 +79,7 @@ static void handle_neighbour_data(neighbour_agg_conn_t * conn,
 {
 	pegp_conn_t * pegp = conncvt_neighbour_agg(conn);
 
-	printf("PE GP: Handling neighbour data round=%u length=%u\n", round_count, length);
+	printf("PEGP: Neighbour r=%u len=%u\n", round_count, length);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -112,7 +108,7 @@ static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, voi
 
 	void const * msgdata = (msg + 1); // Get the pointer after the message
 
-	PEDPRINTF("PE GP: Adding %u pieces of data in round %u\n", length, msg->round_count);
+	PEDPRINTF("PEGP: Adding %u pieces of data in round %u\n", length, msg->round_count);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -135,7 +131,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
-	PEDPRINTF("PE GP: Setup finsihed\n");
+	PEDPRINTF("PEGP: Setup finsihed\n");
 
 	if (tree_agg_is_leaf(conn))
 	{
@@ -149,7 +145,7 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(tconn);
 
-	PEDPRINTF("PE GP: Update local data\n");
+	PEDPRINTF("PEGP: Update local data\n");
 
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
@@ -177,7 +173,7 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(tconn);
 
-	PEDPRINTF("PE GP: Update local data with own data\n");
+	PEDPRINTF("PEGP: Update local data with own data\n");
 
 	unique_array_t * data = &((aggregation_data_t *)ptr)->list;
 
@@ -194,7 +190,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
-	printf("PE GP: Store Packet length=%u\n", length);
+	printf("PEGP: Store len=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -213,7 +209,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
-	PEDPRINTF("PE GP: Writing data to packet\n");
+	PEDPRINTF("PEGP: Writing data to packet\n");
 
 	// Take all data, write a struct to the buffer at the start, 
 	// containing the length of the packet (as the number of node_data_t)
@@ -230,7 +226,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("PE GP: Writing packet, length:%d data length:%d\n", msg->length, *packet_length);
+	printf("PEGP: Write len=%d dlen=%d\n", msg->length, *packet_length);
 
 	// Get the pointer after the message
 	void * msgdata = (msg + 1);
@@ -254,10 +250,9 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 
 static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
 {
-	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
+	pegp_conn_t * pegp = conncvt_predicate_manager(conn);
 
-	printf("PE GP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
-		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
+	pegp->predicate_failed(pegp, from, hops);
 }
 
 static const predicate_manager_callbacks_t pm_callbacks = { NULL, &pm_predicate_failed };
@@ -332,7 +327,7 @@ static void pretend_node_data(void * data)
 
 static void data_evaluation(pegp_conn_t * pegp)
 {
-	printf("PE GP: Eval: Beginning Evaluation\n");
+	printf("PEGP: Start Eval\n");
 
 	map_t const * predicate_map = predicate_manager_get_map(&pegp->predconn);
 
@@ -378,7 +373,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 				target = unique_array_next(target))
 			{
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-				printf("PE GP: Eval: Checking Target: %s for hops %d\n", addr2str(t), hops);
+				printf("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
 
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbours_elem;
@@ -403,7 +398,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 
 					if (neighbour != NULL)
 					{
-						printf("PE GP: Eval: Checking neighbour %s\n", addr2str(neighbour));
+						PEDPRINTF("PEGP: Eval: Checking neighbour %s\n", addr2str(neighbour));
 
 						// If the neighbour hasn't been seen before
 						if (!unique_array_contains(&seen_nodes, neighbour)) 
@@ -412,7 +407,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 
 							if (nd == NULL)
 							{
-								printf("PE GP: ERROR: received no info on %s\n", addr2str(neighbour));
+								printf("PEGP: ERROR no info on %s\n", addr2str(neighbour));
 							}
 							else
 							{
@@ -460,7 +455,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 					++count;
 				}
 
-				printf("PE GP: Eval: i=%u Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+				printf("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
@@ -478,11 +473,11 @@ static void data_evaluation(pegp_conn_t * pegp)
 
 		if (evaluation_result)
 		{
-			printf("PE GP: Pred: TRUE\n");
+			printf("PEGP: TRUE\n");
 		}
 		else
 		{
-			printf("PE GP: Pred: FAILED due to error: %s\n", error_message());
+			printf("PEGP: FAILED (%s)\n", error_message());
 		}
 
 		//predicate_manager_send_response(&predconn, &hop_data,
@@ -500,7 +495,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 	map_clear(&pegp->received_data);
 	unique_array_clear(&pegp->neighbour_info);
 
-	printf("PE GP: Round: finishing=%u\n", pegp->pred_round_count);
+	printf("PEGP: Round=%u\n", pegp->pred_round_count);
 	
 	pegp->pred_round_count += 1;
 }
@@ -534,7 +529,7 @@ exit:
 
 void pegp_start_delayed2(pegp_conn_t * conn)
 {
-	PEDPRINTF("PE GE: Starting Data Aggregation\n");
+	PEDPRINTF("PEGP: Starting Data Aggregation\n");
 
 	tree_agg_open(&conn->aggconn, conn->sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 
@@ -547,7 +542,7 @@ void pegp_start_delayed2(pegp_conn_t * conn)
 
 void pegp_start_delayed1(pegp_conn_t * conn)
 {
-	//printf("PE GE: Starting Neighbour Aggregation\n");
+	//printf("PEGP: Starting Neighbour Aggregation\n");
 
 	neighbour_aggregate_open(&conn->nconn, conn->sink, 121, 110, 150, &neighbour_callbacks);
 
@@ -580,7 +575,7 @@ bool pegp_start(pegp_conn_t * conn,
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr, sink))
 	{
-		PEDPRINTF("PE GE: We are sink node.\n");
+		PEDPRINTF("PEGP: We are sink node.\n");
 
 		predicate_manager_start_serial_input(&conn->predconn);
 	}
@@ -702,7 +697,7 @@ static void predicate_failed(pegp_conn_t * conn, rimeaddr_t const * from, uint8_
 {
 	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PE LP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
+	printf("PEGP: Response from %s, %u, %u hops. Failed pred %u.\n",
 		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
 }
 
@@ -719,7 +714,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	
-	PEDPRINTF("PE GE: Process Started.\n");
+	PEDPRINTF("PEGP: Process Started.\n");
 
 	// Init code
 #ifdef NODE_ID

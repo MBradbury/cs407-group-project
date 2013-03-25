@@ -59,7 +59,7 @@ static void receieved_data(nhopreq_conn_t * conn, rimeaddr_t const * from, uint8
 {
 	pelp_conn_t * pelp = conncvt_nhopreq(conn);
 
-	printf("PE LP: Obtained information from %s hops:%u\n", addr2str(from), hops);
+	printf("PELP: Obtained information from %s hops:%u\n", addr2str(from), hops);
 
 	hop_manager_record(&pelp->hop_data, hops, data, pelp->data_size);
 }
@@ -101,7 +101,7 @@ static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback,
 
 static const nhopreq_callbacks_t nhopreq_callbacks = { &nhopreq_data_fn, &receieved_data };
 
-PROCESS(pelp_process, "PE LP Process");
+PROCESS(pelp_process, "PELP Process");
 PROCESS_THREAD(pelp_process, ev, data)
 {
 	static pelp_conn_t * pelp;
@@ -113,7 +113,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 	pelp = (pelp_conn_t *)data;
 	
-	printf("PE LP: Process Started.\n");
+	printf("PELP: Process Started.\n");
 	
 	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
@@ -121,17 +121,17 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 	while (true)
 	{
-		printf("PE LP: Starting long wait...\n");
+		printf("PELP: Starting long wait...\n");
 
 		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-		printf("PE LP: Wait finished! About to ask for data!\n");
+		printf("PELP: Wait finished! About to ask for data!\n");
 
 		// Only ask for data if the predicate needs it
 		if (pelp->max_comm_hops != 0)
 		{
-			printf("PE LP: Starting request for %d hops of data...\n", pelp->max_comm_hops);
+			printf("PELP: Starting request for %d hops of data...\n", pelp->max_comm_hops);
 
 			nhopreq_request_info(&pelp->nhr, pelp->max_comm_hops);
 	
@@ -139,7 +139,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 			etimer_set(&et, 120 * CLOCK_SECOND);
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-			printf("PE LP: Finished collecting hop data.\n");
+			printf("PELP: Finished collecting hop data.\n");
 
 			const unsigned int max_size = hop_manager_max_size(&pelp->hop_data);
 
@@ -164,7 +164,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 						++count;
 					}
 
-					printf("PE LP: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+					printf("PELP: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
 				}
 			}
 		}
@@ -180,7 +180,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
 			{
-				printf("PE LP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
+				printf("PELP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 		
 				bool evaluation_result = evaluate_predicate(
 					pelp->data_fn, pelp->data_size,
@@ -192,11 +192,11 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 				if (evaluation_result)
 				{
-					printf("PE LP: Pred: TRUE\n");
+					printf("PELP: Pred: TRUE\n");
 				}
 				else
 				{
-					printf("PE LP: Pred: FAILED due to error: %s\n", error_message());
+					printf("PELP: Pred: FAILED due to error: %s\n", error_message());
 				}
 
 				predicate_manager_send_response(&pelp->predconn, &pelp->hop_data,
@@ -247,12 +247,12 @@ bool pelp_start(pelp_conn_t * conn,
 
 	if (!nhopreq_start(&conn->nhr, 149, 132, conn->data_size, &nhopreq_callbacks))
 	{
-		printf("PE LP: nhopreq start function failed\n");
+		printf("PELP: nhopreq start function failed\n");
 	}
 
 	if (rimeaddr_cmp(sink, &rimeaddr_node_addr)) // Sink
 	{
-		printf("PE LP: Is the base station!\n");
+		printf("PELP: Is the base station!\n");
 
 		// As we are the base station we need to start reading the serial input
 		predicate_manager_start_serial_input(&conn->predconn);
@@ -373,7 +373,7 @@ static void predicate_failed(pelp_conn_t * conn, rimeaddr_t const * from, uint8_
 {
 	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PE LP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
+	printf("PELP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
 		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
 }
 
@@ -390,7 +390,7 @@ PROCESS_THREAD(mainProcess, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	
-	printf("PE LP: Process Started.\n");
+	printf("PELP: Process Started.\n");
 
 	// Init code
 #ifdef NODE_ID

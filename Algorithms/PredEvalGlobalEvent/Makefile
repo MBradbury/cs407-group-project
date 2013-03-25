@@ -24,9 +24,9 @@ CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werro
 #CFLAGS += -DNDEBUG
 CFLAGS += -DNDEBUGVM
 
-CFLAGS += -DPEGE_APPLICATION
-
 CFLAGS += -fdata-sections
+
+CFLAGS += -DPEGE_APPLICATION -DRIMESTATS_CONF_ENABLED
 
 # Disable uip
 #CONTIKI_NO_NET=1

@@ -146,7 +146,7 @@ PROCESS_THREAD(pele_process, ev, data)
 				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
 				{
 					void * mapdata = map_data(hop_map, elem);
-					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pelp->data_size), mapdata, pele->data_size);
+					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pele->data_size), mapdata, pele->data_size);
 					++count;
 				}
 

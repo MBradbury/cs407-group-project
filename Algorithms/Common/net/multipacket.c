@@ -16,8 +16,8 @@
 // From: http://stackoverflow.com/questions/3437404/min-and-max-in-c
 #define min(a, b) \
    ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
+	   __typeof__ (b) _b = (b); \
+	 _a < _b ? _a : _b; })
 
 #define MAX_REXMITS 4
 #define SEND_PERIOD ((clock_time_t) 1 * CLOCK_SECOND)
@@ -94,7 +94,7 @@ static const struct packetbuf_attrlist multipacket_attributes[] = {
 	{ PACKETBUF_ATTR_EPACKET_ELENGTH, PACKETBUF_ATTR_BYTE * sizeof(unsigned int) },	// Length
 	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
 	RUNICAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 
 

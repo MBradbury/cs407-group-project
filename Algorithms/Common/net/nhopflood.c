@@ -27,7 +27,7 @@ static const struct packetbuf_attrlist flood_attributes[] = {
 	{ PACKETBUF_ATTR_TTL, PACKETBUF_ATTR_BIT * 4 },
 	{ PACKETBUF_ATTR_EPACKET_ID, PACKETBUF_ATTR_BIT * 8 },
 	BROADCAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 
 // Message Structs

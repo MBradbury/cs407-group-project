@@ -62,9 +62,9 @@ typedef struct tree_agg_conn
 
 
 bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
-                   uint16_t ch1, uint16_t ch2,
-                   size_t data_size,
-                   tree_agg_callbacks_t const * callbacks);
+				   uint16_t ch1, uint16_t ch2,
+				   size_t data_size,
+				   tree_agg_callbacks_t const * callbacks);
 
 void tree_agg_close(tree_agg_conn_t * conn);
 

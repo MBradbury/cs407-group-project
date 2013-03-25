@@ -162,6 +162,21 @@ To counter the given disadvantages of our basic clustering implementation, we de
 \end{itemize}
 
 
-\subsection{LEACH}
-\cite{LEACH}
+\subsection{TDMA}
+
+To have a representative algorithm of what may be tested, TDMA (Time Division Multiple Access) was chosen to be implemented and have predicates written for it. The algorithm that was initially implemented was described by \citeauthor{DCATechReport} in \cite[p.~4]{DCATechReport} and is outlined below:
+
+\begin{enumerate}
+\item Initially assign every node the smallest numbered channel
+\item Every round every node broadcasts a message containing their ID and their currently assigned channel
+\item When a message is received the neighbour set is updated and the node that received the message assigns its channel to be the lowest channel not assigned to any neighbour. Two neighbours are not allowed to change their channel in the same round, so a tie breaker is done and the node with the lower ID is allowed to change their channel
+\item After choosing a channel the node broadcasts its ID and chosen channel
+\item The procedure is repeated until every node cannot choose a smaller channel than its current channel
+\end{enumerate}
+
+Interestingly enough when this was first implemented the algorithm only made sure that a node did not have the same channel as any of its one hop neighbours. It did not ensure that the one hop neighbours of any node would have unique channels (as would be required by TDMA to ensure no collisions). This is the kind of bug that running predicates would have assisted identifying.
+
+To make sure that the channel allocation was suitable for TDMA, instead of nodes just sending their own channel assignment to its neighbours. It also included the assignment of the one hop neighbours it knows about in that message. This then allowed nodes to receive information on their two hop neighbourhoods, which they then based their decision on what channel to allocate to themselves from.
+
+
 

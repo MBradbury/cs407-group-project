@@ -42,12 +42,9 @@ Finally, all of these custom containers are tested by a test suite that checks f
   \centering
   \begin{boxedminipage}{\linewidth}
     % 
-    \null Process $j$ - \verb|eventupdate|\\
+    \null Process $j$ - \res{eventupdate}\\
     %
     \null \textbf{variables}\\
-    %
-    \null\qq \% The distance we need to send information to, this is changed by the user\\
-    \null\qq \var{distance}: int init 0;\\~\\
     %
     \null\qq \var{period}: timer init $P_{generate}$;\\~\\
     %
@@ -68,6 +65,11 @@ Finally, all of these custom containers are tested by a test suite that checks f
     \null\qq \% The probability of sending our data, even if no change occurred\\
     \null\qq \var{chance}: real;\\~\\
     %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The distance we need to send information\\
+    \null\qq \var{distance}: int;\\~\\
+    %
     \null \textbf{actions}\\
     %
     %
@@ -77,13 +79,13 @@ Finally, all of these custom containers are tested by a test suite that checks f
     \null\qq\qq $\var{changed} \assign \var{previous} = \bot \lor \var{differs}(\var{data}(), \var{previous})$;\\
     \null\qq\qq \res{if} ($\var{force} \lor \var{changed}$) \res{then}\\
     \null\qq\qq\qq $\var{previous} \assign \var{data}()$;\\
-    \null\qq\qq\qq \res{nhopflood}.\res{BCAST}$\langle j, \var{previous}\rangle$;\\
+    \null\qq\qq\qq \res{nhopflood}$\langle j, \var{previous}, \var{distance}\rangle$;\\
     \null\qq\qq \res{fi}; \\
     \null\qq\qq \res{set}($\mathit{period}$, $P_{generate}$); \\~\\
     %
     %
     \null\qq \% Receiving Change message\\
-    \null\qq \emph{receive}::~\res{nhopflood}.\res{RECV}$\langle source, data\rangle \rightarrow$\\
+    \null\qq \emph{receive}::~\res{nhopflood.recv}$\langle source, data, hops\rangle \rightarrow$\\
     \null\qq\qq \% Prevent delivery if being told that the current node's data has changed\\
     \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
     \null\qq\qq\qq \% Inform library caller of data change\\

@@ -110,9 +110,67 @@ Contiki's data transfer primitives for their RIME protocols are fairly hidden be
 Contiki provides broadcast primitives to allow the flooding of messages through the network, however the \verb|trickle|\cite{Levis04trickle} primitive only allows a single source node\footnote{trickle.h \url{http://contiki.sourceforge.net/docs/2.6/a00381.html}}, which presents a problem, when multiple nodes are attempting to send a message N-hops away. 
 In some cases \verb|reliable unicast| could be used to target the specific nodes for which the message is intended. This, however, is not suitable when the identifies of the nodes is not known, or in situations when storing routing tables is not appropiate. 
 
-Our response to this was to develop a primitive which would flood the network, a fixed number of hops from the source, whilst allowing multiple nodes to use the same primitive, with different messages. Our implementation uses a \verb|stubborn broadcast| to pass the message along a chain, only rebroadcasting the message when the hop limit (the number of hops the message is intended to travel) has not been reached. If a message has been seen before by a node (and the number of hops left is lower than before) it is simply ignored and not passed on. In the case where the hop limit for a 
-duplicate message is higher than the previously seen limit, it is then rebroadcast, so that all the intended recipiets will recieve the message.  
+Our response to this was to develop a primitive which would flood the network, a fixed number of hops from the source, whilst allowing multiple nodes to use the same primitive, with different messages. Our implementation uses a \verb|stubborn broadcast| to pass the message along a chain, only rebroadcasting the message when the hop limit (the number of hops the message is intended to travel) has not been reached. If a message has been seen before by a node (and the number of hops left is lower than before) it is simply ignored and not passed on. In the case where the hop count for a 
+duplicate message is higher than the previously seen count, it is then rebroadcast, so that all the intended recipients will recieve the message.  
+After a fixed time, messages are then sent back to the source along a chain, this time is reset whenever a message with a higher hop count is seen.  Each node stores the ID of the node that it received the message from, and the response message is sent back to that node. In turn, that node will forward the message to the node it received the original message from, eventually the message will end up at the source, to be processed.
+
 %TODO: Note about performance maybe?
+%Could also put a graphic of the chain here too
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \verb|n-hop-req|\\
+    %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The number of hops left to send a message\\
+    \null\qq \var{hop\_limit}: int\\~\\
+    %
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \%The nodes a given message was seen from\\
+    \null\qq \var{mote\_records}: map\\~\\
+    %
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Send Data Period, the time between receiving a request for data, and sending it\\
+    \null\qq \var{$P_{send\_data}$}: time;\\~\\
+    %
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Receiving Message\\
+    \null\qq \emph{receive}::~\res{recv}$\langle source, data, hop\_count, id\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($mote\_records.contains(id)$ \&\& $mote\_records.hop\_count(id) < hop\_count$) \res{then} \\
+    \null\qq\qq\qq \% Rebroadcast message with $hop\_count -1$ \\
+    \null\qq\qq\qq \% Updated $mote\_records$ with new data \\
+    \null\qq\qq\qq \% Reset data sending timer\\
+    \null\qq\qq \res{else if} ($!mote\_records.contains(id)$) \res{then}\\
+    \null\qq\qq\qq \%Broadcast message with $hop\_count -1$\\
+    \null\qq\qq\qq \% Updated $mote\_records$ with new data \\
+    \null\qq\qq\qq \% Set data sending timer to \var{$P_{send\_data}$} \\
+    \null\qq\qq \res{fi;}\\~\\
+    %
+    \null\qq \% Sending Data\\
+    \null\qq \emph{send\_data}:~\res{timeout}(\var{$P_{send\_data}$})$\rightarrow$\\
+    \null\qq\qq \res{runicast.send}($mote\_records.getMote(id)$, $data$);\\~\\
+    %
+    \null\qq \% Recieved Data\\
+    \null\qq \emph{recv\_data}:~\res{runicast.recv}$\langle source, data, id\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($mote\_records.getMote(id)$ == $self$) \res{then}\\
+    \null\qq\qq\qq \% Process Data\\
+    \null\qq\qq \res{else}\\
+    \null\qq\qq\qq \res{runicast.send}($mote\_records.getMote(id)$, $data$);\\
+    \null\qq\qq \res{fi;}\\~\\
+  \end{boxedminipage}
+  \caption{N-Hop Request Algorithm}
+  \label{fig:n-hop-req-algorithm}
+\end{figure}
 
 \subsubsection{Neighbour Detect}
 

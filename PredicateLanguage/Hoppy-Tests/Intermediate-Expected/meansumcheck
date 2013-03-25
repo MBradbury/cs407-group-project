@@ -1,11 +1,12 @@
-//[all] (FUNDEF 2 AS temperature RETURNING Float IN (USING 2 AT 254 AS twohopn IN (((N:twohopn N:temperature F:sum) (N:twohopn F:len) DIVIDE) (N:twohopn N:temperature F:mean) EQUAL)))
+//[all] (FUNDEF 2 AS temperature RETURNING Float IN (USING 1 AS onehopn IN (USING 2 AS twohopn IN (((N:twohopn N:temperature F:sum) (N:twohopn F:len) DIVIDE) (N:twohopn N:temperature F:mean) EQUAL))))
 //TARGETING all
 //FUNC 2 AS temperature
+//STORING 1 IN onehopn
 //STORING 2 IN twohopn
-ASUM 254 2
-ALEN 254
+ASUM 255 2
+ALEN 255
 ICASTF
 FDIV2
-AMEAN 254 2
+AMEAN 255 2
 FEQ
 HALT

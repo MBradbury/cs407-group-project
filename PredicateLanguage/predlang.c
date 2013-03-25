@@ -467,11 +467,11 @@ typedef enum {
 
   FPOW=52,
 
-  VIINC=53, VIDEC=54, VIFAFC=55,
+  VIINC=53, VIDEC=54, VIFAFC=55, THISC=56,
 
-  IDEC=56,
+  IDEC=57,
 
-  EQUIVALENT=57, IMPLIES=58,
+  EQUIVALENT=58, IMPLIES=59,
 
 } opcode;
 
@@ -506,7 +506,7 @@ static const char * opcode_names[] = {
 
 	"FPOW",
 
-	"VIINC", "VIDEC", "VIFAFC",
+	"VIINC", "VIDEC", "VIFAFC", "THISC",
 
 	"IDEC",
 
@@ -1081,6 +1081,27 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 				variable_type_t type;
 				void const * data = call_function(function_id_t_from_bytecode(current + 1), inputdata, &type);
+				current += sizeof(function_id_t);
+
+				if (data == NULL)
+				{
+					return false;
+				}
+
+				if (!push_stack(data, variable_type_size(type)))
+					return false;
+
+			} break;
+
+		case THISC:
+			{
+				variable_reg_t const * var = get_variable(THIS_VAR_ID);
+
+				if (var == NULL)
+					return false;
+
+				variable_type_t type;
+				void const * data = call_function(function_id_t_from_bytecode(current + 1), var->location, &type);
 				current += sizeof(function_id_t);
 
 				if (data == NULL)

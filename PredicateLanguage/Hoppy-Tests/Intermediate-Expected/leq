@@ -1,0 +1,5 @@
+//[all] (I:1 I:2 LESS_THAN_EQUAL)
+//TARGETING all
+IPUSH 1
+IPUSH 2
+ILEQ

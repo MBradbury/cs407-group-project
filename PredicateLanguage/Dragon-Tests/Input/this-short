@@ -1,0 +1,9 @@
+// Get `this' variable
+// Get the temperature of the current node
+THISC 2
+
+// Prepare to compare to 20.0
+FPUSH 20.0
+
+// Check if it is equal to 20
+FEQ

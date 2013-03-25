@@ -635,28 +635,24 @@ final class Compiler implements ISyntaxTreeVisitor
 
 					checkIs(variableScope.keySet(), nvn.getName());
 
-					comment(nvn.getName());
-
-					int id, arrid;
+					int fnid = functionScope.get(item.getName()).id;
 
 					if (nvn.getName().equals("this"))
 					{
-						id = arrid = 0;
+						comment(item.getName() + "(this)");
+						write("THISC", fnid);
 					}
 					else
 					{
 						ArrIds vid = variableScope.get(nvn.getName());
-						id = vid.id;
-						arrid = vid.arrid;
+
+						// Equivalent to:
+						// IFETCH id
+						// AFETCH arrid
+						// CALL fnid
+						comment(item.getName() + "(" + nvn.getName() + "[*" + vid.id + "])");
+						write("VIFAFC", vid.id, vid.arrid, fnid);
 					}
-
-					int fnid = functionScope.get(item.getName()).id;
-
-					// Equivalent to:
-					// IFETCH id
-					// AFETCH arrid
-					// CALL fnid
-					write("VIFAFC", id, arrid, fnid);
 				}
 				else
 				{

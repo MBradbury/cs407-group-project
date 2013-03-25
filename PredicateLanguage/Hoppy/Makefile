@@ -3,6 +3,7 @@ all:
 	javac *.java
 
 jar: all
+	rm -rf predvis
 	mkdir predvis
 	mkdir predvis/hoppy
 	cp *.class predvis/hoppy

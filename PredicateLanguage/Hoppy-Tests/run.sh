@@ -15,8 +15,8 @@ CP="${HOPPYDIR}/Hoppy.jar"
 DRAGONCP="${DRAGONDIR}/Dragon.jar${CPSEP}${DRAGONDIR}/guava-13.0.1.jar"
 
 # Remove any previous intermediate files
-rm -rf Intermediate Output Dragon-Output
-mkdir Intermediate Output Dragon-Output
+rm -rf Intermediate Output Dragon-Output Execution-Output
+mkdir Intermediate Output Dragon-Output Execution-Output
 
 rm -f Input/*~
 
@@ -65,7 +65,7 @@ do
 
 	#echo "$VMBINARY \"Dragon-Output/$name\" > \"Output/$name\""
 
-	$VMBINARY "Dragon-Output/$name" > "Output/$name"
+	$VMBINARY "Dragon-Output/$name" 1> "Output/$name" 2> "Execution-Output/$name"
 	
 	# Check that we got the expected result
 	

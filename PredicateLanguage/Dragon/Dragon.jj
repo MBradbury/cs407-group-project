@@ -182,7 +182,7 @@ enum OpcodeEnum
 	JZ(19, OpcodeType.OneArgByte),
 	JNZ(20, OpcodeType.OneArgByte),
 
-	IADD(21), ISUB(22), IMUL(23), IDIV1(24), IDIV2(25), IINC(26), IDEC(56),
+	IADD(21), ISUB(22), IMUL(23), IDIV1(24), IDIV2(25), IINC(26), IDEC(57),
 	IEQ(27), INEQ(28), ILT(29), ILEQ(30), IGT(31), IGEQ(32),
 
 	FADD(33), FSUB(34), FMUL(35), FDIV1(36), FDIV2(37),
@@ -200,7 +200,9 @@ enum OpcodeEnum
 	VIINC(53, OpcodeType.OneArgByte), VIDEC(54, OpcodeType.OneArgByte),
 	VIFAFC(55, OpcodeType.ThreeArgsByte),
 
-	EQUIVALENT(56), IMPLIES(57);
+	THISC(56, OpcodeType.OneArgByte),
+
+	EQUIVALENT(58), IMPLIES(59);
 	
 	private final int value;
 	private final OpcodeType type;
@@ -380,7 +382,7 @@ TOKEN : {
 	| < ZEROARG :	"HALT" | <POP> | <CAST> | <MATHOP> | <MATHLOP> | <LOGICOP> | <ABS> | "FPOW" >
 	| < ONEARGI :	"IPUSH" >
 	| < ONEARGF :	"FPUSH" >
-	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> | "VIINC" | "VIDEC" >
+	| < ONEARGB :	<FETCH> | <STORE> | "ALEN" | "CALL" | <VAR> | "VIINC" | "VIDEC" | "THISC" >
 	| < ONEARGS :	<JUMP> >
 	| < TWOARGB :	<ABIGOP> >
 	| < THREEARGB :	"VIFAFC" >

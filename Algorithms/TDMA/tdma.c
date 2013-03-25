@@ -30,7 +30,7 @@ static const struct packetbuf_attrlist attributes[] = {
 
 typedef struct
 {
-	unsigned int slot;
+	unsigned int length;
 	bool is_change;
 } msg_t;
 
@@ -74,6 +74,9 @@ static linked_list_t packet_queue;
 // Map of neighbour_entry_t
 static map_t neighbour_details;
 
+// List of rimeaddr_t
+static unique_array_t one_hop_neighbours;
+
 // The maximum number of slots that can be assigned
 // The lower this is the lower the latency
 static const unsigned int slot_count = 10;
@@ -104,6 +107,47 @@ static void bcast(struct broadcast_conn * conn, void * data, size_t length, uint
 	broadcast_send(conn);
 }
 
+static void bcast_beacon(struct broadcast_conn * conn, bool is_change)
+{
+	unsigned int length = unique_array_length(&one_hop_neighbours) + 1;
+	unsigned int packet_length = sizeof(msg_t) + (sizeof(neighbour_entry_t) * length);
+
+	packetbuf_clear();
+	packetbuf_set_datalen(packet_length);
+	msg_t * msg = (msg_t *)packetbuf_dataptr();
+
+	msg->length = length;
+	msg->is_change = is_change;
+
+	neighbour_entry_t * entries = (neighbour_entry_t *)(msg + 1);
+
+	// Copy in our value
+	rimeaddr_copy(&entries->neighbour, &rimeaddr_node_addr);
+	entries->slot = assigned_slot;
+
+	++entries;
+
+	// Copy in the data from our one hop neighbourhood
+	unique_array_elem_t elem;
+	for (elem = unique_array_first(&one_hop_neighbours);
+		 unique_array_continue(&one_hop_neighbours, elem);
+		 elem = unique_array_next(elem))
+	{
+		rimeaddr_t const * neighbour =
+			(rimeaddr_t const *)unique_array_data(&one_hop_neighbours, elem);
+
+		void * data = map_get(&neighbour_details, neighbour);
+
+		memcpy(entries, data, sizeof(neighbour_entry_t));
+
+		++entries;
+	}
+
+	packetbuf_set_attr(PACKETBUF_ATTR_PACKET_TYPE, PACKET_TYPE_PROTOCOL_BEACON);
+
+	broadcast_send(conn);
+}
+
 static void set_slot(void * ptr)
 {
 	struct broadcast_conn * conn = (struct broadcast_conn *)ptr;
@@ -112,11 +156,7 @@ static void set_slot(void * ptr)
 
 	assigned_slot = to_change_assigned_slot;
 
-	msg_t msg;
-	msg.slot = assigned_slot;
-	msg.is_change = true;
-
-	bcast(conn, &msg, sizeof(msg_t), PACKET_TYPE_PROTOCOL_BEACON);
+	bcast_beacon(conn, true);
 }
 
 static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
@@ -125,6 +165,12 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 	unsigned int length = packetbuf_datalen();
 
 	uint8_t type = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_PACKET_TYPE);
+
+	// Record who is in our one hop neighbourhood
+	if (!unique_array_contains(&one_hop_neighbours, sender))
+	{
+		unique_array_append(&one_hop_neighbours, rimeaddr_clone(sender));
+	}
 
 	switch (type)
 	{
@@ -135,14 +181,15 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 	case PACKET_TYPE_PROTOCOL_BEACON:
 		{
 			msg_t * msg = (msg_t *)ptr;
+			neighbour_entry_t const * entries = (neighbour_entry_t const *)(msg + 1);
 
-			printf("Received beacon from %s slot=%u change=%u\n",
-				addr2str(sender), msg->slot, msg->is_change);
+			printf("Received beacon from %s length=%u change=%u\n",
+				addr2str(sender), msg->length, msg->is_change);
 
 			// Cancel, if a node with a lower id is also changing
 			if (msg->is_change && rimeaddr_lt(sender, &rimeaddr_node_addr))
 			{
-				if (!ctimer_expired(&ct_change_assigned_slot))
+				if (ctimer_expired(&ct_change_assigned_slot) != 0)
 				{
 					printf("Stopping change slot timer\n");
 
@@ -150,26 +197,32 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 				}
 			}
 
-			// Update or store information on this node
-			neighbour_entry_t * entry = map_get(&neighbour_details, sender);
-
-			if (entry == NULL)
+			unsigned int i;
+			for (i = 0; i != msg->length; ++i)
 			{
-				entry = malloc(sizeof(neighbour_entry_t));
-				rimeaddr_copy(&entry->neighbour, sender);
-				entry->slot = msg->slot;
+				// Don't record information on self
+				if (!rimeaddr_cmp(&entries[i].neighbour, &rimeaddr_node_addr))
+				{
+					// Update or store information on this node
+					neighbour_entry_t * entry = map_get(&neighbour_details, &entries[i].neighbour);
 
-				map_put(&neighbour_details, entry);
-			}
-			else
-			{
-				entry->slot = msg->slot;
+					if (entry == NULL)
+					{
+						entry = malloc(sizeof(neighbour_entry_t));
+						memcpy(entry, &entries[i], sizeof(sizeof(neighbour_entry_t)));
+
+						map_put(&neighbour_details, entry);
+					}
+					else
+					{
+						entry->slot = entries[i].slot;
+					}
+				}
 			}
 
 			printf("Searching for better slot...\n");
 
 			// Find the smallest slot not in use by other nodes
-			unsigned int i;
 			for (i = 0; i != slot_count; ++i)
 			{
 				//printf("Checking slot %u\n", i);
@@ -224,6 +277,7 @@ PROCESS_THREAD(startup_process, ev, data)
 
 	linked_list_init(&packet_queue, &free_queue_entry);
 	map_init(&neighbour_details, &rimeaddr_equality, &free);
+	unique_array_init(&one_hop_neighbours, &rimeaddr_equality, &free);
 
 	broadcast_open(&bc, 126, &callbacks);
 	channel_set_attributes(126, attributes);
@@ -266,11 +320,7 @@ PROCESS_THREAD(startup_process, ev, data)
 
 			printf("Broadcasting our slot %u\n", assigned_slot);
 
-			msg_t msg;
-			msg.slot = assigned_slot;
-			msg.is_change = false;
-
-			bcast(&bc, &msg, sizeof(msg_t), PACKET_TYPE_PROTOCOL_BEACON);
+			bcast_beacon(&bc, false);
 		}
 	}
 
@@ -278,5 +328,6 @@ exit:
 	broadcast_close(&bc);
 	map_free(&neighbour_details);
 	linked_list_free(&packet_queue);
+	unique_array_free(&one_hop_neighbours);
 	PROCESS_END();
 }

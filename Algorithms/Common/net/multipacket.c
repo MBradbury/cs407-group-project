@@ -33,9 +33,9 @@ typedef struct
 
 	unsigned int sent;
 
-	void * data;
-
 	uint8_t seqno;
+
+	// Data stored from here onwards
 
 } multipacket_sending_packet_t;
 
@@ -58,26 +58,20 @@ typedef struct
 
 	unsigned int data_received;
 
-	void * data;
-
 	uint8_t last_seqno;
 
-} multipacket_recieving_packet_t;
+	// Data stored from here onwards
 
-static void sending_packet_cleanup(void * ptr)
+} multipacket_receiving_packet_t;
+
+static inline void * sending_data(multipacket_sending_packet_t * packet)
 {
-	multipacket_sending_packet_t * details = (multipacket_sending_packet_t *)ptr;
-
-	free(details->data);
-	free(details);
+	return (packet + 1);
 }
 
-static void recieving_packet_cleanup(void * ptr)
+static inline void * receiving_data(multipacket_receiving_packet_t * packet)
 {
-	multipacket_recieving_packet_t * details = (multipacket_recieving_packet_t *)ptr;
-
-	free(details->data);
-	free(details);
+	return (packet + 1);
 }
 
 static bool recv_key_equality(void const * left, void const * right)
@@ -122,7 +116,7 @@ static void send_loop_callback(void * ptr)
 
 		unsigned int to_send = min(PACKETBUF_SIZE, details->length - details->sent);
 
-		void * send_start = (char *)(details->data) + details->sent;
+		void * send_start = (char *)(sending_data(details)) + details->sent;
 
 		packetbuf_clear();
 		packetbuf_set_datalen(to_send);
@@ -152,7 +146,7 @@ static void send_loop_callback(void * ptr)
 			MPDPRINTF("multipacket: Finished sending a packet of length:%d to %s with id %d\n",
 				details->length, addr2str(&details->target), details->id);
 
-			conn->callbacks->sent(conn, &details->target, details->data, details->length);
+			conn->callbacks->sent(conn, &details->target, sending_data(details), details->length);
 
 			linked_list_pop(&conn->sending_packets);
 		}
@@ -179,7 +173,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	key.data.id = packet_id;
 	rimeaddr_copy(&key.data.originator, source);
 
-	multipacket_recieving_packet_t * details = (multipacket_recieving_packet_t *)map_get(&conn->receiving_packets, &key);
+	multipacket_receiving_packet_t * details = (multipacket_receiving_packet_t *)map_get(&conn->receiving_packets, &key);
 
 
 	void * data_to_pass_onwards = NULL;
@@ -204,14 +198,13 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 			}
 			else
 			{
-				details = (multipacket_recieving_packet_t *)malloc(sizeof(multipacket_recieving_packet_t));
+				details = (multipacket_receiving_packet_t *)malloc(sizeof(multipacket_receiving_packet_t) + data_length);
 				details->key = key;
-				details->data = malloc(data_length);
 				details->length = data_length;
 				details->last_seqno = seq;
 				details->data_received = recv_length;
 
-				memcpy(details->data, data_recv, recv_length);
+				memcpy(receiving_data(details), data_recv, recv_length);
 
 				map_put(&conn->receiving_packets, details);
 			}
@@ -225,7 +218,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 			MPDPRINTF("multipacket: Recv'd a new part of a packet from %s with id %d seqno:%d and length %d/%d\n",
 				addr2str(from), packet_id, seq, recv_length, details->length);
 
-			void * data_ptr = (char *)(details->data) + details->data_received;
+			void * data_ptr = (char *)(receiving_data(details)) + details->data_received;
 
 			memcpy(data_ptr, data_recv, recv_length);
 
@@ -237,7 +230,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 			// If so set the relevant variables
 			if (details->data_received == details->length)
 			{
-				data_to_pass_onwards = details->data;
+				data_to_pass_onwards = receiving_data(details);
 				length_of_data_to_pass_onwards = details->length;
 				should_remove_from_map = true;
 			}
@@ -275,9 +268,9 @@ bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_c
 
 		ctimer_set(&conn->ct_sender, SEND_PERIOD, &send_loop_callback, conn);
 
-		linked_list_init(&conn->sending_packets, &sending_packet_cleanup);
+		linked_list_init(&conn->sending_packets, &free);
 
-		map_init(&conn->receiving_packets, &recv_key_equality, &recieving_packet_cleanup);
+		map_init(&conn->receiving_packets, &recv_key_equality, &free);
 
 		return true;
 	}
@@ -301,14 +294,15 @@ void multipacket_close(multipacket_conn_t * conn)
 void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void * data, unsigned int length)
 {
 	// Allocate the packet
-	multipacket_sending_packet_t * details = (multipacket_sending_packet_t *)malloc(sizeof(multipacket_sending_packet_t));
+	multipacket_sending_packet_t * details = (multipacket_sending_packet_t *)malloc(sizeof(multipacket_sending_packet_t) + length);
 	details->id = conn->id++;
-	details->data = data;
 	details->length = length;
 	details->sent = 0;
 	details->seqno = 0;
 	rimeaddr_copy(&details->target, target);
 	rimeaddr_copy(&details->source, &rimeaddr_node_addr);
+
+	memcpy(sending_data(details), data, length);
 
 	// Add to the queue to send
 	linked_list_append(&conn->sending_packets, details);

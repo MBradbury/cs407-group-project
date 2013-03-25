@@ -29,7 +29,7 @@ static void data_check(void * p)
 
 	if (force)
 	{
-		printf("eventupdate: Randomly forcing an update %d <= %d\n",
+		printf("eup: Force up %d <= %d\n",
 			(int)(rnd * 10000), (int)(conn->chance * 10000));
 	}
 
@@ -74,7 +74,6 @@ static void data_check(void * p)
 
 		packetbuf_clear();
 		packetbuf_set_datalen(packet_size);
-		debug_packet_size(packet_size);
 		void * msg = packetbuf_dataptr();
 
 		// Set the data to send
@@ -131,7 +130,7 @@ void event_update_set_distance(event_update_conn_t * conn, uint8_t distance)
 {
 	if (conn != NULL)
 	{
-		printf("Setting the update distance to be %d hops\n", distance);
+		printf("eup: Set hops=%d\n", distance);
 
 		conn->distance = distance;
 

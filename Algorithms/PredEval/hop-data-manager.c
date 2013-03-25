@@ -73,10 +73,7 @@ void hop_manager_remove(hop_data_t * hop_data, uint8_t hops, rimeaddr_t const * 
 {
 	map_t * map = hop_manager_get(hop_data, hops);
 
-	if (map != NULL && from != NULL)
-	{
-		map_remove(map, from);
-	}
+	map_remove(map, from);
 }
 
 void hop_manager_reset(hop_data_t * hop_data)

@@ -41,13 +41,21 @@ typedef struct
 	uint8_t retx;
 
 	uint8_t data_length;
-	void * data;
+
+	// Data stored from here onwards
 
 } packet_details_t;
 
+static inline void * packet_details_data(packet_details_t * details)
+{
+	return (details + 1);
+}
+
 static packet_details_t * alloc_packet_details(uint8_t id, uint8_t hops)
 {
-	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t));
+	unsigned int data_length = packetbuf_datalen();
+
+	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t) + data_length);
 
 	rimeaddr_copy(&details->sender, &rimeaddr_node_addr);
 	details->id = id;
@@ -56,17 +64,18 @@ static packet_details_t * alloc_packet_details(uint8_t id, uint8_t hops)
 
 	details->retx = 0;
 
-	details->data_length = packetbuf_datalen();
-	details->data = malloc(details->data_length);
+	details->data_length = data_length;
 
-	memcpy(details->data, packetbuf_dataptr(), details->data_length);
+	memcpy(packet_details_data(details), packetbuf_dataptr(), details->data_length);
 
 	return details;
 }
 
 static packet_details_t * packet_details_from_packetbuf(void)
 {
-	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t));
+	unsigned int data_length = packetbuf_datalen();
+
+	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t) + data_length);
 
 	rimeaddr_copy(&details->sender, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 	details->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
@@ -75,24 +84,12 @@ static packet_details_t * packet_details_from_packetbuf(void)
 
 	details->retx = 0;
 
-	details->data_length = packetbuf_datalen();
-	details->data = malloc(details->data_length);
+	details->data_length = data_length;
 
-	memcpy(details->data, packetbuf_dataptr(), details->data_length);
+	memcpy(packet_details_data(details), packetbuf_dataptr(), details->data_length);
 
 	return details;
 }
-
-static void free_packet_details(void * ptr)
-{
-	packet_details_t * details = (packet_details_t *)ptr;
-	if (details != NULL)
-	{
-		free(details->data);
-		free(details);
-	}
-}
-
 
 typedef struct
 {
@@ -227,7 +224,7 @@ static void nhopflood_delayed_start_sending(void * ptr)
 			void * msg = packetbuf_dataptr();
 
 			// Copy the packet to the buffer
-			memcpy(msg, details->data, details->data_length);
+			memcpy(msg, packet_details_data(details), details->data_length);
 
 			// Set the header flags
 			packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->sender);
@@ -273,7 +270,7 @@ bool nhopflood_start(nhopflood_conn_t * conn, uint8_t ch, nhopflood_recv_fn rece
 
 	conn->current_id = 0;
 
-	linked_list_init(&conn->packet_queue, &free_packet_details);
+	linked_list_init(&conn->packet_queue, &free);
 	map_init(&conn->latest_message_seen, &rimeaddr_equality, &free);
 
 	conn->send_period = send_period;

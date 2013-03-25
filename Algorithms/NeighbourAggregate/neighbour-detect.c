@@ -40,7 +40,7 @@ static void round_complete(void * ptr)
 
 		if (conn->round_count - stored->round_last_seen >= conn->missed_round_threshold)
 		{
-			printf("ND: removing %s (R=%u RLS=%u THRE=%u)\n",
+			printf("ND: rm %s (R=%u RLS=%u THRE=%u)\n",
 				addr2str(addr), conn->round_count, stored->round_last_seen, conn->missed_round_threshold);
 
 			// We haven't seen this node for a while, so need to remove it
@@ -54,7 +54,7 @@ static void round_complete(void * ptr)
 		}
 	}
 
-	printf("ND: Round %u complete!\n", conn->round_count);
+	printf("ND: R=%u done\n", conn->round_count);
 
 	// Call the callback
 	(*conn->callbacks->round_complete_callback)(conn, &conn->results, conn->round_count);
@@ -79,7 +79,7 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 	{
 		unique_array_append(&conn->results, rimeaddr_clone(from));
 
-		printf("ND: Recording Address: %s\n", addr2str(from));
+		printf("ND: %s\n", addr2str(from));
 	}
 
 	// Update round map

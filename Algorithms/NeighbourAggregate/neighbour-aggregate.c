@@ -328,9 +328,11 @@ static void neighbour_agg_send_data(void * ptr)
 
 		list_to_array_single(&conn->one_hop_neighbours, msg);
 
-		printf("NAgg: Is leaf, sending length:%d 1HN:%d\n", message_length, one_hop_n_size);
+		printf("NAgg: send len:%d 1HN:%d\n", message_length, one_hop_n_size);
 
 		tree_agg_send(&conn->tc, msg, message_length);
+
+		free(msg);
 	}
 
 	conn->round_count++;

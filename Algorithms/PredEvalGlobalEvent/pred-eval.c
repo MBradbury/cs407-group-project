@@ -317,7 +317,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 
 			tree_agg_send(&pege->aggconn, msg, data_length);
 
-			// No need to free data as tree_agg now owns that memory
+			free(msg);
 		}
 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));

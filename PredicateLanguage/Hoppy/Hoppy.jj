@@ -22,7 +22,6 @@ PARSER_BEGIN(Hoppy)
 
 package predvis.hoppy;
 
-import java.io.PrintStream;
 import java.util.*;
 import java.io.*;
 
@@ -36,7 +35,7 @@ public class Hoppy
 		compile(program);
 	}
 
-    public void run(FileOutputStream out) throws Exception
+    public void run(PrintStream out) throws Exception
     {
         Program program = Input();
         compile(program, out);
@@ -44,13 +43,10 @@ public class Hoppy
 
 	private static void compile(Program program) throws Exception
 	{
-		System.out.println("//" + program.toString());
-		System.out.println("//TARGETING " + program.getPredicateTarget());
-
-		(new Compiler()).visit(program.getSyntaxTree());
+		compile(program, System.out);
 	}
 
-	private static void compile(Program program, OutputStream out) throws Exception
+	private static void compile(Program program, PrintStream out) throws Exception
 	{
 		out.println("//" + program.toString());
 		out.println("//TARGETING " + program.getPredicateTarget());

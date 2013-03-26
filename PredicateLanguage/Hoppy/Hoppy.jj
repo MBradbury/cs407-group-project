@@ -46,7 +46,7 @@ public class Hoppy
         return Input();
     }
 
-	private static HashMap<Integer, Integer> compile(Program program, OutputStream out) throws Exception
+	public HashMap<Integer, Integer> compile(Program program, OutputStream out) throws Exception
 	{
         PrintStream ps = new PrintStream(out);
 

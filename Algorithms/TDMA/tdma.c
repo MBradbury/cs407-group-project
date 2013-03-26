@@ -87,7 +87,7 @@ static const unsigned int slot_count = 10;
 static const clock_time_t slot_length = 2 * CLOCK_SECOND;
 
 // The length of each round
-static const clock_time_t round_length = 20 * CLOCK_SECOND;
+static const clock_time_t round_length = 45 * CLOCK_SECOND;
 
 static struct ctimer ct_change_assigned_slot;
 

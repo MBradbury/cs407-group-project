@@ -5,6 +5,7 @@ import java.io.*;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import predvis.dragon.Dragon;
 import predvis.hoppy.Hoppy; 
 
@@ -94,8 +95,8 @@ public class Predicate {
             } else {
                 Hoppy.ReInit(in);
             }
-			Program program = hoppy.getProgram();
-			String target = program.getPredicateTarget();
+            Program program = hoppy.getProgram();
+            String target = program.getPredicateTarget();
             HashMap<Integer, Integer> vdMap = hoppy.compile(program, out);
             
             //Run Dragon
@@ -117,12 +118,12 @@ public class Predicate {
                 bytecode[i] = (int)(bytes[i] & 0xFF);
             }
 			
-			//Set up variable details structure
-			VariableDetails[] vds = new VariableDetails[vdMap.size()];
-			int i = 0;
-			for (int n : vds.keySet()) {
-				vds[i++] = new VariableDetails(vds.get(n), n);
-			}
+            //Set up variable details structure
+            VariableDetails[] vds = new VariableDetails[vdMap.size()];
+            int i = 0;
+            for (int n : vdMap.keySet()) {
+                vds[i++] = new VariableDetails(vdMap.get(n), n);
+            }
 			
         } catch (Exception e) {
             //TODO

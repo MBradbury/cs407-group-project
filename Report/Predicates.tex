@@ -83,7 +83,6 @@ So we would need at best $2\Delta_{sink} + 2|Neighbours(n, 2)|$ messages to eval
 & \hspace{9em}			(n.slot \neq n'.slot)
 \end{align}
 
-
 The second predicate we could consider is the one where every node checks their 1-hop neighbourhood for slot collisions. Here we model the 2-hop nature of the predicate differently, because instead of checking on the node that we want to check for slot collisions, we check on the node between two nodes that might have slot collisions.
 
 \begin{enumerate}
@@ -196,7 +195,8 @@ using Neighbours(2) as twohopn in
         slot(x) != slot(this)
     )
 \end{verbatim}
-\caption{Check that no two neighbours have the same slot}
+\caption{Check that no two neighbours have the same slot (2-hop information)}
+\label{fig:two-hop-slot-pred-lang}
 \end{figure}
 
 \begin{figure}[H]
@@ -205,11 +205,15 @@ using Neighbours(1) as onehopn in
     @(x : onehopn ~
         @(y : onehopn ~
             addr(x) != addr(y) => slot(x) != slot(y)
-        )
+        ) & 
+        slot(x) != slot(this)
     )
 \end{verbatim}
-\caption{Check that no two neighbours have the same slot \cite{DBLP:journals/corr/abs-0808-0920}}
+\caption{Check that no two neighbours have the same slot (1-hop information)}
+\label{fig:one-hop-slot-pred-lang}
 \end{figure}
+
+Predicates like those in \autoref{fig:two-hop-slot-pred-lang} and \autoref{fig:one-hop-slot-pred-lang} are found at \cite{DBLP:journals/corr/abs-0808-0920}.
 
 \begin{figure}[H]
 \begin{verbatim}

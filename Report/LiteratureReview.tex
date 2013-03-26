@@ -3,6 +3,8 @@
 
 \subsection{Routing in Sensor Networks}
 
+\cite{TankBible}
+
 \subsubsection{Flooding}
 
 
@@ -13,6 +15,33 @@
 
 \subsubsection{Contiki}
 % Cite basically all the papers at: http://www.contiki-os.org/support.html
+
+\paragraph{A Database In Every Sensor} 
+\cite{Tsiftes:2011:DS:2070942.2070974} %http://dunkels.com/adam/tsiftes11database.pdf
+
+\paragraph{Sensor Network IP Stacks}
+\cite{ko2011beyond} % http://dunkels.com/adam/ko11beyond.pdf
+\cite{dunkels2009efficient} % http://dunkels.com/adam/yazar09efficient.pdf
+\cite{Durvy:2008:MSN:1460412.1460483} %http://dunkels.com/adam/durvy08making.pdf
+\cite{dunkels2003full} % http://dunkels.com/adam/mobisys2003.pdf
+
+\paragraph{Cooja / MSPSim}
+\cite{Eriksson:2009:CIT:1537614.1537650} % https://dl.acm.org/citation.cfm?id=1537614.1537650
+
+\paragraph{Protothreads}
+\cite{Dunkels:2006:PSE:1182807.1182811} % http://dunkels.com/adam/dunkels06protothreads.pdf
+
+\paragraph{Energy Estimation}
+\cite{Dunkels:2007:SOE:1278972.1278979} % http://dunkels.com/adam/dunkels07softwarebased.pdf
+
+\paragraph{RIME}
+\cite{Dunkels:2007:ACA:1322263.1322295} % http://dunkels.com/adam/dunkels07adaptive.pdf
+
+\paragraph{Beacon Coordination}
+\cite{Dunkels:2011:ALB:1966251.1966270} % http://dunkels.com/adam/dunkels11announcement.pdf
+
+\paragraph{Run-time Reprogramming}
+\cite{Dunkels:2006:RDL:1182807.1182810} % http://dunkels.com/adam/dunkels06runtime.pdf
 
 \subsubsection{NS2}
 
@@ -194,7 +223,7 @@ DIDUCE \cite{diduce} is a tool which employs machine learning to dynamically gen
 
 One method of automatically inferring invariants in applications is the use of a prototype invariant detector, DAIKON \cite{daikon}, which uses execution traces to produce a list of likely invariants. The set of dynamically detected invariants depend on observed values and the invariants are an indication of the quality of a test suite. Daikon consists of two parts; a language specific front end and a language independent interference engine. The former executes the running program and accesses its runtime state to get the required information (consist of variables and their value). This information contains a subset of relevant variables and only these are written to the trace file. A variable is considered as relevant depending on the type of invariants targeted and whether they are accessible at an instrumentation point. This forms an input to the second part of the system - the invariant inference engine - which uses machine learning techniques and produces a set of detected invariants for the program.
 
-The main challenge with these techniques is deducing the relevance of the invariants as it depends on the programmer's expereience and knowledge of the underlying system. However, these can be improved with techniques like exploiting unused polymorphism and suppressing invariants that are logically implied by other invariants. Daikon does not require the programmer to specify invariants for the application, however, including DIDUCE, it is not designed for distributed or resource-constrained systems like WSN.
+The main challenge with these techniques is deducing the relevance of the invariants as it depends on the programmer's experience and knowledge of the underlying system. However, these can be improved with techniques like exploiting unused polymorphism and suppressing invariants that are logically implied by other invariants. Daikon does not require the programmer to specify invariants for the application, however, including DIDUCE, it is not designed for distributed or resource-constrained systems like WSN.
 
 
 \begin{comment}

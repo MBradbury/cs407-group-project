@@ -32,7 +32,6 @@ public class Predicate {
     public Predicate(String name, File scriptFile) {
         this.name = name;
         this.scriptFile = scriptFile;
-        
         compileScript();
     }
     
@@ -44,8 +43,7 @@ public class Predicate {
         this.name = name;
     }
     
-    public String getScript()
-    {
+    public String getScript() {
         if (script != null) {
             return script;
         }
@@ -64,6 +62,7 @@ public class Predicate {
     
     public void setScript(String script) {
         this.script = script;
+        compileScript();
         
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile));
@@ -107,9 +106,11 @@ public class Predicate {
             dragon.run(leout);
             
             //Store bytecode.
-            System.out.println("Bytecode: " + out.toString());
-        } catch (FileNotFoundException e) {
-            //TODO
+            byte[] bytes = ((ByteArrayOutputStream)out).toByteArray();
+            bytecode = new int[bytes.length];
+            for (int i = 0; i < bytes.length; ++i) {
+                bytecode[i] = (int)bytes[i];
+            }
         } catch (Exception e) {
             //TODO
         }

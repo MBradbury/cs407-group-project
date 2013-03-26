@@ -216,6 +216,7 @@ public class PredVis extends JFrame {
         predicateList.setPreferredSize(new Dimension(200, 600));
         predicateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         predicateList.addListSelectionListener(new ListSelectionListener() {
+            @Override
             public void valueChanged(ListSelectionEvent le) {
                 if (predicateList.getSelectedIndex() != -1) {
                     setCurrentPredicate((Predicate)predicateList.getSelectedValue());

@@ -62,12 +62,12 @@ public class WSNMonitor {
     
     private final NodeComms comms;
     
-    public WSNMonitor(String comPort) {
+    public WSNMonitor(String port) {
         listeners = new ArrayList<NetworkUpdateListener>();
         
         states = new HashMap<Integer, NetworkState>();
         
-        comms = new NodeComms(comPort);
+        comms = new NodeComms(port);
         
         comms.connect(new NodeCommsResponder(this));
     }

@@ -5,12 +5,7 @@ import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.visualization.BasicVisualizationServer;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import edu.uci.ics.jung.visualization.renderers.Renderer.VertexLabel.Position;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Paint;
-import java.awt.Shape;
+import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
 import java.io.File;
@@ -58,7 +53,7 @@ public class PredVis extends JFrame {
     
     private int currentRound = 0;
     
-    public PredVis(String comPort) {
+    public PredVis(String port) {
         super("Predicate Visualiser");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -79,7 +74,7 @@ public class PredVis extends JFrame {
         initNetworkViewer();
         
         //Init monitoring.
-        initMonitoring(comPort);
+        initMonitoring(port);
         
         pack();
     }
@@ -131,8 +126,21 @@ public class PredVis extends JFrame {
                     return;
                 }
                 
-                //Create new script file.
-                File scriptFile = new File(".", predicateName);
+                //Pick directory
+                File directory = null;
+                final JFileChooser fileDialog = new JFileChooser(".");
+                fileDialog.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                fileDialog.setDialogTitle("Predicate Directory");
+                int retval = fileDialog.showOpenDialog(frame);
+                if (retval == JFileChooser.APPROVE_OPTION) {
+                    directory = fileDialog.getSelectedFile();
+                } else {
+                    //No script chosen, abort.
+                    return;
+                }
+                
+                //Create script file based on directory and predicate name
+                File scriptFile = new File(directory.getAbsolutePath(), predicateName);
 
                 //Set new predicate as current
                 Predicate p = new Predicate(predicateName, scriptFile);
@@ -150,6 +158,7 @@ public class PredVis extends JFrame {
                 //Get user to locate existing script file
                 File scriptFile = null;
                 final JFileChooser fileDialog = new JFileChooser(".");
+                fileDialog.setDialogTitle("Predicate Script");
                 int retval = fileDialog.showOpenDialog(frame);
                 if (retval == JFileChooser.APPROVE_OPTION) {
                     scriptFile = fileDialog.getSelectedFile();
@@ -173,8 +182,8 @@ public class PredVis extends JFrame {
         menuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //Close gui.
-                
+                WindowEvent wev = new WindowEvent(frame, WindowEvent.WINDOW_CLOSING);
+                Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(wev);
             }
         });
         menu.add(menuItem);
@@ -230,13 +239,14 @@ public class PredVis extends JFrame {
         
         //Script editor save button
         savePredicateScriptButton = new JButton("Save Script");
-        predicateControlsPanel.add(savePredicateScriptButton);
+        savePredicateScriptButton.setEnabled(false);
         savePredicateScriptButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 currentPredicate.setScript(predicateScriptEditor.getText());
             }
         });
+        predicateControlsPanel.add(savePredicateScriptButton);
         
         //Fill panels
         predicatePanel.add(predicateControlsPanel, BorderLayout.EAST);
@@ -283,9 +293,9 @@ public class PredVis extends JFrame {
         tabbedPane.addTab("Network", null, networkPanel, "View Network Diagram");
     }
     
-    private void initMonitoring(String comPort) {        
+    private void initMonitoring(String port) {        
         //Listen for updates to network state.
-        wsnMonitor = new WSNMonitor(comPort);
+        wsnMonitor = new WSNMonitor(port);
         wsnMonitor.addListener(new NetworkUpdateListener() {
             @Override
             public void networkUpdated(final Map<Integer, NetworkState> networkStates) {
@@ -304,6 +314,7 @@ public class PredVis extends JFrame {
     private void setCurrentPredicate(Predicate p) {
         currentPredicate = p;
         predicateScriptEditor.setText(p.getScript());
+        savePredicateScriptButton.setEnabled(true);
     }
     
     private void updateNetworkView(NetworkState ns) {

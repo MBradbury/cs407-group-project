@@ -51,7 +51,6 @@ public class PredVis extends JFrame {
     private JList predicateList = null;
     private JTextArea predicateScriptEditor = null;
     private JButton savePredicateScriptButton = null;
-    private JButton addPredicateButton = null;
     
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
@@ -106,6 +105,8 @@ public class PredVis extends JFrame {
     }
     
     private void initMenuBar() {
+        final JFrame frame = this;
+        
         menuBar = new JMenuBar();
         
         //File menu
@@ -114,14 +115,68 @@ public class PredVis extends JFrame {
         menuBar.add(menu);
         
         JMenuItem menuItem = new JMenuItem("New Predicate", KeyEvent.VK_N);
+        menuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                //Ask for predicate name
+                final String predicateName = (String)JOptionPane.showInputDialog(
+                    frame,
+                    "Give the predicate a name: ",
+                    "New Predicate",
+                    JOptionPane.PLAIN_MESSAGE
+                );
+
+                if ((predicateName == null) || (predicateName.length() <= 0)) {
+                    //No predicate name given, abort.
+                    return;
+                }
+                
+                //Create new script file.
+                File scriptFile = new File(".", predicateName);
+
+                //Set new predicate as current
+                Predicate p = new Predicate(predicateName, scriptFile);
+                predicateListModel.addElement(p);
+                predicateList.setSelectedValue(p, true);
+                setCurrentPredicate(p);
+            }
+        });
         menu.add(menuItem);
         
         menuItem = new JMenuItem("Load Predicate", KeyEvent.VK_L);
+        menuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                //Get user to locate existing script file
+                File scriptFile = null;
+                final JFileChooser fileDialog = new JFileChooser(".");
+                int retval = fileDialog.showOpenDialog(frame);
+                if (retval == JFileChooser.APPROVE_OPTION) {
+                    scriptFile = fileDialog.getSelectedFile();
+                } else {
+                    //No script chosen, abort.
+                    return;
+                }
+
+                //Set new predicate as current
+                Predicate p = new Predicate(scriptFile.getName(), scriptFile);
+                predicateListModel.addElement(p);
+                predicateList.setSelectedValue(p, true);
+                setCurrentPredicate(p);
+            }
+        });
         menu.add(menuItem);
         
         menu.addSeparator();
         
         menuItem = new JMenuItem("Quit", KeyEvent.VK_Q);
+        menuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                //Close gui.
+                
+            }
+        });
         menu.add(menuItem);
         
         //Help menu
@@ -130,6 +185,7 @@ public class PredVis extends JFrame {
         menuBar.add(menu);
         
         menuItem = new JMenuItem("About", KeyEvent.VK_A);
+        //TODO
         menu.add(menuItem);
         
         setJMenuBar(menuBar);
@@ -148,7 +204,17 @@ public class PredVis extends JFrame {
         
         //List init
         predicateList = new JList(predicateListModel);
-        predicateList.setPreferredSize(new Dimension(300, 600));
+        predicateList.setPreferredSize(new Dimension(200, 600));
+        predicateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        predicateList.addListSelectionListener(new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent le) {
+                if (predicateList.getSelectedIndex() != -1) {
+                    setCurrentPredicate((Predicate)predicateList.getSelectedValue());
+                } else {
+                    //Do nothing
+                }
+            }
+        });
         predicatePanel.add(predicateList, BorderLayout.WEST);
         
         //Controls panel
@@ -159,7 +225,7 @@ public class PredVis extends JFrame {
         predicateScriptEditor = new JTextArea("Click Add Predicate");
         predicateScriptEditor.setWrapStyleWord(false);
         predicateScriptEditor.setFont(MONOSPACE_FONT);
-        predicateScriptEditor.setPreferredSize(new Dimension(250, 300));
+        predicateScriptEditor.setPreferredSize(new Dimension(400, 300));
         predicateControlsPanel.add(predicateScriptEditor);
         
         //Script editor save button
@@ -169,45 +235,6 @@ public class PredVis extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 currentPredicate.setScript(predicateScriptEditor.getText());
-            }
-        });
-        
-        //Add predicate button
-        addPredicateButton = new JButton("Add Predicate");
-        predicateControlsPanel.add(addPredicateButton);
-        addPredicateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                //Ask for predicate name
-                final String predicateName = (String)JOptionPane.showInputDialog(
-                    frame,
-                    "Give the predicate a name: ",
-                    "New Predicate",
-                    JOptionPane.PLAIN_MESSAGE
-                );
-
-                if ((predicateName == null) || (predicateName.length() <= 0)) {
-                    //No predicate name given, abort.
-                    return;
-                }
-                
-                //Get user to locate script file
-                File scriptFile = null;
-                final JFileChooser fileDialog = new JFileChooser(".");
-                int retval = fileDialog.showOpenDialog(frame);
-                if (retval == JFileChooser.APPROVE_OPTION) {
-                    scriptFile = fileDialog.getSelectedFile();
-                } else {
-                    //No script chosen, abort.
-                    return;
-                }
-
-                //Set new predicate as current
-                currentPredicate = new Predicate(predicateName, scriptFile);
-                predicateListModel.addElement(currentPredicate);
-                
-                //Load script into editor
-                predicateScriptEditor.setText(currentPredicate.getScript());
             }
         });
         
@@ -272,6 +299,11 @@ public class PredVis extends JFrame {
                 }
             }
         });
+    }
+    
+    private void setCurrentPredicate(Predicate p) {
+        currentPredicate = p;
+        predicateScriptEditor.setText(p.getScript());
     }
     
     private void updateNetworkView(NetworkState ns) {

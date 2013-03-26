@@ -174,19 +174,84 @@ After a fixed time, messages are then sent back to the source along a chain, thi
 
 \subsubsection{Neighbour Detect}
 
+To aid in debugging a vital piece of information that will be required about the network is its topology. Trying to analyse network state without knowing which nodes are neighbours of other nodes, makes drawing meaningful conclusions from that data much harder. This meant that we needed a way to send neighbour information back to the sink. Thankfully part of the job is already accomplished as Contiki comes with a library to perform neighbour detection\cite{?}. We extended that library in two ways.
+
+The first was to add more features to Contiki's neighbour detect library. As that library was very simple and supported only saying that a neighbour had been detected (with the option of providing a integer value as well). As we were aiming for this code to support changes in the network, such as nodes leaving or joining neighbourhoods, we added the concept of a round. Instead of just knowing about neighbours at that instant in time, it allowed the library to maintain some kind of history about what nodes were neighbours of other nodes in the past. Whenever new nodes are detected they are recorded, however, if a node has not been detected for a certain number of rounds then that node is removed from the record.
+
 \begin{figure}[ht!]
 \centering
 \subfigure[Node A requesting neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-request}}
 \subfigure[Node A receiving neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-report}}
+\caption{Nodes asking for and receiving neighbour data}
 \end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \res{neighbourdetect}\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{period}: timer init $P_{round}$;\\~\\
+    %
+    \null\qq \% The history of node\\
+    \null\qq \var{previous}: map of address to int init $\emptyset$;\\~\\
+    %
+    \null\qq \% The current round\\
+    \null\qq \var{count}: int init 0;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Round Period\\
+    \null\qq \var{$P_{round}$}: time;\\~\\
+    %
+    \null\qq \% The missed round threshold\\
+    \null\qq \var{missed}: int;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Check for changes\\
+    \null\qq \emph{round}::~\res{timeout}(\var{period}) $\rightarrow$\\
+    \null\qq\qq $\var{previous} \assign \{ (addr, round) \in \var{previous} | count - round \geq missed \}$;\\
+    \null\qq\qq \% Tell library caller that a round is finished\\
+    \null\qq\qq \res{round-complete}(\res{values}(previous), \var{count});\\
+    \null\qq\qq $\var{count} \assign \var{count} + 1$; \\
+    \null\qq\qq \res{set}($\mathit{period}$, $P_{round}$); \\~\\
+    %
+    %
+    \null\qq \% Receiving Neighbour Discovery message\\
+    \null\qq \emph{neighbour}::~\res{neighbour\_discovery.recv}$\langle source, round\rangle \rightarrow$\\
+    \null\qq\qq \% Update the round we last saw this node\\
+    \null\qq\qq \res{if} ($source \in \res{keys}(\var{previous})$) \res{then} \\
+    \null\qq\qq\qq \res{if} ($round > \var{previous}[\var{source}]$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{previous}[\var{source}] \assign \var{round}$; \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq \res{else} \\
+    \null\qq\qq\qq $\var{previous}[\var{source}] \assign \var{round}$; \\
+    \null\qq\qq \res{fi}; \\~\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Neighbour Detect Algorithm}
+  \label{algo:neighbour-detect}
+\end{figure}
+
+For this to be useful we needed a way to get this data back to the sink node. There are many ways to do this, but one of the best is aggregating along a tree because it can combine many messages into a single one and forward that aggregated message instead of lots of smaller messages \cite{?}. The Neighbour Aggregation part uses the Tree Aggregation library that we have developed, the function that is used to aggregate data together is $\cup$ (union), this allows data to be aggregated with other data and allows that data to be updated. The nodes own data is set to be $\res{node-data}$, where $\var{j}$ is the current node's address and $\res{round-data}$ is the set of node addresses provided by the $\res{round-complete}$ callback in \autoref{algo:neighbour-detect}.
+
+\begin{equation}
+\res{node-data} = \{\{\var{other}, \var{j}\} | \var{other} \in \res{round-data} \}
+\end{equation}
+
 
 \subsubsection{Tree Aggregation}
 
 \begin{figure}[ht!]
 \centering
-\subfigure[Example Network]{\includegraphics[width=0.75\textwidth]{Diagrams/neighbour-network}}
+\subfigure[Example Network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-network}}
 
-\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.75\textwidth]{Diagrams/neighbour-tree-structure}}
+\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-tree-structure}}
 \end{figure}
 
 

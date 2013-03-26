@@ -89,6 +89,7 @@ Finally, all of these custom containers are tested by a test suite that checks f
     \null\qq\qq \% Prevent delivery if being told that the current node's data has changed\\
     \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
     \null\qq\qq\qq \% Inform library caller of data change\\
+    \null\qq\qq\qq \res{data-changed-callback}(\var{data}, \var{hops}); \\
     \null\qq\qq \res{fi}; \\~\\
     %
     %

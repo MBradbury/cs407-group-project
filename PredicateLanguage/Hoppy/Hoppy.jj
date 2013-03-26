@@ -35,7 +35,7 @@ public class Hoppy
 		compile(program);
 	}
 
-    public void run(PrintStream out) throws Exception
+    public void run(OutputStream out) throws Exception
     {
         Program program = Input();
         compile(program, out);
@@ -46,12 +46,16 @@ public class Hoppy
 		compile(program, System.out);
 	}
 
-	private static void compile(Program program, PrintStream out) throws Exception
+	private static void compile(Program program, OutputStream out) throws Exception
 	{
-		out.println("//" + program.toString());
-		out.println("//TARGETING " + program.getPredicateTarget());
+        PrintStream ps = new PrintStream(out);
 
-		(new Compiler(out)).visit(program.getSyntaxTree());
+		ps.println("//" + program.toString());
+		ps.println("//TARGETING " + program.getPredicateTarget());
+
+
+        Compiler c = new Compiler(ps);
+		c.visit(program.getSyntaxTree());
 	}
 }
 
@@ -156,7 +160,7 @@ final class Compiler implements ISyntaxTreeVisitor
 
 	private boolean writtenHalt = false;
 
-    private PrintStream out = System.out;
+    private PrintStream out = null;//System.out;
     
     public Compiler()
     {
@@ -164,12 +168,12 @@ final class Compiler implements ISyntaxTreeVisitor
 		variableScope.put("this", new ArrIds(variableId++, 0));
     }
 	
-	public Compiler(OutputStream out)
+	public Compiler(PrintStream out)
 	{
 		// The this variable is implicitly in the scope
 		variableScope.put("this", new ArrIds(variableId++, 0));
 
-        this.out = new PrintStream(out);
+        this.out = out;
 	}
 	
 	public Compiler(Compiler other)
@@ -180,6 +184,7 @@ final class Compiler implements ISyntaxTreeVisitor
 		this.functionScope.putAll(other.functionScope);
 		this.variableId = other.variableId;
 		this.writtenHalt = other.writtenHalt;
+        this.out = other.out;
 	}
 
 	private void write(String code)

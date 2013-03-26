@@ -32,35 +32,8 @@ public class Dragon
 	{
 		Dragon parser = new Dragon(System.in);
 		ArrayList<Opcode> opcodes = parser.Input();
-		
 		transformJumps(opcodes);
-		
-		/*for (Opcode op : opcodes)
-		{
-			System.err.print(op.getName());
-			
-			ArrayList<Arg> opArgs = op.getArgs();
-			
-			for (Arg arg : opArgs)
-			{
-				System.err.print(" ");
-				System.err.print(arg.toString());
-			}
-			
-			if (op.getLabel() != null)
-			{
-				System.err.print(" (Label=");
-				System.err.print(op.getLabel());
-				System.err.print(")");
-			}
-			
-			System.err.println();
-		}*/
-		
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
-		
-		// Big-endian
-		//DataOutputStream out = new DataOutputStream(os);
 		
 		// Little-endian
 		LittleEndianDataOutputStream out = new LittleEndianDataOutputStream(os);
@@ -92,6 +65,38 @@ public class Dragon
 		}
 		
 		os.writeTo(System.out);
+	}
+
+	public void run(LittleEndianDataOutputStream out) throws Exception
+	{
+		ArrayList<Opcode> opcodes = Input();
+		transformJumps(opcodes);
+		
+		try
+		{
+			for (Opcode op : opcodes)
+			{
+				out.writeByte(op.getName().getValue());
+				
+				for (Arg arg : op.getArgs())
+				{
+					arg.write(out);
+				}
+			}
+			out.flush();
+		}
+		catch (IOException e)
+		{
+			System.err.println(e);
+		}
+		finally
+		{
+			try {
+				out.close();
+			} catch (Exception e) {
+				System.err.println(e);
+			}
+		}
 	}
 	
 	private static void transformJumps(ArrayList<Opcode> opcodes) throws Exception

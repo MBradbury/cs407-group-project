@@ -95,9 +95,8 @@ public class Predicate {
             } else {
                 Hoppy.ReInit(in);
             }
-            Program program = hoppy.getProgram();
-            String target = program.getPredicateTarget();
-            HashMap<Integer, Integer> vdMap = hoppy.compile(program, out);
+            HashMap<Integer, Integer> vdMap = new HashMap<Integer, Integer>();
+            String target = hoppy.compile(out, vdMap);
             
             //Run Dragon
             in = new ByteArrayInputStream(out.toString().getBytes(Charset.forName("UTF-8")));

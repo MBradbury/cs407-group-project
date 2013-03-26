@@ -30,10 +30,10 @@ public class Hoppy
 	public static void main(String args[]) throws Exception, ParseException, CompilationException, TypeException
 	{
 		Hoppy parser = new Hoppy(System.in);
-		
-		Program program = parser.getProgram();
 
-		HashMap<Integer, Integer> vds = parser.compile(program, System.out);
+		HashMap<Integer, Integer> vds = new HashMap<Integer, Integer>();
+
+		parser.compile(System.out, vds);
 		
 		for (int key : vds.keySet())
 		{
@@ -41,13 +41,10 @@ public class Hoppy
 		}
 	}
 
-    public Program getProgram() throws Exception
-    {
-        return Input();
-    }
-
-	public HashMap<Integer, Integer> compile(Program program, OutputStream out) throws Exception
+	public String compile(OutputStream out, HashMap<Integer, Integer> vds) throws Exception
 	{
+		Program program = Input();
+
         PrintStream ps = new PrintStream(out);
 
 		ps.println("//" + program.toString());
@@ -55,8 +52,13 @@ public class Hoppy
 
         Compiler c = new Compiler(ps);
 		c.visit(program.getSyntaxTree());
+
+		if (vds != null)
+		{
+			vds.putAll(c.getVariableDetails());
+		}
 		
-		return c.getVariableDetails();
+		return program.getPredicateTarget().toString();
 	}
 }
 

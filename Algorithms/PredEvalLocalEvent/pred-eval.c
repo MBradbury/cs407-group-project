@@ -177,7 +177,7 @@ PROCESS_THREAD(pele_process, ev, data)
 				}
 				else
 				{
-					printf("PELE: Pred: FAILED with=%s\n", error_message());
+					printf("PELE: Pred: FAILED (%s)\n", error_message());
 				}
 			}
 		}

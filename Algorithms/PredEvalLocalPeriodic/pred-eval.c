@@ -194,7 +194,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 				}
 				else
 				{
-					printf("PELP: Pred: FAILED due to error: %s\n", error_message());
+					printf("PELP: Pred: FAILED (%s)\n", error_message());
 				}
 			}
 		}

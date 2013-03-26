@@ -53,7 +53,24 @@ To address the issue of high power consumption of these wired sensors, Werner-Al
 Werner-Allen Et Al implemented a wireless sensor network that was deployed on the Volcan Tungurahua in central Ecuador using a Mica2 sensor mote plateform and three infrasonic microphone nodes. These nodes transmitted data to an aggregation node, which relayed the data over a 9km wireless link to the base station. Time synchronization for the infrasonic sensors was done using a GPS receiver which receives a GPS time signal and relays the data 
 to the infrasound and aggregator nodes. Over a period of time, the temperature and battery voltage may change and this may affect the sampling rate of the individual nodes and the precision of the time recorded from the GPS timestamp message. These uncertainties was addressed by applying a linear regression to the logged data stream giving an estimation of the node outputs. In addition, the sensor nodes where required to be protected against harsh environemnts such as rain and long exposure of sunlight by using waterproof pelican cases and 1/4-wave whip antennas.
 
-Distributed Event Detection: Distributed Detector Deign, Local Detector Design
+Their first deployment on the volcano included a small network where nodes could send continuous signals to each other, however this was not feasible for a larger network deployed over longer periods of time. To solve the issue with bandwidth and energy consumption, the team implemented a distributed event detector which only transmits well-correlated signlas to the base station. A local event detection algorithm is used to trigger data collection for uncorrelated signals.
+
+\begin{itemize}
+\item Distributed Event Detector
+
+To measure the correlated signal, the distributed detector uses a decentralized voting system among a group of nodes. Each nodes samples data at a continuous rate of 102.4Hz and buffers a window of such data while running a local event detection algorithm. If an event is triggered it uses a local radio broadcast to broadcast a vote to other nodes and a global flood to initiate globbal data collection from all the nodes. Radio contention is reduced using a token-bases scheme for sceduling transmission, where each nodes transmits their buffer one after the other. 
+
+\item Local Event Detector
+
+The team implemented two local event detectors; a threshold-based detector and an exponentially weighted moving average (EWMA)-based detector. The former is triggered when the signal rises above an upper threshold and below a lower threshold. However due to spurous signals such as wind noise, the detector may be suceptible to false trigger. On the other hand, the EWMA detector calculates two moving averages with different gain parameters and is triggered if the ratio of the two averages and the new sample exceeds some threshold T. This method is less affected by node sensitivity and any duplicate triggers over a windows of 100 samples if suppressed.
+
+\end{itemize}
+
+1. decentralized voting process to measure signal correlation
+
+2. Each node samples data in a buffered window and runs a local event detection.
+
+3. When event is detected, it broadcast a vote message
 
 \subsubsection{Structural Monitoring}
 \cite{5508230}
@@ -116,15 +133,15 @@ The authors tested the DICAS algorithm against 5 sets of attacks, these are:
 
 Additionally, the paper describes a cost analysis on the DICAS algorithm, these are the results: 
 \begin{itemize}
-\item Memory Overhead:
+\item Memory Overhead
 
 The memory overhead is the most pressing of the overheads created by the DICAS algorithm. The algorithm must store several data structures on each node: a neighbours list, a watch buffer, a commitment key list and the alert list. These structures are variable on sizes dependent on the number of nodes in the network, the network layout and the MAC layer delay for acquiring a channel. Any implementation must consider the memory cost of the algorithm seriously.
 
-\item Computation Overhead:
+\item Computation Overhead
 
 With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbour list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbour list structure are relatively small, the computation time required for these operations is negligible.
 
-\item Bandwith Overhead:
+\item Bandwith Overhead
 
 When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases make up a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
 \end{itemize}

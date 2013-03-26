@@ -4,13 +4,14 @@ all: $(CONTIKI_PROJECT)
 PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers \
 $(CS407DIR)/Algorithms/Common/net $(CS407DIR)/PredicateLanguage \
 $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourAggregate \
-$(CS407DIR)/Algorithms/PredEval
+$(CS407DIR)/Algorithms/PredEval $(CS407DIR)/Algorithms/PredEvalLocalEvent
 PROJECT_SOURCEFILES = 
 
 CONTIKIDIRS :=
 CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c predlang.c array-list.c map.c \
 unique-array.c random-range.c tree-aggregator.c led-helper.c neighbour-detect.c \
-neighbour-aggregate.c rimeaddr-helpers.c multipacket.c linked-list.c predicate-manager.c hop-data-manager.c
+neighbour-aggregate.c rimeaddr-helpers.c multipacket.c linked-list.c predicate-manager.c hop-data-manager.c \
+eventupdate.c nhopflood.c pred-eval.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

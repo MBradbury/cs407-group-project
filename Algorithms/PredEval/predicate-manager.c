@@ -416,13 +416,12 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 }
 
 
-bool evaluate_predicate(
+bool evaluate_predicate(predicate_manager_conn_t * conn,
 	node_data_fn data_fn, size_t data_size,
 	function_details_t const * function_details, size_t functions_count,
 	hop_data_t * hop_data,
-	ubyte const * program, unsigned int program_length,
-	void const * all_neighbour_data,
-	var_elem_t const * variables, unsigned int variables_length)
+	void const * all_neighbour_data, unsigned int nd_length,
+	predicate_detail_entry_t const * pe)
 {
 	unsigned int i;
 
@@ -439,17 +438,27 @@ bool evaluate_predicate(
 	}
 
 	// Bind the variables to the VM
-	for (i = 0; i < variables_length; ++i)
+	for (i = 0; i < pe->variables_details_length; ++i)
 	{
 		// Get the length of this hop's data
 		// including all of the closer hop's data length
-		unsigned int length = hop_manager_length(hop_data, &variables[i]);
+		unsigned int length = hop_manager_length(hop_data, &pe->variables_details[i]);
 
-		printf("PredMan: Binding vars: id=%d hop=%d len=%d\n", variables[i].var_id, variables[i].hops, length);
-		bind_input(variables[i].var_id, all_neighbour_data, length);
+		printf("PredMan: Binding vars: id=%d hop=%d len=%d\n",
+			pe->variables_details[i].var_id, pe->variables_details[i].hops, length);
+		
+		bind_input(pe->variables_details[i].var_id, all_neighbour_data, length);
 	}
 
-	return evaluate(program, program_length);
+	bool result = evaluate(pe->bytecode, pe->bytecode_length);
+
+	if (!result)
+	{
+		predicate_manager_send_response(conn, hop_data,
+					pe, all_neighbour_data, data_size, nd_length);
+	}
+
+	return result;
 }
 
 

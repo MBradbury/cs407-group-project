@@ -165,13 +165,11 @@ PROCESS_THREAD(pele_process, ev, data)
 			{
 				printf("PELE: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 	
-				bool evaluation_result = evaluate_predicate(
+				bool evaluation_result = evaluate_predicate(&pele->predconn,
 					pele->data_fn, pele->data_size,
 					pele->function_details, pele->functions_count,
 					&pele->hop_data,
-					pe->bytecode, pe->bytecode_length,
-					all_neighbour_data,
-					pe->variables_details, pe->variables_details_length);
+					all_neighbour_data, max_size, pe);
 
 				if (evaluation_result)
 				{
@@ -179,11 +177,8 @@ PROCESS_THREAD(pele_process, ev, data)
 				}
 				else
 				{
-					printf("PELE: Pred: FAILED due to error: %s\n", error_message());
+					printf("PELE: Pred: FAILED with=%s\n", error_message());
 				}
-
-				predicate_manager_send_response(&pele->predconn, &pele->hop_data,
-					pe, all_neighbour_data, pele->data_size, max_size);
 			}
 		}
 
@@ -386,7 +381,7 @@ static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_
 {
 	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PE LP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
+	printf("PELE: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
 		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
 }
 

@@ -485,13 +485,11 @@ static void data_evaluation(pege_conn_t * pege)
 		// We need to set the global data needed for pretend_node_data
 		global_pege_conn = pege;
 
-		bool evaluation_result = evaluate_predicate(
+		bool evaluation_result = evaluate_predicate(&pege->predconn,
 			pretend_node_data, pege->data_size,
 			pege->function_details, pege->functions_count,
 			&hop_data,
-			pred->bytecode, pred->bytecode_length,
-			all_neighbour_data,
-			pred->variables_details, pred->variables_details_length);
+			all_neighbour_data, max_size, pred);
 
 		if (evaluation_result)
 		{

@@ -17,6 +17,8 @@
 #include "net/rimeaddr-helpers.h"
 #include "debug-helper.h"
 
+#include "pele.h"
+
 //
 // See: arxiv.org/pdf/0808.0920v1.pdf
 //
@@ -267,23 +269,114 @@ static struct broadcast_conn bc;
 static const struct broadcast_callbacks callbacks = { &recv };
 
 
+typedef struct
+{
+	rimeaddr_t addr;
+	unsigned int slot;
+} node_data_t;
+
+static void const * get_addr(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->addr;
+}
+
+static void const * get_slot(void const * ptr)
+{
+	return &((node_data_t const *)ptr)->slot;
+}
+
+static const function_details_t func_det[] =
+{
+	{ 0, TYPE_INTEGER, &get_addr },
+	{ 1, TYPE_INTEGER, &get_slot }
+};
+
+static void node_data(void * ptr)
+{
+	node_data_t * nd = (node_data_t *)ptr;
+	rimeaddr_copy(&nd->addr, &rimeaddr_node_addr);
+	nd->slot = assigned_slot;
+}
+
+static bool node_data_differs(void const * left, void const * right)
+{
+	node_data_t const * l = (node_data_t const *)left;
+	node_data_t const * r = (node_data_t const *)right;
+
+	return l->slot != r->slot;
+}
+
+static bool send_example_predicate(pele_conn_t * pele, rimeaddr_t const * destination, uint8_t id)
+{
+	if (pele == NULL || destination == NULL)
+		return false;
+
+	static ubyte const program_bytecode[] = {
+		0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0A,0xFF,
+		0x1C,0x13,0x43,0x37,0x01,0xFF,0x01,0x38,0x01,0x1C,0x30,0x02,
+		0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x02,0x0A,0xFF,0x1C,0x13,
+		0x3D,0x37,0x01,0xFF,0x00,0x37,0x02,0xFF,0x00,0x1C,0x37,0x01,
+		0xFF,0x01,0x37,0x02,0xFF,0x01,0x1C,0x3B,0x2C,0x35,0x02,0x12,
+		0x20,0x2C,0x2C,0x35,0x01,0x12,0x0A,0x00};
+
+	static var_elem_t var_details[1];
+	var_details[0].hops = 1;
+	var_details[0].var_id = 255;
+
+	const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+	const uint8_t var_details_length = sizeof(var_details)/sizeof(var_details[0]);
+
+	return predicate_manager_create(&pele->predconn,
+		id, destination,
+		program_bytecode, bytecode_length,
+		var_details, var_details_length);
+}
+
+static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+{
+	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
+
+	printf("PE LP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
+		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
+}
+
 PROCESS_THREAD(startup_process, ev, data)
 {
 	static struct etimer et_tdma, et_round;
 	static unsigned int current_slot = 0;
+	static pele_conn_t pele;
+	static rimeaddr_t sink;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
+
+	sink.u8[0] = 1;
+	sink.u8[1] = 0;
 
 	linked_list_init(&packet_queue, &free_queue_entry);
 	map_init(&neighbour_details, &rimeaddr_equality, &free);
 	unique_array_init(&one_hop_neighbours, &rimeaddr_equality, &free);
 
-	broadcast_open(&bc, 126, &callbacks);
-	channel_set_attributes(126, attributes);
+	broadcast_open(&bc, 90, &callbacks);
+	channel_set_attributes(90, attributes);
 
 	etimer_set(&et_tdma, slot_length);
 	etimer_set(&et_round, round_length);
+
+	pele_start(&pele,
+		&sink, &node_data, sizeof(node_data_t),
+		&node_data_differs, &predicate_failed,
+		func_det, sizeof(func_det)/sizeof(func_det[0]));
+
+	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
+	{
+		rimeaddr_t target;
+		rimeaddr_copy(&target, &rimeaddr_null);
+		//target.u8[0] = 5;
+		//target.u8[1] = 0;
+
+		send_example_predicate(&pele, &target, 0);
+	}
 
 	while (true)
 	{
@@ -325,6 +418,7 @@ PROCESS_THREAD(startup_process, ev, data)
 	}
 
 exit:
+	pele_stop(&pele);
 	broadcast_close(&bc);
 	map_free(&neighbour_details);
 	linked_list_free(&packet_queue);

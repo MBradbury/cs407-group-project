@@ -463,13 +463,11 @@ static void data_evaluation(pegp_conn_t * pegp)
 		// has access to it
 		global_pegp_conn = pegp;
 
-		bool evaluation_result = evaluate_predicate(
+		bool evaluation_result = evaluate_predicate(&pegp->predconn,
 			pretend_node_data, pegp->data_size,
 			pegp->function_details, pegp->functions_count,
 			&pegp->hop_data,
-			pred->bytecode, pred->bytecode_length,
-			all_neighbour_data,
-			pred->variables_details, pred->variables_details_length);
+			all_neighbour_data, max_size, pred);
 
 		if (evaluation_result)
 		{

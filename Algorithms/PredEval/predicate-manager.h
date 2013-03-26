@@ -104,13 +104,11 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, struct hop
 uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe);
 
 
-bool evaluate_predicate(
+bool evaluate_predicate(predicate_manager_conn_t * conn,
 	node_data_fn data_fn, size_t data_size,
 	function_details_t const * function_details, size_t functions_count,
 	struct hop_data * hop_data,
-	ubyte const * program, unsigned int program_length,
-	void const * all_neighbour_data,
-	var_elem_t const * variables, unsigned int variables_length);
-
+	void const * all_neighbour_data, unsigned int nd_length,
+	predicate_detail_entry_t const * pe);
 
 #endif /*CS407_PREDICATE_MANAGER_H*/

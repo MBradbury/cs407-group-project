@@ -182,13 +182,11 @@ PROCESS_THREAD(pelp_process, ev, data)
 			{
 				printf("PELP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 		
-				bool evaluation_result = evaluate_predicate(
+				bool evaluation_result = evaluate_predicate(&pelp->predconn,
 					pelp->data_fn, pelp->data_size,
 					pelp->function_details, pelp->functions_count,
 					&pelp->hop_data,
-					pe->bytecode, pe->bytecode_length,
-					all_neighbour_data,
-					pe->variables_details, pe->variables_details_length);
+					all_neighbour_data, max_size, pe);
 
 				if (evaluation_result)
 				{
@@ -198,9 +196,6 @@ PROCESS_THREAD(pelp_process, ev, data)
 				{
 					printf("PELP: Pred: FAILED due to error: %s\n", error_message());
 				}
-
-				predicate_manager_send_response(&pelp->predconn, &pelp->hop_data,
-					pe, all_neighbour_data, pelp->data_size, max_size);
 			}
 		}
 

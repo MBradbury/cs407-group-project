@@ -84,16 +84,14 @@ public class NodeComms {
         }*/
     }
     
-    public void writeln(String line)
-            throws RuntimeException, IOException
-    {
+    public void writeln(String line) throws RuntimeException, IOException {
        byte[] characters = (line + '\n').getBytes("ISO-8859-1");
        
        if (characters.length > bufferSize)
        {
            throw new RuntimeException("Message (" + line + ") is too long (" + characters.length + ").");
        }
-        
+       
        output.write(characters);
        output.flush();
     }

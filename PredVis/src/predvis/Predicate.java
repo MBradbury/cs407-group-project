@@ -1,12 +1,12 @@
 package predvis;
 
-import java.io.*;
-import java.nio.channels.FileChannel;
-import java.nio.MappedByteBuffer;
-import java.nio.charset.Charset;
-import predvis.hoppy.Hoppy;
-import predvis.dragon.Dragon;
 import com.google.common.io.LittleEndianDataOutputStream; 
+import java.io.*;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import predvis.dragon.Dragon;
+import predvis.hoppy.Hoppy; 
 
 /**
  *
@@ -25,8 +25,7 @@ public class Predicate {
     private String script;
     private int[] bytecode;
     
-    public Predicate()
-    {
+    public Predicate() {
         //Do nothing.
     }
     
@@ -37,17 +36,16 @@ public class Predicate {
         compileScript();
     }
     
-    public String getName()
-    {
+    public String getName() {
         return name;
     }
     
-    public void setName(String name)
-    {
+    public void setName(String name) {
         this.name = name;
     }
     
-    public String getScript() {
+    public String getScript()
+    {
         if (script != null) {
             return script;
         }
@@ -83,15 +81,13 @@ public class Predicate {
     
     private void compileScript() {
         try {
-            String script = getScript();
-            
             //Run Hoppy
-            InputStream in = new ByteArrayInputStream(script.getBytes(Charset.forName("UTF-8")));
+            InputStream in = new ByteArrayInputStream(getScript().getBytes(Charset.forName("UTF-8")));
             OutputStream out = new ByteArrayOutputStream();
             if (hoppy == null) {
                 hoppy = new Hoppy(in);
             } else {
-                hoppy.ReInit(in);
+                Hoppy.ReInit(in);
             }
             hoppy.run(out);
             
@@ -106,7 +102,7 @@ public class Predicate {
             if (dragon == null) {
                 dragon = new Dragon(in);
             } else {
-                dragon.ReInit(in);
+                Dragon.ReInit(in);
             }
             dragon.run(leout);
             
@@ -115,13 +111,12 @@ public class Predicate {
         } catch (FileNotFoundException e) {
             //TODO
         } catch (Exception e) {
-            e.printStackTrace();
+            //TODO
         }
     }
     
     @Override
-    public String toString()
-    {
+    public String toString() {
         return name;
     }
 }

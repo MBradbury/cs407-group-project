@@ -11,10 +11,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Paint;
 import java.awt.Shape;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
 import java.io.File;
 import java.io.IOException;
@@ -45,13 +42,17 @@ public class PredVis extends JFrame {
     private WSNMonitor wsnMonitor = null;
     
     //GUI widgets.
+    private JMenuBar menuBar = null;
+    
     private JTabbedPane tabbedPane = null;
+    
     private JPanel predicatePanel = null;
     private JPanel predicateControlsPanel = null;
     private JList predicateList = null;
-    private JTextField predicateScriptEditor = null;
+    private JTextArea predicateScriptEditor = null;
     private JButton savePredicateScriptButton = null;
     private JButton addPredicateButton = null;
+    
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
     private JSlider historySlider = null;
@@ -73,6 +74,7 @@ public class PredVis extends JFrame {
         initPredicates();
         
         //Init gui.
+        initMenuBar();
         initTabbedPane();
         initPredicateViewer();
         initNetworkViewer();
@@ -102,6 +104,36 @@ public class PredVis extends JFrame {
             }
         });
     }
+    
+    private void initMenuBar() {
+        menuBar = new JMenuBar();
+        
+        //File menu
+        JMenu menu = new JMenu("File");
+        menu.setMnemonic(KeyEvent.VK_F);
+        menuBar.add(menu);
+        
+        JMenuItem menuItem = new JMenuItem("New Predicate", KeyEvent.VK_N);
+        menu.add(menuItem);
+        
+        menuItem = new JMenuItem("Load Predicate", KeyEvent.VK_L);
+        menu.add(menuItem);
+        
+        menu.addSeparator();
+        
+        menuItem = new JMenuItem("Quit", KeyEvent.VK_Q);
+        menu.add(menuItem);
+        
+        //Help menu
+        menu = new JMenu("Help");
+        menu.setMnemonic(KeyEvent.VK_H);
+        menuBar.add(menu);
+        
+        menuItem = new JMenuItem("About", KeyEvent.VK_A);
+        menu.add(menuItem);
+        
+        setJMenuBar(menuBar);
+    }
 
     private void initTabbedPane() {
         tabbedPane = new JTabbedPane();
@@ -120,17 +152,19 @@ public class PredVis extends JFrame {
         predicatePanel.add(predicateList, BorderLayout.WEST);
         
         //Controls panel
-        predicateControlsPanel = new JPanel(new BorderLayout());
+        predicateControlsPanel = new JPanel();
+        predicateControlsPanel.setLayout(new BoxLayout(predicateControlsPanel, BoxLayout.Y_AXIS));
         
         //Script editor
-        predicateScriptEditor = new JTextField("Predicate script...", 20);
+        predicateScriptEditor = new JTextArea("Click Add Predicate");
+        predicateScriptEditor.setWrapStyleWord(false);
         predicateScriptEditor.setFont(MONOSPACE_FONT);
         predicateScriptEditor.setPreferredSize(new Dimension(250, 300));
-        predicateControlsPanel.add(predicateScriptEditor, BorderLayout.NORTH);
+        predicateControlsPanel.add(predicateScriptEditor);
         
         //Script editor save button
         savePredicateScriptButton = new JButton("Save Script");
-        predicateControlsPanel.add(savePredicateScriptButton, BorderLayout.AFTER_LINE_ENDS);
+        predicateControlsPanel.add(savePredicateScriptButton);
         savePredicateScriptButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -140,7 +174,7 @@ public class PredVis extends JFrame {
         
         //Add predicate button
         addPredicateButton = new JButton("Add Predicate");
-        predicateControlsPanel.add(addPredicateButton, BorderLayout.SOUTH);
+        predicateControlsPanel.add(addPredicateButton);
         addPredicateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

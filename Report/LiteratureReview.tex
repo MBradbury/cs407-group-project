@@ -62,15 +62,16 @@ To measure the correlated signal, the distributed detector uses a decentralized 
 
 \item Local Event Detector
 
-The team implemented two local event detectors; a threshold-based detector and an exponentially weighted moving average (EWMA)-based detector. The former is triggered when the signal rises above an upper threshold and below a lower threshold. However due to spurous signals such as wind noise, the detector may be suceptible to false trigger. On the other hand, the EWMA detector calculates two moving averages with different gain parameters and is triggered if the ratio of the two averages and the new sample exceeds some threshold T. This method is less affected by node sensitivity and any duplicate triggers over a windows of 100 samples if suppressed.
-
+The team implemented two local event detectors; a threshold-based detector and an exponentially weighted moving average (EWMA)-based detector. The former is triggered when the signal rises above an upper threshold and below a lower threshold. However due to spurous signals such as wind noise, the detector may be suceptible to false trigger. On the other hand, the EWMA detector calculates two moving averages with different gain parameters and is triggered if the ratio of the two averages and the new sample exceeds some threshold T. This method is less affected by node sensitivity and any duplicate triggers over a window of 100 samples are suppressed.
 \end{itemize}
 
-1. decentralized voting process to measure signal correlation
+Data collection and performance
 
-2. Each node samples data in a buffered window and runs a local event detection.
+During the deployment, the team managed to log 54 hours of continuous data which includes seismoacoustic signals from several hundred events. The raw data was used to analyse the system's performance and many challenges where discovered in the early observations. They discovered that on average only 61 percent of data was retrieved from the network and on several occasions the modems which transmitted data back to the station would experience short dropouts, causing all data aggragated from the nodes to be lost. In addition, duplicate packets were also recorded as a likely result of redundant retransmission and lost acklowledgement. Both lost and duplicate data had to be accounted for before being stored in the timebase.
 
-3. When event is detected, it broadcast a vote message
+Conclusions and improvements
+
+In general, the event-triggered model was successful in detecting eruptions and other volcanic events and was able to verify the working of the local and global event detectors by examining the downloaded data. However, since the experiment was deployed over a limited area space of the volcano, further work is to be done to instrument volcanos at a larger scale. This includes, and most importantly, the management of energy and bandwidth usage of the sensors and increasing its computational power to deviate from continuous data collection to enabling the collection of well-correlated signals. 
 
 \subsubsection{Structural Monitoring}
 \cite{5508230}

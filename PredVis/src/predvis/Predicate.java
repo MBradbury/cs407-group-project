@@ -109,7 +109,7 @@ public class Predicate {
             byte[] bytes = ((ByteArrayOutputStream)out).toByteArray();
             bytecode = new int[bytes.length];
             for (int i = 0; i < bytes.length; ++i) {
-                bytecode[i] = (int)bytes[i];
+                bytecode[i] = (int)(bytes[i] & 0xFF);
             }
         } catch (Exception e) {
             //TODO

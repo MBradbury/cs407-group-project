@@ -477,7 +477,7 @@
 }
 
 @MISC{Dunkels09contikiipsn,
-  author = {Adam Dunkels and Fredrik Ã–sterlind and Nicolas Tsiftes},
+  author = {Adam Dunkels and Fredrik \"{O}sterlind and Nicolas Tsiftes},
   title = {Contiki IPSN 2009 Tutorial Handouts},
   year = {2009}
 }
@@ -634,6 +634,39 @@
   keywords = {Boolean satisfiability; multiple errors; sequential circuits; sequential
 	logic debugging; Boolean functions; computability; logic CAD; program
 	debugging; sequential circuits;}
+}
+
+@PHDTHESIS{aggphdfeng,
+  author = {Jie Feng},
+  title = {{Performance of Data Aggregation for Wireless Sensor Networks}},
+  school = {{University of Saskatchewan Saskatoon}},
+  year = {2010},
+  abstract = {This thesis focuses on three fundamental issues that concern data
+	aggregation protocols for periodic data collection in sensor networks:
+	which sensor nodes should report their data, when should they report
+	it, and should they use unicast or broadcast based protocols for
+	this purpose. The issue of when nodes should report their data is
+	considered in the context of real-time monitoring applications. The
+	first part of this thesis shows that asynchronous aggregation, in
+	which the time of each node’s transmission is determined adaptively
+	based on its local history of past packet receptions from its children,
+	outperforms synchronous aggregation by providing lower delay for
+	a given end-to-end loss rate. Second, new broadcast-based aggregation
+	protocols that minimize the number of packet transmissions, relying
+	on multipath delivery rather than automatic repeat request for reliability,
+	are designed and evaluated. The performance of broadcast-based aggregation
+	is compared to that of unicast-based aggregation, in the context
+	of both real-time and delay-tolerant data collection. Finally, this
+	thesis investigates the potential benefits of dynamically, rather
+	than semi-statically, determining the set of nodes reporting their
+	data, in the context of applications in which coverage of some monitored
+	region is to be maintained. Unicast and broadcast-based coverage-preserving
+	data aggregation protocols are designed and evaluated. The performance
+	of the proposed protocols is compared to that of data collection
+	protocols relying on node scheduling.},
+  owner = {Matt},
+  timestamp = {2013.03.26},
+  url = {http://hdl.handle.net/10388/etd-06292010-135305}
 }
 
 @ARTICLE{5010224,
@@ -1051,6 +1084,31 @@
 	Design and Implementation (NSDI},
   year = {2004},
   pages = {15--28}
+}
+
+@INPROCEEDINGS{1628365,
+  author = {Hong Li and HongYi Yu and ANa Liu},
+  title = {A Tree Based Data Collection Scheme for Wireless Sensor Network},
+  booktitle = {Networking, International Conference on Systems and International
+	Conference on Mobile Communications and Learning Technologies, 2006.
+	ICN/ICONS/MCL 2006. International Conference on},
+  year = {2006},
+  pages = {119-119},
+  abstract = {Combining the delivery of query messages with the selection of data
+	aggregation points, a novel distributed data collection scheme for
+	wireless sensor network - TBDCS (A Tree Based Data Collection Scheme)
+	is proposed in this paper. Using a flooding avoidance method, it
+	sets up a tree with minimum intermediate nodes, which are also data
+	aggregators when sensor nodes send data back. Moreover, each intermediate
+	node knows all its next-hop children in the tree, so it can choose
+	a proper time locally to aggregate the received data. Theoretical
+	analysis proves that TBDCS changes neither the network connectivity
+	nor the shortest path’s length between the sink and sensor nodes.
+	Simulations show TBDCS significantly reduces the traffic and achieves
+	longer system lifetime.},
+  doi = {10.1109/ICNICONSMCL.2006.36},
+  keywords = {Aggregates;Broadcasting;Data analysis;Data engineering;Diversity reception;Floods;Monitoring;Telecommunication
+	traffic;Traffic control;Wireless sensor networks}
 }
 
 @INPROCEEDINGS{liu2007wids,

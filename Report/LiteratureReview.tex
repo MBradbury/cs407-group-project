@@ -48,11 +48,11 @@ A group of engineers from the National Taiwan University developed a micro-sclae
 \cite{SzewczykPMC04}
 
 \subsubsection{Volcano Monitoring}
-\cite{Werner-Allen:2006:FYV:1298455.1298491} Claimed: Ivan
+Claimed: Ivan
 
 Active volcanoes need to be monitored to predict the likelihood of future eruptions so that early-warning signs can be issued for the evacuation of habitants near the volcano. Today, volcanoists use wired arrays of sensors such as seismometers and acoustic microphones to collect seismic and infrared (low-frequency acoustic) signals and determining a wide range of factors such as sources of volcanic eruptions, interior structure of a volcano and differentiating eruption signals from noise. A typical study can indlue the placement of several stations around the volcano where each contains a low distribution of wired sensors that collects data to a hard drive. Data is then collected manually in a possibly inconvenient location.
 
-To address the issue of high power consumption of these wired sensors, \citeauthor{Werner-Allen:2006:FYV:1298455.1298491} introduced the deployment of embedded wireless sensor networks consisting of low-power nodes with minimum CPU, memory and wireless communication capabilities. This allows for long distance real time monitoring of volcanic activities and reducing the need for manual data collection. The main challenge however is that environmental monitoring studies sample at a frequency which is much lower than the sample rate of volcanic time series. This is due to the limited radio bandwidth of the sensors thus requiring the need for efficient power management techniques and accurate time synchronization of the nodes. 
+To address the issue of high power consumption of these wired sensors, \citeauthor{Werner-Allen:2006:FYV:1298455.1298491} in \cite{Werner-Allen:2006:FYV:1298455.1298491} introduced the deployment of embedded wireless sensor networks consisting of low-power nodes with minimum CPU, memory and wireless communication capabilities. This allows for long distance real time monitoring of volcanic activities and reducing the need for manual data collection. The main challenge however is that environmental monitoring studies sample at a frequency which is much lower than the sample rate of volcanic time series. This is due to the limited radio bandwidth of the sensors thus requiring the need for efficient power management techniques and accurate time synchronization of the nodes. 
 
 \citeauthor{Werner-Allen:2006:FYV:1298455.1298491} implemented a wireless sensor network that was deployed on the Volcan Tungurahua in central Ecuador using a Mica2 sensor mote platform and three infrasonic microphone nodes. These nodes transmitted data to an aggregation node, which relayed the data over a 9km wireless link to the base station. Time synchronization for the infrasonic sensors was done using a GPS receiver which receives a GPS time signal and relays the data 
 to the infrasound and aggregator nodes. Over a period of time, the temperature and battery voltage may change and this may affect the sampling rate of the individual nodes and the precision of the time recorded from the GPS time stamp message. These uncertainties was addressed by applying a linear regression to the logged data stream giving an estimation of the node outputs. In addition, the sensor nodes where required to be protected against harsh environments such as rain and long exposure of sunlight by using waterproof pelican cases and 1/4-wave whip antennas.
@@ -69,11 +69,11 @@ To measure the correlated signal, the distributed detector uses a decentralized 
 The team implemented two local event detectors; a threshold-based detector and an exponentially weighted moving average (EWMA)-based detector. The former is triggered when the signal rises above an upper threshold and below a lower threshold. However due to spurous signals such as wind noise, the detector may be susceptible to false trigger. On the other hand, the EWMA detector calculates two moving averages with different gain parameters and is triggered if the ratio of the two averages and the new sample exceeds some threshold T. This method is less affected by node sensitivity and any duplicate triggers over a window of 100 samples are suppressed.
 \end{itemize}
 
-Data collection and performance
+\paragraph{Data Collection and Performance}
 
 During the deployment, the team managed to log 54 hours of continuous data which includes seismoacoustic signals from several hundred events. The raw data was used to analyse the system's performance and many challenges where discovered in the early observations. They discovered that on average only 61 percent of data was retrieved from the network and on several occasions the modems which transmitted data back to the station would experience short drop-outs, causing all data aggregated from the nodes to be lost. In addition, duplicate packets were also recorded as a likely result of redundant retransmission and lost acknowledgement. Both lost and duplicate data had to be accounted for before being stored in the timebase.
 
-Conclusion and improvements
+\paragraph{Conclusion and Improvements}
 
 In general, the event-triggered model was successful in detecting eruptions and other volcanic events and was able to verify the working of the local and global event detectors by examining the downloaded data. However, since the experiment was deployed over a limited area space of the volcano, further work is to be done to instrument volcanoes at a larger scale. This includes, and most importantly, the management of energy and bandwidth usage of the sensors and increasing its computational power to deviate from continuous data collection to enabling the collection of well-correlated signals. 
 
@@ -91,7 +91,9 @@ In general, the event-triggered model was successful in detecting eruptions and 
 
 Before we can consider what predicates we can try to check for, or how we should check those predicates, we first need to understand what we are detecting and why. In dependable systems we need to consider the fault-error-failure cycle. This cycle says that a \emph{fault} once caused by either some external influence (e.g. radiation leading to bit-flips in memory \cite{?}) or internal influence (e.g. code bugs) will lead to an \emph{error}, this is the \emph{activation} step. An error is the manifestation of the fault (e.g. memory holding the incorrect value). An error then leads to a \emph{failure} in the step called \emph{propagation}, the failure of the system is an observable deviation from the system's specification (e.g. allowing doors to be opened that should remain closed). It is not always the case the faults lead to errors, or errors lead to failures, sometimes multiple faults or errors are respectively required to cause a single error or failure. \cite{1335465}
 
-There is a choice of what should be measured and checked in predicates, should faults, errors or failures be measured? \textbf{TODO}
+There is a choice of what should be measured and checked in predicates, should faults, errors or failures be measured? Faults cannot be measured \cite{?} in a way that is possible for a mote, so they are discounted. That leaves measuring errors and failures. Typically failures would be the event being measured \cite{?} as that is what arises after an error actually causes the issue to happen. However, errors can also be measured if there is a dedicated program checking the state and comparing it to an expected state \cite{?}. For example an ECC (error correcting code) such as a Hamming Code can be used to detect and correct an error (in this case a bit-flip) in some memory after a fault (such as a voltage surge ) \cite{hamming1950error}.
+
+Much of what has been discussed has involved transient faults such as those caused by environmental conditions, however, there is a class of faults that are a lot more common and much easier to resolve - faults caused by software bugs. These faults can lead to programs ending up in the wrong state and just performing incorrectly. There has been a certain amount of work that looks into detecting traditional distributed system bugs (such as deadlock \cite{?}) in wireless sensor networks. However, there has been little work in looking into providing tools to aid in system debugging. The rest of this section will cover work on predicates in sensor networks, including detection of them and methods for identifying why is system is not performing correctly.
 
 
 \subsubsection{GPD}
@@ -146,14 +148,14 @@ The memory overhead is the most pressing of the overheads created by the DICAS a
 
 With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbour list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbour list structure are relatively small, the computation time required for these operations is negligible.
 
-\item Bandwith Overhead
+\item Bandwidth Overhead
 
 When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases make up a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
 \end{itemize}
 
 \subsection{H-SEND: Hierachichal SEnsor Network Debugging}
 
-H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{?}
+H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{herbert2007adaptive}
 
 There are 4 main steps involved in H-SEND:
 

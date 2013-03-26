@@ -42,7 +42,7 @@ Finally, all of these custom containers are tested by a test suite that checks f
   \centering
   \begin{boxedminipage}{\linewidth}
     % 
-    \null Process $j$ - \res{eventupdate}\\
+    \null Process $j$ - \res{event-update}\\
     %
     \null \textbf{variables}\\
     %
@@ -108,10 +108,10 @@ Contiki's data transfer primitives for their RIME protocols are fairly hidden be
 
 \subsubsection{N-Hop Request}
 Contiki provides broadcast primitives to allow the flooding of messages through the network, however the \verb|trickle|\cite{Levis04trickle} primitive only allows a single source node\footnote{trickle.h \url{http://contiki.sourceforge.net/docs/2.6/a00381.html}}, which presents a problem, when multiple nodes are attempting to send a message N-hops away. 
-In some cases \verb|reliable unicast| could be used to target the specific nodes for which the message is intended. This, however, is not suitable when the identifies of the nodes is not known, or in situations when storing routing tables is not appropiate. 
+In some cases \verb|reliable unicast| could be used to target the specific nodes for which the message is intended. This, however, is not suitable when the identifies of the nodes is not known, or in situations when storing routing tables is not appropriate. 
 
 Our response to this was to develop a primitive which would flood the network, a fixed number of hops from the source, whilst allowing multiple nodes to use the same primitive, with different messages. Our implementation uses a \verb|stubborn broadcast| to pass the message along a chain, only rebroadcasting the message when the hop limit (the number of hops the message is intended to travel) has not been reached. If a message has been seen before by a node (and the number of hops left is lower than before) it is simply ignored and not passed on. In the case where the hop count for a 
-duplicate message is higher than the previously seen count, it is then rebroadcast, so that all the intended recipients will recieve the message.  
+duplicate message is higher than the previously seen count, it is then rebroadcast, so that all the intended recipients will receive the message.  
 After a fixed time, messages are then sent back to the source along a chain, this time is reset whenever a message with a higher hop count is seen.  Each node stores the ID of the node that it received the message from, and the response message is sent back to that node. In turn, that node will forward the message to the node it received the original message from, eventually the message will end up at the source, to be processed.
 
 %TODO: Note about performance maybe?
@@ -170,6 +170,147 @@ After a fixed time, messages are then sent back to the source along a chain, thi
   \end{boxedminipage}
   \caption{N-Hop Request Algorithm}
   \label{fig:n-hop-req-algorithm}
+\end{figure}
+
+\subsubsection{Tree Aggregation}
+
+As has been previously mentioned Tree Aggregation is a very useful technique employed in wireless sensor networks to aggregate a set of data to a single node in the network. It is very useful because of its ability to convey the same amount of data in potentially fewer messages. The algorithm works by first creating a tree structure such that nodes know of a parent node that they should unicast their messages to. Once this tree is set up the nodes (typically leaf nodes) unicast data to their parents, this can either happen when an event occurs or it can happen periodically. When a parent node receives a message it waits for a certain amount of time for more messages to arrive, every message it receives is stored and aggregated. After the time period is up the aggregated data is forwarded to its parent node. Once the data reaches the destination it is delivered to the user of the library.
+
+
+The user of this library needs to implement four important functions:
+\begin{enumerate}
+\item[$\otimes_{agg}$] This function aggregates stored data with data message that has been received
+\item[$\otimes_{own}$] This function aggregates the node's own data into the stored data
+\item[$\otimes_{read}$] This function does the initial reading of data from a message and creates the local stored data
+\item[$\otimes_{write}$] This function writes the local stored data back to a packet
+\end{enumerate}
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \res{tree-aggregation}\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{parentdetect}: timer init $\bot$;\\~\\
+    %
+    \null\qq \var{seensetup}, \var{collecting}, \var{leaf}: bool init $False$, $False$, $True$;\\~\\
+    %
+    \null\qq \var{besthop}: int init $INTMAX$;\\~\\
+    %
+    \null\qq \var{bestparent}: address init $\bot$;\\~\\~\\
+    %
+    \null\qq \var{aggregation}: timer init $\bot$;\\~\\
+    %
+    \null\qq \var{collecting}: bool init $False$;\\~\\
+    %
+    \null\qq \var{stored}: struct init $\bot$;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% How long to wait for messages to aggregate before forwarding what the node has\\
+    \null\qq \var{$P_{aggregation}$}: time;\\~\\
+    %
+    \null\qq \% How long to wait for parents to be detected\\
+    \null\qq \var{$P_{parentdetect}$}: time;\\~\\
+    %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The address of the node data should be aggregated to\\
+    \null\qq \var{sink}: address;\\
+    %
+  \end{boxedminipage}
+  \caption{Tree Aggregation Algorithm - variables}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Set up tree: initialise\\
+    \null\qq \emph{starup}::~\res{init} $\rightarrow$\\
+    \null\qq\qq \res{bcast}$\langle j, \bot, 1\rangle$;\\~\\
+    %
+    %
+    \null\qq \% Set up tree: receive message\\
+    \null\qq \emph{receive}::~\res{recv}$\langle source, parent, hops\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($j \not= sink$) \res{then} \\
+    \null\qq\qq\qq \res{if} ($\lnot\var{seensetup}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{seensetup} \assign True$; \\
+    \null\qq\qq\qq\qq \res{set}($\mathit{parentdetect}$, $P_{parentdetect}$); \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq\qq \res{if} ($\var{hops} < \var{besthop}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{bestparent}, \var{besthop} \assign \var{source}, \var{hops}$; \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq\qq \res{if} ($\var{leaf} \land \var{j} = \var{parent}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{leaf} \assign False$; \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq \res{fi}; \\~\\
+    %
+    %
+    \null\qq \% Set up tree: finish detecting parents\\
+    \null\qq \emph{check}::~\res{timeout}(\var{parentdetect}) $\rightarrow$\\
+    \null\qq\qq \res{if} ($\var{besthop} = INTMAX$) \res{then} \\
+    \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, INTMAX\rangle$;\\
+    \null\qq\qq \res{else} \\
+    \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, \var{besthop} + 1\rangle$;\\
+    \null\qq\qq \res{fi}; \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Tree Aggregation Algorithm - Setting up tree}
+\end{figure}
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Send data function\\
+    \null\qq \emph{send}::~\res{function}$\langle data\rangle \rightarrow$\\
+    \null\qq\qq \res{multipacket.unicast}$\langle \var{bestparent}, data\rangle$;\\~\\
+    %
+    %
+    \null\qq \% Set up tree: receive message\\
+    \null\qq \emph{receive}::~\res{multipacket.recv}$\langle source, data\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($j = sink$) \res{then} \\
+    \null\qq\qq\qq $\var{stored} \assign \otimes_{read}(data)$; \\
+    \null\qq\qq\qq $\var{stored} \assign \otimes_{own}(\var{stored})$; \\
+    \null\qq\qq\qq $\res{deliver}(\otimes_{write}(\var{stored}))$; \\
+    \null\qq\qq \res{else} \\
+    \null\qq\qq\qq \res{if} ($\var{collecting}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{stored} \assign \otimes_{agg}(\var{stored}, \var{data})$; \\
+    \null\qq\qq\qq \res{else} \\
+    \null\qq\qq\qq\qq $\var{stored} \assign \otimes_{read}(data)$; \\
+    \null\qq\qq\qq\qq $\var{collecting} \assign True$; \\
+    \null\qq\qq\qq\qq \res{set}($\mathit{aggregation}$, $P_{aggregation}$); \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq \res{fi}; \\~\\
+    %
+    %
+    \null\qq \% Set up tree: finish detecting parents\\
+    \null\qq \emph{finishagg}::~\res{timeout}(\var{aggregation}) $\rightarrow$\\
+    \null\qq\qq \res{multipacket.unicast}$\langle \var{bestparent}, \otimes_{write}(\var{stored})\rangle$;\\
+    \null\qq\qq $\var{collecting} \assign False$; \\
+    \null\qq\qq $\var{stored} \assign \bot$; \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Tree Aggregation Algorithm - Sending data}
+\end{figure}
+
+
+\begin{figure}[ht!]
+\centering
+\subfigure[Example Network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-network}}
+
+\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-tree-structure}}
 \end{figure}
 
 \subsubsection{Neighbour Detect}
@@ -243,16 +384,6 @@ For this to be useful we needed a way to get this data back to the sink node. Th
 \begin{equation}
 \res{node-data} = \{\{\var{other}, \var{j}\} | \var{other} \in \res{round-data} \}
 \end{equation}
-
-
-\subsubsection{Tree Aggregation}
-
-\begin{figure}[ht!]
-\centering
-\subfigure[Example Network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-network}}
-
-\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-tree-structure}}
-\end{figure}
 
 
 \subsection{Clustering}

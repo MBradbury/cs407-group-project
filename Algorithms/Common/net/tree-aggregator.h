@@ -22,7 +22,7 @@ typedef struct
 	/** This function is used to add a nodes own one data */
 	void (* aggregate_own)(struct tree_agg_conn * tconn, void * data);
 
-	/** This function is called when a node needs to savea  packet
+	/** This function is called when a node needs to save a packet
 		The arguments are: Connection, Packet and the Packet Length  */
 	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
 

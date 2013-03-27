@@ -111,6 +111,36 @@ When asking for information on the neighbourhood, it possible to consider optimi
 
 The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use to us is when gathering data for in-network predicates that are checked periodically.
 
+Surprisingly, asking for and receiving all the required information actually requires fewer messages than incrementally asking for information. This is because of the communication that needs to be repeated when asking for more information. For example if you have a conjunctive predicate where the sub-predicates require 1 and 3 hops of information. If we ask for all information then we simply send messages out 3 hops and then receive replies from all the nodes in that neighbourhood. If we instead ask for one-hop information first and then three-hop, we first have to send a message to local neighbours and then will end up sending them another data request message when asking for three-hop information (as the 1-hop neighbourhood is contained within the 3-hop neighbourhood).
+
+For some predicates it may make obvious sense, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would end up degrading the performance of requesting the near-by information. Also adding this feature would increase the firmware size, which began to reach the limit when the predicate evaluation libraries that aggregate data to the sink were implemented.
+
+% Include equations if someone can be bothered to work them out
+\begin{comment}
+\begin{figure}[H]
+\begin{equation}
+\sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
+\end{equation}
+\caption{The number of messages required to respond x hops}
+\end{figure}
+
+The sigma function is defined as it is because for each of the nodes that are $x$ hops away they will require sending their data message $x$ hops to reach the requesting node.
+
+\begin{figure}[H]
+\begin{equation}
+\sum_{j \in H} j + \sigma(j)
+\end{equation}
+\caption{Maximum number of messages for an incremental data request}
+\end{figure}
+
+\begin{figure}[H]
+\begin{equation}
+|N_F(\text{max}(H))| \times \text{max}(H) + \sigma(\text{max}(H))
+\end{equation}
+\caption{Number of messages for a complete data request}
+\end{figure}
+\end{comment}
+
 \textbf{TODO: finish off how its not suitable}
 
 

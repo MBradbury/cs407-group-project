@@ -139,11 +139,11 @@ There is a choice of what should be measured and checked in predicates, should f
 Much of what has been discussed has involved transient faults such as those caused by environmental conditions, however, there is a class of faults that are a lot more common and much easier to resolve - faults caused by software bugs. These faults can lead to programs ending up in the wrong state and just performing incorrectly. There has been a certain amount of work that looks into detecting traditional distributed system bugs (such as deadlock \cite{?}) in wireless sensor networks. However, there has been little work in looking into providing tools to aid in system debugging. The rest of this section will cover work on predicates in sensor networks, including detection of them and methods for identifying why is system is not performing correctly.
 
 
-\subsubsection{GPD}
+\subsubsection{Global Predicate Detection}
 
-\cite{345831}
-\cite{277788}
-\cite{553309}
+Perhaps one of the most well known techniques to undertake this kind of debugging is Global Predicate Detection (GPD). GPD involves ``taking a consistent global snapshot of the system and checking whether the snapshot satisfies the global predicate'' \cite{277788}. These snapshots are repeated periodically and checked if they satisfy the predicate, in doing so properties can be detected that are required for the predicate to hold.
+
+However, GPD is not as simple as this. To begin with there are two types of global predicates: stable and unstable. Stable predicates are ones that remain true once they become true \cite{277788} and unstable predicates can fluctuate between true and false. An example of a stable predicate is termination, once a system has terminated it cannot turn it self back on again. There also exists a distinction between strong and weak predicates, where strong predicates hold for the entire network ($definitely : p$) and weak predicates hold for a subset of that network ($possibly : p$) \cite{553309,345831}. Because of the unreliability of wireless networks it may often be the case that all that can be said is that the predicate is possibly true, due to not receiving all the information that is required to evaluate the predicate \cite{?}.
 
 
 \subsection{Predicate Detection in Distributed Systems}

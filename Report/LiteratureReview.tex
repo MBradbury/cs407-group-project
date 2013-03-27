@@ -81,7 +81,22 @@ Engineers from the University of Luxembourg implemented a system based on a Wire
 
 The network consists of a set of fixed and mobile sensors which are connected to several mesh routers within a polluted area and makes use of a gateway which transmitts data back to the monitoring server as well as providing internet connectivity to the sensors. High-gain antennas was used to reduce the propability of interference from non-city radio frequency emittors such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthorgonal channels between the sensors, mesh routers, gateways and directional antennas. A server middleware was responsible for allocating IP addresses to the sensors and any external user. At the monitoring station, the transmitted data is analysed by an Air Pollution Monitoring Toolbox application and compares the pollution level to the 'critical level of pollution'. The critical data are transmitted to an Air Pollution Decision makers for safety guidance.
 
+\paragraph{WSN Challenges}
 
+\begin{itemize}
+\item Limiting number of request messages each sensor can receive from the data server.
+
+The network uses an Ad-hoc On-Demand Distance Vector routing protocol for efficient forwarding of data packets to the data server and makes use of a series of messages to communicate through the network and to discover and maintain data routes. A request message is propagated to the network when the data server requests for a specific data item. All the sensors receives the message and checks whether is it the destination or not. If not, it stores a copy of the message in its buffer containing previously broadcasted request messages and rebroadcasts it back to its neighbours. Once the destined sensor receives the message it sends back a reply message using the reverse path of the data server.
+
+To prevent the sensors from overloading with request messages, each message is set with a Time-To-Live (TTL) value with discards the message when the value expires. This value is dependant on the size of the network where a larger network will have higher TTL value to ensure that the request messages reaches the defined destination.
+
+\item Energy Usage
+
+The wireless mesh network is energy efficient since the sensors are energy constrained. This uses an enhanced energy conserving routing protocol which employs a routing algorithm that aims to distribute data among maximally disjoint paths towards the sink so that the lifeline of the WSN service can be prolonged. It also allows the sensors to participate in carrying the global traffic over the network
+
+\item Data transmission periods
+\item Optimized means of gateway placements
+\end{itemize}
 
 \subsubsection{Forest Fires}
 \cite{libeliumForestFires}

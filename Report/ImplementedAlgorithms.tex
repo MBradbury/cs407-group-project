@@ -147,20 +147,22 @@ After a fixed time, messages are then sent back to the source along a chain, thi
     %
     \null\qq \% Receiving Message\\
     \null\qq \emph{receive}::~\res{recv}$\langle source, data, hop\_count, id\rangle \rightarrow$\\
-    \null\qq\qq \res{if} ($mote\_records.contains(id)$ \&\& $mote\_records.hop\_count(id) < hop\_count$) \res{then} \\
-    \null\qq\qq\qq \% Rebroadcast message with $hop\_count -1$ \\
-    \null\qq\qq\qq \% Updated $mote\_records$ with new data \\
-    \null\qq\qq\qq \% Reset data sending timer\\
-    \null\qq\qq \res{else if} ($!mote\_records.contains(id)$) \res{then}\\
-    \null\qq\qq\qq \%Broadcast message with $hop\_count -1$\\
-    \null\qq\qq\qq \% Updated $mote\_records$ with new data \\
-    \null\qq\qq\qq \% Set data sending timer to \var{$P_{send\_data}$} \\
+    \null\qq\qq \res{if} ($mote\_records.contains(id)$) \res{then}\\
+    \null\qq\qq\qq \res{if} ($mote\_records.hop\_count(id) < hop\_count$) \res{then} \\
+    \null\qq\qq\qq\qq \res{stbroadcast.send($message$,$hop\_count -1$)};\\
+    \null\qq\qq\qq\qq \res{$mote\_records$.replace($id$,$hop\_count$)};\\
+    \null\qq\qq\qq\qq \res{\var{$P_{send\_data}$}.restart()}\\
+    \null\qq\qq\qq \res{fi;}\\
+    \null\qq\qq \res{else}\\
+    \null\qq\qq\qq \res{stbroadcast.send($message$,$hop\_count -1$)};\\
+    \null\qq\qq\qq \res{$mote\_records$.add($id$,$data$,$source$,$hop\_count$)};\\
+    \null\qq\qq\qq \res{\var{$P_{send\_data}$}.start()}\\
     \null\qq\qq \res{fi;}\\~\\
     %
     %
     \null\qq \% Sending Data\\
     \null\qq \emph{send\_data}:~\res{timeout}(\var{$P_{send\_data}$})$\rightarrow$\\
-    \null\qq\qq \res{runicast.send}($mote\_records.getMote(id)$, $data$);\\~\\
+    \null\qq\qq \res{runicast.send}($j$,$mote\_records.getMote(id)$, $data$);\\~\\
     %
     %
     \null\qq \% Recieved Data\\

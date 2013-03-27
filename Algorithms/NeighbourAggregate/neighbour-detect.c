@@ -40,7 +40,7 @@ static void round_complete(void * ptr)
 
 		if (conn->round_count - stored->round_last_seen >= conn->missed_round_threshold)
 		{
-			printf("Detected that %s is no longer in our neighbourhood, so removing it (R=%u RLS=%u THRE=%u)\n",
+			printf("ND: rm %s (R=%u RLS=%u THRE=%u)\n",
 				addr2str(addr), conn->round_count, stored->round_last_seen, conn->missed_round_threshold);
 
 			// We haven't seen this node for a while, so need to remove it
@@ -54,10 +54,10 @@ static void round_complete(void * ptr)
 		}
 	}
 
-	printf("Neighbour Detect: Round %u complete!\n", conn->round_count);
+	printf("ND: R=%u done\n", conn->round_count);
 
-	// call the callback
-	(*conn->callbacks.round_complete_callback)(conn, &conn->results, conn->round_count);
+	// Call the callback
+	(*conn->callbacks->round_complete_callback)(conn, &conn->results, conn->round_count);
 
 	++conn->round_count;
 
@@ -77,12 +77,9 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 
 	if (!unique_array_contains(&conn->results, from))
 	{
-		rimeaddr_t * store = (rimeaddr_t *)malloc(sizeof(rimeaddr_t));
-		rimeaddr_copy(store, from);
-		unique_array_append(&conn->results, store);
+		unique_array_append(&conn->results, rimeaddr_clone(from));
 
-		printf("Recording Address: %s", addr2str(from));
-		printf(" on node: %s\n", addr2str(&rimeaddr_node_addr));
+		printf("ND: %s\n", addr2str(from));
 	}
 
 	// Update round map
@@ -107,18 +104,14 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 		map_put(&conn->round_map, stored);
 	}
 
-	printf("Neighbour Discovery: got addr seen before from: %s\n", addr2str(from));
+	//printf("ND: got addr seen before from: %s\n", addr2str(from));
 
 	toggle_led_for(LEDS_BLUE, CLOCK_SECOND);
 }
 
-static void neighbor_discovery_sent(struct neighbor_discovery_conn * c)
-{
-	//printf("Neighbour Discovery: sent message\n");
-}
 
 static const struct neighbor_discovery_callbacks neighbor_discovery_callbacks =
-	{ &neighbor_discovery_recv, &neighbor_discovery_sent };
+	{ &neighbor_discovery_recv, NULL };
 
 bool start_neighbour_detect(neighbour_detect_conn_t * conn,
 	uint16_t channel, neighbour_detect_callbacks_t const * cb_fns,
@@ -128,7 +121,7 @@ bool start_neighbour_detect(neighbour_detect_conn_t * conn,
 	// Check parameters
 	if (conn != NULL && channel != 0 && cb_fns != NULL)
 	{
-		printf("Neighbour Discovery: Started!\n");
+		//printf("ND: Started!\n");
 
 		map_init(&conn->round_map, &rimeaddr_equality, &free);
 
@@ -137,7 +130,7 @@ bool start_neighbour_detect(neighbour_detect_conn_t * conn,
 		conn->round_count = 0;
 		conn->missed_round_threshold = missed_round_threshold;
 
-		memcpy(&conn->callbacks, cb_fns, sizeof(neighbour_detect_callbacks_t)); //copy in the callbacks
+		conn->callbacks = cb_fns;
 
 		neighbor_discovery_open(
 	        &conn->nd,
@@ -164,7 +157,7 @@ void stop_neighbour_detect(neighbour_detect_conn_t * conn)
 {
 	if (conn != NULL)
 	{
-		printf("Neighbour Discovery: Stopped!\n");
+		//printf("ND: Stopped!\n");
 
 		neighbor_discovery_close(&conn->nd);
 

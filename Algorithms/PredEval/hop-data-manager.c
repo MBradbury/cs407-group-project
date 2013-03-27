@@ -24,14 +24,13 @@ bool hop_manager_init(hop_data_t * hop_data)
 	return false;
 }
 
-bool hop_manager_free(hop_data_t * hop_data)
+void hop_manager_free(hop_data_t * hop_data)
 {
 	if (hop_data != NULL)
 	{
 		hop_data->max_size = 0;
-		return array_list_free(&hop_data->maps);
+		array_list_free(&hop_data->maps);
 	}
-	return false;
 }
 
 bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, size_t data_length)
@@ -57,12 +56,7 @@ bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, 
 
 		memcpy(stored, data, data_length);
 
-		if (!map_put(map, stored))
-		{
-			free(stored);
-			return false;
-		}
-
+		map_put(map, stored);
 
 		hop_data->max_size++;
 	}
@@ -75,31 +69,20 @@ bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, 
 	return true;
 }
 
-bool hop_manager_remove(hop_data_t * hop_data, uint8_t hops, rimeaddr_t const * from)
+void hop_manager_remove(hop_data_t * hop_data, uint8_t hops, rimeaddr_t const * from)
 {
-	if (hop_data == NULL || hops == 0 || from == NULL)
-	{
-		return false;
-	}
-
 	map_t * map = hop_manager_get(hop_data, hops);
 
-	if (map != NULL)
-	{
-		return map_remove(map, from);
-	}
-
-	return true;
+	map_remove(map, from);
 }
 
-bool hop_manager_reset(hop_data_t * hop_data)
+void hop_manager_reset(hop_data_t * hop_data)
 {
 	if (hop_data != NULL)
 	{
 		hop_data->max_size = 0;
-		return array_list_clear(&hop_data->maps);
+		array_list_clear(&hop_data->maps);
 	}
-	return false;
 }
 
 map_t * hop_manager_get(hop_data_t * hop_data, uint8_t hop)
@@ -109,7 +92,7 @@ map_t * hop_manager_get(hop_data_t * hop_data, uint8_t hop)
 		return NULL;
 	}
 
-	unsigned int length = array_list_length(&hop_data->maps);
+	const unsigned int length = array_list_length(&hop_data->maps);
 
 	// Map doesn't exist so create it
 	if (length < hop)
@@ -125,11 +108,6 @@ map_t * hop_manager_get(hop_data_t * hop_data, uint8_t hop)
 	}
 
 	return (map_t *)array_list_data(&hop_data->maps, hop - 1);
-}
-
-unsigned int hop_manager_max_size(hop_data_t * hop_data)
-{
-	return hop_data != NULL ? hop_data->max_size : 0;
 }
 
 unsigned int hop_manager_length(hop_data_t * hop_data, var_elem_t const * variable)

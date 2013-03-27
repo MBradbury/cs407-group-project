@@ -17,7 +17,11 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
-#undef NDEBUG
+#ifdef NHOPREQ_DEBUG
+#	define NHRDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define NHRDPRINTF(...)
+#endif
 
 #ifndef STBROADCAST_ATTRIBUTES
 #	define STBROADCAST_ATTRIBUTES BROADCAST_ATTRIBUTES
@@ -31,14 +35,14 @@ static const struct packetbuf_attrlist stbroadcast_attributes[] = {
 	{ PACKETBUF_ATTR_TTL, PACKETBUF_ATTR_BIT * 4 },
 	{ PACKETBUF_ATTR_EPACKET_ID, PACKETBUF_ATTR_BIT * 16 },
 	STBROADCAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 static const struct packetbuf_attrlist runicast_attributes[] = {
 	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
 	{ PACKETBUF_ADDR_ERECEIVER, PACKETBUF_ADDRSIZE },
 	{ PACKETBUF_ATTR_HOPS, PACKETBUF_ATTR_BIT * 4 },
 	RUNICAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 
 static const uint8_t RUNICAST_MAX_RETX = 3;
@@ -109,19 +113,12 @@ static void send_reply(
 	rimeaddr_t const * eventual_target, uint8_t hops, void const * data);
 
 
-// Get an id that contains the address of the node sending
-// the message and the number of messages that node has sent.
-static inline uint16_t get_message_id(nhopreq_conn_t * conn)
-{
-	return conn->message_id++;
-}
-
 // STUBBORN BROADCAST
 static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 {
 	nhopreq_conn_t * conn = conncvt_datareq_bcast(c);
 
-#ifndef NDEBUG
+#ifdef NHRDPRINTF
 	if (packetbuf_datalen() != sizeof(request_data_msg_t))
 	{
 		printf("nhopreq: Packet length not as expected\n");
@@ -132,9 +129,9 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 
 	rimeaddr_copy(&originator, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 	rimeaddr_copy(&sender, packetbuf_addr(PACKETBUF_ADDR_SENDER));
-	uint16_t message_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
-	uint8_t hop_limit = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_TTL);
-	uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS);
+	const uint16_t message_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
+	const uint8_t hop_limit = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_TTL);
+	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS);
 
 	// We don't want to do anything if the message we sent
 	// has got back to ourselves
@@ -182,7 +179,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 		// This is a newer message, so we need to respond to it.
 		if (message_id > record->id)
 		{
-			printf("nhopreq: Seen a newer message from %s (%u), so we will need to repond with our data.\n",
+			printf("nhopreq: Seen a newer message from %s (%u), so we will need to respond with our data.\n",
 				addr2str(&originator), message_id);
 
 			record->id = message_id;
@@ -217,19 +214,6 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	}
 }
 
-static void datareq_stbroadcast_sent(struct stbroadcast_conn *c)
-{
-	//printf("I've sent!\n");
-}
-
-static void datareq_stbroadcast_callback_cancel(void * ptr)
-{
-	nhopreq_conn_t * conn = (nhopreq_conn_t *)ptr;
-
-	printf("nhopreq: Canceling Stubborn Broadcast.\n");
-	stbroadcast_cancel(&conn->bc);
-}
-
 // TODO: need to collate responses, then send the on,
 // right now messages collide while a node is trying to forward
 // RELIABLE UNICAST
@@ -247,12 +231,8 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 
 	rimeaddr_copy(&sender, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 	rimeaddr_copy(&target, packetbuf_addr(PACKETBUF_ADDR_ERECEIVER));
-	uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS) + 1;
+	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS) + 1;
 
-	//printf("nhopreq: runicast received from %s of length %u, ",
-	//	addr2str(from), packetbuf_datalen());
-	//printf("ESender=%s ", addr2str(&sender));
-	//printf("ETarget=%s, traveled=%u\n", addr2str(&target), hops);
 
 	void * msgdata = tmpBuffer;
 	
@@ -261,7 +241,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	{
 		// The target node has received the required data,
 		// so provide it to the upper layer
-		(*conn->receive_fn)(&sender, hops, msgdata);
+		conn->callbacks->receive_fn(conn, &sender, hops, msgdata);
 	}
 	else
 	{
@@ -277,11 +257,6 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	}
 }
 
-static void runicast_sent(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
-{
-	//printf("runicast sent\n");
-}
-
 static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
 {
 	printf("nhopreq: Runicast timed out to:%s retransmissions:%u\n", addr2str(to), retransmissions);
@@ -290,21 +265,19 @@ static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, u
 
 // Callbacks
 static const struct runicast_callbacks runicastCallbacks =
-	{ &runicast_recv, &runicast_sent, &runicast_timedout };
+	{ &runicast_recv, NULL, &runicast_timedout };
 
 static const struct stbroadcast_callbacks datareq_stbroadcastCallbacks =
-	{ &datareq_stbroadcast_recv, &datareq_stbroadcast_sent };
+	{ &datareq_stbroadcast_recv, NULL };
 
 
 // Methods
 static void delayed_reply_data(void * ptr)
 {
-	printf("Starting delayed send of node data\n");
-
 	delayed_reply_data_params_t * p =
 		(delayed_reply_data_params_t *)ptr;
 
-	printf("nhopreq: Forwarding message to %s\n", addr2str(&p->target));
+	printf("nhopreq: Starting delayed send of node data to %s\n", addr2str(&p->target));
 
 	send_reply(
 		p->conn,
@@ -353,7 +326,7 @@ static void send_reply(
 		if (data == NULL)
 		{
 			// Call data get functions and store result in outwards bound packet
-			conn->data_fn(data_dest);
+			conn->callbacks->data_fn(conn, data_dest);
 		}
 		else
 		{
@@ -382,7 +355,7 @@ static void send_reply(
 		if (data == NULL)
 		{
 			// Call data get functions and store result in outwards bound packet
-			conn->data_fn(data_dest);
+			conn->callbacks->data_fn(conn, data_dest);
 		}
 		else
 		{
@@ -417,9 +390,7 @@ static bool send_n_hop_data_request(
 
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(request_data_msg_t));
-	debug_packet_size(sizeof(request_data_msg_t));
 	request_data_msg_t * msg = (request_data_msg_t *)packetbuf_dataptr();
-	memset(msg, 0, sizeof(request_data_msg_t));
 
 	packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, originator);
 	packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &rimeaddr_node_addr);
@@ -438,7 +409,7 @@ static bool send_n_hop_data_request(
 
 	stbroadcast_send_stubborn(&conn->bc, random_send_time);
 
-	ctimer_set(&conn->datareq_stbroadcast_stop_timer, send_limit, &datareq_stbroadcast_callback_cancel, conn);
+	ctimer_set(&conn->datareq_stbroadcast_stop_timer, send_limit, &stbroadcast_cancel, &conn->bc);
 
 	return true;
 }
@@ -446,14 +417,13 @@ static bool send_n_hop_data_request(
 
 // Initialise multi-hop predicate checking
 bool nhopreq_start(
-	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2, rimeaddr_t const * base_station_addr,
-	data_generation_fn data_fn, unsigned int data_size, data_receive_fn receive_fn)
+	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2,
+	unsigned int data_size, nhopreq_callbacks_t const * callbacks)
 {
-	if (conn == NULL || base_station_addr == NULL ||
-		data_fn == NULL || ch1 == ch2 || data_size == 0 ||
-		receive_fn == NULL)
+	if (conn == NULL || callbacks == NULL ||
+		callbacks->data_fn == NULL || ch1 == ch2 || data_size == 0 ||
+		callbacks->receive_fn == NULL)
 	{
-		printf("nhopreq: start failed!\n");
 		return false;
 	}
 
@@ -466,13 +436,11 @@ bool nhopreq_start(
 	runicast_open(&conn->ru, ch2, &runicastCallbacks);
 	channel_set_attributes(ch2, runicast_attributes);
 
-	rimeaddr_copy(&conn->base_station_addr, base_station_addr);
-
 	conn->message_id = 1;
 
-	conn->data_fn = data_fn;
+	conn->callbacks = callbacks;
+
 	conn->data_size = data_size;
-	conn->receive_fn = receive_fn;
 
 	map_init(&conn->mote_records, &rimeaddr_equality, &free);
 
@@ -480,7 +448,7 @@ bool nhopreq_start(
 }
 
 // Shutdown multi-hop predicate checking
-bool nhopreq_end(nhopreq_conn_t * conn)
+bool nhopreq_stop(nhopreq_conn_t * conn)
 {
 	if (conn == NULL)
 	{
@@ -500,14 +468,8 @@ bool nhopreq_end(nhopreq_conn_t * conn)
 	return true;
 }
 
-
-bool is_base_station(nhopreq_conn_t const * conn)
-{
-	return conn != NULL && rimeaddr_cmp(&rimeaddr_node_addr, &conn->base_station_addr);
-}
-
 void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops)
 {
-	send_n_hop_data_request(conn, &rimeaddr_node_addr, get_message_id(conn), hops, 0);
+	send_n_hop_data_request(conn, &rimeaddr_node_addr, conn->message_id++, hops, 0);
 }
 

@@ -17,16 +17,21 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code -Wmissing-field-initializers \
 -Wno-int-to-pointer-cast -Winit-self -Wstrict-aliasing -Wno-unused-parameter \
 -Wuninitialized -Wold-style-definition -Wredundant-decls -Werror-implicit-function-declaration \
--Wunused -Wno-unused-value -Wreturn-type
+-Wunused -Wno-unused-value -Wreturn-type -Winline
 
 CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
 
 #CFLAGS += -DNDEBUG
 CFLAGS += -DNDEBUGVM
 
+CFLAGS += -fdata-sections
+
+CFLAGS += -DPEGE_APPLICATION -DRIMESTATS_CONF_ENABLED
+
 # Disable uip
 #CONTIKI_NO_NET=1
 
+CFLAGS += -DPROCESS_CONF_NO_PROCESS_NAMES=1
+
 CONTIKI = $(CS407DIR)/contiki
 include $(CONTIKI)/Makefile.include
-

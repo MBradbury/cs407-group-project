@@ -22,12 +22,19 @@
 #	define DEBUG_ERR_PRINT(...) (void)0
 #endif
 
+// When we have a C-String that we can find the length
+// of at compile time
+#define FAST_SNPRINTF(to, from) \
+	memcpy(to, from, sizeof(from)/sizeof(from[0]))
+
+
+
 #define STACK_SIZE (1 * 256)
 
 #define MAXIMUM_FUNCTIONS 5
 #define MAXIMUM_VARIABLES 10
 
-#define ERROR_MESSAGE_LENGTH 128
+#define ERROR_MESSAGE_LENGTH 64
 
 
 #define THIS_VAR_ID 0
@@ -63,11 +70,11 @@ char const * error_message(void)
 /****************************************************
  ** MEMORY MANAGEMENT
  ***************************************************/
-static inline void * heap_alloc(nuint size)
+static void * heap_alloc(nuint size)
 {
 	if (heap_ptr + size > stack_ptr)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Heap overwriting stack");
+		FAST_SNPRINTF(error, "Heap overwriting stack");
 		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
@@ -80,11 +87,11 @@ static inline void * heap_alloc(nuint size)
 }
 
 
-static inline bool push_stack(void const * ptr, nuint size)
+static bool push_stack(void const * ptr, nuint size)
 {
 	if (stack_ptr - size < heap_ptr)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Stack overwriting heap");
+		FAST_SNPRINTF(error, "Stack overflow");
 		DEBUG_PRINT("========%s========\n", error);
 		return false;
 	}
@@ -97,32 +104,12 @@ static inline bool push_stack(void const * ptr, nuint size)
 
 static inline bool int_push_stack(nint i)
 {
-	if (stack_ptr - sizeof(nint) < heap_ptr)
-	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Stack overwriting heap");
-		DEBUG_PRINT("========%s========\n", error);
-		return false;
-	}
-
-	stack_ptr -= sizeof(nint);
-	*((nint *)stack_ptr) = i;
-
-	return true;
+	return push_stack(&i, sizeof(nint));
 }
 
 static inline bool float_push_stack(nfloat f)
 {
-	if (stack_ptr - sizeof(nfloat) < heap_ptr)
-	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Stack overwriting heap");
-		DEBUG_PRINT("========%s========\n", error);
-		return false;
-	}
-
-	stack_ptr -= sizeof(nfloat);
-	*((nfloat *)stack_ptr) = f;
-
-	return true;
+	return push_stack(&f, sizeof(nfloat));
 }
 
 static inline nuint stack_size(void)
@@ -134,7 +121,7 @@ static bool require_stack_size(nuint size)
 {
 	if (stack_size() < size)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "STACK UNDERFLOW");
+		FAST_SNPRINTF(error, "Stack underflow");
 		DEBUG_PRINT("Stack too small is %d bytes needed %d bytes\n",
 			(char *)(stack + STACK_SIZE) - (char *)stack_ptr, size);
 		return false;
@@ -206,7 +193,7 @@ static variable_reg_t * create_variable(variable_id_t id, variable_type_t type)
 {
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Created maximum number of variables");
+		FAST_SNPRINTF(error, "Created max variables");
 		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
@@ -244,7 +231,7 @@ static variable_reg_t * create_variable(variable_id_t id, variable_type_t type)
 
 	if (variable->location == NULL)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Failed to allocate enough space on heap for variable");
+		FAST_SNPRINTF(error, "Out of heap space for var");
 		DEBUG_PRINT("========%s=====%d===\n", error, variable_type_size(type));
 		return NULL;
 	}
@@ -264,7 +251,7 @@ static variable_reg_t * create_array(variable_id_t id, variable_type_t type, nui
 {
 	if (variable_regs_count == MAXIMUM_VARIABLES)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Created maximum number of variables");
+		FAST_SNPRINTF(error, "Created max variables");
 		DEBUG_PRINT("========%s========\n", error);
 		return NULL;
 	}
@@ -274,7 +261,7 @@ static variable_reg_t * create_array(variable_id_t id, variable_type_t type, nui
 	{
 		if (variable_regs[i].id == id)
 		{
-			snprintf(error, ERROR_MESSAGE_LENGTH, "Already registered variable with id");
+			snprintf(error, ERROR_MESSAGE_LENGTH, "Already registered variable with id=%u", id);
 			DEBUG_PRINT("========%s=====%u===\n", error, id);
 			return NULL;
 		}
@@ -310,7 +297,7 @@ static bool alloc_array(variable_reg_t * variable)
 
 	if (variable->location == NULL)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Failed to allocate enough space on heap for variable");
+		FAST_SNPRINTF(error, "Failed to alloc space for var");
 		DEBUG_PRINT("========%s=====%d===\n", error, variable_type_size(variable->type) * variable->length);
 		return false;
 	}
@@ -333,7 +320,7 @@ static variable_reg_t * get_variable(variable_id_t id)
 		}
 	}
 
-	snprintf(error, ERROR_MESSAGE_LENGTH, "No variable with the given id=%u exists", id);
+	snprintf(error, ERROR_MESSAGE_LENGTH, "No variable with id=%u exists", id);
 	DEBUG_PRINT("========%s=====%u===\n", error, id);
 
 	return NULL;
@@ -378,7 +365,7 @@ bool register_function(function_id_t id, data_access_fn fn, variable_type_t type
 {
 	if (function_regs_count == MAXIMUM_FUNCTIONS)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Already registered maximum number of functions");
+		FAST_SNPRINTF(error, "Registered max functions");
 		DEBUG_PRINT("========%s=====%u===\n", error, id);
 		return false;
 	}
@@ -435,7 +422,7 @@ static void const * call_function(function_id_t id, void * data, variable_type_t
 		return reg->fn(data);
 	}
 
-	snprintf(error, ERROR_MESSAGE_LENGTH, "Function with given id=%d doesn't exist", id);
+	snprintf(error, ERROR_MESSAGE_LENGTH, "Function with id=%d doesn't exist", id);
 	DEBUG_PRINT("========%s======%u==\n", error, id);
 
 	return NULL;
@@ -480,11 +467,11 @@ typedef enum {
 
   FPOW=52,
 
-  VIINC=53, VIDEC=54, VIFAFC=55,
+  VIINC=53, VIDEC=54, VIFAFC=55, THISC=56,
 
-  IDEC=56,
+  IDEC=57,
 
-  EQUIVALENT=57, IMPLIES=58,
+  EQUIVALENT=58, IMPLIES=59,
 
 } opcode;
 
@@ -519,7 +506,7 @@ static const char * opcode_names[] = {
 
 	"FPOW",
 
-	"VIINC", "VIDEC", "VIFAFC",
+	"VIINC", "VIDEC", "VIFAFC", "THISC",
 
 	"IDEC",
 
@@ -574,7 +561,7 @@ static const char * opcode_names[] = {
 					 \
 					if (result == NULL) \
 					{ \
-						snprintf(error, ERROR_MESSAGE_LENGTH, "User defined function returns NULL"); \
+						FAST_SNPRINTF(error, "User defined function returns NULL"); \
 						DEBUG_PRINT("==========%s==========\n", error); \
 						return false; \
 					} \
@@ -596,7 +583,7 @@ static const char * opcode_names[] = {
 			} \
 			else \
 			{ \
-				snprintf(error, ERROR_MESSAGE_LENGTH, "Variable not an array of user types!"); \
+				FAST_SNPRINTF(error, "Variable not an array of user types!"); \
 				DEBUG_PRINT("==========%s==========\n", error); \
 				return false; \
 			} \
@@ -1026,7 +1013,7 @@ nbool evaluate(ubyte const * start, nuint program_length)
 				if (!push_stack(&res, sizeof(nfloat)))
 					return false;*/
 
-				snprintf(error, ERROR_MESSAGE_LENGTH, "POW DISABLED");
+				FAST_SNPRINTF(error, "POW DISABLED");
 				return false;
 
 			} break;
@@ -1106,6 +1093,27 @@ nbool evaluate(ubyte const * start, nuint program_length)
 
 			} break;
 
+		case THISC:
+			{
+				variable_reg_t const * var = get_variable(THIS_VAR_ID);
+
+				if (var == NULL)
+					return false;
+
+				variable_type_t type;
+				void const * data = call_function(function_id_t_from_bytecode(current + 1), var->location, &type);
+				current += sizeof(function_id_t);
+
+				if (data == NULL)
+				{
+					return false;
+				}
+
+				if (!push_stack(data, variable_type_size(type)))
+					return false;
+
+			} break;
+
 		default:
 			DEBUG_PRINT("Unknown OP CODE %d\n", *current);
 			break;
@@ -1135,19 +1143,19 @@ nbool evaluate(ubyte const * start, nuint program_length)
 bool init_pred_lang(node_data_fn given_data_fn, nuint given_data_size)
 {
 	// Reset the error message variable
-	snprintf(error, ERROR_MESSAGE_LENGTH, "No Error");
+	FAST_SNPRINTF(error, "No Error");
 
 	// Make sure wqe are given valid functions
 	if (given_data_fn == NULL)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "No user data function provided");
+		FAST_SNPRINTF(error, "No user data function provided");
 		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
 	}
 
 	if (given_data_size == 0)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Zero sized user data");
+		FAST_SNPRINTF(error, "Zero sized user data");
 		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
 	}
@@ -1187,14 +1195,14 @@ bool bind_input(variable_id_t id, void * data, unsigned int length)
 {
 	if (data == NULL)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Cannot bind input when no data provided");
+		FAST_SNPRINTF(error, "Cannot bind input when NULL");
 		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
 	}
 
 	if (length == 0)
 	{
-		snprintf(error, ERROR_MESSAGE_LENGTH, "Cannot bind input of length 0");
+		FAST_SNPRINTF(error, "Cannot bind input of length 0");
 		DEBUG_PRINT("==========%s==========\n", error);
 		return false;
 	}
@@ -1212,7 +1220,6 @@ bool bind_input(variable_id_t id, void * data, unsigned int length)
 /****************************************************
  ** INIT MANAGEMENT END
  ***************************************************/
-
 
 
 
@@ -1271,9 +1278,8 @@ static void const * get_humidity_fn(void const * ptr)
 {
 	return &((user_data_t const *)ptr)->humidity;
 }
-#endif
 
-#ifdef MAIN_FUNC
+
 // FROM: http://www.anyexample.com/programming/c/how_to_load_file_into_memory_using_plain_ansi_c_language.xml
 nint load_file_to_memory(char const * filename, ubyte ** result) 
 {

@@ -10,9 +10,15 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 #include <limits.h>
 #include <stdint.h>
+
+#ifdef PREDICATE_MANAGER_DEBUG
+#	define PMDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define PMDPRINTF(...)
+#endif
+
 
 #define UINT8_MIN 0
 
@@ -49,10 +55,10 @@ static bool predicate_id_equal(void const * left, void const * right)
 	if (left == NULL || right == NULL)
 		return false;
 
-	predicate_detail_entry_t const * l = (predicate_detail_entry_t const *)left;
-	predicate_detail_entry_t const * r = (predicate_detail_entry_t const *)right;
+	uint8_t const * l = (uint8_t const *)left;
+	uint8_t const * r = (uint8_t const *)right;
 
-	return l->id == r->id;
+	return *l == *r;
 }
 
 
@@ -86,7 +92,7 @@ static void trickle_recv(struct trickle_conn * tc)
 		// evaluating this predicate
 		map_remove(&conn->predicates, &msg->predicate_id);
 
-		printf("Predicate Manager: Removed predicate with id %d\n", msg->predicate_id);
+		printf("PredMan: Remove %d\n", msg->predicate_id);
 	}
 	else
 	{
@@ -95,7 +101,7 @@ static void trickle_recv(struct trickle_conn * tc)
 
 		if (stored != NULL)
 		{
-			printf("Predicate Manager: Updating predicate with id %d.\n", msg->predicate_id);
+			printf("PredMan: Update %d\n", msg->predicate_id);
 
 			// Re-allocate data structures if needed
 
@@ -113,7 +119,7 @@ static void trickle_recv(struct trickle_conn * tc)
 		}
 		else
 		{
-			printf("Predicate Manager: Creating predicate with id %d.\n", msg->predicate_id);
+			printf("PredMan: Create %d\n", msg->predicate_id);
 
 			// Allocate memory for the data
 			stored = malloc(sizeof(predicate_detail_entry_t));
@@ -152,7 +158,8 @@ static void trickle_recv(struct trickle_conn * tc)
 		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&conn->predicates, elem);
 
 		// Set the led to be red if this node will evaluate a predicate
-		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) ||
+			rimeaddr_cmp(&pe->target, &rimeaddr_null))
 		{
 			leds_on(LEDS_RED);
 			break;
@@ -182,21 +189,17 @@ static void mesh_rcv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops
 	}
 }
 
-static void mesh_sent(struct mesh_conn * c)
-{
-}
-
 static void mesh_timeout(struct mesh_conn * c)
 {
 	predicate_manager_conn_t * conn = conncvt_mesh(c);
 
-	printf("Predicate Manager: Mesh timedout\n");
+	PMDPRINTF("PredMan: Mesh timedout\n");
 
 	// We timedout, so start sending again
 	//mesh_send(c, &conn->basestation);
 }
 
-static const struct mesh_callbacks mc_callbacks = { &mesh_rcv, &mesh_sent, &mesh_timeout };
+static const struct mesh_callbacks mc_callbacks = { &mesh_rcv, NULL, &mesh_timeout };
 
 
 bool predicate_manager_open(
@@ -222,16 +225,12 @@ bool predicate_manager_open(
 	return false;
 }
 
-bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn)
+void predicate_manager_start_serial_input(predicate_manager_conn_t * conn)
 {
-	if (conn == NULL)
+	if (conn != NULL)
 	{
-		return false;
+		process_start(&predicate_input_process, (void *)conn);
 	}
-
-	process_start(&predicate_input_process, (void *)conn);
-
-	return true;
 }
 
 void predicate_manager_close(predicate_manager_conn_t * conn)
@@ -261,19 +260,20 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 		return false;
 
 	// Send the request message
-	unsigned int packet_size = sizeof(eval_pred_req_t) + (sizeof(ubyte) * bytecode_length) + (sizeof(var_elem_t) * var_details_length);
+	const unsigned int packet_size =
+		sizeof(eval_pred_req_t) +
+		(sizeof(ubyte) * bytecode_length) +
+		(sizeof(var_elem_t) * var_details_length);
 
 	if (packet_size > PACKETBUF_SIZE)
 	{
-		printf("Predicate Manager: Predicate packet it too long to be sent.\n");
+		printf("PredMan: Packet too long\n");
 		return false;
 	}
 
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_size);
-	debug_packet_size(packet_size);
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_size);
 
 	// Set eventual destination in header
 	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
@@ -288,17 +288,22 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	ubyte * msg_bytecode = (ubyte *)(msg_vars + var_details_length);
 
+#ifdef PREDICATE_MANAGER_DEBUG
 	// Debug check to make sure that we have done sane things!
 	if ((void *)(msg_bytecode + bytecode_length) - (void *)msg != packet_size)
 	{
-		printf("Predicate Manager: Failed to copy data correctly got=%ld expected=%u!\n",
+		printf("PredMan: Failed copy got=%ld expected=%u!\n",
 			(void *)(msg_bytecode + bytecode_length) - (void *)msg,
 			packet_size);
 	}
+#endif
 
 	memcpy(msg_bytecode, bytecode, sizeof(ubyte) * bytecode_length);
 
-	printf("Predicate Manager: Sent packet length %d\n", packet_size);
+	PMDPRINTF("PredMan: Sent %d\n", packet_size);
+
+	// We need to receive the predicate so we know of it
+	trickle_recv(&conn->tc);
 
 	trickle_send(&conn->tc);
 
@@ -310,13 +315,9 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimea
 	if (conn == NULL || destination == NULL)
 		return false;
 
-	unsigned int packet_size = sizeof(eval_pred_req_t);
-
 	packetbuf_clear();
-	packetbuf_set_datalen(packet_size);
-	debug_packet_size(packet_size);
+	packetbuf_set_datalen(sizeof(eval_pred_req_t));
 	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_size);
 
 	// Set eventual destination in header
 	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
@@ -340,13 +341,14 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 		return false;
 	}
 
-	unsigned int packet_length = sizeof(failure_response_t) +
-								 sizeof(hops_position_t) * pe->variables_details_length +
-								 data_size * data_length;
+	const unsigned int packet_length =
+		sizeof(failure_response_t) +
+		sizeof(hops_position_t) * pe->variables_details_length +
+		data_size * data_length;
 
 	if (packet_length > PACKETBUF_SIZE)
 	{
-		printf("Predicate Manager: Predicate reply is too long (%u > %d)\n",
+		printf("PredMan: Pred reply too long %u > %d\n",
 			packet_length, PACKETBUF_SIZE);
 
 		return false;
@@ -356,9 +358,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_length);
-	debug_packet_size(packet_length);
 	failure_response_t * msg = (failure_response_t *)packetbuf_dataptr();
-	memset(msg, 0, packet_length);
 
 	msg->predicate_id = pe->id;
 	msg->num_hops_positions = pe->variables_details_length;
@@ -371,32 +371,24 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	{
 		hops_details[i].hops = pe->variables_details[i].hops;
 		hops_details[i].var_id = pe->variables_details[i].var_id;
-		hops_details[i].length = hop_manager_length(&hop_data, &pe->variables_details[i]);
+		hops_details[i].length = hop_manager_length(hop_data, &pe->variables_details[i]);
 	}
 
 	void * msg_neighbour_data = (void *)(hops_details + pe->variables_details_length);
 
 	memcpy(msg_neighbour_data, data, data_size * data_length);
 
-	// TODO: test with global evaluators
-	/*if (rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
+	// If the target is the current node, just deliver the message
+	if (rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
 	{
-		if (conn->callbacks->recv_response != NULL)
-		{
-			conn->callbacks->recv_response(conn, &rimeaddr_node_addr, 0);
-		}
+		mesh_rcv(&conn->mc, &rimeaddr_node_addr, 0);
 	}
-	else*/
+	else
 	{
 		mesh_send(&conn->mc, &conn->basestation);
 	}
 
 	return true;
-}
-
-map_t const * predicate_manager_get_map(predicate_manager_conn_t * conn)
-{
-	return conn == NULL ? NULL : &conn->predicates;
 }
 
 
@@ -409,7 +401,7 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 
 	uint8_t max_hops = 0;
 
-	unsigned int i;
+	uint8_t i;
 	for (i = 0; i < pe->variables_details_length; ++i)
 	{
 		if (pe->variables_details[i].hops > max_hops)
@@ -424,12 +416,74 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 }
 
 
+bool evaluate_predicate(predicate_manager_conn_t * conn,
+	node_data_fn data_fn, size_t data_size,
+	function_details_t const * function_details, size_t functions_count,
+	hop_data_t * hop_data,
+	void const * all_neighbour_data, unsigned int nd_length,
+	predicate_detail_entry_t const * pe)
+{
+	unsigned int i;
+
+	// Set up the predicate language VM
+	init_pred_lang(data_fn, data_size);
+
+	// Register the data functions
+
+	for (i = 0; i < functions_count; ++i)
+	{
+		function_details_t const * fund = &function_details[i];
+
+		register_function(fund->id, fund->fn, fund->return_type);
+	}
+
+	// Bind the variables to the VM
+	for (i = 0; i < pe->variables_details_length; ++i)
+	{
+		// Get the length of this hop's data
+		// including all of the closer hop's data length
+		unsigned int length = hop_manager_length(hop_data, &pe->variables_details[i]);
+
+		printf("PredMan: Binding vars: id=%d hop=%d len=%d\n",
+			pe->variables_details[i].var_id, pe->variables_details[i].hops, length);
+		
+		bind_input(pe->variables_details[i].var_id, all_neighbour_data, length);
+	}
+
+	bool result = evaluate(pe->bytecode, pe->bytecode_length);
+
+	if (!result)
+	{
+		predicate_manager_send_response(conn, hop_data,
+					pe, all_neighbour_data, data_size, nd_length);
+	}
+
+	return result;
+}
+
+
+#define HEX_CHAR_TO_NUM(ch) (((ch) >= '0' && (ch) <= '9') ? (ch) - '0' : (ch) - 'A')
+
+// From: http://www.techinterview.org/post/526339864/int-atoi-char-pstr
+static uint8_t myatoi(char const * str)
+{
+	uint8_t result = 0;
+
+	while (*str && *str >= '0' && *str <= '9')
+	{
+		result = (result * 10u) + (*str - '0');
+		++str;
+	}
+	
+	return result;
+}
+
 
 PROCESS_THREAD(predicate_input_process, ev, data)
 {
 	static predicate_manager_conn_t * conn;
 	static predicate_detail_entry_t current;
-	static int state;
+	static unsigned int state;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -445,18 +499,18 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		PROCESS_YIELD_UNTIL(ev == serial_line_event_message);
 
 		char const * line = (char const *)data;
-		unsigned int length = strlen(line);
+		const unsigned int length = strlen(line);
 
-		printf("Predicate Manager: received line: `%s' of length %u in state %d\n", line, length, state);
+		PMDPRINTF("PredMan: line:`%s' (%u) in %d\n", line, length, state);
 
 		switch (state)
 		{
 		// Initial state looking for start line
 		case 0:
 			{
-				if (strcmp(line, "[") == 0)
+				if (length == 1 && line[0] == '[' && line[1] == '\0')
 				{
-					printf("Predicate Manager: Starting predicate input...\n");
+					PMDPRINTF("PredMan: Starting predicate input...\n");
 					state = 1;
 				}
 			} break;
@@ -464,7 +518,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		// Read in the predicate id
 		case 1:
 			{
-				int value = atoi(line);
+				unsigned int value = myatoi(line);
 
 				if (value >= UINT8_MIN && value <= UINT8_MAX)
 				{
@@ -473,7 +527,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else
 				{
-					printf("Predicate Manager: going to error handler\n");
+					PMDPRINTF("PredMan: going to error handler\n");
 					state = 99;
 					continue;
 				}
@@ -491,10 +545,10 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				buffer[first_length] = '\0';
 
 				// Before dot
-				current.target.u8[0] = atoi(buffer);
+				current.target.u8[0] = (uint8_t)myatoi(buffer);
 
 				// After dot
-				current.target.u8[1] = atoi(position + 1);
+				current.target.u8[1] = (uint8_t)myatoi(position + 1);
 
 				state = 3;
 
@@ -505,21 +559,14 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 			{
 				if (line[0] == 'b')
 				{
-					printf("Predicate Manager: processing bytecode\n");
+					PMDPRINTF("PredMan: processing bytecode\n");
 
 					unsigned int bytecode_count = (length - 1) / 2;
 					
-					if (current.bytecode == NULL)
-					{
-						current.bytecode = malloc(sizeof(ubyte) * bytecode_count);
-					}
-					else
-					{
-						ubyte * new = malloc(sizeof(ubyte) * (bytecode_count + current.bytecode_length));
-						memcpy(new, current.bytecode, sizeof(ubyte) * current.bytecode_length);
-						free(current.bytecode);
-						current.bytecode = new;
-					}
+					ubyte * new = malloc(sizeof(ubyte) * (bytecode_count + current.bytecode_length));
+					memcpy(new, current.bytecode, sizeof(ubyte) * current.bytecode_length);
+					free(current.bytecode);
+					current.bytecode = new;
 
 					ubyte * starting = current.bytecode + current.bytecode_length;
 
@@ -529,11 +576,15 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 					unsigned int i = 0;
 					for (i = 0; i != bytecode_count; ++i)
 					{
-						char buffer[3];
-						memcpy(buffer, current_pair, sizeof(char) * 2);
+						starting[i] = HEX_CHAR_TO_NUM(current_pair[0]) * 16 + HEX_CHAR_TO_NUM(current_pair[1]);
+
+						// Nice code is below, compared to CHAR_TO_NUM
+						/*char buffer[3];
+						buffer[0] = current_pair[0];
+						buffer[1] = current_pair[1];
 						buffer[2] = '\0';
 
-						starting[i] = (ubyte) strtol(buffer, NULL, 16);
+						starting[i] = (ubyte) strtol(buffer, NULL, 16);*/
 
 						current_pair += 2;
 					}
@@ -543,23 +594,14 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else if (line[0] == 'v')
 				{
-					printf("Predicate Manager: processing variable details\n");
+					PMDPRINTF("PredMan: processing variable details\n");
 
-					var_elem_t * to_store_at = NULL;
-					if (current.variables_details == NULL)
-					{
-						current.variables_details = malloc(sizeof(var_elem_t));
-						to_store_at = current.variables_details;
-					}
-					else
-					{
-						var_elem_t * new = malloc(sizeof(var_elem_t) * (1 + current.variables_details_length));
-						memcpy(new, current.variables_details, sizeof(var_elem_t) * current.variables_details_length);
-						free(current.variables_details);
-						current.variables_details = new;
+					var_elem_t * new = malloc(sizeof(var_elem_t) * (1 + current.variables_details_length));
+					memcpy(new, current.variables_details, sizeof(var_elem_t) * current.variables_details_length);
+					free(current.variables_details);
+					current.variables_details = new;
 
-						to_store_at = current.variables_details + current.variables_details_length;
-					}
+					var_elem_t * to_store_at = current.variables_details + current.variables_details_length;
 
 					char const * start = line + 1;
 
@@ -572,20 +614,20 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 					buffer[first_length] = '\0';
 
 					// Before dot
-					to_store_at->hops = atoi(buffer);
+					to_store_at->hops = (uint8_t)myatoi(buffer);
 
 					// After dot
-					to_store_at->var_id = atoi(position + 1);
+					to_store_at->var_id = (uint8_t)myatoi(position + 1);
 
 
 					current.variables_details_length += 1;
 
 				}
-				else if (strcmp(line, "]") == 0)
+				else if (length == 1 && line[0] == ']' && line[1] == '\0')
 				{
 					if (current.bytecode_length == 0)
 					{
-						printf("Predicate Manager: going to error handler\n");
+						PMDPRINTF("PredMan: going to error handler\n");
 						state = 99;
 						continue;
 					}
@@ -603,7 +645,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else
 				{
-					printf("Predicate Manager: going to error handler\n");
+					PMDPRINTF("PredMan: going to error handler\n");
 					state = 99;
 					continue;
 				}
@@ -616,11 +658,11 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				free(current.variables_details);
 				free(current.bytecode);
 				memset(&current, 0, sizeof(current));
-				printf("Predicate Manager: Error occured in parsing input\n");
+				printf("PredMan: Error occured in parsing input\n");
 			} break;
 
 		default:
-			printf("Predicate Manager: Not sure what to do with state %d and line %s\n", state, line);
+			printf("PredMan: Not sure what to do state=%d, line=%s\n", state, line);
 			break;
 		}
 

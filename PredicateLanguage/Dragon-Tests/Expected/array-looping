@@ -1,6 +1,7 @@
 Program length 39
 Stack ptr value (float 8.001953) (int 2048) (bool 1)
 Result: 2048
+Error: No Error
 Stack values:
 	Stack 4 0
 	Stack 3 8

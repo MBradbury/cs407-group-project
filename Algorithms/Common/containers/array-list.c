@@ -147,34 +147,3 @@ bool array_list_remove(array_list_t * list, array_list_elem_t elem)
 
 	return true;
 }
-
-unsigned int array_list_length(array_list_t const * list)
-{
-	return list == NULL ? 0 : list->count;
-}
-
-array_list_elem_t array_list_first(array_list_t const * list)
-{
-	return 0;
-}
-
-array_list_elem_t array_list_next(array_list_elem_t elem)
-{
-	return elem + 1;
-}
-
-bool array_list_continue(array_list_t const * list, array_list_elem_t elem)
-{
-	if (list == NULL)
-		return false;
-
-	return elem < list->count;
-}
-
-void * array_list_data(array_list_t const * list, array_list_elem_t elem)
-{
-	return list == NULL || elem >= list->count ? NULL : list->data[elem];
-}
-
-
-

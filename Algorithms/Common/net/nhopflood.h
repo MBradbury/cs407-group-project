@@ -40,7 +40,7 @@ bool nhopflood_start(nhopflood_conn_t * conn, uint8_t ch, nhopflood_recv_fn rece
 	clock_time_t send_period, uint8_t maxrx);
 
 // Shutdown n-hop data flooding.
-bool nhopflood_stop(nhopflood_conn_t * conn);
+void nhopflood_stop(nhopflood_conn_t * conn);
 
 // Send an n-hop data flood.
 bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops);

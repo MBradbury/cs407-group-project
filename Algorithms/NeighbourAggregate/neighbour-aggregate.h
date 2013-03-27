@@ -6,10 +6,12 @@
 #include "net/tree-aggregator.h"
 #include "neighbour-detect.h"
 
+struct neighbour_agg_conn;
+
 typedef struct
 {
 	// Called when data is received at the sink, from the tree
-	void (* data_callback_fn)(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count);
+	void (* data_callback_fn)(struct neighbour_agg_conn * conn, rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count);
 } neighbour_agg_callbacks_t;
 
 typedef struct neighbour_agg_conn
@@ -20,12 +22,11 @@ typedef struct neighbour_agg_conn
 	
 	unique_array_t one_hop_neighbours;
 
-	neighbour_agg_callbacks_t callbacks;
+	neighbour_agg_callbacks_t const * callbacks;
 
 	unsigned int round_count;
 	
 	struct ctimer ct_send_data;
-	struct ctimer ct_initial_wait;
 
 } neighbour_agg_conn_t;
 

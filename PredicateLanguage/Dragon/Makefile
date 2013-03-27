@@ -13,7 +13,11 @@ all:
 	javac -cp .$(CPSEP)guava-13.0.1.jar *.java
 
 jar: all
-	jar cvf Dragon.jar *.class
+	rm -rf predvis
+	mkdir predvis
+	mkdir predvis/dragon
+	cp *.class predvis/dragon
+	jar cvf Dragon.jar predvis
 
 clean:
-	rm *.java *.class Dragon.jar
+	rm -rf *.java *.class Dragon.jar predvis

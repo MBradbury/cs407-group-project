@@ -37,6 +37,66 @@ Finally, all of these custom containers are tested by a test suite that checks f
 
 \subsubsection{Event Update}
 
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \res{event-update}\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{period}: timer init $P_{generate}$;\\~\\
+    %
+    \null\qq \% The previous node data sent to the network\\
+    \null\qq \var{previous}: struct init $\bot$;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Generate Period, how often we should check for a change in the data\\
+    \null\qq \var{$P_{generate}$}: time;\\~\\
+    %
+    \null\qq \% Checks if the data differs\\
+    \null\qq \var{differs}: function takes (struct, struct) returns boolean;\\~\\
+    %
+    \null\qq \% Gets the data of the current node\\
+    \null\qq \var{data}: function takes () returns struct;\\~\\
+    %
+    \null\qq \% The probability of sending our data, even if no change occurred\\
+    \null\qq \var{chance}: real;\\~\\
+    %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The distance we need to send information\\
+    \null\qq \var{distance}: int;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Check for changes\\
+    \null\qq \emph{check}::~\res{timeout}(\var{period}) $\rightarrow$\\
+    \null\qq\qq $\var{force} \assign \res{RandReal}(0, 1) \leq \var{chance}$;\\
+    \null\qq\qq $\var{changed} \assign \var{previous} = \bot \lor \var{differs}(\var{data}(), \var{previous})$;\\
+    \null\qq\qq \res{if} ($\var{force} \lor \var{changed}$) \res{then}\\
+    \null\qq\qq\qq $\var{previous} \assign \var{data}()$;\\
+    \null\qq\qq\qq \res{nhopflood}$\langle j, \var{previous}, \var{distance}\rangle$;\\
+    \null\qq\qq \res{fi}; \\
+    \null\qq\qq \res{set}($\mathit{period}$, $P_{generate}$); \\~\\
+    %
+    %
+    \null\qq \% Receiving Change message\\
+    \null\qq \emph{receive}::~\res{nhopflood.recv}$\langle source, data, hops\rangle \rightarrow$\\
+    \null\qq\qq \% Prevent delivery if being told that the current node's data has changed\\
+    \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
+    \null\qq\qq\qq \% Inform library caller of data change\\
+    \null\qq\qq\qq \res{data-changed-callback}(\var{data}, \var{hops}); \\
+    \null\qq\qq \res{fi}; \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Event Update Broadcast Algorithm}
+\end{figure}
+
+
 \subsubsection{Multi-Packet}
 
 In Contiki sending a single packet has its limits, there is only so much data you can get in a single packet. There are two C macros that are relevant to this \verb|PACKETBUF_HDR_SIZE| which is set to 48 bytes and \verb|PACKETBUF_SIZE| which is set to 128 bytes\footnote{packetbuf.h \url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}. This means that in general we will only be able to send a packet containing 128 bytes of information, but what if we have a data structure that spans 300 bytes? Then we will need to have a way to send multiple packets and a receiver that can put the packets back together in the correct way to deliver the data.
@@ -57,24 +117,296 @@ Finally, the gathered data is then passed to the predicate evaluator.
 
 \subsubsection{N-Hop Flood}
 
+
 To improve upon our initial implementation of N-Hop Request we considered situations where every node in the network is evaluating a single predicate. Since we know that every node in an N-Hop radius will need our application and network information we can forgo the request phase of the previous implementation and instead just flood the network with our data. When a node receives a predicate that is marked as global it uses the 
 
 \subsubsection{Neighbour Detection}
+
+\subsubsection{N-Hop Request}
+Contiki provides broadcast primitives to allow the flooding of messages through the network, however the \verb|trickle|\cite{Levis04trickle} primitive only allows a single source node\footnote{trickle.h \url{http://contiki.sourceforge.net/docs/2.6/a00381.html}}, which presents a problem, when multiple nodes are attempting to send a message N-hops away. 
+In some cases \verb|reliable unicast| could be used to target the specific nodes for which the message is intended. This, however, is not suitable when the identifies of the nodes is not known, or in situations when storing routing tables is not appropriate. 
+
+Our response to this was to develop a primitive which would flood the network, a fixed number of hops from the source, whilst allowing multiple nodes to use the same primitive, with different messages. Our implementation uses a \verb|stubborn broadcast| to pass the message along a chain, only rebroadcasting the message when the hop limit (the number of hops the message is intended to travel) has not been reached. If a message has been seen before by a node (and the number of hops left is lower than before) it is simply ignored and not passed on. In the case where the hop count for a 
+duplicate message is higher than the previously seen count, it is then rebroadcast, so that all the intended recipients will receive the message.  
+After a fixed time, messages are then sent back to the source along a chain, this time is reset whenever a message with a higher hop count is seen.  Each node stores the ID of the node that it received the message from, and the response message is sent back to that node. In turn, that node will forward the message to the node it received the original message from, eventually the message will end up at the source, to be processed.
+
+%TODO: Note about performance maybe?
+%Could also put a graphic of the chain here too
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \verb|n-hop-req|\\
+    %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The number of hops left to send a message\\
+    \null\qq \var{hop\_limit}: int\\~\\
+    %
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \%The nodes a given message was seen from\\
+    \null\qq \var{mote\_records}: map\\~\\
+    %
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Send Data Period, the time between receiving a request for data, and sending it\\
+    \null\qq \var{$P_{send\_data}$}: time;\\~\\
+    %
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Receiving Message\\
+    \null\qq \emph{receive}::~\res{recv}$\langle source, data, hop\_count, id\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($mote\_records.contains(id)$) \res{then}\\
+    \null\qq\qq\qq \res{if} ($mote\_records.hop\_count(id) < hop\_count$) \res{then} \\
+    \null\qq\qq\qq\qq \res{stbroadcast.send($message$,$hop\_count -1$)};\\
+    \null\qq\qq\qq\qq \res{$mote\_records$.replace($id$,$hop\_count$)};\\
+    \null\qq\qq\qq\qq \res{\var{$P_{send\_data}$}.restart()}\\
+    \null\qq\qq\qq \res{fi;}\\
+    \null\qq\qq \res{else}\\
+    \null\qq\qq\qq \res{stbroadcast.send($message$,$hop\_count -1$)};\\
+    \null\qq\qq\qq \res{$mote\_records$.add($id$,$data$,$source$,$hop\_count$)};\\
+    \null\qq\qq\qq \res{\var{$P_{send\_data}$}.start()}\\
+    \null\qq\qq \res{fi;}\\~\\
+    %
+    %
+    \null\qq \% Sending Data\\
+    \null\qq \emph{send\_data}:~\res{timeout}(\var{$P_{send\_data}$})$\rightarrow$\\
+    \null\qq\qq \res{runicast.send}($j$,$mote\_records.getMote(id)$, $data$);\\~\\
+    %
+    %
+    \null\qq \% Recieved Data\\
+    \null\qq \emph{recv\_data}:~\res{runicast.recv}$\langle source, data, id\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($mote\_records.getMote(id)$ == $self$) \res{then}\\
+    \null\qq\qq\qq \% Process Data\\
+    \null\qq\qq \res{else}\\
+    \null\qq\qq\qq \res{runicast.send}($mote\_records.getMote(id)$, $data$);\\
+    \null\qq\qq \res{fi;}\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{N-Hop Request Algorithm}
+  \label{fig:n-hop-req-algorithm}
+\end{figure}
+
+\subsubsection{Tree Aggregation}
+
+As has been previously mentioned Tree Aggregation is a very useful technique employed in wireless sensor networks to aggregate a set of data to a single node in the network. It is very useful because of its ability to convey the same amount of data in potentially fewer messages. The algorithm works by first creating a tree structure such that nodes know of a parent node that they should unicast their messages to. Once this tree is set up the nodes (typically leaf nodes) unicast data to their parents, this can either happen when an event occurs or it can happen periodically. When a parent node receives a message it waits for a certain amount of time for more messages to arrive, every message it receives is stored and aggregated. After the time period is up the aggregated data is forwarded to its parent node. Once the data reaches the destination it is delivered to the user of the library.
+
+
+The user of this library needs to implement four important functions:
+\begin{enumerate}
+\item[$\otimes_{agg}$] This function aggregates stored data with data message that has been received
+\item[$\otimes_{own}$] This function aggregates the node's own data into the stored data
+\item[$\otimes_{read}$] This function does the initial reading of data from a message and creates the local stored data
+\item[$\otimes_{write}$] This function writes the local stored data back to a packet
+\end{enumerate}
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \res{tree-aggregation}\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{parentdetect}: timer init $\bot$;\\~\\
+    %
+    \null\qq \var{seensetup}, \var{collecting}, \var{leaf}: bool init $False$, $False$, $True$;\\~\\
+    %
+    \null\qq \var{besthop}: int init $INTMAX$;\\~\\
+    %
+    \null\qq \var{bestparent}: address init $\bot$;\\~\\~\\
+    %
+    \null\qq \var{aggregation}: timer init $\bot$;\\~\\
+    %
+    \null\qq \var{collecting}: bool init $False$;\\~\\
+    %
+    \null\qq \var{stored}: struct init $\bot$;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% How long to wait for messages to aggregate before forwarding what the node has\\
+    \null\qq \var{$P_{aggregation}$}: time;\\~\\
+    %
+    \null\qq \% How long to wait for parents to be detected\\
+    \null\qq \var{$P_{parentdetect}$}: time;\\~\\
+    %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The address of the node data should be aggregated to\\
+    \null\qq \var{sink}: address;\\
+    %
+  \end{boxedminipage}
+  \caption{Tree Aggregation Algorithm - variables}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Set up tree: initialise\\
+    \null\qq \emph{starup}::~\res{init} $\rightarrow$\\
+    \null\qq\qq \res{bcast}$\langle j, \bot, 1\rangle$;\\~\\
+    %
+    %
+    \null\qq \% Set up tree: receive message\\
+    \null\qq \emph{receive}::~\res{recv}$\langle source, parent, hops\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($j \not= sink$) \res{then} \\
+    \null\qq\qq\qq \res{if} ($\lnot\var{seensetup}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{seensetup} \assign True$; \\
+    \null\qq\qq\qq\qq \res{set}($\mathit{parentdetect}$, $P_{parentdetect}$); \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq\qq \res{if} ($\var{hops} < \var{besthop}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{bestparent}, \var{besthop} \assign \var{source}, \var{hops}$; \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq\qq \res{if} ($\var{leaf} \land \var{j} = \var{parent}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{leaf} \assign False$; \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq \res{fi}; \\~\\
+    %
+    %
+    \null\qq \% Set up tree: finish detecting parents\\
+    \null\qq \emph{check}::~\res{timeout}(\var{parentdetect}) $\rightarrow$\\
+    \null\qq\qq \res{if} ($\var{besthop} = INTMAX$) \res{then} \\
+    \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, INTMAX\rangle$;\\
+    \null\qq\qq \res{else} \\
+    \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, \var{besthop} + 1\rangle$;\\
+    \null\qq\qq \res{fi}; \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Tree Aggregation Algorithm - Setting up tree}
+\end{figure}
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Send data function\\
+    \null\qq \emph{send}::~\res{function}$\langle data\rangle \rightarrow$\\
+    \null\qq\qq \res{multipacket.unicast}$\langle \var{bestparent}, data\rangle$;\\~\\
+    %
+    %
+    \null\qq \% Set up tree: receive message\\
+    \null\qq \emph{receive}::~\res{multipacket.recv}$\langle source, data\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($j = sink$) \res{then} \\
+    \null\qq\qq\qq $\var{stored} \assign \otimes_{read}(data)$; \\
+    \null\qq\qq\qq $\var{stored} \assign \otimes_{own}(\var{stored})$; \\
+    \null\qq\qq\qq $\res{deliver}(\otimes_{write}(\var{stored}))$; \\
+    \null\qq\qq \res{else} \\
+    \null\qq\qq\qq \res{if} ($\var{collecting}$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{stored} \assign \otimes_{agg}(\var{stored}, \var{data})$; \\
+    \null\qq\qq\qq \res{else} \\
+    \null\qq\qq\qq\qq $\var{stored} \assign \otimes_{read}(data)$; \\
+    \null\qq\qq\qq\qq $\var{collecting} \assign True$; \\
+    \null\qq\qq\qq\qq \res{set}($\mathit{aggregation}$, $P_{aggregation}$); \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq \res{fi}; \\~\\
+    %
+    %
+    \null\qq \% Set up tree: finish detecting parents\\
+    \null\qq \emph{finishagg}::~\res{timeout}(\var{aggregation}) $\rightarrow$\\
+    \null\qq\qq \res{multipacket.unicast}$\langle \var{bestparent}, \otimes_{write}(\var{stored})\rangle$;\\
+    \null\qq\qq $\var{collecting} \assign False$; \\
+    \null\qq\qq $\var{stored} \assign \bot$; \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Tree Aggregation Algorithm - Sending data}
+\end{figure}
+
+>>>>>>> 6e77db9c7fc057ba115b622414a7637f4a766bf2
+
+\begin{figure}[ht!]
+\centering
+\subfigure[Example Network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-network}}
+
+\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-tree-structure}}
+\end{figure}
+
+\subsubsection{Neighbour Detect}
+
+To aid in debugging a vital piece of information that will be required about the network is its topology. Trying to analyse network state without knowing which nodes are neighbours of other nodes, makes drawing meaningful conclusions from that data much harder. This meant that we needed a way to send neighbour information back to the sink. Thankfully part of the job is already accomplished as Contiki comes with a library to perform neighbour detection\cite{?}. We extended that library in two ways.
+
+The first was to add more features to Contiki's neighbour detect library. As that library was very simple and supported only saying that a neighbour had been detected (with the option of providing a integer value as well). As we were aiming for this code to support changes in the network, such as nodes leaving or joining neighbourhoods, we added the concept of a round. Instead of just knowing about neighbours at that instant in time, it allowed the library to maintain some kind of history about what nodes were neighbours of other nodes in the past. Whenever new nodes are detected they are recorded, however, if a node has not been detected for a certain number of rounds then that node is removed from the record.
 
 \begin{figure}[ht!]
 \centering
 \subfigure[Node A requesting neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-request}}
 \subfigure[Node A receiving neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-report}}
+\caption{Nodes asking for and receiving neighbour data}
 \end{figure}
 
-\subsubsection{Tree Aggregation}
-
-\begin{figure}[ht!]
-\centering
-\subfigure[Example Network]{\includegraphics[width=0.75\textwidth]{Diagrams/neighbour-network}}
-
-\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.75\textwidth]{Diagrams/neighbour-tree-structure}}
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \res{neighbourdetect}\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{period}: timer init $P_{round}$;\\~\\
+    %
+    \null\qq \% The history of node\\
+    \null\qq \var{previous}: map of address to int init $\emptyset$;\\~\\
+    %
+    \null\qq \% The current round\\
+    \null\qq \var{count}: int init 0;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Round Period\\
+    \null\qq \var{$P_{round}$}: time;\\~\\
+    %
+    \null\qq \% The missed round threshold\\
+    \null\qq \var{missed}: int;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Check for changes\\
+    \null\qq \emph{round}::~\res{timeout}(\var{period}) $\rightarrow$\\
+    \null\qq\qq $\var{previous} \assign \{ (addr, round) \in \var{previous} | count - round \geq missed \}$;\\
+    \null\qq\qq \% Tell library caller that a round is finished\\
+    \null\qq\qq \res{round-complete}(\res{values}(previous), \var{count});\\
+    \null\qq\qq $\var{count} \assign \var{count} + 1$; \\
+    \null\qq\qq \res{set}($\mathit{period}$, $P_{round}$); \\~\\
+    %
+    %
+    \null\qq \% Receiving Neighbour Discovery message\\
+    \null\qq \emph{neighbour}::~\res{neighbour\_discovery.recv}$\langle source, round\rangle \rightarrow$\\
+    \null\qq\qq \% Update the round we last saw this node\\
+    \null\qq\qq \res{if} ($source \in \res{keys}(\var{previous})$) \res{then} \\
+    \null\qq\qq\qq \res{if} ($round > \var{previous}[\var{source}]$) \res{then} \\
+    \null\qq\qq\qq\qq $\var{previous}[\var{source}] \assign \var{round}$; \\
+    \null\qq\qq\qq \res{fi}; \\
+    \null\qq\qq \res{else} \\
+    \null\qq\qq\qq $\var{previous}[\var{source}] \assign \var{round}$; \\
+    \null\qq\qq \res{fi}; \\~\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Neighbour Detect Algorithm}
+  \label{algo:neighbour-detect}
 \end{figure}
+
+For this to be useful we needed a way to get this data back to the sink node. There are many ways to do this, but one of the best is aggregating along a tree because it can combine many messages into a single one and forward that aggregated message instead of lots of smaller messages \cite{?}. The Neighbour Aggregation part uses the Tree Aggregation library that we have developed, the function that is used to aggregate data together is $\cup$ (union), this allows data to be aggregated with other data and allows that data to be updated. The nodes own data is set to be $\res{node-data}$, where $\var{j}$ is the current node's address and $\res{round-data}$ is the set of node addresses provided by the $\res{round-complete}$ callback in \autoref{algo:neighbour-detect}.
+
+\begin{equation}
+\res{node-data} = \{\{\var{other}, \var{j}\} | \var{other} \in \res{round-data} \}
+\end{equation}
 
 \subsection{Clustering}
 
@@ -95,7 +427,7 @@ To counter the given disadvantages of our basic clustering implementation, we de
 	\end{itemize}	
 	\item[] Started work on Multi-hop local based predicates
 	\begin{itemize}
-		\item stubborn broadcast to reliably broadcast to one hop neighbours, who would then rebroadcast the message to their neighbours until the hop limit was reached.
+		\item used N-Hop Req to send initial message down the chain
 		\item We tried using trickle to return the results back to the originating node. However, due to trickles implementation, only one message could be flooded through the network at one time. 
 		\item due to collisions, we used ctimers to delay the responses to messages sent back to the originator node.
 		\item next step is to re-implement the algorithm, so that nodes send messages directly back along the chain of nodes they received the predicated check message from. This way the messages will be more reliably returned to the orignator node. This also allows for multiple messages to be sent this way.
@@ -104,6 +436,22 @@ To counter the given disadvantages of our basic clustering implementation, we de
 	\end{itemize}	
 \end{itemize}
 
+
 \subsection{LEACH}
 \cite{LEACH}
 
+\subsection{TDMA}
+
+To have a representative algorithm of what may be tested, TDMA (Time Division Multiple Access) was chosen to be implemented and have predicates written for it. The algorithm that was initially implemented was described by \citeauthor{DCATechReport} in \cite[p.~4]{DCATechReport} and is outlined below:
+
+\begin{enumerate}
+\item Initially assign every node the smallest numbered channel
+\item Every round every node broadcasts a message containing their ID and their currently assigned channel
+\item When a message is received the neighbour set is updated and the node that received the message assigns its channel to be the lowest channel not assigned to any neighbour. Two neighbours are not allowed to change their channel in the same round, so a tie breaker is done and the node with the lower ID is allowed to change their channel
+\item After choosing a channel the node broadcasts its ID and chosen channel
+\item The procedure is repeated until every node cannot choose a smaller channel than its current channel
+\end{enumerate}
+
+Interestingly enough when this was first implemented the algorithm only made sure that a node did not have the same channel as any of its one hop neighbours. It did not ensure that the one hop neighbours of any node would have unique channels (as would be required by TDMA to ensure no collisions). This is the kind of bug that running predicates would have assisted identifying.
+
+To make sure that the channel allocation was suitable for TDMA, instead of nodes just sending their own channel assignment to its neighbours. It also included the assignment of the one hop neighbours it knows about in that message. This then allowed nodes to receive information on their two hop neighbourhoods, which they then based their decision on what channel to allocate to themselves from.

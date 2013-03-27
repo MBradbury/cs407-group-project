@@ -22,7 +22,7 @@ typedef struct
 	/** This function is used to add a nodes own one data */
 	void (* aggregate_own)(struct tree_agg_conn * tconn, void * data);
 
-	/** This function is called when a node needs to savea  packet
+	/** This function is called when a node needs to save a packet
 		The arguments are: Connection, Packet and the Packet Length  */
 	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
 
@@ -49,7 +49,7 @@ typedef struct tree_agg_conn
 	void * data;
 	size_t data_length;
 
-	tree_agg_callbacks_t callbacks;
+	tree_agg_callbacks_t const * callbacks;
 
 	// ctimers
 	struct ctimer ctrecv;
@@ -62,17 +62,36 @@ typedef struct tree_agg_conn
 
 
 bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
-                   uint16_t ch1, uint16_t ch2,
-                   size_t data_size,
-                   tree_agg_callbacks_t const * callbacks);
+				   uint16_t ch1, uint16_t ch2,
+				   size_t data_size,
+				   tree_agg_callbacks_t const * callbacks);
 
 void tree_agg_close(tree_agg_conn_t * conn);
 
 void tree_agg_send(tree_agg_conn_t * conn, void * data, size_t length);
 
-bool tree_agg_is_sink(tree_agg_conn_t const * conn);
-bool tree_agg_is_leaf(tree_agg_conn_t const * conn);
-bool tree_agg_is_collecting(tree_agg_conn_t const * conn);
+#ifdef CONTAINERS_CHECKED
+
+#	define tree_agg_is_sink(conn) \
+		((conn) != NULL && rimeaddr_cmp(&(conn)->sink, &rimeaddr_node_addr))
+
+#	define tree_agg_is_leaf(conn) \
+		((conn) != NULL && (conn)->is_leaf_node)
+
+#	define tree_agg_is_collecting(conn) \
+		((conn) != NULL && (conn)->is_collecting)
+
+#else
+
+#	define tree_agg_is_sink(conn) \
+		(rimeaddr_cmp(&(conn)->sink, &rimeaddr_node_addr))
+		
+#	define tree_agg_is_leaf(conn) \
+		((conn)->is_leaf_node)
+
+#	define tree_agg_is_collecting(conn) \
+		((conn)->is_collecting)
+
+#endif
 
 #endif /*CS407_TREE_AGGREGATOR_H*/
-

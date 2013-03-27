@@ -78,4 +78,55 @@ Finally, there is one other useful mode, and that is the ability to run Cooja wi
 
 When developing libraries make sure you use static variables vary carefully. For example we found that commonly we would make callback timers static and then use that object. When the code using that timer will only be called from one place it is okay. However, when you have multiple calls to that timer (imagine broadcasting on different channels) this can cause race conditions as the memory for that timer is being shared. What should be done is the timer object should be placed in a struct and that struct should be passed to the relevant functions that need to access the timer. For each time you wish to use the library a pointer to a different struct should be passed to those functions.
 
+However, there are times that declaring a variable as static is very important. One of these cases is when you have a process that it waiting on some event, if you want a variable to maintain the same value after the event has been waited on, then that variable needs to be static. In \autoref{lst:contiki-process-static-variables} the \verb|printf| statmenet prints out a static and non-static variable. The static counter will increase and be reliably printed out. However, when the variable \verb|x| is printed, the value it contains at that point could be anything. This is due to the way that Contiki's process are actually proto-threads, so share a stack with other proto-threads, if another process were to be scheduled at this point it could potentially modify the stack. This would lead to stack variables such as \verb|x| potentially being changed. On the other hand, if there are no points in the program where the process may yield to other threads, then variables can be non-static. For example \verb|y|'s value would be printed correctly every time.
+
+\begin{listing}[H]
+\begin{minted}[fontsize=\small]{c}
+PROCESS_THREAD(proc, ev, data)
+{
+	static struct etimer et;
+	static unsigned int counter = 0;
+
+	PROCESS_BEGIN();
+
+	while (true)
+	{
+		unsigned int x = 1234;
+
+		etimer_set(&et, 10 * CLOCK_SECOND);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+		unsigned int y = 2;
+
+		printf("%u %u %u\n", counter, x, y);
+
+		++counter;
+	}
+
+	PROCESS_END();
+}
+\end{minted}
+\caption{Contiki process static variables}
+\label{lst:contiki-process-static-variables}
+\end{listing}
+
+\subsection{Firmware Size}
+
+Reducing firmware size is a very important issue for WSN applications. As there is a small amount of space for firmware \cite{?} the smaller the compile code the more functionality that can be included in it. The Contiki wiki\footnote{\url{https://github.com/contiki-os/contiki/wiki/Reducing-Contiki-OS-firmware-size}} has a number of techniques that they have included in Contiki to optimise the code size. As these are already done, to reduce code size further it is the responsibility of the system developer to reduce the code size. The following are a number of techniques that were used to reduce the firmware size of the code that was developed:
+
+\begin{enumerate}
+\item Remove as many static strings as possible. Static strings take up lots of space in the ROM and are only helpful for debugging. Once debugging is finished these strings should be removed.
+\item Remove as many unneeded function calls as possible.
+\begin{itemize}
+\item \verb|printf| - This is linked to removing static strings
+\item \verb|memset| - If you memset memory to a set value after allocating it then remove the memset call and just fill in the data structure as is appropriate
+\item \verb|memcpy| - If possible copy the data by hand. GCC tends to inline \verb|memcpy| for small sizes \cite{?}, but as will all optimisations it is best to test than rely on this \cite{?}.
+\item Avoid string functions and other C library functions. If you do not use them it is possible that the object they are contained within will not be linked and thus space will be saved. \cite{?}
+\end{itemize}
+\end{enumerate}
+
+The most important thing is to make small changes at a time and then test every change that is made. This way the impact of the change on the program's size can be observed and if it made the size larger, then the change can be reverted. Doing multiple changes at once, may be faster to code, but may not lead to the desired result quicker.
+
+
+
 

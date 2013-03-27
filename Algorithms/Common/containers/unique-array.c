@@ -15,11 +15,6 @@ bool unique_array_init(unique_array_t * list, unique_array_equality_t equality, 
 	return array_list_init(&list->list, cleanup);
 }
 
-bool unique_array_free(unique_array_t * list)
-{
-	return array_list_free(&list->list);
-}
-
 // Add / Remove items from list
 bool unique_array_append(unique_array_t * list, void * data)
 {
@@ -123,22 +118,6 @@ bool unique_array_merge(unique_array_t * first, unique_array_t * second, unique_
 	return result;
 }
 
-bool unique_array_remove(unique_array_t * list, unique_array_elem_t elem)
-{
-	return list != NULL && array_list_remove(&list->list, elem);
-}
-
-bool unique_array_clear(unique_array_t * list)
-{
-	return list != NULL && array_list_clear(&list->list);
-}
-
-// Get list length
-unsigned int unique_array_length(unique_array_t const * list)
-{
-	return list == NULL ? 0 : array_list_length(&list->list);
-}
-
 // Check if data is in list
 bool unique_array_contains(unique_array_t const * list, void const * data)
 {
@@ -159,25 +138,4 @@ bool unique_array_contains(unique_array_t const * list, void const * data)
 	}
 
 	return false;
-}
-
-// List iteration 
-unique_array_elem_t unique_array_first(unique_array_t const * list)
-{
-	return 0;
-}
-
-unique_array_elem_t unique_array_next(unique_array_elem_t elem)
-{
-	return array_list_next(elem);
-}
-
-bool unique_array_continue(unique_array_t const * list, unique_array_elem_t elem)
-{
-	return list != NULL && array_list_continue(&list->list, elem);
-}
-
-void * unique_array_data(unique_array_t const * list, unique_array_elem_t elem)
-{
-	return list == NULL ? NULL : array_list_data(&list->list, elem);
 }

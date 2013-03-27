@@ -11,24 +11,24 @@ else
 	CPSEP=";"
 fi
 
-CP="${HOPPYDIR}"
-DRAGONCP="${DRAGONDIR}${CPSEP}${DRAGONDIR}/guava-13.0.1.jar"
+CP="${HOPPYDIR}/Hoppy.jar"
+DRAGONCP="${DRAGONDIR}/Dragon.jar${CPSEP}${DRAGONDIR}/guava-13.0.1.jar"
 
 # Remove any previous intermediate files
-rm -rf Intermediate Output Dragon-Output
-mkdir Intermediate Output Dragon-Output
+rm -rf Intermediate Output Dragon-Output Execution-Output
+mkdir Intermediate Output Dragon-Output Execution-Output
 
 rm -f Input/*~
 
 # Make Hoppy compiler
 cd $HOPPYDIR
-make
+make jar
 cd ../$THISDIR
 
 
 # Make the Dragon assembler
 cd $DRAGONDIR
-make
+make jar
 cd ../$THISDIR
 
 
@@ -48,7 +48,7 @@ for test in Input/*
 do
 	name=$(basename $test)
 
-	cat $test | java -cp "$CP" Hoppy > "Intermediate/$name"
+	cat $test | java -cp "$CP" predvis.hoppy.Hoppy > "Intermediate/$name"
 
 
 	`cmp -s Intermediate/$name Intermediate-Expected/$name >/dev/null`
@@ -60,12 +60,12 @@ do
 		echo "==================================Test $name Succeeded (Intermediate)"
 	fi
 
-	cat "Intermediate/$name" | java -cp "$DRAGONCP" Dragon > "Dragon-Output/$name"
+	cat "Intermediate/$name" | java -cp "$DRAGONCP" predvis.dragon.Dragon > "Dragon-Output/$name"
 	
 
 	#echo "$VMBINARY \"Dragon-Output/$name\" > \"Output/$name\""
 
-	$VMBINARY "Dragon-Output/$name" > "Output/$name"
+	$VMBINARY "Dragon-Output/$name" 1> "Output/$name" 2> "Execution-Output/$name"
 	
 	# Check that we got the expected result
 	

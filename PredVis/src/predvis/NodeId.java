@@ -16,15 +16,15 @@ public class NodeId implements Comparable<NodeId> {
     
     @Override
     public String toString() {
-        String result = "";
+        StringBuilder result = new StringBuilder();
         for (int i = 0; i != id.length; ++i) {
-            result += id[i];
+            result.append(id[i]);
             
             if (i + 1 != id.length) {
-                result += ".";
+                result.append(".");
             }
         }
-        return result;
+        return result.toString();
     }
     
     @Override
@@ -37,6 +37,7 @@ public class NodeId implements Comparable<NodeId> {
         return hash;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (obj == null) {
             return false;

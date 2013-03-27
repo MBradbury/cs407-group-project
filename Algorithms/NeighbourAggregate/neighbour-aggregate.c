@@ -28,12 +28,19 @@
 #include "containers/unique-array.h"
 
 
-#define INITIAL_INTERVAL (15 * CLOCK_SECOND)
-#define MIN_INTERVAL (5 * CLOCK_SECOND)
-#define MAX_INTERVAL (120 * CLOCK_SECOND)
+#ifdef NEIGHBOUR_AGG_DEBUG
+#	define NADPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define NADPRINTF(...)
+#endif
+
+
+#define INITIAL_INTERVAL ((clock_time_t) 15 * CLOCK_SECOND)
+#define MIN_INTERVAL ((clock_time_t) 5 * CLOCK_SECOND)
+#define MAX_INTERVAL ((clock_time_t) 120 * CLOCK_SECOND)
 #define MISSED_ROUND_THRESHOLD 4
 
-static const clock_time_t ROUND_LENGTH = 5 * 60 * CLOCK_SECOND;
+#define ROUND_LENGTH ((clock_time_t) 5 * 60 * CLOCK_SECOND)
 
 static void neighbour_agg_send_data(void * ptr);
 
@@ -64,7 +71,7 @@ typedef struct
 } aggregation_data_t;
 
 
-#ifndef NDEBUG
+#ifdef NEIGHBOUR_AGG_DEBUG
 static void print_ua_rimeaddr_pair(unique_array_t const * data)
 {
 	printf("{");
@@ -116,7 +123,7 @@ static void neighbour_agg_round_complete(neighbour_detect_conn_t * nd, unique_ar
 	// Get main conn, for the array of one_hop_neighbours
 	neighbour_agg_conn_t * conn = conncvt_neighbourdetect_conn(nd);
 
-	printf("Neighbour Aggregate: Merging neighbour data round:%u len:%u\n",
+	NADPRINTF("NAgg: Merging neighbour data round:%u len:%u\n",
 		round_count, unique_array_length(neighbours));
 	
 	// Empty current one_hop_neighbours
@@ -132,8 +139,6 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, vo
 
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-	printf("Neighbour Aggregate: Recv\n");
-
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 
 	unsigned int length = msg->length;
@@ -142,16 +147,11 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, vo
 
 	printf("R=%d|", msg->round_count);
 
-	char firstaddr[RIMEADDR_STRING_LENGTH];
-	char secondaddr[RIMEADDR_STRING_LENGTH];
-
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		printf("%s,%s",
-			addr2str_r(&neighbours[i].first, firstaddr, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&neighbours[i].second, secondaddr, RIMEADDR_STRING_LENGTH)
-		);
+		printf("%s,", addr2str(&neighbours[i].first));
+		printf("%s", addr2str(&neighbours[i].second));
 
 		if (i + 1 < length)
 		{
@@ -162,31 +162,29 @@ static void tree_agg_recv(tree_agg_conn_t * tconn, rimeaddr_t const * source, vo
 	printf("\n");
 	
 	// Call the callback
-	(*conn->callbacks.data_callback_fn)(neighbours, length, msg->round_count);
+	(*conn->callbacks->data_callback_fn)(conn, neighbours, length, msg->round_count);
 }
 
 static void tree_agg_setup_finished(tree_agg_conn_t * tconn)
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("Neighbour Agg: Setup finsihed\n");
+	NADPRINTF("NAgg: Setup finsihed\n");
 
 	if (tree_agg_is_leaf(tconn))
 	{
-		printf("Neighbour Agg: Is leaf starting data aggregation\n");
-
 		leds_on(LEDS_GREEN);
-
-		// Start sending data if we are a leaf
-		neighbour_agg_send_data(conn);
 	}
+
+	// Start sending loop
+	neighbour_agg_send_data(conn);
 }
 
 static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void const * to_apply, unsigned int length)
 {
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
-	printf("Neighbour Agg: Update local data\n");
+	NADPRINTF("NAgg: Update local data\n");
 
 	unique_array_t * data = &((aggregation_data_t *)voiddata)->list;
 	collect_msg_t const * data_to_apply = (collect_msg_t const *)to_apply;
@@ -200,9 +198,7 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void
 		// allocating memory
 		if (!unique_array_contains(data, &ap[i]))
 		{
-			rimeaddr_pair_t * pair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-			memcpy(pair, &ap[i], sizeof(rimeaddr_pair_t));
-			unique_array_append(data, pair);
+			unique_array_append(data, rimeaddr_pair_clone(&ap[i]));
 		}
 	}
 }
@@ -212,7 +208,7 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("Neighbour Agg: Update local data with own of len=%u\n",
+	NADPRINTF("NAgg: Update with own len=%u\n",
 		unique_array_length(&conn->one_hop_neighbours));
 
 	unique_array_t * conn_list = &((aggregation_data_t *)ptr)->list;
@@ -232,10 +228,7 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 
 		if (!unique_array_contains(conn_list, &pair))
 		{
-			rimeaddr_pair_t * mempair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-			memcpy(mempair, &pair, sizeof(rimeaddr_pair_t));
-
-			unique_array_append(conn_list, mempair);
+			unique_array_append(conn_list, rimeaddr_pair_clone(&pair));
 		}
 	}
 }
@@ -244,7 +237,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 {
 	neighbour_agg_conn_t * conn = conncvt_treeconn(tconn);
 
-	printf("Neighbour Agg: Store packet\n");
+	NADPRINTF("NAgg: Store packet\n");
 
 	collect_msg_t const * msg = (collect_msg_t const *)packet;
 	
@@ -264,10 +257,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * tconn, void const * packet, 
 		// Allocate memory for this pair
 		// As we expect the data we received to be free of duplicates
 		// We will not perform duplicate checks here.
-		rimeaddr_pair_t * pair = (rimeaddr_pair_t *)malloc(sizeof(rimeaddr_pair_t));
-		memcpy(pair, &neighbours[i], sizeof(rimeaddr_pair_t));
-
-		unique_array_append(&conn_data->list, pair);
+		unique_array_append(&conn_data->list, rimeaddr_pair_clone(&neighbours[i]));
 	}
 }
 
@@ -277,8 +267,8 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data,
 
 	aggregation_data_t const * data_array = (aggregation_data_t *)tconn->data;
 
-#ifndef NDEBUG
-	printf("Neighbour Agg: Writing: ");
+#ifdef NEIGHBOUR_AGG_DEBUG
+	printf("NAgg: Writing: ");
 	print_ua_rimeaddr_pair(&data_array->list);
 #endif
 
@@ -318,8 +308,6 @@ static const tree_agg_callbacks_t callbacks = {
 
 static void neighbour_agg_send_data(void * ptr)
 {
-	printf("Neighbour Agg send data leaf\n");
-
 	// Extract the struct
 	neighbour_agg_conn_t * conn = (neighbour_agg_conn_t *)ptr;
 
@@ -335,15 +323,16 @@ static void neighbour_agg_send_data(void * ptr)
 		// Create the data message that we are going to send
 		unsigned int message_length = sizeof(collect_msg_t) + one_hop_n_size * sizeof(rimeaddr_pair_t);
 		collect_msg_t * msg = (collect_msg_t *)malloc(message_length);
-		memset(msg, 0, message_length);
 
 		msg->round_count = conn->round_count;
 
 		list_to_array_single(&conn->one_hop_neighbours, msg);
 
-		printf("Neighbour Agg: Is leaf sending 1-hop data onwards length:%d |1HN|:%d\n", message_length, one_hop_n_size);
+		printf("NAgg: send len:%d 1HN:%d\n", message_length, one_hop_n_size);
 
 		tree_agg_send(&conn->tc, msg, message_length);
+
+		free(msg);
 	}
 
 	conn->round_count++;
@@ -359,33 +348,28 @@ bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 	uint16_t ch1, uint16_t ch2, uint16_t ch3,
 	neighbour_agg_callbacks_t const * callback_fns)
 {
-	if (conn != NULL && ch1 != 0 && ch2 != 0 && ch3 != 0 && callback_fns != NULL)
+	if (conn == NULL || ch1 == 0 || ch2 == 0 || ch3 == 0 || callback_fns == NULL)
 	{
-		// We need to set the random number generator here
-		random_init(*(uint16_t*)(&rimeaddr_node_addr));
-
-		printf("Neighbour Agg: Setting up aggregation tree\n");
-
-		if (!unique_array_init(&conn->one_hop_neighbours, &rimeaddr_equality, &free))
-		{
-			return false;
-		}
-
-		memcpy(&conn->callbacks, callback_fns, sizeof(neighbour_agg_callbacks_t));
-
-		start_neighbour_detect(&conn->nd,
-			ch3, &neighbour_detect_callbacks,
-			INITIAL_INTERVAL, MIN_INTERVAL, MAX_INTERVAL,
-			ROUND_LENGTH, MISSED_ROUND_THRESHOLD);
-
-		// We do not expect the first rounds of this to provide much information
-		// because we will not have discovered much about the network
-		tree_agg_open(&conn->tc, sink, ch1, ch2, sizeof(aggregation_data_t), &callbacks);
-
-		return true;
+		return false;
 	}
-	
-	return false;
+
+	if (!unique_array_init(&conn->one_hop_neighbours, &rimeaddr_equality, &free))
+	{
+		return false;
+	}
+
+	conn->callbacks = callback_fns;
+
+	start_neighbour_detect(&conn->nd,
+		ch3, &neighbour_detect_callbacks,
+		INITIAL_INTERVAL, MIN_INTERVAL, MAX_INTERVAL,
+		ROUND_LENGTH, MISSED_ROUND_THRESHOLD);
+
+	// We do not expect the first rounds of this to provide much information
+	// because we will not have discovered much about the network
+	tree_agg_open(&conn->tc, sink, ch1, ch2, sizeof(aggregation_data_t), &callbacks);
+
+	return true;
 }
 
 void neighbour_aggregate_close(neighbour_agg_conn_t * conn)
@@ -394,13 +378,15 @@ void neighbour_aggregate_close(neighbour_agg_conn_t * conn)
 	{
 		// Close the connections
 		ctimer_stop(&conn->ct_send_data);
-		ctimer_stop(&conn->ct_initial_wait);
 		unique_array_clear(&conn->one_hop_neighbours);
 		tree_agg_close(&conn->tc);
 		stop_neighbour_detect(&conn->nd);
 		conn->round_count = 0;
 	}
 }
+
+
+
 
 #ifdef NEIGHBOUR_AGG_APPLICATION
 

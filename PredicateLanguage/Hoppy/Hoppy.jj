@@ -1,8 +1,8 @@
 options {
   LOOKAHEAD = 1;
+  STATIC = true;
   CHOICE_AMBIGUITY_CHECK = 2;
   OTHER_AMBIGUITY_CHECK = 1;
-  STATIC = true;
   DEBUG_PARSER = false;
   DEBUG_LOOKAHEAD = false;
   DEBUG_TOKEN_MANAGER = false;
@@ -20,8 +20,10 @@ options {
 
 PARSER_BEGIN(Hoppy)
 
-import java.io.PrintStream;
+package predvis.hoppy;
+
 import java.util.*;
+import java.io.*;
 
 public class Hoppy
 {
@@ -33,12 +35,27 @@ public class Hoppy
 		compile(program);
 	}
 
+    public void run(OutputStream out) throws Exception
+    {
+        Program program = Input();
+        compile(program, out);
+    }
+
 	private static void compile(Program program) throws Exception
 	{
-		System.out.println("//" + program.toString());
-		System.out.println("//TARGETING " + program.getPredicateTarget());
+		compile(program, System.out);
+	}
 
-		(new Compiler()).visit(program.getSyntaxTree());
+	private static void compile(Program program, OutputStream out) throws Exception
+	{
+        PrintStream ps = new PrintStream(out);
+
+		ps.println("//" + program.toString());
+		ps.println("//TARGETING " + program.getPredicateTarget());
+
+
+        Compiler c = new Compiler(ps);
+		c.visit(program.getSyntaxTree());
 	}
 }
 
@@ -142,11 +159,21 @@ final class Compiler implements ISyntaxTreeVisitor
 	private int arrVariableId = 255;
 
 	private boolean writtenHalt = false;
+
+    private PrintStream out = null;//System.out;
+    
+    public Compiler()
+    {
+		// The this variable is implicitly in the scope
+		variableScope.put("this", new ArrIds(variableId++, 0));
+    }
 	
-	public Compiler()
+	public Compiler(PrintStream out)
 	{
 		// The this variable is implicitly in the scope
 		variableScope.put("this", new ArrIds(variableId++, 0));
+
+        this.out = out;
 	}
 	
 	public Compiler(Compiler other)
@@ -157,46 +184,47 @@ final class Compiler implements ISyntaxTreeVisitor
 		this.functionScope.putAll(other.functionScope);
 		this.variableId = other.variableId;
 		this.writtenHalt = other.writtenHalt;
+        this.out = other.out;
 	}
 
 	private void write(String code)
 	{
-		System.out.println(code);
+		out.println(code);
 	}
 
 	private void write(String code, String label)
 	{
-		System.out.println(code + " " + label);
+		out.println(code + " " + label);
 	}
 
 	private void write(String code, int arg)
 	{
-		System.out.println(code + " " + arg);
+		out.println(code + " " + arg);
 	}
 
 	private void write(String code, int arg1, int arg2)
 	{
-		System.out.println(code + " " + arg1 + " " + arg2);
+		out.println(code + " " + arg1 + " " + arg2);
 	}
 
 	private void write(String code, int arg1, int arg2, int arg3)
 	{
-		System.out.println(code + " " + arg1 + " " + arg2 + " " + arg3);
+		out.println(code + " " + arg1 + " " + arg2 + " " + arg3);
 	}
 
 	private void write(String code, float arg)
 	{
-		System.out.println(code + " " + arg);
+		out.println(code + " " + arg);
 	}
 
 	private void label(String l)
 	{
-		System.out.print(l + ": ");
+		out.print(l + ": ");
 	}
 
 	private void comment(String c)
 	{
-		System.out.println("//" + c);
+		out.println("//" + c);
 	}
 
 
@@ -612,28 +640,24 @@ final class Compiler implements ISyntaxTreeVisitor
 
 					checkIs(variableScope.keySet(), nvn.getName());
 
-					comment(nvn.getName());
-
-					int id, arrid;
+					int fnid = functionScope.get(item.getName()).id;
 
 					if (nvn.getName().equals("this"))
 					{
-						id = arrid = 0;
+						comment(item.getName() + "(this)");
+						write("THISC", fnid);
 					}
 					else
 					{
 						ArrIds vid = variableScope.get(nvn.getName());
-						id = vid.id;
-						arrid = vid.arrid;
+
+						// Equivalent to:
+						// IFETCH id
+						// AFETCH arrid
+						// CALL fnid
+						comment(item.getName() + "(" + nvn.getName() + "[*" + vid.id + "])");
+						write("VIFAFC", vid.id, vid.arrid, fnid);
 					}
-
-					int fnid = functionScope.get(item.getName()).id;
-
-					// Equivalent to:
-					// IFETCH id
-					// AFETCH arrid
-					// CALL fnid
-					write("VIFAFC", id, arrid, fnid);
 				}
 				else
 				{

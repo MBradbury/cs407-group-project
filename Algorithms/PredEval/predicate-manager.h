@@ -14,6 +14,13 @@
 
 typedef struct
 {
+	uint8_t id;
+	uint8_t return_type;
+	void const * (* fn)(void const * ptr);
+} function_details_t;
+
+typedef struct
+{
 	uint8_t predicate_id;
 	uint8_t num_hops_positions;
 	uint8_t data_length;
@@ -75,7 +82,7 @@ bool predicate_manager_open(
 	predicate_manager_conn_t * conn, uint16_t ch1, uint16_t ch2, rimeaddr_t const * basestation,
 	clock_time_t trickle_interval, predicate_manager_callbacks_t const * callbacks);
 
-bool predicate_manager_start_serial_input(predicate_manager_conn_t * conn);
+void predicate_manager_start_serial_input(predicate_manager_conn_t * conn);
 
 void predicate_manager_close(predicate_manager_conn_t * conn);
 
@@ -92,9 +99,16 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, struct hop
 	predicate_detail_entry_t const * pe, void * data, size_t data_size, size_t data_length);
 
 
-map_t const * predicate_manager_get_map(predicate_manager_conn_t * conn);
+#define predicate_manager_get_map(conn) ((conn) == NULL ? NULL : &(conn)->predicates)
 
 uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe);
 
+
+bool evaluate_predicate(predicate_manager_conn_t * conn,
+	node_data_fn data_fn, size_t data_size,
+	function_details_t const * function_details, size_t functions_count,
+	struct hop_data * hop_data,
+	void const * all_neighbour_data, unsigned int nd_length,
+	predicate_detail_entry_t const * pe);
 
 #endif /*CS407_PREDICATE_MANAGER_H*/

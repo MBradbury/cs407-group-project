@@ -3,16 +3,55 @@
 
 \subsection{Routing in Sensor Networks}
 
+\cite{TankBible}
+
+%Aggregation:
+\cite{aggphdfeng} % http://ecommons.usask.ca/bitstream/handle/10388/etd-06292010-135305/thesis-jie.pdf
+
 \subsubsection{Flooding}
 
+\subsubsection{Tree Aggregation}
+\cite{1628365} % https://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=1628365
+
+\subsubsection{Clustering}
 
 
 \subsection{Simulating Sensor Networks}
 
 \subsubsection{TinyOS}
 
+TOSSIM \cite{levis2003tossim}
+
 \subsubsection{Contiki}
 % Cite basically all the papers at: http://www.contiki-os.org/support.html
+
+\paragraph{A Database In Every Sensor} 
+\cite{Tsiftes:2011:DS:2070942.2070974} %http://dunkels.com/adam/tsiftes11database.pdf
+\cite{TinyDB}
+
+\paragraph{Sensor Network IP Stacks}
+\cite{ko2011beyond} % http://dunkels.com/adam/ko11beyond.pdf
+\cite{dunkels2009efficient} % http://dunkels.com/adam/yazar09efficient.pdf
+\cite{Durvy:2008:MSN:1460412.1460483} %http://dunkels.com/adam/durvy08making.pdf
+\cite{dunkels2003full} % http://dunkels.com/adam/mobisys2003.pdf
+
+\paragraph{Cooja / MSPSim}
+\cite{Eriksson:2009:CIT:1537614.1537650} % https://dl.acm.org/citation.cfm?id=1537614.1537650
+
+\paragraph{Protothreads}
+\cite{Dunkels:2006:PSE:1182807.1182811} % http://dunkels.com/adam/dunkels06protothreads.pdf
+
+\paragraph{Energy Estimation}
+\cite{Dunkels:2007:SOE:1278972.1278979} % http://dunkels.com/adam/dunkels07softwarebased.pdf
+
+\paragraph{RIME}
+\cite{Dunkels:2007:ACA:1322263.1322295} % http://dunkels.com/adam/dunkels07adaptive.pdf
+
+\paragraph{Beacon Coordination}
+\cite{Dunkels:2011:ALB:1966251.1966270} % http://dunkels.com/adam/dunkels11announcement.pdf
+
+\paragraph{Run-time Reprogramming}
+\cite{Dunkels:2006:RDL:1182807.1182810} % http://dunkels.com/adam/dunkels06runtime.pdf
 
 \subsubsection{NS2}
 
@@ -34,7 +73,30 @@
 
 \subsubsection{Air Pollution}
 \cite{libeliumAirPollution}
-\cite{wsnpollution}
+\cite{wsnpollution} Claimed: Ivan
+
+Air pollution has been a growing concern in congested urban cities as a result of industrilization and heavy transporation. These concerns include poor air quality and visibilty and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densly deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and indistrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
+
+Engineers from the University of Luxembourg implemented a system based on a Wireless Mesh Network of sensors to measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution ares are out of range of the communication service. David Et Al. proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in such areas.
+
+The network consists of a set of fixed and mobile sensors which are connected to several mesh routers within a polluted area and makes use of a gateway which transmitts data back to the monitoring server as well as providing internet connectivity to the sensors. High-gain antennas was used to reduce the propability of interference from non-city radio frequency emittors such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthorgonal channels between the sensors, mesh routers, gateways and directional antennas. A server middleware was responsible for allocating IP addresses to the sensors and any external user. At the monitoring station, the transmitted data is analysed by an Air Pollution Monitoring Toolbox application and compares the pollution level to the 'critical level of pollution'. The critical data are transmitted to an Air Pollution Decision makers for safety guidance.
+
+\paragraph{WSN Challenges}
+
+\begin{itemize}
+\item Limiting number of request messages each sensor can receive from the data server.
+
+The network uses an Ad-hoc On-Demand Distance Vector routing protocol for efficient forwarding of data packets to the data server and makes use of a series of messages to communicate through the network and to discover and maintain data routes. A request message is propagated to the network when the data server requests for a specific data item. All the sensors receives the message and checks whether is it the destination or not. If not, it stores a copy of the message in its buffer containing previously broadcasted request messages and rebroadcasts it back to its neighbours. Once the destined sensor receives the message it sends back a reply message using the reverse path of the data server.
+
+To prevent the sensors from overloading with request messages, each message is set with a Time-To-Live (TTL) value with discards the message when the value expires. This value is dependant on the size of the network where a larger network will have higher TTL value to ensure that the request messages reaches the defined destination.
+
+\item Energy Usage
+
+The wireless mesh network is energy efficient since the sensors are energy constrained. This uses an enhanced energy conserving routing protocol which employs a routing algorithm that aims to distribute data among maximally disjoint paths towards the sink so that the lifeline of the WSN service can be prolonged. It also allows the sensors to participate in carrying the global traffic over the network
+
+\item Data transmission periods
+\item Optimized means of gateway placements
+\end{itemize}
 
 \subsubsection{Forest Fires}
 \cite{libeliumForestFires}
@@ -44,7 +106,34 @@
 \cite{SzewczykPMC04}
 
 \subsubsection{Volcano Monitoring}
-\cite{Werner-Allen:2006:FYV:1298455.1298491}
+Claimed: Ivan
+
+Active volcanoes need to be monitored to predict the likelihood of future eruptions so that early-warning signs can be issued for the evacuation of habitants near the volcano. Today, volcanoists use wired arrays of sensors such as seismometers and acoustic microphones to collect seismic and infrared (low-frequency acoustic) signals and determining a wide range of factors such as sources of volcanic eruptions, interior structure of a volcano and differentiating eruption signals from noise. A typical study can indlue the placement of several stations around the volcano where each contains a low distribution of wired sensors that collects data to a hard drive. Data is then collected manually in a possibly inconvenient location.
+
+To address the issue of high power consumption of these wired sensors, \citeauthor{Werner-Allen:2006:FYV:1298455.1298491} in \cite{Werner-Allen:2006:FYV:1298455.1298491} introduced the deployment of embedded wireless sensor networks consisting of low-power nodes with minimum CPU, memory and wireless communication capabilities. This allows for long distance real time monitoring of volcanic activities and reducing the need for manual data collection. The main challenge however is that environmental monitoring studies sample at a frequency which is much lower than the sample rate of volcanic time series. This is due to the limited radio bandwidth of the sensors thus requiring the need for efficient power management techniques and accurate time synchronization of the nodes. 
+
+\citeauthor{Werner-Allen:2006:FYV:1298455.1298491} implemented a wireless sensor network that was deployed on the Volcan Tungurahua in central Ecuador using a Mica2 sensor mote platform and three infrasonic microphone nodes. These nodes transmitted data to an aggregation node, which relayed the data over a 9km wireless link to the base station. Time synchronization for the infrasonic sensors was done using a GPS receiver which receives a GPS time signal and relays the data 
+to the infrasound and aggregator nodes. Over a period of time, the temperature and battery voltage may change and this may affect the sampling rate of the individual nodes and the precision of the time recorded from the GPS time stamp message. These uncertainties was addressed by applying a linear regression to the logged data stream giving an estimation of the node outputs. In addition, the sensor nodes where required to be protected against harsh environments such as rain and long exposure of sunlight by using waterproof pelican cases and 1/4-wave whip antennas.
+
+Their first deployment on the volcano included a small network where nodes could send continuous signals to each other, however this was not feasible for a larger network deployed over longer periods of time. To solve the issue with bandwidth and energy consumption, the team implemented a distributed event detector which only transmits well-correlated signals to the base station. A local event detection algorithm is used to trigger data collection for uncorrelated signals.
+
+\begin{itemize}
+\item Distributed Event Detector
+
+To measure the correlated signal, the distributed detector uses a decentralized voting system among a group of nodes. Each nodes samples data at a continuous rate of 102.4Hz and buffers a window of such data while running a local event detection algorithm. If an event is triggered it uses a local radio broadcast to broadcast a vote to other nodes and a global flood to initiate global data collection from all the nodes. Radio contention is reduced using a token-bases scheme for scheduling transmission, where each nodes transmits their buffer one after the other. 
+
+\item Local Event Detector
+
+The team implemented two local event detectors; a threshold-based detector and an exponentially weighted moving average (EWMA)-based detector. The former is triggered when the signal rises above an upper threshold and below a lower threshold. However due to spurous signals such as wind noise, the detector may be susceptible to false trigger. On the other hand, the EWMA detector calculates two moving averages with different gain parameters and is triggered if the ratio of the two averages and the new sample exceeds some threshold T. This method is less affected by node sensitivity and any duplicate triggers over a window of 100 samples are suppressed.
+\end{itemize}
+
+\paragraph{Data Collection and Performance}
+
+During the deployment, the team managed to log 54 hours of continuous data which includes seismoacoustic signals from several hundred events. The raw data was used to analyse the system's performance and many challenges where discovered in the early observations. They discovered that on average only 61 percent of data was retrieved from the network and on several occasions the modems which transmitted data back to the station would experience short drop-outs, causing all data aggregated from the nodes to be lost. In addition, duplicate packets were also recorded as a likely result of redundant retransmission and lost acknowledgement. Both lost and duplicate data had to be accounted for before being stored in the timebase.
+
+\paragraph{Conclusion and Improvements}
+
+In general, the event-triggered model was successful in detecting eruptions and other volcanic events and was able to verify the working of the local and global event detectors by examining the downloaded data. However, since the experiment was deployed over a limited area space of the volcano, further work is to be done to instrument volcanoes at a larger scale. This includes, and most importantly, the management of energy and bandwidth usage of the sensors and increasing its computational power to deviate from continuous data collection to enabling the collection of well-correlated signals. 
 
 \subsubsection{Structural Monitoring}
 \cite{5508230}
@@ -60,8 +149,16 @@
 
 Before we can consider what predicates we can try to check for, or how we should check those predicates, we first need to understand what we are detecting and why. In dependable systems we need to consider the fault-error-failure cycle. This cycle says that a \emph{fault} once caused by either some external influence (e.g. radiation leading to bit-flips in memory \cite{?}) or internal influence (e.g. code bugs) will lead to an \emph{error}, this is the \emph{activation} step. An error is the manifestation of the fault (e.g. memory holding the incorrect value). An error then leads to a \emph{failure} in the step called \emph{propagation}, the failure of the system is an observable deviation from the system's specification (e.g. allowing doors to be opened that should remain closed). It is not always the case the faults lead to errors, or errors lead to failures, sometimes multiple faults or errors are respectively required to cause a single error or failure. \cite{1335465}
 
-There is a choice of what should be measured and checked in predicates, should faults, errors or failures be measured? \textbf{TODO}
+There is a choice of what should be measured and checked in predicates, should faults, errors or failures be measured? Faults cannot be measured \cite{?} in a way that is possible for a mote, so they are discounted. That leaves measuring errors and failures. Typically failures would be the event being measured \cite{?} as that is what arises after an error actually causes the issue to happen. However, errors can also be measured if there is a dedicated program checking the state and comparing it to an expected state \cite{?}. For example an ECC (error correcting code) such as a Hamming Code can be used to detect and correct an error (in this case a bit-flip) in some memory after a fault (such as a voltage surge ) \cite{hamming1950error}.
 
+Much of what has been discussed has involved transient faults such as those caused by environmental conditions, however, there is a class of faults that are a lot more common and much easier to resolve - faults caused by software bugs. These faults can lead to programs ending up in the wrong state and just performing incorrectly. There has been a certain amount of work that looks into detecting traditional distributed system bugs (such as deadlock \cite{?}) in wireless sensor networks. However, there has been little work in looking into providing tools to aid in system debugging. The rest of this section will cover work on predicates in sensor networks, including detection of them and methods for identifying why is system is not performing correctly.
+
+
+\subsubsection{Global Predicate Detection}
+
+Perhaps one of the most well known techniques to undertake this kind of debugging is Global Predicate Detection (GPD). GPD involves ``taking a consistent global snapshot of the system and checking whether the snapshot satisfies the global predicate'' \cite{277788}. These snapshots are repeated periodically and checked if they satisfy the predicate, in doing so properties can be detected that are required for the predicate to hold.
+
+However, GPD is not as simple as this. To begin with there are two types of global predicates: stable and unstable. Stable predicates are ones that remain true once they become true \cite{277788} and unstable predicates can fluctuate between true and false. An example of a stable predicate is termination, once a system has terminated it cannot turn it self back on again. There also exists a distinction between strong and weak predicates, where strong predicates hold for the entire network ($definitely : p$) and weak predicates hold for a subset of that network ($possibly : p$) \cite{553309,345831}. Because of the unreliability of wireless networks it may often be the case that all that can be said is that the predicate is possibly true, due to not receiving all the information that is required to evaluate the predicate \cite{?}.
 
 
 \subsection{Predicate Detection in Distributed Systems}
@@ -101,22 +198,22 @@ The authors tested the DICAS algorithm against 5 sets of attacks, these are:
 
 Additionally, the paper describes a cost analysis on the DICAS algorithm, these are the results: 
 \begin{itemize}
-\item Memory Overhead:
+\item Memory Overhead
 
 The memory overhead is the most pressing of the overheads created by the DICAS algorithm. The algorithm must store several data structures on each node: a neighbours list, a watch buffer, a commitment key list and the alert list. These structures are variable on sizes dependent on the number of nodes in the network, the network layout and the MAC layer delay for acquiring a channel. Any implementation must consider the memory cost of the algorithm seriously.
 
-\item Computation Overhead:
+\item Computation Overhead
 
 With regards to computation they found that each packet received or sent required: one lookup for the current source and destination in the neighbour list, for an incoming packet - adding an entry to the watch buffer or for an outgoing packet - deleting an entry from the watch buffer. Since the size of the watch buffer and the neighbour list structure are relatively small, the computation time required for these operations is negligible.
 
-\item Bandwith Overhead:
+\item Bandwidth Overhead
 
 When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases make up a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
 \end{itemize}
 
 \subsection{H-SEND: Hierachichal SEnsor Network Debugging}
 
-H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{?}
+H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{herbert2007adaptive}
 
 There are 4 main steps involved in H-SEND:
 
@@ -150,6 +247,12 @@ H-SEND is optimised for WSNs in a variety of ways. For example, it minimises ove
 \subsubsection*{Dynamic Invariant Detection $\cup$ Checking Engine (DIDUCE)}
 
 DIDUCE \cite{diduce} is a tool which employs machine learning to dynamically generate hypotheses of invariants for a system at run-time; the invariants begin extremely strict, and are relaxed over time to allow for new correct behaviour. The machine learning aspect means that developers do not have to specify invariants themselves, which proves beneficial as accurately pinpointing the values necessary for fault-free operation is non-trivial. DIDUCE checks against the invariants continually during a program's operation and reports all violations detected at the end of the run, whereas Daicon merely presents the user with invariants found. For all its apparent usefulness, unfortunately DIDUCE was designed for large, complex systems rather than lightweight distributed systems with constrained resources (i.e. WSNs), so it is likely to prove infeasible to use this tool for GPD.
+
+\subsubsection*{DAIKON: A tool for dynamically detecting invariants in sensor network applications}
+
+One method of automatically inferring invariants in applications is the use of a prototype invariant detector, DAIKON \cite{daikon}, which uses execution traces to produce a list of likely invariants. The set of dynamically detected invariants depend on observed values and the invariants are an indication of the quality of a test suite. Daikon consists of two parts; a language specific front end and a language independent interference engine. The former executes the running program and accesses its runtime state to get the required information (consist of variables and their value). This information contains a subset of relevant variables and only these are written to the trace file. A variable is considered as relevant depending on the type of invariants targeted and whether they are accessible at an instrumentation point. This forms an input to the second part of the system - the invariant inference engine - which uses machine learning techniques and produces a set of detected invariants for the program.
+
+The main challenge with these techniques is deducing the relevance of the invariants as it depends on the programmer's experience and knowledge of the underlying system. However, these can be improved with techniques like exploiting unused polymorphism and suppressing invariants that are logically implied by other invariants. Daikon does not require the programmer to specify invariants for the application, however, including DIDUCE, it is not designed for distributed or resource-constrained systems like WSN.
 
 \begin{comment}
 \subsection{Quality of Service}

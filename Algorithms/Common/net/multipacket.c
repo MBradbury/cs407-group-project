@@ -7,27 +7,35 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef MULTIPACKET_DEBUG
+#	define MPDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define MPDPRINTF(...)
+#endif
+
 // From: http://stackoverflow.com/questions/3437404/min-and-max-in-c
 #define min(a, b) \
    ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
+	   __typeof__ (b) _b = (b); \
+	 _a < _b ? _a : _b; })
 
-static const uint8_t MAX_REXMITS = 4;
-
-static const clock_time_t send_period = 1 * CLOCK_SECOND;
+#define MAX_REXMITS 4
+#define SEND_PERIOD ((clock_time_t) 1 * CLOCK_SECOND)
 
 typedef struct
 {
 	uint16_t id;
+	
 	rimeaddr_t target;
 	rimeaddr_t source;
 
-	void * data;
 	unsigned int length;
 
 	unsigned int sent;
+
 	uint8_t seqno;
+
+	// Data stored from here onwards
 
 } multipacket_sending_packet_t;
 
@@ -46,29 +54,24 @@ typedef struct
 {
 	recv_key_t key;
 
-	void * data;
 	unsigned int length;
 
 	unsigned int data_received;
 
 	uint8_t last_seqno;
 
-} multipacket_recieving_packet_t;
+	// Data stored from here onwards
 
-static void sending_packet_cleanup(void * ptr)
+} multipacket_receiving_packet_t;
+
+static inline void * sending_data(multipacket_sending_packet_t * packet)
 {
-	multipacket_sending_packet_t * details = (multipacket_sending_packet_t *)ptr;
-
-	free(details->data);
-	free(details);
+	return (packet + 1);
 }
 
-static void recieving_packet_cleanup(void * ptr)
+static inline void * receiving_data(multipacket_receiving_packet_t * packet)
 {
-	multipacket_recieving_packet_t * details = (multipacket_recieving_packet_t *)ptr;
-
-	free(details->data);
-	free(details);
+	return (packet + 1);
 }
 
 static bool recv_key_equality(void const * left, void const * right)
@@ -91,7 +94,7 @@ static const struct packetbuf_attrlist multipacket_attributes[] = {
 	{ PACKETBUF_ATTR_EPACKET_ELENGTH, PACKETBUF_ATTR_BYTE * sizeof(unsigned int) },	// Length
 	{ PACKETBUF_ADDR_ESENDER, PACKETBUF_ADDRSIZE },
 	RUNICAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 
 
@@ -113,11 +116,11 @@ static void send_loop_callback(void * ptr)
 
 		unsigned int to_send = min(PACKETBUF_SIZE, details->length - details->sent);
 
-		void * send_start = (char *)(details->data) + details->sent;
+		void * send_start = (char *)(sending_data(details)) + details->sent;
 
 		packetbuf_clear();
 		packetbuf_set_datalen(to_send);
-		debug_packet_size(to_send);
+		//debug_packet_size(to_send);
 		void * msg = packetbuf_dataptr();
 		memcpy(msg, send_start, to_send);
 
@@ -128,10 +131,8 @@ static void send_loop_callback(void * ptr)
 
 		packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &details->source);
 
-#ifdef MPDEBUG
-		printf("multipacket: Sending a packet of sublength:%d/%d to %s with id %d and seqno %d\n",
+		MPDPRINTF("multipacket: Sending a packet of sublength:%d/%d to %s with id %d and seqno %d\n",
 			to_send, details->length, addr2str(&details->target), details->id, details->seqno);
-#endif
 		
 		runicast_send(&conn->rc, &details->target, MAX_REXMITS);
 
@@ -142,12 +143,10 @@ static void send_loop_callback(void * ptr)
 		// Check to see if we have finished sending
 		if (details->sent == details->length)
 		{
-#ifdef MPDEBUG
-			printf("multipacket: Finished sending a packet of length:%d to %s with id %d\n",
+			MPDPRINTF("multipacket: Finished sending a packet of length:%d to %s with id %d\n",
 				details->length, addr2str(&details->target), details->id);
-#endif
 
-			conn->callbacks->sent(conn, &details->target, details->data, details->length);
+			conn->callbacks->sent(conn, &details->target, sending_data(details), details->length);
 
 			linked_list_pop(&conn->sending_packets);
 		}
@@ -174,7 +173,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	key.data.id = packet_id;
 	rimeaddr_copy(&key.data.originator, source);
 
-	multipacket_recieving_packet_t * details = (multipacket_recieving_packet_t *)map_get(&conn->receiving_packets, &key);
+	multipacket_receiving_packet_t * details = (multipacket_receiving_packet_t *)map_get(&conn->receiving_packets, &key);
 
 
 	void * data_to_pass_onwards = NULL;
@@ -186,10 +185,8 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 		if (seq == 0)
 		{
 			// We have not received this message before!
-#ifdef MPDEBUG
-			printf("multipacket: Recv'd a new packet from %s with id %d and length %d/%d\n",
+			MPDPRINTF("multipacket: Recv'd a new packet from %s with id %d and length %d/%d\n",
 				addr2str(from), packet_id, recv_length, data_length);
-#endif
 
 			// OPTIMISATION: avoid allocating memory when we will free it shortly
 			// this is the case when we have an entire message in a single packet
@@ -201,14 +198,13 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 			}
 			else
 			{
-				details = (multipacket_recieving_packet_t *)malloc(sizeof(multipacket_recieving_packet_t));
+				details = (multipacket_receiving_packet_t *)malloc(sizeof(multipacket_receiving_packet_t) + data_length);
 				details->key = key;
-				details->data = malloc(data_length);
 				details->length = data_length;
 				details->last_seqno = seq;
 				details->data_received = recv_length;
 
-				memcpy(details->data, data_recv, recv_length);
+				memcpy(receiving_data(details), data_recv, recv_length);
 
 				map_put(&conn->receiving_packets, details);
 			}
@@ -219,12 +215,10 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 		// Check that this is the next packet that we want
 		if (seq == details->last_seqno + 1)
 		{
-#ifdef MPDEBUG
-			printf("multipacket: Recv'd a new part of a packet from %s with id %d seqno:%d and length %d/%d\n",
+			MPDPRINTF("multipacket: Recv'd a new part of a packet from %s with id %d seqno:%d and length %d/%d\n",
 				addr2str(from), packet_id, seq, recv_length, details->length);
-#endif
 
-			void * data_ptr = (char *)(details->data) + details->data_received;
+			void * data_ptr = (char *)(receiving_data(details)) + details->data_received;
 
 			memcpy(data_ptr, data_recv, recv_length);
 
@@ -236,7 +230,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 			// If so set the relevant variables
 			if (details->data_received == details->length)
 			{
-				data_to_pass_onwards = details->data;
+				data_to_pass_onwards = receiving_data(details);
 				length_of_data_to_pass_onwards = details->length;
 				should_remove_from_map = true;
 			}
@@ -246,10 +240,8 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	// Check to see if we have fully received this packet
 	if (data_to_pass_onwards != NULL)
 	{
-#ifdef MPDEBUG
-		printf("multipacket: delivering packet from %s with id %d and length %d\n",
+		MPDPRINTF("multipacket: delivering packet from %s with id %d and length %d\n",
 			addr2str(from), packet_id, length_of_data_to_pass_onwards);
-#endif
 
 		conn->callbacks->recv(conn, source, data_to_pass_onwards, length_of_data_to_pass_onwards);
 
@@ -261,18 +253,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	}
 }
 
-static void sent_by_runicast(struct runicast_conn * rc, rimeaddr_t const * to, uint8_t retransmissions)
-{
-}
-
-static void runicast_timedout(struct runicast_conn * rc, rimeaddr_t const * to, uint8_t retransmissions)
-{
-#ifdef MPDEBUG
-	printf("multipacket: runicast time'd out sending to %s\n", addr2str(to));
-#endif
-}
-
-static const struct runicast_callbacks rccallbacks = {&recv_from_runicast, &sent_by_runicast, &runicast_timedout};
+static const struct runicast_callbacks rccallbacks = {&recv_from_runicast, NULL, NULL};
 
 bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_callbacks_t const * callbacks)
 {
@@ -285,11 +266,11 @@ bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_c
 
 		conn->callbacks = callbacks;
 
-		ctimer_set(&conn->ct_sender, send_period, &send_loop_callback, conn);
+		ctimer_set(&conn->ct_sender, SEND_PERIOD, &send_loop_callback, conn);
 
-		linked_list_init(&conn->sending_packets, &sending_packet_cleanup);
+		linked_list_init(&conn->sending_packets, &free);
 
-		map_init(&conn->receiving_packets, &recv_key_equality, &recieving_packet_cleanup);
+		map_init(&conn->receiving_packets, &recv_key_equality, &free);
 
 		return true;
 	}
@@ -313,20 +294,19 @@ void multipacket_close(multipacket_conn_t * conn)
 void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void * data, unsigned int length)
 {
 	// Allocate the packet
-	multipacket_sending_packet_t * details = (multipacket_sending_packet_t *)malloc(sizeof(multipacket_sending_packet_t));
+	multipacket_sending_packet_t * details = (multipacket_sending_packet_t *)malloc(sizeof(multipacket_sending_packet_t) + length);
 	details->id = conn->id++;
-	details->data = data;
 	details->length = length;
 	details->sent = 0;
 	details->seqno = 0;
 	rimeaddr_copy(&details->target, target);
 	rimeaddr_copy(&details->source, &rimeaddr_node_addr);
 
+	memcpy(sending_data(details), data, length);
+
 	// Add to the queue to send
 	linked_list_append(&conn->sending_packets, details);
 
-#ifdef MPDEBUG
-	printf("multipacket: Adding data of length %d to send to %s with id %d. %u packets queued.\n",
+	MPDPRINTF("multipacket: Adding data of length %d to send to %s with id %d. %u packets queued.\n",
 		length, addr2str(target), details->id, linked_list_length(&conn->sending_packets));
-#endif
 }

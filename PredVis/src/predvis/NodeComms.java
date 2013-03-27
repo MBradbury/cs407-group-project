@@ -13,7 +13,7 @@ import java.io.InputStreamReader;
 public class NodeComms {
     public static final String SERIALDUMP_LINUX = "/home/user/contiki/tools/sky/serialdump-linux";
     
-    private final String comPort;
+    private final String port;
     private Thread readInput = null;
     private volatile boolean stop = false;
     
@@ -24,12 +24,12 @@ public class NodeComms {
     // This is the buffer size inside the contiki motes
     private static final int bufferSize = 127;
 
-    public NodeComms(String comPort) {
-        this.comPort = comPort;
+    public NodeComms(String port) {
+        this.port = port;
     }
     
     public void connect(final NodeCommsCallback callback) {
-        final String[] cmd = new String[] { SERIALDUMP_LINUX, "-b115200", comPort };
+        final String[] cmd = new String[] { SERIALDUMP_LINUX, "-b115200", port };
         
         //Open streams from sink node.
         try {
@@ -84,16 +84,14 @@ public class NodeComms {
         }*/
     }
     
-    public void writeln(String line)
-            throws RuntimeException, IOException
-    {
+    public void writeln(String line) throws RuntimeException, IOException {
        byte[] characters = (line + '\n').getBytes("ISO-8859-1");
        
        if (characters.length > bufferSize)
        {
            throw new RuntimeException("Message (" + line + ") is too long (" + characters.length + ").");
        }
-        
+       
        output.write(characters);
        output.flush();
     }

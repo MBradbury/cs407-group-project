@@ -47,20 +47,6 @@ There are lots of features that are usually provided by scripting languages that
 \end{enumerate}
 
 
-\subsubsection{Getting and Waiting for Neighbourhood Data}
-
-\begin{enumerate}
-	\item If all neighbours are known then 1-hop predicates can wait for each node to send data. This has extra memory and communication requirements
-	\item If we do not know who our n-hop neighbours are then we can just set a time out to wait for results
-	\begin{enumerate}
-		\item If we do not receive all items what should be done?
-		\item Should we report that the predicate is true, even though we didn't receive all the information?
-	\end{enumerate}
-	\item What data should be sent from surrounding nodes and how could we access it?
-\end{enumerate}
-
-
-
 \subsection{Where to Evaluate Predicates}
 
 Given the problem of assigning slots in a TDMA MAC protocol, one would wish to ensure that no node within two hops of any given node has the same slot. This raises a question of where this predicate should be evaluated to ensure minimum energy usage in its evaluation.
@@ -106,6 +92,26 @@ So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages t
 Overall we can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer message. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
 
 However, if we were not asking the entire network to check for this property, then the first predicate would behave better. This is because the second predicate would have to be called for every 1-hop neighbour of the intended node. However, as it is assumed that the entire network would be asked if this predicate holds, then the second predicate is better.
+
+
+\subsubsection{Getting and Waiting for Neighbourhood Data}
+
+\begin{enumerate}
+	\item If all neighbours are known then 1-hop predicates can wait for each node to send data. This has extra memory and communication requirements
+	\item If we do not know who our n-hop neighbours are then we can just set a time out to wait for results
+	\begin{enumerate}
+		\item If we do not receive all items what should be done?
+		\item Should we report that the predicate is true, even though we didn't receive all the information?
+	\end{enumerate}
+	\item What data should be sent from surrounding nodes and how could we access it?
+\end{enumerate}
+
+
+When asking for information on the neighbourhood, it possible to consider optimisations due to the structure of the predicate. For example take conjunctive predicates where the structure of the predicate $P$ is $P = P_1 \land P_2 \land \ldots \land P_n$. If one of the $P_i$ is false then the result of the predicate $P$ is false ($False \land P \Leftrightarrow False$). This means that the statements could potentially be evaluated in an order such that the $P_i$ that requires the fewest resources is evaluated first and the $P_j$ that requires the most resources is evaluated last.
+
+The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use to us is when gathering data for in-network predicates that are checked periodically.
+
+\textbf{TODO: finish off how its not suitable}
 
 
 \subsection{Implementing Primitives}

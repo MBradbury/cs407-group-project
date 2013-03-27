@@ -113,18 +113,10 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 	// Get a pointer to the nhopflood_conn_t
 	nhopflood_conn_t * conn = conncvt_broadcast(c);
 
-	/*char s1[RIMEADDR_STRING_LENGTH], s2[RIMEADDR_STRING_LENGTH];
-
-	printf("Received flood from %s with id:%d ttl:%d hops:%d src:%s\n",
-		addr2str_r(sender, s1, RIMEADDR_STRING_LENGTH),
-		packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID),
-		packetbuf_attr(PACKETBUF_ATTR_TTL),
-		packetbuf_attr(PACKETBUF_ATTR_HOPS),
-		addr2str_r(packetbuf_addr(PACKETBUF_ADDR_ESENDER), s2, RIMEADDR_STRING_LENGTH)
-	);*/
+	rimeaddr_t const * originator = packetbuf_addr(PACKETBUF_ADDR_ESENDER);
 
 	// Get the last seen entry for the end-point sender
-	last_seen_t * last = map_get(&conn->latest_message_seen, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
+	last_seen_t * last = map_get(&conn->latest_message_seen, originator);
 
 	bool seenbefore = true;
 
@@ -136,7 +128,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 
 		// We need to record that we have seen a packet from this sender
 		last = (last_seen_t *)malloc(sizeof(last_seen_t));
-		rimeaddr_copy(&last->from, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
+		rimeaddr_copy(&last->from, originator);
 		last->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
 		last->hops = packetbuf_attr(PACKETBUF_ATTR_HOPS);
 
@@ -158,7 +150,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		// Have seen before, but re-deliver
 		conn->receive_fn(
 			conn,
-			packetbuf_addr(PACKETBUF_ADDR_ESENDER), 
+			originator, 
 			packetbuf_attr(PACKETBUF_ATTR_HOPS),
 			last->hops
 		);
@@ -171,8 +163,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		{
 			packet_details_t * data = (packet_details_t *) linked_list_data(&conn->packet_queue, elem);
 
-			if (rimeaddr_equality(&data->sender, packetbuf_addr(PACKETBUF_ADDR_ESENDER)) &&
-				data->id == last->id)
+			if (rimeaddr_cmp(&data->sender, originator) && data->id == last->id)
 			{
 				uint8_t hops_diff = data->hops - packetbuf_attr(PACKETBUF_ATTR_HOPS);
 
@@ -191,7 +182,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 	{
 		conn->receive_fn(
 			conn,
-			packetbuf_addr(PACKETBUF_ADDR_ESENDER), 
+			originator, 
 			packetbuf_attr(PACKETBUF_ATTR_HOPS),
 			0
 		);
@@ -322,7 +313,7 @@ bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 	// do nothing
 	if (hops == 0)
 	{
-		printf("Nowhere to send data to as hops=0\n");
+		printf("nhopflood: Nowhere to send data to as hops=0\n");
 		return true;
 	}
 
@@ -331,6 +322,9 @@ bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops)
 
 	// Record the details to be sent
 	linked_list_append(&conn->packet_queue, details);
+
+	printf("nhopflood: Added a packet to be sent, now %u packets queued.\n",
+		linked_list_length(&conn->packet_queue));
 
 	return true;
 }

@@ -151,10 +151,9 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t cons
 
 static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback, &pm_predicate_failed };
 
-PROCESS(initProcess, "Init Process");
 PROCESS(mainProcess, "main Process");
 
-AUTOSTART_PROCESSES(&initProcess, &mainProcess);
+AUTOSTART_PROCESSES(&mainProcess);
 
 
 static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
@@ -177,70 +176,6 @@ static bool send_example_predicate(rimeaddr_t const * destination, uint8_t id)
 		id, destination,
 		program_bytecode, bytecode_length,
 		var_details, var_details_length);
-}
-
-PROCESS_THREAD(initProcess, ev, data)
-{
-	static struct etimer et;
-	static rimeaddr_t destination;
-
-	PROCESS_EXITHANDLER(goto exit;)
-	PROCESS_BEGIN();
-
-#ifdef NODE_ID
-	node_id_burn(NODE_ID);
-#endif
-
-#ifdef POWER_LEVEL
-	cc2420_set_txpower(POWER_LEVEL);
-#endif
-
-	hop_manager_init(&hop_data);
-
-	// Set the address of the base station
-	baseStationAddr.u8[0] = 1;
-	baseStationAddr.u8[1] = 0;
-
-	// Set the predicate evaluation target
-	destination.u8[0] = 5;
-	destination.u8[1] = 0;
-
-	if (rimeaddr_cmp(&rimeaddr_node_addr, &destination))
-	{
-		printf("PE LP: Is Destination.\n");
-	}
-	
-	predicate_manager_open(&predconn, 121, 126, &baseStationAddr, trickle_interval, &pm_callbacks);
-
-	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
-	{
-		printf("PE LP: nhopreq start function failed\n");
-	}
-
-	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr)) // Sink
-	{
-		printf("PE LP: Is the base station!\n");
-
-		// As we are the base station we need to start reading the serial input
-		predicate_manager_start_serial_input(&predconn);
-
-		send_example_predicate(&destination, 0);
-		send_example_predicate(&destination, 1);
-
-		leds_on(LEDS_BLUE);
-	}
-	else
-	{
-		leds_on(LEDS_GREEN);
-	}
-
-exit:
-	printf("PE LP: Exiting init Process.\n");
-	/*hop_manager_free(&hop_data);
-	nhopreq_end(&hc);
-	predicate_manager_close(&predconn);*/
-
-	PROCESS_END();
 }
 
 static bool evaluate_predicate(
@@ -284,7 +219,58 @@ PROCESS_THREAD(mainProcess, ev, data)
 	
 	printf("PE LP: Process Started.\n");
 
-	//Wait for other nodes to initialize.
+
+	// Init Code
+#ifdef NODE_ID
+	node_id_burn(NODE_ID);
+#endif
+
+#ifdef POWER_LEVEL
+	cc2420_set_txpower(POWER_LEVEL);
+#endif
+
+	hop_manager_init(&hop_data);
+
+	// Set the address of the base station
+	baseStationAddr.u8[0] = 1;
+	baseStationAddr.u8[1] = 0;
+
+	predicate_manager_open(&predconn, 121, 126, &baseStationAddr, trickle_interval, &pm_callbacks);
+
+	if (!nhopreq_start(&hc, 149, 132, &baseStationAddr, &node_data, sizeof(node_data_t), &receieved_data))
+	{
+		printf("PE LP: nhopreq start function failed\n");
+	}
+
+	if (rimeaddr_cmp(&baseStationAddr, &rimeaddr_node_addr)) // Sink
+	{
+		printf("PE LP: Is the base station!\n");
+
+		// As we are the base station we need to start reading the serial input
+		predicate_manager_start_serial_input(&predconn);
+
+		// Set the predicate evaluation target
+		rimeaddr_t destination;
+		destination.u8[0] = 5;
+		destination.u8[1] = 0;
+
+		if (rimeaddr_cmp(&rimeaddr_node_addr, &destination))
+		{
+			printf("PE LE: Is Destination.\n");
+		}
+
+		send_example_predicate(&destination, 0);
+		send_example_predicate(&destination, 1);
+
+		leds_on(LEDS_BLUE);
+	}
+	else
+	{
+		leds_on(LEDS_GREEN);
+	}
+	// Init End
+
+	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
@@ -383,6 +369,10 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 exit:
 	printf("PE LP: Exiting Process...\n");
+	hop_manager_free(&hop_data);
+	nhopreq_end(&hc);
+	predicate_manager_close(&predconn);
+
 	PROCESS_END();
 }
 

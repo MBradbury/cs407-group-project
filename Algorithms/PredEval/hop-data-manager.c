@@ -55,6 +55,8 @@ bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, 
 			return false;
 		}
 
+		memcpy(stored, data, data_length);
+
 		if (!map_put(map, stored))
 		{
 			free(stored);
@@ -64,8 +66,11 @@ bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, 
 
 		hop_data->max_size++;
 	}
-
-	memcpy(stored, data, data_length);
+	else
+	{
+		// Update the stored data
+		memcpy(stored, data, data_length);
+	}
 
 	return true;
 }
@@ -89,7 +94,12 @@ bool hop_manager_remove(hop_data_t * hop_data, uint8_t hops, rimeaddr_t const * 
 
 bool hop_manager_reset(hop_data_t * hop_data)
 {
-	return hop_manager_free(hop_data);
+	if (hop_data != NULL)
+	{
+		hop_data->max_size = 0;
+		return array_list_clear(&hop_data->maps);
+	}
+	return false;
 }
 
 map_t * hop_manager_get(hop_data_t * hop_data, uint8_t hop)

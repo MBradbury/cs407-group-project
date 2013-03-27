@@ -449,12 +449,18 @@ PROCESS_THREAD(data_gather, ev, data)
 	// Setup the map
 	map_init(&neighbour_info, &neighbour_map_key_compare, &neighbour_map_elem_free);
 
-	printf("PE GE: Starting Aggregation\n");
-
-	tree_agg_open(&aggconn, &sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
+	printf("PE GE: Starting Neighbour Aggregation\n");
 
 	neighbour_aggregate_open(&nconn, &sink, 121, 110, 150, &neighbour_callbacks);
 
+	// Wait for some time to let process start up and perform neighbour detect
+	etimer_set(&et, 60 * CLOCK_SECOND);
+	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+
+	printf("PE GE: Starting Data Aggregation\n");
+
+	tree_agg_open(&aggconn, &sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 
 
 	// If sink start the evaluation process to run in the background

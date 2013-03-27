@@ -15,6 +15,8 @@
 
 static const uint8_t MAX_REXMITS = 4;
 
+static const clock_time_t send_period = 1 * CLOCK_SECOND;
+
 typedef struct
 {
 	uint16_t id;
@@ -283,7 +285,7 @@ bool multipacket_open(multipacket_conn_t * conn, uint16_t channel, multipacket_c
 
 		conn->callbacks = callbacks;
 
-		ctimer_set(&conn->ct_sender, 1 * CLOCK_SECOND, &send_loop_callback, conn);
+		ctimer_set(&conn->ct_sender, send_period, &send_loop_callback, conn);
 
 		linked_list_init(&conn->sending_packets, &sending_packet_cleanup);
 
@@ -320,10 +322,11 @@ void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void
 	rimeaddr_copy(&details->target, target);
 	rimeaddr_copy(&details->source, &rimeaddr_node_addr);
 
-#ifdef MPDEBUG
-	printf("multipacket: Adding data of length %d to send to %s with id %d\n", length, addr2str(target), details->id);
-#endif
-
 	// Add to the queue to send
 	linked_list_append(&conn->sending_packets, details);
+
+#ifdef MPDEBUG
+	printf("multipacket: Adding data of length %d to send to %s with id %d. %u packets queued.\n",
+		length, addr2str(target), details->id, linked_list_length(&conn->sending_packets));
+#endif
 }

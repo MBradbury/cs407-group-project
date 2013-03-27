@@ -33,9 +33,8 @@ bool tree_agg_is_sink(tree_agg_conn_t const * conn)
 }
 
 
-// The times stubborn broadcasting will use
-// to intersperse message resends
-static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
+// The amount of subborn broadcasts to allow time for
+static const unsigned int STUBBORN_WAIT_COUNT = 5;
 
 // Time to gather aggregations over
 static const clock_time_t AGGREGATION_WAIT = 45 * CLOCK_SECOND;
@@ -106,13 +105,18 @@ static void parent_detect_finished(void * ptr)
 		msg->hop_count = conn->best_hop + 1;
 	}
 
-	printf("Sending setup message onwards with hop count %u\n", msg->hop_count);
 
-	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
+	clock_time_t send_period = random_time(2, 4, 0.1);
+	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
+
+	printf("Sending setup message onwards with hop count=%u, send=%lu/%lu, wait = %lu/%lu\n",
+		msg->hop_count, send_period, CLOCK_SECOND, wait_period, CLOCK_SECOND);
+
+	stbroadcast_send_stubborn(&conn->bc, send_period);
 
 	// Wait for a bit to allow a few messages to be sent
 	// Then close the connection and tell user that we are done
-	ctimer_set(&conn->ct_parent_detect, STUBBORN_WAIT, &stbroadcast_cancel_void_and_callback, conn);
+	ctimer_set(&conn->ct_parent_detect, wait_period, &stbroadcast_cancel_void_and_callback, conn);
 }
 
 
@@ -207,9 +211,10 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 
 	tree_agg_conn_t * conn = conncvt_stbcast(ptr);
 
-	setup_tree_msg_t const * msg = (setup_tree_msg_t const *)packetbuf_dataptr();
+	setup_tree_msg_t msg;
+	memcpy(&msg, packetbuf_dataptr(), sizeof(setup_tree_msg_t));
 
-	printf("Tree Agg: Got setup message from %s\n", addr2str(&msg->source));
+	printf("Tree Agg: Got setup message from %s\n", addr2str(&msg.source));
 
 	// If the sink received a setup message, then do nothing
 	// it doesn't need a parent as it is the root.
@@ -237,19 +242,19 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 
 	// As we have received a message we need to record the node
 	// it came from, if it is closer to the sink.
-	if (msg->hop_count < conn->best_hop)
+	if (msg.hop_count < conn->best_hop)
 	{
 		char firstaddr[RIMEADDR_STRING_LENGTH];
 		char secondaddr[RIMEADDR_STRING_LENGTH];
 
 		printf("Tree Agg: Updating to a better parent (%s H:%u) was:(%s H:%u)\n",
-			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), msg->hop_count,
+			addr2str_r(&msg.source, firstaddr, RIMEADDR_STRING_LENGTH), msg.hop_count,
 			addr2str_r(&conn->best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->best_hop
 		);
 
 		// Set the best parent, and the hop count of that node
-		rimeaddr_copy(&conn->best_parent, &msg->source);
-		conn->best_hop = msg->hop_count;
+		rimeaddr_copy(&conn->best_parent, &msg.source);
+		conn->best_hop = msg.hop_count;
 	}
 	else
 	{
@@ -257,7 +262,7 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 		char secondaddr[RIMEADDR_STRING_LENGTH];
 
 		printf("Tree Agg: Ignoring worse (or equal) parent (%s H:%u) currently:(%s H:%u)\n",
-			addr2str_r(&msg->source, firstaddr, RIMEADDR_STRING_LENGTH), msg->hop_count,
+			addr2str_r(&msg.source, firstaddr, RIMEADDR_STRING_LENGTH), msg.hop_count,
 			addr2str_r(&conn->best_parent, secondaddr, RIMEADDR_STRING_LENGTH), conn->best_hop
 		);
 	}
@@ -265,10 +270,10 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	
 	// If the parent of the node that sent this message is this node,
 	// then we are not a leaf
-	if (conn->is_leaf_node && rimeaddr_cmp(&msg->parent, &rimeaddr_node_addr))
+	if (conn->is_leaf_node && rimeaddr_cmp(&msg.parent, &rimeaddr_node_addr))
 	{
 		printf("Tree Agg: Node (%s) is our child, we are not a leaf.\n",
-			addr2str(&msg->source));
+			addr2str(&msg.source));
 
 		conn->is_leaf_node = false;
 
@@ -304,12 +309,16 @@ void tree_agg_setup_wait_finished(void * ptr)
 	rimeaddr_copy(&msg->parent, &rimeaddr_null);
 	msg->hop_count = 1;
 
-	stbroadcast_send_stubborn(&conn->bc, random_time(2, 4, 0.1));
+	clock_time_t send_period = random_time(2, 4, 0.1);
+	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
 
-	printf("Tree Agg: IsSink, sending initial message...\n");
+	printf("Tree Agg: IsSink, sending initial message... (send=%lu/%lu, wait = %lu/%lu)\n",
+		send_period, CLOCK_SECOND, wait_period, CLOCK_SECOND);
+
+	stbroadcast_send_stubborn(&conn->bc, send_period);
 
 	// Wait for a bit to allow a few messages to be sent
-	ctimer_set(&conn->ct_wait_finished, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
+	ctimer_set(&conn->ct_wait_finished, wait_period, &stbroadcast_cancel_void, conn);
 }
  
 

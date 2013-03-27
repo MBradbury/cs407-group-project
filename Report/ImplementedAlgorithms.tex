@@ -90,7 +90,7 @@ Finally, all of these custom containers are tested by a test suite that checks f
     \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
     \null\qq\qq\qq \% Inform library caller of data change\\
     \null\qq\qq\qq \res{data-changed-callback}(\var{data}, \var{hops}); \\
-    \null\qq\qq \res{fi}; \\~\\
+    \null\qq\qq \res{fi}; \\
     %
     %
   \end{boxedminipage}
@@ -157,9 +157,11 @@ After a fixed time, messages are then sent back to the source along a chain, thi
     \null\qq\qq\qq \% Set data sending timer to \var{$P_{send\_data}$} \\
     \null\qq\qq \res{fi;}\\~\\
     %
+    %
     \null\qq \% Sending Data\\
     \null\qq \emph{send\_data}:~\res{timeout}(\var{$P_{send\_data}$})$\rightarrow$\\
     \null\qq\qq \res{runicast.send}($mote\_records.getMote(id)$, $data$);\\~\\
+    %
     %
     \null\qq \% Recieved Data\\
     \null\qq \emph{recv\_data}:~\res{runicast.recv}$\langle source, data, id\rangle \rightarrow$\\
@@ -167,7 +169,9 @@ After a fixed time, messages are then sent back to the source along a chain, thi
     \null\qq\qq\qq \% Process Data\\
     \null\qq\qq \res{else}\\
     \null\qq\qq\qq \res{runicast.send}($mote\_records.getMote(id)$, $data$);\\
-    \null\qq\qq \res{fi;}\\~\\
+    \null\qq\qq \res{fi;}\\
+    %
+    %
   \end{boxedminipage}
   \caption{N-Hop Request Algorithm}
   \label{fig:n-hop-req-algorithm}

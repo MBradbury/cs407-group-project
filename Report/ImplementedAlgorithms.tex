@@ -395,6 +395,80 @@ For this to be useful we needed a way to get this data back to the sink node. Th
 
 \subsection{Clustering}
 
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \res{clustering}\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \% Boolean set to true when a node is elected to be a clusterhead\\
+    %
+    \null\qq \var{is\_CH}: bool init $False$;\\~\\
+    %
+    \null\qq \% Bool set to true on receipt of first setup message\\
+    %
+    \null\qq \var{seen\_setup}: bool init $False$;\\~\\
+    %
+    \null\qq \% Hop distance to best clusterhead\\
+    %
+    \null\qq \var{best\_hop}: int;\\~\\
+    %
+    \null\qq \% Address of best clusterhead\\
+    %
+    \null\qq \var{our\_CH}: address;\\~\\
+    %
+    \null\qq \% Newest setup message received\\
+    %
+    \null\qq \var{msg}: struct;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Detection Time, how long to wait for a better parent after hearing a setup message\\
+    \null\qq \var{$T_{detect}$}: time;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Receive new setup message\\
+    \null\qq \emph{receive-setup}::~\res{recv}$\langle source, CH, hops\rangle \rightarrow$\\
+    \null\qq\qq \% Begin detection timer if this is the first setup message seen\\
+    \null\qq\qq \res{if} (¬$seen\_setup$) \res{then} \\
+    \null\qq\qq\qq \res{if} ($is\_CH$) \res{then} \\
+    \null\qq\qq\qq\qq \res{CH\_detect\_finished}(); \\
+    \null\qq\qq\qq \res{else}\\
+    \null\qq\qq\qq\qq \res{ctimer\_set}($T_{detect}$,CH\_detect\_finished); \\
+    \null\qq\qq \res{fi}; \\
+    \null\qq\qq \res{if} ($msg.hop\_count < tmp\_hop\_count$ \&\& ¬$is\_CH$) \res{then} \\
+    \null\qq\qq\qq $\var{tmp\_CH} \assign \var{msg.source}$;\\
+    \null\qq\qq\qq $\var{tmp\_best\_hop} \assign \var{msg.hops}$;\\
+    %
+    %
+    \null\qq \% End detection period, finalise values\\
+    \null\qq \emph{CH\_detect\_finished}::~\res{timeout}(\var{T\_detect}) $\rightarrow$\\
+    \null\qq\qq $\var{our\_CH} \assign \var{tmp\_CH}$;\\
+    \null\qq\qq $\var{best\_hop} \assign \var{tmp\_best\_hop}$;\\
+    \null\qq\qq \% Forward the setup message\\
+    \null\qq\qq $\var{newmsg.source} \assign \var{\j}$;\\
+    \null\qq\qq $\var{newmsg.CH} \assign \var{is\_CH ? j : our\_CH}$;\\
+    \null\qq\qq $\var{newmsg.hops} \assign \var{best\_hop}+1$;\\
+    \null\qq\qq \res{stbroadcast\_send\_stubborn}($\var{newmsg}$);\\
+    \null\qq\qq \% Inform calling application that setup is complete\\
+    \null\qq\qq \res{setup\_complete}();\\
+    %
+    %
+    \null\qq \% Send message placed in buffer by calling application\\
+	\null\qq \emph{cluster\_send}::~\res{recv}(\var{newmsg}) $\rightarrow$\\
+    \null\qq\qq \res{if} ($is\_CH$) \res{then} \\
+    \null\qq\qq\qq \res{runicast\_send}($\var{sink}, \var{newmsg}$);
+    \null\qq\qq \res{else}\\    
+    \null\qq\qq\qq \res{mesh\_send}($\var{our\_CH}, \var{newmsg}$);
+    \null\qq\qq \res{fi}; \\
+  \end{boxedminipage}
+  \caption{Clustering Algorithm}
+\end{figure}
+
 In a wireless network, message collisions are a significant factor in terms of decreasing performance; collisions are more likely in environments featuring a high density of messages. The intuitive solution to this is to reduce the number of messages sent, with minimal compromise in the richness of the data communicated. To this end, we implemented a clustering algorithm. The principle of operation of a clustering algorithm is to establishe a set of clusterheads on network intitialisation. Each of the other nodes in the network allocates itself exactly one clusterhead, through which all traffic to the sink is routed.
 
 In our implementation, the network initialisation phase occurs when an application running on the nodes begins; this application calls the cluster setup routine. The clusterheads are selected to be the set of nodes in the one-hop neighbourhood of the sink. These nodes broadcast their status as a clusterhead to the rest of the network, and the nodes decide with which clusterhead to align themselves based on shortest distance (in hops). Throughout the resmainder of the network's operation, each node passes its messages to the sink through its chosen clusterhead. At this point control is passed back to the application, which can then call the relevant functions to send a message from a node to the sink through that node's clusterhead. As the nature of the setup guarantees that clusterheads will be within one hop of the sink, the messages they pass on from their respective nodes are sent using Contiki's runicast message type. There are no such guarantees for the other nodes, so Contiki's mesh routing is used to allow for arbitrary distance between a node and its clusterhead. This approach to clustering works well when used in small networks, as it achieves its main goal of reducing the number of messages being passed (specifically, the medium will be a lot less congested in the one-hop neighbourhood of the sink). However, this algorithm clearly does not scale well with either geographical distance or number of nodes. In the former case, the majority of nodes will be out of direct transmission range of their clusterhead and will thus have to route messages through several other intermediary nodes; thus increasing the number of messages in the network. Similarly, with large networks a large number of nodes will all need to send messages to clusterheads which form an increasingly small proportion of the network; this is liable to cause bottlenecks and collisions.

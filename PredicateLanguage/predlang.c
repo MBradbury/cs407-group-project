@@ -131,7 +131,7 @@ static bool require_stack_size(nuint size)
 
 static inline bool pop_stack(nuint size)
 {
-	if (!require_stack_size(sizeof(nuint)))
+	if (!require_stack_size(size))
 		return false;
 
 	stack_ptr += size;
@@ -1422,11 +1422,25 @@ int main(int argc, char * argv[])
 	// Evaluate the program
 	nbool result = evaluate(program_start, program_end - program_start);
 	
-
 	// Print the results
-	printf("Stack ptr value (float %f) (int %d) (bool %d)\n",
-		*((nfloat *)stack_ptr), *((nint *)stack_ptr), *((nbool *)stack_ptr) != 0
-	);
+	if (stack_size() >= sizeof(nfloat))
+	{
+		printf("Stack ptr value (float %f) (int %d) (bool %d)\n",
+			*((nfloat *)stack_ptr), *((nint *)stack_ptr), *((nbool *)stack_ptr) != 0
+		);
+	}
+	else if (stack_size() >= sizeof(nint))
+	{
+		printf("Stack ptr value (int %d) (bool %d)\n",
+			*((nint *)stack_ptr), *((nbool *)stack_ptr) != 0
+		);
+	}
+	else if (stack_size() >= sizeof(nbool))
+	{
+		printf("Stack ptr value (bool %d)\n",
+			*((nbool *)stack_ptr) != 0
+		);
+	}
 
 	printf("Result: %d\n", result);
 

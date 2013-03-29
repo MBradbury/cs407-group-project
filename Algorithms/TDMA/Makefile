@@ -23,7 +23,7 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
 
 #CFLAGS += -DNDEBUG
-CFLAGS += -DNDEBUGVM
+CFLAGS += -DNDEBUGVM -DRIMESTATS_CONF_ENABLED=1 -DENERGEST_CONF_ON=1
 
 CONTIKI = $(CS407DIR)/contiki
 include $(CONTIKI)/Makefile.include

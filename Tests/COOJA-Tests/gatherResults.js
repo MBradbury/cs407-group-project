@@ -76,7 +76,7 @@ while (true)
 		var valuesSplit = splitMsg[3].split("\\|");
 		for (var i = 0; i < valuesSplit.length; ++i)
 		{
-			var nodeData = [];
+			var nodeData = new Object();
 
 			var valueSplit = valuesSplit[i].split(",");
 
@@ -84,11 +84,7 @@ while (true)
 			{
 				var keyVals = valueSplit[j].split("=");
 
-				var pair = new Object();
-				pair["function"] = parseInt(keyVals[0]);
-				pair["value"] = sf(keyVals[1]);
-
-				nodeData.push(pair);
+				nodeData[parseInt(keyVals[0])] =  sf(keyVals[1]);
 			}
 
 			pf["values"].push(nodeData);

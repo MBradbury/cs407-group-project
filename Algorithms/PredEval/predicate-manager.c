@@ -193,7 +193,7 @@ static void mesh_timeout(struct mesh_conn * c)
 {
 	predicate_manager_conn_t * conn = conncvt_mesh(c);
 
-	PMDPRINTF("PredMan: Mesh timedout\n");
+	printf("PredMan: Failure reply timedout\n");
 
 	// We timedout, so start sending again
 	//mesh_send(c, &conn->basestation);
@@ -459,6 +459,41 @@ bool evaluate_predicate(predicate_manager_conn_t * conn,
 	}
 
 	return result;
+}
+
+void print_node_data(void const * ptr, function_details_t const * function_details, size_t functions_count)
+{
+	size_t i;
+	for (i = 0; i != functions_count; ++i)
+	{
+		printf("%u=", function_details[i].id);
+
+		void const * data = function_details[i].fn(ptr);
+
+		switch (function_details[i].return_type)
+		{
+		case TYPE_INTEGER:
+			{
+				nint x = *(nint const *)data;
+				printf("%i", x);
+			} break;
+
+		case TYPE_FLOATING:
+			{
+				double f = *(nfloat const *)data;
+				printf("%f", f);
+			} break;
+
+		default:
+			printf("unk");
+			break;
+		}
+
+		if (i + 1 < functions_count)
+		{
+			printf(",");
+		}
+	}
 }
 
 

@@ -51,4 +51,9 @@ public final class VariableDetails {
         this.hops = hops;
     }
     
+    @Override
+    public String toString()
+    {
+        return "(id=" + id + ", hops=" + hops + ")";
+    } 
 }

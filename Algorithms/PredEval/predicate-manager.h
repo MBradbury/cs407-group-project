@@ -111,4 +111,6 @@ bool evaluate_predicate(predicate_manager_conn_t * conn,
 	void const * all_neighbour_data, unsigned int nd_length,
 	predicate_detail_entry_t const * pe);
 
+void print_node_data(void const * ptr, function_details_t const * function_details, size_t functions_count);
+
 #endif /*CS407_PREDICATE_MANAGER_H*/

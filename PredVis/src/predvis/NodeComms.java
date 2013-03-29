@@ -152,9 +152,23 @@ public class NodeComms {
         }
         
         try {
-            serialDumpProcess.destroy();
+            if (serialDumpProcess != null) {
+                serialDumpProcess.destroy();
+                serialDumpProcess = null;
+            }
         } catch (Exception e) {
             // Ignore
+        }
+    }
+    
+    @Override
+    protected void finalize() throws Throwable
+    {
+        super.finalize();
+        
+        // Make sure we have killed the process we spawned
+        if (serialDumpProcess != null) {
+            serialDumpProcess.destroy();
         }
     }
 }

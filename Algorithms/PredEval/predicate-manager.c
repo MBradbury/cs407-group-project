@@ -28,17 +28,17 @@ static const clock_time_t MESH_WAIT_PERIOD = 120 * CLOCK_SECOND;
 
 PROCESS(predicate_input_process, "PredManager Read Input");
 
-// Struct recieved from base station that contains a predicate to be evaluated by this node.
-typedef struct 
-{
-	uint8_t predicate_id;
-	uint8_t bytecode_length; // length of the bytecode_instructions, located after the struct
-	uint8_t num_of_bytecode_var; // number of variables after the struct
-} eval_pred_req_t;
 
+#define PACKETBUF_ATTR_PREDICATE_ID PACKETBUF_ATTR_HOPS
+#define PACKETBUF_ATTR_BYTECODE_LEN PACKETBUF_ATTR_ERELIABLE
+#define PACKETBUF_ATTR_VAR_LEN PACKETBUF_ATTR_EPACKET_TYPE
 
 // The custom headers we use
 static const struct packetbuf_attrlist trickle_attributes[] = {
+	{ PACKETBUF_ATTR_PREDICATE_ID, PACKETBUF_ATTR_BYTE },
+	{ PACKETBUF_ATTR_BYTECODE_LEN, PACKETBUF_ATTR_BYTE },
+	{ PACKETBUF_ATTR_VAR_LEN, PACKETBUF_ATTR_BYTE },
+
 	{ PACKETBUF_ADDR_ERECEIVER, PACKETBUF_ADDRSIZE },
 	TRICKLE_ATTRIBUTES
     PACKETBUF_ATTR_LAST
@@ -83,54 +83,58 @@ static void trickle_recv(struct trickle_conn * tc)
 {
 	predicate_manager_conn_t * conn = conncvt_trickle(tc);
 
-	eval_pred_req_t const * msg = (eval_pred_req_t *)packetbuf_dataptr();
+	void const * msg = packetbuf_dataptr();
+
+	uint8_t predicate_id = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_PREDICATE_ID);
+	uint8_t bytecode_length = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_BYTECODE_LEN);
+	uint8_t variables_length = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_VAR_LEN);
 
 	// Get eventual destination from header
 	rimeaddr_t const * target = packetbuf_addr(PACKETBUF_ADDR_ERECEIVER);
 
 	//printf("Rcv packet length %d\n", packetbuf_datalen());
 
-	if (msg->bytecode_length == 0)
+	if (bytecode_length == 0)
 	{
 		// There is no bytecode, so interpret this as a request to stop
 		// evaluating this predicate
-		map_remove(&conn->predicates, &msg->predicate_id);
+		map_remove(&conn->predicates, &predicate_id);
 
-		printf("PredMan: Remove %d\n", msg->predicate_id);
+		printf("PredMan: Remove %u\n", predicate_id);
 	}
 	else
 	{
 		// Add or update entry
-		predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&conn->predicates, &msg->predicate_id);
+		predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&conn->predicates, &predicate_id);
 
 		if (stored != NULL)
 		{
-			printf("PredMan: Update %d\n", msg->predicate_id);
+			printf("PredMan: Update %u\n", predicate_id);
 
 			// Re-allocate data structures if needed
 
-			if (msg->bytecode_length != stored->bytecode_length)
+			if (bytecode_length != stored->bytecode_length)
 			{
 				free(stored->bytecode);
-				stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
+				stored->bytecode = malloc(sizeof(ubyte) * bytecode_length);
 			}
 
-			if (msg->num_of_bytecode_var != stored->variables_details_length)
+			if (variables_length != stored->variables_details_length)
 			{
 				free(stored->variables_details);
-				stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
+				stored->variables_details = malloc(sizeof(var_elem_t) * variables_length);
 			}
 		}
 		else
 		{
-			printf("PredMan: Create %d\n", msg->predicate_id);
+			printf("PredMan: Create %u\n", predicate_id);
 
 			// Allocate memory for the data
 			stored = malloc(sizeof(predicate_detail_entry_t));
 
-			stored->id = msg->predicate_id; //set the key
-			stored->bytecode = malloc(sizeof(ubyte) * msg->bytecode_length);
-			stored->variables_details = malloc(sizeof(var_elem_t) * msg->num_of_bytecode_var);
+			stored->id = predicate_id; //set the key
+			stored->bytecode = malloc(sizeof(ubyte) * bytecode_length);
+			stored->variables_details = malloc(sizeof(var_elem_t) * variables_length);
 
 			// Put data in the map
 			map_put(&conn->predicates, stored);
@@ -140,14 +144,14 @@ static void trickle_recv(struct trickle_conn * tc)
 		rimeaddr_copy(&stored->target, target);
 
 		// Pointer for bytecode variables
-		var_elem_t const * variables = (var_elem_t const *)(msg + 1);
+		var_elem_t const * variables = (var_elem_t const *)msg;
 
 		// Create a pointer to the bytecode instructions stored in the message.
-		ubyte const * bytecode_instructions = (ubyte const *)(variables + msg->num_of_bytecode_var);
+		ubyte const * bytecode_instructions = (ubyte const *)(variables + variables_length);
 
 		// Update data
-		stored->bytecode_length = msg->bytecode_length;
-		stored->variables_details_length = msg->num_of_bytecode_var;
+		stored->bytecode_length = bytecode_length;
+		stored->variables_details_length = variables_length;
 
 		memcpy(stored->bytecode, bytecode_instructions, sizeof(ubyte) * stored->bytecode_length);
 		memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
@@ -265,7 +269,7 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	// Send the request message
 	const unsigned int packet_size =
-		sizeof(eval_pred_req_t) +
+		//sizeof(eval_pred_req_t) +
 		(sizeof(ubyte) * bytecode_length) +
 		(sizeof(var_elem_t) * var_details_length);
 
@@ -277,16 +281,20 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_size);
-	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+	void * msg = packetbuf_dataptr();
 
 	// Set eventual destination in header
 	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
 
-	msg->predicate_id = id;
-	msg->bytecode_length = bytecode_length;
-	msg->num_of_bytecode_var = var_details_length;
+	packetbuf_set_attr(PACKETBUF_ATTR_PREDICATE_ID, id);
+	packetbuf_set_attr(PACKETBUF_ATTR_BYTECODE_LEN, bytecode_length);
+	packetbuf_set_attr(PACKETBUF_ATTR_VAR_LEN, var_details_length);
 
-	var_elem_t * msg_vars = (var_elem_t *)(msg + 1);
+	//msg->predicate_id = id;
+	//msg->bytecode_length = bytecode_length;
+	//msg->num_of_bytecode_var = var_details_length;
+
+	var_elem_t * msg_vars = (var_elem_t *)msg;
 
 	memcpy(msg_vars, var_details, sizeof(var_elem_t) * var_details_length);
 
@@ -320,17 +328,16 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimea
 		return false;
 
 	packetbuf_clear();
-	packetbuf_set_datalen(sizeof(eval_pred_req_t));
-	eval_pred_req_t * msg = (eval_pred_req_t *)packetbuf_dataptr();
+	packetbuf_set_datalen(1);
 
 	// Set eventual destination in header
 	packetbuf_set_addr(PACKETBUF_ADDR_ERECEIVER, destination);
 
-	msg->predicate_id = id;
+	packetbuf_set_attr(PACKETBUF_ATTR_PREDICATE_ID, id);
 
 	// Setting bytecode length to 0 indicates that this predicate should be removed
-	msg->bytecode_length = 0;
-	msg->num_of_bytecode_var = 0;
+	packetbuf_set_attr(PACKETBUF_ATTR_BYTECODE_LEN, 0);
+	packetbuf_set_attr(PACKETBUF_ATTR_VAR_LEN, 0);
 
 	trickle_send(&conn->tc);
 

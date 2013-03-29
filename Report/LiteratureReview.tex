@@ -91,17 +91,22 @@ Overall, one of the major conclusions of this work is that anomalous sensor data
 
 \subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}
-\cite{wsnpollution} Claimed: Ivan
+\cite{wsnpollution} 
+
+\cite{fotuewsnpollution} Claimed: Ivan
 
 Air pollution has been a growing concern in congested urban cities as a result of industrialisation and heavy transportation. These concerns include poor air quality and visibility and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densely deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and industrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
 
-Engineers from the University of Luxembourg implemented a system based on a Wireless Mesh Network of sensors to measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution areas are out of range of the communication service. David Et Al. proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in such areas.
-
-The network consists of a set of fixed and mobile sensors which are connected to several mesh routers within a polluted area and makes use of a gateway which transmits data back to the monitoring server as well as providing internet connectivity to the sensors. High-gain antennas was used to reduce the probability of interference from non-city radio frequency emitters such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthogonal channels between the sensors, mesh routers, gateways and directional antennas. A server middleware was responsible for allocating IP addresses to the sensors and any external user. At the monitoring station, the transmitted data is analysed by an Air Pollution Monitoring Toolbox application and compares the pollution level to the 'critical level of pollution'. The critical data are transmitted to an Air Pollution Decision makers for safety guidance.
+Engineers from the University of Luxembourg implemented a system based on a Wireless Mesh Network of sensors to measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution areas are out of range of the communication service.  \citeauthor{fotuewsnpollution} in \cite{fotuewsnpollution} proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in such areas.
 
 \paragraph{WSN Challenges}
 
 \begin{itemize}
+\item Reducing communication interference
+
+High-gain antennas was used to reduce the probability of interference from non-city radio frequency emitters such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthogonal channels between the sensors, mesh routers, gateways and directional antennas.
+
+
 \item Limiting number of request messages each sensor can receive from the data server.
 
 The network uses an Ad-hoc On-Demand Distance Vector routing protocol for efficient forwarding of data packets to the data server and makes use of a series of messages to communicate through the network and to discover and maintain data routes. A request message is propagated to the network when the data server requests for a specific data item. All the sensors receives the message and checks whether is it the destination or not. If not, it stores a copy of the message in its buffer containing previously broadcasted request messages and rebroadcasts it back to its neighbours. Once the destined sensor receives the message it sends back a reply message using the reverse path of the data server.

@@ -103,26 +103,15 @@ In Contiki sending a single packet has its limits, there is only so much data yo
 
 Contiki's data transfer primitives for their RIME protocols are fairly hidden because of their focus on uIPv6. We found \verb|ruldolph0| first \footnote{ruldolph0 \url{http://contiki.sourceforge.net/docs/2.6/a01735.html}} and then \verb|rucb| (Reliable Unicast Bulk Transfer) much later \footnote{rucb \url{http://contiki.sourceforge.net/docs/2.6/a00365.html}}. However, both of them have problems, the API is very convoluted and seems more geared towards sending very large files across the network. This is very different to our aim, which is to send relatively small packets of data to a specific neighbour. So we wrote our own API that would split data of any given size and reassemble it once received, our API was not focused on processing data chunks like \verb|ruldolph0| or \verb|rucb|, but simply operated on a block of memory given to it. This is a case where a simpler API made development much easier for us. Admittedly because our implementation uses dynamic memory allocation it could potentially perform worse, but because the energy of sending and receiving messages dwarfs the energy usage of the CPU, we feel that easier development tradeoff made it worth it. Also, now that code has been written to use this API, the \verb|multipacket| library itself could always be rewritten to use \verb|rucb| as a base to run more efficiently.
 
-\subsubsection{N-Hop Request} 
+\subsubsection{N-Hop Request - Joe (NEEDS MERGING)} 
 
 We developed the N-Hop Request communication layer very early in the project. Our application needed a way to pass predicate messages between nodes, these messages sometimes needed to travel multiple hops in the network and also contain routing information for the receiving node, so that it could respond to the originator. Firstly, we consulted the Contiki libraries to see if any of the existing network primitives could be used for this purpose. We initially considered \verb|Mesh| which sends a packet to any node on the network, this seemed like it would be a prefect fit for sending data back to the originator node; However, issues arose when we discovered that it could only send one unique packet across the network at a time. This was due to the way that \verb|Mesh| was implemented, it only maintains a record of the most recently received packet on the network. This assumption is fine if you assume that you only have 1 sender like a base station but when you have multiple senders sending different packets it fails. Next we considered \verb|Trickle|. Unfortunately, like \verb|Mesh|, \verb|Trickle| had similar short comings which made unsuitable for our task.
 
 Having explored several options from the Contiki source library we realised that N-Hop Request had a very specific set of requirements. We found that no one library offered all the functionality we needed; Therefore, We opted for developing our own communication layer and API to handle the routing of these messages. For this we used existing Contiki Rime Protocol implementations and initially the primitive was heavily influenced by the H-Send\cite{HSEND} algorithm, we started by implementing a variation of H-Send which we then went onto generalise for predicates that could be defined at run-time by our GUI running on the base station.
 
-The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \verb|runicast| (Reliable Unicast). Stubborn Broadcast is used by the originator to send the request for application and network information n-hops in the network. Every node that receives the request checks the hop count in the message; if it's $\> 1$ then, it decrements the hop count and forwards the packet on to it's neighbours using Stubborn Broadcast. Every node that receives this request then waits a random amount of time based on it's rime address and then uses Reliable Unicast to send it's application and Network Information back to the node it received the request from. If a node receives one o  
+The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \verb|runicast| (Reliable Unicast). Stubborn Broadcast is used by the originator to send the request for application and network information n-hops in the network. Every node that receives the request checks the hop count in the message; if it's $\> 1$ then, it decrements the hop count and forwards the packet on to it's neighbours using Stubborn Broadcast. Every node that receives this request then waits a random amount of time with it's rime address as a seed and then uses Reliable Unicast to send it's application and Network Information back to the node it received the request from. If a node receives this packet and isn't the intended target (the originator) they forward packet on to the node that they received their request message from, eventually the packet will arrive back at the originator who can then deliver the message. In order to minimise message sends, each node maintains the most efficient node to get back to the originator. This is based on the number of hops it takes for a request message to reach the node, a message from a node with 3 hops left is a more efficient route than a message from a node with only 2 hops left. Finally, once a pre-determined wait period has expired the gathered data is passed to the predicate evaluator and any further data received is not delivered.
 
-This information is requested rather than sending the predicate to evaluate because some predicates might require global knowledge which is only available at the originator. 
-
-Finally, the gathered data is then passed to the predicate evaluator.
-
-\subsubsection{N-Hop Flood}
-
-
-To improve upon our initial implementation of N-Hop Request we considered situations where every node in the network is evaluating a single predicate. Since we know that every node in an N-Hop radius will need our application and network information we can forgo the request phase of the previous implementation and instead just flood the network with our data. When a node receives a predicate that is marked as global it uses the 
-
-\subsubsection{Neighbour Detection}
-
-\subsubsection{N-Hop Request}
+\subsubsection{N-Hop Request - Amit (NEEDS MERGING)}
 Contiki provides broadcast primitives to allow the flooding of messages through the network, however the \verb|trickle|\cite{Levis04trickle} primitive only allows a single source node\footnote{trickle.h \url{http://contiki.sourceforge.net/docs/2.6/a00381.html}}, which presents a problem, when multiple nodes are attempting to send a message N-hops away. 
 In some cases \verb|reliable unicast| could be used to target the specific nodes for which the message is intended. This, however, is not suitable when the identifies of the nodes is not known, or in situations when storing routing tables is not appropriate. 
 
@@ -193,6 +182,62 @@ After a fixed time, messages are then sent back to the source along a chain, thi
   \caption{N-Hop Request Algorithm}
   \label{fig:n-hop-req-algorithm}
 \end{figure}
+
+\subsubsection{N-Hop Flood}
+
+To improve upon the efficiency of our initial implementation of N-Hop Request we decide to implement a separate protocol for situations where every node in the network is evaluating the same predicate. Firstly we considered the problem, in this situation we know that every node requires the application and network information of every other node in it's N-Hop radius (determined by the predicate being evaluated). Since every node is evaluating the predicate and all nodes know that, we can forgo the request phase of the N-Hop Request implementation; Instead, we simply flood our N-Hop neighbours with our application and network data and the other nodes in the network do the same. 
+
+The N-Hop Flood protocol uses the Rime \verb|broadcast| primitive to send all it's messages to neighbouring nodes. It maintains a buffer of all the packets received and is provided with parameters on initialisation to determine how long each broadcasting round is and how often the protocol must re-broadcast messages within the round. Every node in the network continues to rebroadcast it's own message as well as any packets in the buffer if they have a hop count of $\> 1$, this occurs every time the rebroadcast interval completes. Once the round is finished the message buffer is cleared and all timers are reset.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \verb|n-hop-flood|\\
+    %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The number of hops left to send a message\\
+    \null\qq \var{hop\_limit}: int\\~\\
+    %
+    \null\qq \% The send period for this predicate\\
+    \null\qq \var{send\_period}: time\\~\\
+    %
+    \null\qq \% The max number of times to re-transmit\\
+    \null\qq \var{maxrx}: int\\~\\
+    %
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \% The queue of packets that need to be broadcast\\
+    \null\qq \var{packet\_queue}: linked list\\~\\
+    %
+    \null\qq \% The map of all messages received from the nodes N-Hop neighbours\\
+    \null\qq \var{latest\_message\_seen}: map\\~\\
+    %
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Broadcast Data\\
+    TODO...
+    %
+    %
+    \null\qq \% Recieved Data\\
+    \null\qq \emph{recv\_data}:~$\langle data, sender\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($latest\_message\_seen.getMessage(sender)$ == $NULL$) \res{then}\\
+    \null\qq\qq\qq \% \res{latest\_message\_seen.addMessage}($sender$, $data$);\\
+    \null\qq\qq \res{else}\\
+    \null\qq\qq\qq Ignore the Data\\
+    \null\qq\qq \res{fi;}\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{N-Hop Flood Algorithm}
+  \label{fig:n-hop-flood-algorithm}
+\end{figure}   
+
+\subsubsection{Neighbour Detection}
 
 \subsubsection{Tree Aggregation}
 

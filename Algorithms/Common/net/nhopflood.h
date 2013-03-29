@@ -46,4 +46,3 @@ void nhopflood_stop(nhopflood_conn_t * conn);
 bool nhopflood_send(nhopflood_conn_t * conn, uint8_t hops);
 
 #endif /*CS407_NHOPFLOOD*/
-

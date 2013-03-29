@@ -129,6 +129,6 @@ while (true)
 }
 
 // Write out our results
-log.log(JSON.stringify(results));
+log.log(JSON.stringify(results) + "\n");
 
 log.testOK();

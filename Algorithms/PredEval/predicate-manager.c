@@ -22,6 +22,10 @@
 
 #define UINT8_MIN 0
 
+
+static const clock_time_t MESH_WAIT_PERIOD = 120 * CLOCK_SECOND;
+
+
 PROCESS(predicate_input_process, "PredManager Read Input");
 
 // Struct recieved from base station that contains a predicate to be evaluated by this node.
@@ -193,7 +197,7 @@ static void mesh_timeout(struct mesh_conn * c)
 {
 	predicate_manager_conn_t * conn = conncvt_mesh(c);
 
-	printf("PredMan: Failure reply timedout\n");
+	printf("PredMan: PF reply timedout\n");
 
 	// We timedout, so start sending again
 	//mesh_send(c, &conn->basestation);
@@ -217,7 +221,7 @@ bool predicate_manager_open(
 		trickle_open(&conn->tc, trickle_interval, ch1, &tc_callbacks);
 		channel_set_attributes(ch1, trickle_attributes);
 
-		mesh_open(&conn->mc, ch2, &mc_callbacks);
+		mesh_open(&conn->mc, ch2, &mc_callbacks, MESH_WAIT_PERIOD);
 
 		return true;
 	}
@@ -386,13 +390,25 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	// Copy in neighbour data
 	memcpy(msg_neighbour_data, data, data_size * data_length);
 
-	// If the target is the current node, just deliver the message
-	if (rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
+	// Make sure we have a backup of the packet
+	// Just incase the receiver function clears it
+	char tmpBuffer[PACKETBUF_SIZE];
+	memcpy(tmpBuffer, msg, packet_length);
+
+	// Also have the sender receive the message
+	// This will cause the details to be printed out for analysis
+	mesh_rcv(&conn->mc, &rimeaddr_node_addr, 0);
+
+	// If the target is not the current node send the message
+	if (!rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
 	{
-		mesh_rcv(&conn->mc, &rimeaddr_node_addr, 0);
-	}
-	else
-	{
+		packetbuf_clear();
+		packetbuf_set_datalen(packet_length);
+		msg = (failure_response_t *)packetbuf_dataptr();
+
+		// Copy in the packet backup
+		memcpy(msg, tmpBuffer, packet_length);
+
 		mesh_send(&conn->mc, &conn->basestation);
 	}
 

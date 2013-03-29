@@ -28,8 +28,7 @@ for (var i = 0; i < allmotes.length; ++i)
 // the units this function takes is in milliseconds
 TIMEOUT(220000);
 
-GENERATE_MSG(200000, "sleep"); //Wait for 200 secs
-YIELD_THEN_WAIT_UNTIL(msg.equals("sleep"));
+GENERATE_MSG(200000, "END"); //Wait for 200 secs
 
 while (true)
 {
@@ -41,14 +40,15 @@ while (true)
  	}
  	catch (e)
  	{
-	    // Write out our results
-	    log.log(JSON.stringify(results));
-
  		// Rethrow exception again, to end the script.
  		throw e;
 	}
 
-	if (msg.startsWith("PF "))
+	if (msg.equals("END"))
+	{
+		break;
+	}
+	else if (msg.startsWith("PF "))
 	{
 		var pf = new Object();
 
@@ -127,3 +127,8 @@ while (true)
 		results["stats"]["rime"].push(data);
 	}
 }
+
+// Write out our results
+log.log(JSON.stringify(results));
+
+log.testOK();

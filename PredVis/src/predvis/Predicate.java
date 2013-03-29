@@ -94,7 +94,9 @@ public class Predicate {
             } else {
                 Hoppy.ReInit(in);
             }
-            hoppy.run(out);
+			Program program = hoppy.getProgram();
+			String target = program.getPredicateTarget();
+            HashMap<Integer, Integer> vdMap = hoppy.compile(program, out);
             
             //Run Dragon
             in = new ByteArrayInputStream(out.toString().getBytes(Charset.forName("UTF-8")));
@@ -114,6 +116,14 @@ public class Predicate {
             for (int i = 0; i < bytes.length; ++i) {
                 bytecode[i] = (int)(bytes[i] & 0xFF);
             }
+			
+			//Set up variable details structure
+			VariableDetails[] vds = new VariableDetails[vdMap.size()];
+			int i = 0;
+			for (int n : vds.keySet()) {
+				vds[i++] = new VariableDetails(vds.get(n), n);
+			}
+			
         } catch (Exception e) {
             //TODO
         }

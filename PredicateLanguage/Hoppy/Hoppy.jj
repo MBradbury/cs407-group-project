@@ -30,32 +30,33 @@ public class Hoppy
 	public static void main(String args[]) throws Exception, ParseException, CompilationException, TypeException
 	{
 		Hoppy parser = new Hoppy(System.in);
-		Program program = parser.Input();
+		
+		Program program = parser.getProgram();
 
-		compile(program);
+		HashMap<Integer, Integer> vds = parser.compile(program, System.out);
+		
+		for (int key : vds.keySet())
+		{
+			System.out.println("//VD " + key + " = " + vds.get(key));
+		}
 	}
 
-    public void run(OutputStream out) throws Exception
+    public Program getProgram() throws Exception
     {
-        Program program = Input();
-        compile(program, out);
+        return Input();
     }
 
-	private static void compile(Program program) throws Exception
-	{
-		compile(program, System.out);
-	}
-
-	private static void compile(Program program, OutputStream out) throws Exception
+	private static HashMap<Integer, Integer> compile(Program program, OutputStream out) throws Exception
 	{
         PrintStream ps = new PrintStream(out);
 
 		ps.println("//" + program.toString());
 		ps.println("//TARGETING " + program.getPredicateTarget());
 
-
         Compiler c = new Compiler(ps);
 		c.visit(program.getSyntaxTree());
+		
+		return c.getVariableDetails();
 	}
 }
 
@@ -154,18 +155,23 @@ final class Compiler implements ISyntaxTreeVisitor
 	private final HashMap<String, FunDetails> functionScope = new HashMap<String, FunDetails>();
 	private final HashMap<String, ArrIds> variableScope = new HashMap<String, ArrIds>();
 	private final HashMap<String, Integer> arrayScope = new HashMap<String, Integer>();
+	private final HashMap<Integer, Integer> neighbourVarDetails = new HashMap<Integer, Integer>();
 
 	private int variableId = 0;
 	private int arrVariableId = 255;
 
 	private boolean writtenHalt = false;
 
-    private PrintStream out = null;//System.out;
+    private final PrintStream out;
+	
+	public HashMap<Integer, Integer> getVariableDetails()
+	{
+		return neighbourVarDetails;
+	}
     
     public Compiler()
     {
-		// The this variable is implicitly in the scope
-		variableScope.put("this", new ArrIds(variableId++, 0));
+		this(System.out);
     }
 	
 	public Compiler(PrintStream out)
@@ -178,13 +184,13 @@ final class Compiler implements ISyntaxTreeVisitor
 	
 	public Compiler(Compiler other)
 	{
-		this();
+		this(other.out);
 		this.variableScope.putAll(other.variableScope);
 		this.arrayScope.putAll(other.arrayScope);
 		this.functionScope.putAll(other.functionScope);
+		this.neighbourVarDetails.putAll(other.neighbourVarDetails);
 		this.variableId = other.variableId;
 		this.writtenHalt = other.writtenHalt;
-        this.out = other.out;
 	}
 
 	private void write(String code)
@@ -677,6 +683,8 @@ final class Compiler implements ISyntaxTreeVisitor
 
 			comment("STORING " + item.getNeighbourCount() + " IN " + item.getVariable());
 			
+			neighbourVarDetails.put(item.getNeighbourCount(), location);
+			
 			// Make sure not in scope before we add it
 			checkIsNot(arrayScope.keySet(), item.getVariable());
 			arrayScope.put(item.getVariable(), location);
@@ -687,7 +695,8 @@ final class Compiler implements ISyntaxTreeVisitor
 				writeHalt = writtenHalt = true;
 			}
 			
-			item.getScope().acceptVisit(copy());
+			// Don't create a copy as we want these changes to be visible to the original
+			item.getScope().acceptVisit(this);
 
 			if (writeHalt)
 			{
@@ -707,7 +716,8 @@ final class Compiler implements ISyntaxTreeVisitor
 
 			functionScope.put(item.getName(), new FunDetails(item.getId(), item.getType()));
 
-			item.getScope().acceptVisit(copy());
+			// Don't create a copy as we want these changes to be visible to the original
+			item.getScope().acceptVisit(this);
 		}
 		else
 		{

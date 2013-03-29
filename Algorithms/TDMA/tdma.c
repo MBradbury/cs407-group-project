@@ -9,6 +9,8 @@
 
 #include "dev/leds.h"
 
+#include "lib/print-stats.h"
+
 #include "net/rime/broadcast.h"
 
 #include "containers/linked-list.h"
@@ -447,6 +449,8 @@ PROCESS_THREAD(startup_process, ev, data)
 			printf("Broadcasting our slot %u\n", assigned_slot);
 
 			bcast_beacon(&bc, false);
+
+			print_stats();
 		}
 	}
 

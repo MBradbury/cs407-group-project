@@ -352,13 +352,17 @@ public class PredVis extends JFrame {
     }
     
     private void updateNetworkView(NetworkState ns) {
+        graphPanel.removeAll();
+        
         if (ns == null) {
-            ns = new NetworkState();
+            //ns = new NetworkState();
+            JLabel label = new JLabel("No network state received.", SwingConstants.CENTER);
+            label.setPreferredSize(new Dimension(600, 600));
+            graphPanel.add(label);
+            graphPanel.repaint();
+            return;
         }
         
-        if (vv != null) {
-            graphPanel.remove(vv);
-        }
         
         //Initialise network viewer.
         layout = new CircleLayout<NodeId, String>(ns.getGraph());
@@ -367,13 +371,12 @@ public class PredVis extends JFrame {
         vv.setPreferredSize(new Dimension(600, 600));
         
         // Init. vertex painter.
-        // TODO: Prevent colour changing on a resize
-        // Ideally we want a function that will cap a node id to a colour
         final Transformer<NodeId, Paint> vertexPaint = new Transformer<NodeId, Paint>() {
             @Override
             public Paint transform(NodeId i) {
-                Random rng = new Random();
-                return new Color(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256));
+                //Convert node id hash to colour.
+                int hash = i.hashCode();
+                return new Color(hash % 256, (hash % 128) * 2, (hash % 64) * 4);
             }
         };
         

@@ -97,15 +97,14 @@ Overall, one of the major conclusions of this work is that anomalous sensor data
 
 Air pollution has been a growing concern in congested urban cities as a result of industrialisation and heavy transportation. These concerns include poor air quality and visibility and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densely deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and industrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
 
-Engineers from the University of Luxembourg implemented a system based on a Wireless Mesh Network of sensors to measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution areas are out of range of the communication service.  \citeauthor{fotuewsnpollution} in \cite{fotuewsnpollution} proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in such areas.
+\citeauthor{fotuewsnpollution} in \cite{fotuewsnpollution} proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution areas are out of range of the communication service. In addtion, some polluted areas lack the security measures or have industrial restrictions to deploy fixed sensors so they had to use mobile sensors which were attached on vehicles. 
 
 \paragraph{WSN Challenges}
 
 \begin{itemize}
 \item Reducing communication interference
 
-High-gain antennas was used to reduce the probability of interference from non-city radio frequency emitters such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthogonal channels between the sensors, mesh routers, gateways and directional antennas.
-
+High-gain antennas was used to reduce the probability of interference from non-city radio frequency emitters such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthogonal channels. Each set of devices would use a unique channel to communicate with a different set of devices for example the mesh network would use a channel Cs with the sensors and channel Cg with the gateway.
 
 \item Limiting number of request messages each sensor can receive from the data server.
 
@@ -118,8 +117,15 @@ To prevent the sensors from overloading with request messages, each message is s
 The wireless mesh network is energy efficient since the sensors are energy constrained. This uses an enhanced energy conserving routing protocol which employs a routing algorithm that aims to distribute data among maximally disjoint paths towards the sink so that the lifeline of the WSN service can be prolonged. It also allows the sensors to participate in carrying the global traffic over the network
 
 \item Data transmission periods
-\item Optimized means of gateway placements
+
+To avoid high energy consumptions, data from the sesors to the data server were only transmitted at specifc times of the day (non-real time). This allowed for energy and bandwidth optimization and thus increasing the network's lifetime on the long run.
+
+\item Optimized placements of mesh router 
+
+Since the network includes mobile sensors, there are chances that it can lose connectivity with the the fixed sensors. A challenge that the team faced was placing the mesh routers in such a way that they were always connected to the mobile and fixed sensors in order to receive the sensed data. This is crucial for network reliability and quality of service.
 \end{itemize}
+
+
 
 \subsubsection*{Forest Fires}
 \cite{libeliumForestFires}

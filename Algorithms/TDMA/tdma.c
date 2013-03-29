@@ -339,7 +339,7 @@ static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_
 	printf("PELP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
 		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
 
-	printf("PF *%u:", response->predicate_id);
+	printf("PF *%s:%u:", addr2str(from), response->predicate_id);
 
 	hops_position_t const * hops_details = (hops_position_t const *)(response + 1);
 

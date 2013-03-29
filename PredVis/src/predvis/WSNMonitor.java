@@ -48,11 +48,13 @@ class NodeCommsResponder implements NodeCommsCallback {
             
             String[] splitFirst = stripped.split(":");
             
-            int predicateId = Integer.parseInt(splitFirst[0]);
+            String from = splitFirst[0];
+            
+            int predicateId = Integer.parseInt(splitFirst[1]);
             
             HashMap<VariableDetails, Integer> vds = new HashMap<VariableDetails, Integer>();
             
-            for (String det : splitFirst[1].split(","))
+            for (String det : splitFirst[2].split(","))
             {
                 String[] detSplit = det.split("#");
                 
@@ -65,7 +67,7 @@ class NodeCommsResponder implements NodeCommsCallback {
                 vds.put(vd, length);
             }
             
-            String[] dataSplit = splitFirst[2].split("\\|");
+            String[] dataSplit = splitFirst[3].split("\\|");
             
             // Each hash map contains the data for a single node
             // The key in a hash map is the function id, the value

@@ -96,7 +96,8 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn,
 
 
 bool predicate_manager_send_response(predicate_manager_conn_t * conn, struct hop_data * hop_data,
-	predicate_detail_entry_t const * pe, void * data, size_t data_size, size_t data_length);
+	predicate_detail_entry_t const * pe, void const * data, size_t data_size, size_t data_length,
+	node_data_fn node_data);
 
 
 #define predicate_manager_get_map(conn) ((conn) == NULL ? NULL : &(conn)->predicates)

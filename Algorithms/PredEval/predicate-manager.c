@@ -334,7 +334,8 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimea
 }
 
 bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t * hop_data,
-	predicate_detail_entry_t const * pe, void * data, size_t data_size, size_t data_length)
+	predicate_detail_entry_t const * pe, void const * data, size_t data_size, size_t data_length,
+	node_data_fn node_data)
 {
 	if (conn == NULL || pe == NULL)
 	{
@@ -344,7 +345,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	const unsigned int packet_length =
 		sizeof(failure_response_t) +
 		sizeof(hops_position_t) * pe->variables_details_length +
-		data_size * data_length;
+		data_size * (data_length + 1);
 
 	if (packet_length > PACKETBUF_SIZE)
 	{
@@ -355,6 +356,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	}
 
 	// TODO: Switch to using ruldolph1 or our own multipacket
+	// otherwise this cannot handle packets larger than 128 bytes
 
 	packetbuf_clear();
 	packetbuf_set_datalen(packet_length);
@@ -362,7 +364,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 
 	msg->predicate_id = pe->id;
 	msg->num_hops_positions = pe->variables_details_length;
-	msg->data_length = data_length;
+	msg->data_length = data_length + 1;
 
 	hops_position_t * hops_details = (hops_position_t *)(msg + 1);
 
@@ -376,6 +378,12 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 
 	void * msg_neighbour_data = (void *)(hops_details + pe->variables_details_length);
 
+	// Copy in this node's data
+	node_data(msg_neighbour_data);
+
+	msg_neighbour_data = ((char *)msg_neighbour_data) + data_size;
+
+	// Copy in neighbour data
 	memcpy(msg_neighbour_data, data, data_size * data_length);
 
 	// If the target is the current node, just deliver the message
@@ -455,7 +463,7 @@ bool evaluate_predicate(predicate_manager_conn_t * conn,
 	if (!result)
 	{
 		predicate_manager_send_response(conn, hop_data,
-					pe, all_neighbour_data, data_size, nd_length);
+					pe, all_neighbour_data, data_size, nd_length, data_fn);
 	}
 
 	return result;

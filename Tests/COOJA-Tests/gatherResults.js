@@ -9,8 +9,6 @@ if (typeof String.prototype.startsWith != 'function')
 	};
 }
 
-var out = "";
-
 // Use JavaScript object as an associative array
 var results = new Object();
 results["stats"] = new Object();
@@ -26,11 +24,11 @@ for (var i = 0; i < allmotes.length; ++i)
 }
 
 
-// Set a timeout of 200 seconds
+// Set a timeout of 920 seconds
 // the units this function takes is in milliseconds
-TIMEOUT(220000);
+TIMEOUT(920000);
 
-GENERATE_MSG(200000, "END"); //Wait for 200 secs
+GENERATE_MSG(900000, "END"); //Wait for 900 secs
 
 while (true)
 {
@@ -44,7 +42,7 @@ while (true)
 	{
 		var pf = new Object();
 
-		var splitMsg = msg.substring("PF *".length, msg.length - "*".length).split(":");
+		var splitMsg = msg.substring(msg.indexOf("*") + 1, msg.lastIndexOf("*")).split(":");
 
 		pf["on"] = id;
 		pf["node"] = splitMsg[0];

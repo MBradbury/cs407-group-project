@@ -9,6 +9,13 @@ if (typeof String.prototype.startsWith != 'function')
 	};
 }
 
+// We need to fix strings for some reason
+// http://www.mirthcorp.com/community/forums/showthread.php?t=5128
+// http://nelsonwells.net/2012/02/json-stringify-with-mapped-variables/
+function sf(s) {
+	return new String(s);
+}
+
 // Use JavaScript object as an associative array
 var results = new Object();
 results["stats"] = new Object();
@@ -44,8 +51,8 @@ while (true)
 
 		var splitMsg = msg.substring(msg.indexOf("*") + 1, msg.lastIndexOf("*")).split(":");
 
-		pf["on"] = id;
-		pf["node"] = splitMsg[0];
+		pf["on"] = sf(id);
+		pf["node"] = sf(splitMsg[0]);
 		pf["predicateId"] = parseInt(splitMsg[1]);
 
 		pf["variableDetails"] = [];
@@ -79,7 +86,7 @@ while (true)
 
 				var pair = new Object();
 				pair["function"] = parseInt(keyVals[0]);
-				pair["value"] = keyVals[1];
+				pair["value"] = sf(keyVals[1]);
 
 				nodeData.push(pair);
 			}

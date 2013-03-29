@@ -9,3 +9,16 @@ We use malloc to dynamically allocate memory when needed as this simplified deve
 \subsection{Improve C Containers Developed}
 
 To aid in the development of our applications (and to ease developers from other languages such as Java to C) we developed a library of containers. These containers are very simple with the aim of having low memory usage. However, the complexity of certain operations could be improved. For example the \verb|map| container's time complexity for retrieval of an element given a key is O(n) where n is the number of elements in the container as the underlying container is simply an array. This could be improved to O(log(n)) by sorting the elements in the underlying array, or improved further to amortized O(1) by using a hash table. Although, whatever improved container is chosen, the importance of memory usage (including issues such as fragmentation) should be taken into account.
+
+\subsection{Stateful Predicates}
+
+In \autoref{sec:lit-review-practical-experience} we discussed a number of real-world deployments that have been undertaken, one of these was habitat monitoring on Great Duck Island by \citeauthor{SzewczykPMC04}. One of the issues that the authors found was that clock drift could lead to lots of collisions by causing to slots which when assigned didn't overlap, but came to do so. A way that our solution could have been extended to detect this is to add the notion of history to a predicate. So instead of just evaluating the predicate based on what is available at that instant, the predicate is also evaluated on what is known about that node in the past.
+
+This becomes difficult due to the limitations of the mote hardware. As the motes have limited memory, they will not be able to hold all of the information they may wish to be evaluating over. There is also an issue where individual motes running the same firmware may have different memory usages due to memory fragmentation and the way that dynamic memory allocation works \cite{?}. So this rules out allowing our in-network predicate evaluation algorithms from utilising this history. However, the at-sink global evaluation algorithms can be evaluated on much more capable hardware with much larger memories. The memory size for4 a desktop computer is many of order of magnitude greater than that a mote (16GB vs 16KB). Finally, as the full state history is available off the sensor network, it would also allow developers to write their own analysis scripts out of the scope of testing predicates.
+
+
+\subsection{Mote Mobility}
+
+When considering mobility of the sensor network the problem becomes very different. We have developed our solution on the assumption that it will be used to test certain properties that have been set up in advance to ensure that energy is saved later on, or to check certain application properties and the way that they relate to their neighbours. If the neighbours are continuously changing (as they would be in a deployment such as ZebraNet \cite{Juang:2002:ECW:635508.605408}), then checking certain neighbour properties would be meaningless because for some of those properties there would be no reason to set them up.
+
+\textbf{TODO: finish off}

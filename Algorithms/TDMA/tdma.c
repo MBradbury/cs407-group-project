@@ -87,7 +87,7 @@ static const unsigned int slot_count = 10;
 static const clock_time_t slot_length = 2 * CLOCK_SECOND;
 
 // The length of each round
-static const clock_time_t round_length = 20 * CLOCK_SECOND;
+static const clock_time_t round_length = 60 * CLOCK_SECOND;
 
 static struct ctimer ct_change_assigned_slot;
 
@@ -334,10 +334,43 @@ static bool send_example_predicate(pele_conn_t * pele, rimeaddr_t const * destin
 
 static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
 {
-	failure_response_t * response = (failure_response_t *)packetbuf_dataptr();
+	failure_response_t const * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PE LP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
+	printf("PELP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
 		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
+
+	printf("PF *%s:%u:", addr2str(from), response->predicate_id);
+
+	hops_position_t const * hops_details = (hops_position_t const *)(response + 1);
+
+	uint8_t i;
+	for (i = 0; i != response->num_hops_positions; ++i)
+	{
+		printf("%u#%u#%u", hops_details[i].hops, hops_details[i].var_id, hops_details[i].length);
+
+		if (i + 1 < response->num_hops_positions)
+		{
+			printf(",");
+		}
+	}
+
+	printf(":");
+
+	void const * msg_neighbour_data = (hops_details + response->num_hops_positions);
+
+	for (i = 0; i != response->data_length; ++i)
+	{
+		void const * ptr = ((char const *)msg_neighbour_data) + (i * conn->data_size);
+		
+		print_node_data(ptr, conn->function_details, conn->functions_count);
+
+		if (i + 1 < response->data_length)
+		{
+			printf("|");
+		}
+	}
+
+	printf("*\n");
 }
 
 PROCESS_THREAD(startup_process, ev, data)

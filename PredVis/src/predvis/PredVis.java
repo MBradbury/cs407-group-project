@@ -16,6 +16,38 @@ import javax.swing.*;
 import javax.swing.event.*;
 import org.apache.commons.collections15.Transformer;
 
+class PredicateListRenderer extends DefaultListCellRenderer  
+{  
+    @Override
+    public Component getListCellRendererComponent( JList list,  
+            Object value, int index, boolean isSelected,  
+            boolean cellHasFocus )  
+    {  
+        super.getListCellRendererComponent( list, value, index,  
+                isSelected, cellHasFocus );  
+        
+        Predicate p = (Predicate)value;
+        switch(p.getStatus()) 
+        {
+            case SATISFIED:
+                setForeground(Color.BLACK);
+                setBackground(Color.GREEN);
+                break;
+
+            case UNSATISFIED:
+                setForeground(Color.WHITE);
+                setBackground(Color.RED);
+                break;
+
+            default:
+                setForeground(Color.BLACK);
+                setBackground(Color.WHITE);
+        }
+
+        return this;  
+    }  
+}
+
 /**
  *
  * @author Tim
@@ -128,7 +160,7 @@ public class PredVis extends JFrame {
                 
                 //Pick directory
                 File directory = null;
-                final JFileChooser fileDialog = new JFileChooser(".");
+                final JFileChooser fileDialog = new JFileChooser("../PredicateLanguage/Hoppy-Tests/");
                 fileDialog.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 fileDialog.setDialogTitle("Predicate Directory");
                 int retval = fileDialog.showOpenDialog(frame);
@@ -157,7 +189,7 @@ public class PredVis extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 //Get user to locate existing script file
                 File scriptFile = null;
-                final JFileChooser fileDialog = new JFileChooser(".");
+                final JFileChooser fileDialog = new JFileChooser("../PredicateLanguage/Hoppy-Tests/");
                 fileDialog.setDialogTitle("Predicate Script");
                 int retval = fileDialog.showOpenDialog(frame);
                 if (retval == JFileChooser.APPROVE_OPTION) {
@@ -213,6 +245,7 @@ public class PredVis extends JFrame {
         
         //List init
         predicateList = new JList(predicateListModel);
+        predicateList.setCellRenderer(new PredicateListRenderer());
         predicateList.setPreferredSize(new Dimension(200, 600));
         predicateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         predicateList.addListSelectionListener(new ListSelectionListener() {
@@ -319,13 +352,17 @@ public class PredVis extends JFrame {
     }
     
     private void updateNetworkView(NetworkState ns) {
+        graphPanel.removeAll();
+        
         if (ns == null) {
-            ns = new NetworkState();
+            //ns = new NetworkState();
+            JLabel label = new JLabel("No network state received.", SwingConstants.CENTER);
+            label.setPreferredSize(new Dimension(600, 600));
+            graphPanel.add(label);
+            graphPanel.repaint();
+            return;
         }
         
-        if (vv != null) {
-            graphPanel.remove(vv);
-        }
         
         //Initialise network viewer.
         layout = new CircleLayout<NodeId, String>(ns.getGraph());
@@ -334,13 +371,12 @@ public class PredVis extends JFrame {
         vv.setPreferredSize(new Dimension(600, 600));
         
         // Init. vertex painter.
-        // TODO: Prevent colour changing on a resize
-        // Ideally we want a function that will cap a node id to a colour
         final Transformer<NodeId, Paint> vertexPaint = new Transformer<NodeId, Paint>() {
             @Override
             public Paint transform(NodeId i) {
-                Random rng = new Random();
-                return new Color(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256));
+                //Convert node id hash to colour.
+                int hash = i.hashCode();
+                return new Color(hash % 256, (hash % 128) * 2, (hash % 64) * 4);
             }
         };
         

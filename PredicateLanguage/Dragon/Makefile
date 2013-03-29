@@ -15,8 +15,11 @@ all:
 jar: all
 	rm -rf predvis
 	mkdir predvis
+	chmod -R 744 predvis
 	mkdir predvis/dragon
+	chmod -R 744 predvis/dragon
 	cp *.class predvis/dragon
+	chmod 644 predvis/dragon/*.class
 	jar cvf Dragon.jar predvis
 
 clean:

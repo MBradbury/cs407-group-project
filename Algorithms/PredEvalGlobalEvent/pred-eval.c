@@ -500,9 +500,6 @@ static void data_evaluation(pege_conn_t * pege)
 			printf("PEGE: FAILED (%s)\n", error_message());
 		}
 
-		predicate_manager_send_response(&pege->predconn, &hop_data,
-			pred, all_neighbour_data, pege->data_size, max_size);
-
 		free(all_neighbour_data);
 
 		hop_manager_reset(&hop_data);

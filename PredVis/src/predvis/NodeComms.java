@@ -1,6 +1,7 @@
 package predvis;
 
 import com.google.common.base.Strings;
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,6 +19,7 @@ public class NodeComms {
     private volatile boolean stop = false;
     
     private BufferedOutputStream output = null;
+    private BufferedReader input = null, err = null;
     
     private Process serialDumpProcess = null;
     
@@ -34,8 +36,8 @@ public class NodeComms {
         //Open streams from sink node.
         try {
             serialDumpProcess = Runtime.getRuntime().exec(cmd);
-            final BufferedReader input = new BufferedReader(new InputStreamReader(serialDumpProcess.getInputStream()));
-            final BufferedReader err = new BufferedReader(new InputStreamReader(serialDumpProcess.getErrorStream()));
+            input = new BufferedReader(new InputStreamReader(serialDumpProcess.getInputStream()));
+            err = new BufferedReader(new InputStreamReader(serialDumpProcess.getErrorStream()));
             
             output = new BufferedOutputStream(serialDumpProcess.getOutputStream());
             
@@ -56,10 +58,8 @@ public class NodeComms {
                             callback.receivedLine(line);
                         }
                         
-                        err.close();
-                        input.close();
                         callback.closedConnection();
-                    } catch(IOException e) {
+                    } catch(Exception e) {
                         callback.lostConnection(e);
                     } finally {
                         close();
@@ -134,27 +134,62 @@ public class NodeComms {
     
     public void close()
     {
+        stop = true;
+        
         try {
-            stop = true;
+            if (output != null) {
+                output.close();
+                output = null;
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        
+        try {
+            if (input != null) {
+                input.close();
+                input = null;
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        
+        try {
+            if (err != null) {
+                err.close();
+                err = null;
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        
+        try {
+            if (serialDumpProcess != null) {
+                serialDumpProcess.destroy();
+                serialDumpProcess = null;
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        
+        try {
             if (readInput != null) {
                 readInput.join(1000);
+                
             }
-            
         } catch (Exception e) {
             // Ignore
         }
+    }
+    
+    @Override
+    protected void finalize() throws Throwable
+    {
+        super.finalize();
         
-        try {
-            output.close();
-            output = null;
-        } catch (Exception e) {
-            // Ignore
-        }
-        
-        try {
+        // Make sure we have killed the process we spawned
+        if (serialDumpProcess != null) {
             serialDumpProcess.destroy();
-        } catch (Exception e) {
-            // Ignore
         }
     }
 }

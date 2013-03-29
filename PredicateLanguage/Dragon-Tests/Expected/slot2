@@ -1,5 +1,5 @@
 Program length 56
-Stack ptr value (float 0.000000) (int 1) (bool 1)
+Stack ptr value (int 1) (bool 1)
 Result: 1
 Error: No Error
 Stack values:

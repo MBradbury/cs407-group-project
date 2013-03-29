@@ -5,6 +5,7 @@ import java.io.*;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import predvis.dragon.Dragon;
 import predvis.hoppy.Hoppy; 
 
@@ -13,6 +14,11 @@ import predvis.hoppy.Hoppy;
  * @author Tim
  */
 public class Predicate {
+    public enum PredicateStatus {
+        SATISFIED,
+        UNSATISFIED
+    }
+    
     //Static parser so single instance only, call ReInit() between executions.
     private static Hoppy hoppy = null;
     private static Dragon dragon = null;
@@ -73,9 +79,10 @@ public class Predicate {
         }
     }
     
-    public boolean isSatisfied() {
+    private static int temp = 0;
+    public PredicateStatus getStatus() {
         //TODO: query network, is predicate satisfied?
-        return false;
+        return temp++ % 2 == 0 ? PredicateStatus.SATISFIED : PredicateStatus.UNSATISFIED;
     }
     
     private void compileScript() {
@@ -88,10 +95,8 @@ public class Predicate {
             } else {
                 Hoppy.ReInit(in);
             }
-            hoppy.run(out);
-            
-            String intermediate = out.toString();
-            System.out.println("Intermediate code: " + intermediate + "\n\n");
+            HashMap<Integer, Integer> vdMap = new HashMap<Integer, Integer>();
+            String target = hoppy.compile(out, vdMap);
             
             //Run Dragon
             in = new ByteArrayInputStream(out.toString().getBytes(Charset.forName("UTF-8")));
@@ -111,6 +116,14 @@ public class Predicate {
             for (int i = 0; i < bytes.length; ++i) {
                 bytecode[i] = (int)(bytes[i] & 0xFF);
             }
+			
+            //Set up variable details structure
+            VariableDetails[] vds = new VariableDetails[vdMap.size()];
+            int i = 0;
+            for (int n : vdMap.keySet()) {
+                vds[i++] = new VariableDetails(vdMap.get(n), n);
+            }
+			
         } catch (Exception e) {
             //TODO
         }

@@ -84,10 +84,17 @@ The performance of the network showed that initially packet loss was up to 20\% 
 
 Overall, one of the major conclusions of this work is that anomalous sensor data can be used to predict mote failures with a high degree of accuracy. The authors believe that this prediction allows for a high level of pro-active maintenance, and self-organisation and self-healing of the network.
 
-\subsubsection*{ZebraNet}
-\cite{Juang:2002:ECW:635508.605408}
+\subsubsection*{Animal Monitoring}
 % https://www.princeton.edu/~mrm/ZNetASPLOS.pdf
 % http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.6467&rep=rep1&type=pdf
+
+Instead of monitoring the habitat, why not simply directly monitor the animal in question? This is the track that a number of other wireless sensor networks have taken \cite{Juang:2002:ECW:635508.605408}. The traditional technique was to attach collars that emit radio waves that are used in manual triangulation or take GPS measurements and then recover the hardware attached to the animal to extract the data. Sensor networks provide a way to extract this data automatically in a much easier manner and can also allow for data to be accessed earlier.   Much of what is true for habitat monitoring is also true for monitoring animals: the hardware needs to be protected against the weather, the data needs to be extracted as reliably as possible and the battery should last as long as possible to make the deployment cost effective.
+
+ZebraNet by \citeauthor{Juang:2002:ECW:635508.605408} in \cite{Juang:2002:ECW:635508.605408} investigates these issues as well as some of the unique deployment issues related to mounting hardware on animals. For example it is very important that the hardware is light enough for the animal to handle for a long time. This adds a new type of trade-off, when considering energy usage and reliability system developers must also consider weight.
+
+Aside from the usual issues associated with sensor networks, having sensors attached to animals presents another very important problem that needs to be solved. Many of the animals that we wish to monitor, are desired to monitor for very good reasons. Most often it is the case that they are endangered or are often the victims of poaching \cite{?}. By attaching wireless devices that broadcast information, it has been found that attackers can trace their way back to a source. There has been much research to develop ways to mitigate this problem, one example is using fake sources to lure an attacker in an alternate direction than that of the real source \cite{Ozturk:2004:SPE:1029102.1029117,Kamat.1437121,6296046}. These additional problems that arise as side-effects of communicating through a wireless medium are often difficult and expensive (in terms of energy) to overcome.
+
+
 
 \subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}

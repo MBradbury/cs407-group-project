@@ -8,21 +8,21 @@
 %Aggregation:
 \cite{aggphdfeng} % http://ecommons.usask.ca/bitstream/handle/10388/etd-06292010-135305/thesis-jie.pdf
 
-\subsubsection{Flooding}
+\subsubsection*{Flooding}
 
-\subsubsection{Tree Aggregation}
+\subsubsection*{Tree Aggregation}
 \cite{1628365} % https://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=1628365
 
-\subsubsection{Clustering}
+\subsubsection*{Clustering}
 
 
 \subsection{Simulating Sensor Networks}
 
-\subsubsection{TinyOS}
+\subsubsection*{TinyOS}
 
 TOSSIM \cite{levis2003tossim}
 
-\subsubsection{Contiki}
+\subsubsection*{Contiki}
 % Cite basically all the papers at: http://www.contiki-os.org/support.html
 
 \paragraph{A Database In Every Sensor} 
@@ -53,33 +53,51 @@ TOSSIM \cite{levis2003tossim}
 \paragraph{Run-time Reprogramming}
 \cite{Dunkels:2006:RDL:1182807.1182810} % http://dunkels.com/adam/dunkels06runtime.pdf
 
-\subsubsection{NS2}
+\subsubsection*{NS2}
 
-\subsubsection{JProwler}
+\subsubsection*{JProwler}
 
-\subsubsection{Simulating Energy Consumption}
+\subsubsection*{Simulating Energy Consumption}
 \cite{Shnayder04}
 
 
 \subsection{Sensor Network Platforms}
 
-\subsubsection{MICA}
+\subsubsection*{MICA}
 \cite{Mica2002}
 
-\subsubsection{Sky}
+\subsubsection*{Sky}
 
 
 \subsection{Practical Experience in Sensor Networks}
+\label{sec:lit-review-practical-experience}
 
-\subsubsection{Air Pollution}
+\subsubsection*{Habitat Monitoring}
+
+Habitat monitoring is widely thought to be one of the key wireless sensor network application that is driving research and adoption. The problem involves determining the location of the sensor nodes, which then allows tracking \cite{Cerpa:2001:HMA:844193.844196} and two of the primary problems in sensor networks: data aggregation and energy efficient multihop communications.
+
+The research undertaken by \citeauthor{SzewczykPMC04} in \cite{SzewczykPMC04} involves deploying sensor nodes on the Great Duck Island in order to test the long term real-world deployment of sensor networks. The importance of deploying and testing a WSN in the real world is due to the fact that challenges are encountered that are not present in indoor deployments or simulations. The problem becomes one of not just what software needs to run and how, but also consider on what hardware in what conditions. For example the authors wished to waterproof the mote in order to ensure that it survived dew, rain and flooding. However, when enclosing the motes it was worried that (i) radio transmissions would be interfered with and (ii) sensor data could be affected.
+
+Overall, the deployed motes performed well (logging 1.1 million readings over 123 days), however, there were a number of abnormal results that included: (i) sensor readings outside their range, (ii) ``erratic packet delivery'' and (iii) failure of motes. The authors point out (in section 2.5) that in the future it would be useful to augment applications with the ability to notify that failures occurred and to perform self-healing.
+
+The performance of the network showed that initially packet loss was up to 20\% but that slowly decreased, most likely due to the fact that the size of the network network was reducing over time (as nodes permanently crashed). Due to the low network utilisation (under 5\%) \citeauthor{SzewczykPMC04} initially believed that collisions would not play an important role, however, their results suggested otherwise. Their results suggest that this was caused by clock drift which lead to slot assignments not preventing collisions within their period. This importance of clock drift on TDMA-based MAC protocols is something that would tend not to be found from testing in a simulator because of the slow speed of simulation and the length of time it takes for these small clock drifts to lead to an effect.
+
+Overall, one of the major conclusions of this work is that anomalous sensor data can be used to predict mote failures with a high degree of accuracy. The authors believe that this prediction allows for a high level of pro-active maintenance, and self-organisation and self-healing of the network.
+
+\subsubsection*{ZebraNet}
+\cite{Juang:2002:ECW:635508.605408}
+% https://www.princeton.edu/~mrm/ZNetASPLOS.pdf
+% http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.6467&rep=rep1&type=pdf
+
+\subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}
 \cite{wsnpollution} Claimed: Ivan
 
-Air pollution has been a growing concern in congested urban cities as a result of industrilization and heavy transporation. These concerns include poor air quality and visibilty and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densly deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and indistrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
+Air pollution has been a growing concern in congested urban cities as a result of industrialisation and heavy transportation. These concerns include poor air quality and visibility and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densely deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and industrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
 
-Engineers from the University of Luxembourg implemented a system based on a Wireless Mesh Network of sensors to measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution ares are out of range of the communication service. David Et Al. proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in such areas.
+Engineers from the University of Luxembourg implemented a system based on a Wireless Mesh Network of sensors to measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution areas are out of range of the communication service. David Et Al. proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in such areas.
 
-The network consists of a set of fixed and mobile sensors which are connected to several mesh routers within a polluted area and makes use of a gateway which transmitts data back to the monitoring server as well as providing internet connectivity to the sensors. High-gain antennas was used to reduce the propability of interference from non-city radio frequency emittors such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthorgonal channels between the sensors, mesh routers, gateways and directional antennas. A server middleware was responsible for allocating IP addresses to the sensors and any external user. At the monitoring station, the transmitted data is analysed by an Air Pollution Monitoring Toolbox application and compares the pollution level to the 'critical level of pollution'. The critical data are transmitted to an Air Pollution Decision makers for safety guidance.
+The network consists of a set of fixed and mobile sensors which are connected to several mesh routers within a polluted area and makes use of a gateway which transmits data back to the monitoring server as well as providing internet connectivity to the sensors. High-gain antennas was used to reduce the probability of interference from non-city radio frequency emitters such as WiFi and access points. However, interference may also be caused from inter-device communication and was reduced by using multiple orthogonal channels between the sensors, mesh routers, gateways and directional antennas. A server middleware was responsible for allocating IP addresses to the sensors and any external user. At the monitoring station, the transmitted data is analysed by an Air Pollution Monitoring Toolbox application and compares the pollution level to the 'critical level of pollution'. The critical data are transmitted to an Air Pollution Decision makers for safety guidance.
 
 \paragraph{WSN Challenges}
 
@@ -98,21 +116,18 @@ The wireless mesh network is energy efficient since the sensors are energy const
 \item Optimized means of gateway placements
 \end{itemize}
 
-\subsubsection{Forest Fires}
+\subsubsection*{Forest Fires}
 \cite{libeliumForestFires}
 \cite{FireWxNet}
 
-\subsubsection{Great Duck Island}
-\cite{SzewczykPMC04}
-
-\subsubsection{Volcano Monitoring}
+\subsubsection*{Volcano Monitoring}
 Claimed: Ivan
 
-Active volcanoes need to be monitored to predict the likelihood of future eruptions so that early-warning signs can be issued for the evacuation of habitants near the volcano. Today, volcanoists use wired arrays of sensors such as seismometers and acoustic microphones to collect seismic and infrared (low-frequency acoustic) signals and determining a wide range of factors such as sources of volcanic eruptions, interior structure of a volcano and differentiating eruption signals from noise. A typical study can indlue the placement of several stations around the volcano where each contains a low distribution of wired sensors that collects data to a hard drive. Data is then collected manually in a possibly inconvenient location.
+Active volcanoes need to be monitored to predict the likelihood of future eruptions so that early-warning signs can be issued for the evacuation of habitants near the volcano. Today, volcanoes use wired arrays of sensors such as seismometers and acoustic microphones to collect seismic and infrared (low-frequency acoustic) signals and determining a wide range of factors such as sources of volcanic eruptions, interior structure of a volcano and differentiating eruption signals from noise. A typical study can indlue the placement of several stations around the volcano where each contains a low distribution of wired sensors that collects data to a hard drive. Data is then collected manually in a possibly inconvenient location.
 
 To address the issue of high power consumption of these wired sensors, \citeauthor{Werner-Allen:2006:FYV:1298455.1298491} in \cite{Werner-Allen:2006:FYV:1298455.1298491} introduced the deployment of embedded wireless sensor networks consisting of low-power nodes with minimum CPU, memory and wireless communication capabilities. This allows for long distance real time monitoring of volcanic activities and reducing the need for manual data collection. The main challenge however is that environmental monitoring studies sample at a frequency which is much lower than the sample rate of volcanic time series. This is due to the limited radio bandwidth of the sensors thus requiring the need for efficient power management techniques and accurate time synchronization of the nodes. 
 
-\citeauthor{Werner-Allen:2006:FYV:1298455.1298491} implemented a wireless sensor network that was deployed on the Volcan Tungurahua in central Ecuador using a Mica2 sensor mote platform and three infrasonic microphone nodes. These nodes transmitted data to an aggregation node, which relayed the data over a 9km wireless link to the base station. Time synchronization for the infrasonic sensors was done using a GPS receiver which receives a GPS time signal and relays the data 
+\citeauthor{Werner-Allen:2006:FYV:1298455.1298491} implemented a wireless sensor network that was deployed on the Volcano Tungurahua in central Ecuador using a Mica2 sensor mote platform and three infrasonic microphone nodes. These nodes transmitted data to an aggregation node, which relayed the data over a 9km wireless link to the base station. Time synchronization for the infrasonic sensors was done using a GPS receiver which receives a GPS time signal and relays the data 
 to the infrasound and aggregator nodes. Over a period of time, the temperature and battery voltage may change and this may affect the sampling rate of the individual nodes and the precision of the time recorded from the GPS time stamp message. These uncertainties was addressed by applying a linear regression to the logged data stream giving an estimation of the node outputs. In addition, the sensor nodes where required to be protected against harsh environments such as rain and long exposure of sunlight by using waterproof pelican cases and 1/4-wave whip antennas.
 
 Their first deployment on the volcano included a small network where nodes could send continuous signals to each other, however this was not feasible for a larger network deployed over longer periods of time. To solve the issue with bandwidth and energy consumption, the team implemented a distributed event detector which only transmits well-correlated signals to the base station. A local event detection algorithm is used to trigger data collection for uncorrelated signals.
@@ -124,7 +139,7 @@ To measure the correlated signal, the distributed detector uses a decentralized 
 
 \item Local Event Detector
 
-The team implemented two local event detectors; a threshold-based detector and an exponentially weighted moving average (EWMA)-based detector. The former is triggered when the signal rises above an upper threshold and below a lower threshold. However due to spurous signals such as wind noise, the detector may be susceptible to false trigger. On the other hand, the EWMA detector calculates two moving averages with different gain parameters and is triggered if the ratio of the two averages and the new sample exceeds some threshold T. This method is less affected by node sensitivity and any duplicate triggers over a window of 100 samples are suppressed.
+The team implemented two local event detectors; a threshold-based detector and an exponentially weighted moving average (EWMA)-based detector. The former is triggered when the signal rises above an upper threshold and below a lower threshold. However due to spurious signals such as wind noise, the detector may be susceptible to false trigger. On the other hand, the EWMA detector calculates two moving averages with different gain parameters and is triggered if the ratio of the two averages and the new sample exceeds some threshold T. This method is less affected by node sensitivity and any duplicate triggers over a window of 100 samples are suppressed.
 \end{itemize}
 
 \paragraph{Data Collection and Performance}
@@ -135,14 +150,14 @@ During the deployment, the team managed to log 54 hours of continuous data which
 
 In general, the event-triggered model was successful in detecting eruptions and other volcanic events and was able to verify the working of the local and global event detectors by examining the downloaded data. However, since the experiment was deployed over a limited area space of the volcano, further work is to be done to instrument volcanoes at a larger scale. This includes, and most importantly, the management of energy and bandwidth usage of the sensors and increasing its computational power to deviate from continuous data collection to enabling the collection of well-correlated signals. 
 
-\subsubsection{Structural Monitoring}
+\subsubsection*{Structural Monitoring}
 \cite{5508230}
 
-\subsubsection{Development of Applications}
+\subsubsection*{Development of Applications}
 \cite{Fagerstrom:1988:DTD:55823.55833}
 
 
-\subsubsection{Power Considerations}
+\subsubsection*{Power Considerations}
 
 
 \subsection{Predicates}
@@ -154,26 +169,30 @@ There is a choice of what should be measured and checked in predicates, should f
 Much of what has been discussed has involved transient faults such as those caused by environmental conditions, however, there is a class of faults that are a lot more common and much easier to resolve - faults caused by software bugs. These faults can lead to programs ending up in the wrong state and just performing incorrectly. There has been a certain amount of work that looks into detecting traditional distributed system bugs (such as deadlock \cite{?}) in wireless sensor networks. However, there has been little work in looking into providing tools to aid in system debugging. The rest of this section will cover work on predicates in sensor networks, including detection of them and methods for identifying why is system is not performing correctly.
 
 
-\subsubsection{Global Predicate Detection}
+\subsubsection*{Global Predicate Detection}
 
 Perhaps one of the most well known techniques to undertake this kind of debugging is Global Predicate Detection (GPD). GPD involves ``taking a consistent global snapshot of the system and checking whether the snapshot satisfies the global predicate'' \cite{277788}. These snapshots are repeated periodically and checked if they satisfy the predicate, in doing so properties can be detected that are required for the predicate to hold.
 
 However, GPD is not as simple as this. To begin with there are two types of global predicates: stable and unstable. Stable predicates are ones that remain true once they become true \cite{277788} and unstable predicates can fluctuate between true and false. An example of a stable predicate is termination, once a system has terminated it cannot turn it self back on again. There also exists a distinction between strong and weak predicates, where strong predicates hold for the entire network ($definitely : p$) and weak predicates hold for a subset of that network ($possibly : p$) \cite{553309,345831}. Because of the unreliability of wireless networks it may often be the case that all that can be said is that the predicate is possibly true, due to not receiving all the information that is required to evaluate the predicate \cite{?}.
 
 
-\subsection{Predicate Detection in Distributed Systems}
+\subsection{Predicate Detection or Checking in Distributed Systems}
 
-\subsubsection{NodeMD}
+\subsubsection*{NodeMD}
 \cite{NodeMD}
 
 
-\subsubsection{Sympathy}
+\subsubsection*{Debugging by Computing Aggregates}
+% https://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=1203364
+\cite{1203364}
+
+\subsubsection*{Sympathy}
 
 One of the projects that is summarised by \citeauthor{herbert2007adaptive} in \cite{herbert2007adaptive} is a method for identifying and localizing failures called Sympathy \cite{ramanathan2005sympathy}. Sympathy is intended to be run either in pre- or post-deployment environments where it collects data from distributed nodes at a sink. When insufficient data is received it is taken to imply that there exists a problem (insufficient data is component defined). The idea is that by monitoring data (both actively and passively) between components the system can identify what kind of failure occurred in a certain area of the network. Both of which are very useful when trying to debug a failure.
 
 It does, however, have some downsides. The first is that there is assumed to be no traffic and thus no application traffic or network congestion. These are real issues especially when applying this kind of debugging to a high throughput sensor network. There are also a number of spurious failure notification, which the authors are working on reducing, by applying a Bayes engine.
 
-\subsection {DICAS: Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks}
+\subsubsection*{DICAS: Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks}
 
 Detection, Diagnosis and Isolation of Control Attacks in Sensor Networks (DICAS) \cite{dicaspaper} is a lightweight distributed protocol for Wireless Sensor Networks that mitigates the effects of a wide-range of control traffic attacks. DICAS does this by utilizing a unique property of a wireless sensor network, this is that each node is able to monitor a part of their neighbours network traffic. Using DICAS the authors were able to create LSR a lightweight secure routing algorithm for Wireless Sensor Networks.
 
@@ -211,7 +230,7 @@ With regards to computation they found that each packet received or sent require
 When considering bandwidth the overhead was primarily gained in 2 conditions: after node deployment when a node is populating its neighbour list and during a wormhole attack detection where a node is informing its neighbours of the malicious node. However, these cases make up a negligible fraction of the total network traffic over the lifetime of a wireless sensor network.
 \end{itemize}
 
-\subsection{H-SEND: Hierachichal SEnsor Network Debugging}
+\subsubsection*{H-SEND: Hierachichal SEnsor Network Debugging}
 
 H-SEND is a framework for detecting faults in WSNs, designed to minimise energy consumption. It differs from related algorithms by being capable of handling very large WSNs. \cite{herbert2007adaptive}
 

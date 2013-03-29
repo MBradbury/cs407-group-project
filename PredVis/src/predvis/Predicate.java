@@ -13,6 +13,11 @@ import predvis.hoppy.Hoppy;
  * @author Tim
  */
 public class Predicate {
+    public enum PredicateStatus {
+        SATISFIED,
+        UNSATISFIED
+    }
+    
     //Static parser so single instance only, call ReInit() between executions.
     private static Hoppy hoppy = null;
     private static Dragon dragon = null;
@@ -73,9 +78,10 @@ public class Predicate {
         }
     }
     
-    public boolean isSatisfied() {
+    private static int temp = 0;
+    public PredicateStatus getStatus() {
         //TODO: query network, is predicate satisfied?
-        return false;
+        return temp++ % 2 == 0 ? PredicateStatus.SATISFIED : PredicateStatus.UNSATISFIED;
     }
     
     private void compileScript() {
@@ -89,9 +95,6 @@ public class Predicate {
                 Hoppy.ReInit(in);
             }
             hoppy.run(out);
-            
-            String intermediate = out.toString();
-            System.out.println("Intermediate code: " + intermediate + "\n\n");
             
             //Run Dragon
             in = new ByteArrayInputStream(out.toString().getBytes(Charset.forName("UTF-8")));

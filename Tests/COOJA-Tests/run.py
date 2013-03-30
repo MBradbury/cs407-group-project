@@ -21,7 +21,12 @@ removedCount = 0
 while removedCount < repeats:
 
 	# Check to see if any processes have finished
-	removedCount += len([p for p in processes if p.poll() is not None])
+	removed = len([p for p in processes if p.poll() is not None])
+
+	if removed > 0:
+		removedCount += removed
+		print("{0} processes terminated".format(removed))
+
 	processes = [p for p in processes if p.poll() is None]
 
 	# Create processes if below limit

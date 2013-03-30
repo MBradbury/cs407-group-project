@@ -1,5 +1,6 @@
 //import Java Package to JavaScript
 importPackage(java.io);
+importPackage(java.util.zip);
 
 // Define a startsWith function for convenience
 if (typeof String.prototype.startsWith != 'function')
@@ -9,7 +10,7 @@ if (typeof String.prototype.startsWith != 'function')
 	};
 }
 
-outputDirectory = "/home/user/cs407-group-project/Tests/COOJA-Tests/TDMA/PELE/15/"
+outputDirectory = "/home/user/cs407-group-project/Tests/COOJA-Tests/TDMA/PELE/1HOP/15/4.0/"
 
 // We need a way to generate a 99% sure its unique filename
 function guid() {
@@ -19,7 +20,7 @@ function guid() {
 	});
 }
 
-resultsFile = new FileWriter(outputDirectory + guid(), false);
+resultsFile = new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(outputDirectory + guid()))));
 
 
 // We need to fix strings for some reason
@@ -45,11 +46,11 @@ for (var i = 0; i < allmotes.length; ++i)
 }
 
 
-// Set a timeout of 30 minutes 20 seconds
+// Set a timeout of 45 minutes 20 seconds
 // the units this function takes is in milliseconds
-TIMEOUT(1820000);
+TIMEOUT(2720000);
 
-GENERATE_MSG(1800000, "END"); //Wait for 30 minutes
+GENERATE_MSG(2700000, "END"); //Wait for 45 minutes
 
 while (true)
 {

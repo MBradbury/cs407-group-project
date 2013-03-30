@@ -5,7 +5,7 @@ import sys
 import json
 from pprint import pprint
 import xml.etree.ElementTree as ET
-
+import gzip
 from numpy import mean, std
 
 
@@ -116,7 +116,7 @@ def predicate(this, onehopn, slots):
 
 class AnalyseFile:
 	def __init__(self, path):
-		with open(path) as f:
+		with gzip.open(path, 'rb') as f:
 			self.data = json.load(f)
 
 		self.motes = self.data[u"motes"]
@@ -208,49 +208,53 @@ sizes = [15]
 
 results = {}
 
-for peType in peTypes:
-
+for peType in os.listdir('TDMA'):
 	results[peType] = {}
 
-	for size in sizes:
+	for predicateDist in os.listdir('TDMA/' + peType):
+		results[peType][predicateDist] = {}
 
-		results[peType][size] = {}
+		for size in os.listdir('TDMA/' + peType + "/" + predicateDist):
+			results[peType][predicateDist][size] = {}
 
-		path = "TDMA/" + peType + "/" + str(size)
+			for period in os.listdir('TDMA/' + peType + "/" + predicateDist + "/" + size):
+				results[peType][predicateDist][size][period] = {}
 
-		localResults = []
+				path = 'TDMA/' + peType + "/" + predicateDist + "/" + size + "/" + period
 
-		for resultsFile in os.listdir(path):
+				localResults = []
 
-			print(path + "/" + resultsFile)
+				for resultsFile in os.listdir(path):
 
-			try:
+					print(path + "/" + resultsFile)
 
-				a = AnalyseFile(path + "/" + resultsFile)
+					try:
 
-				localResults.append(a)
+						a = AnalyseFile(path + "/" + resultsFile)
 
-				#pprint(a.energy)
-				print("Total Messages: {0}".format(a.rimeTotal))
-				print("TDMA: {0}".format(a.TDMATotal))
-				print("PE: {0}".format(a.peTotal))
+						localResults.append(a)
 
-				print("PC Responses reached sink: {0}".format(a.responsesReachedSinkPC))
-				#print("PC predicate success rate: {0}".format(a.successRate))
-				print("PC predicates correctly evaluted: {0}".format(a.pcCorrectlyEvaluted))
+						#pprint(a.energy)
+						print("Total Messages: {0}".format(a.rimeTotal))
+						print("TDMA: {0}".format(a.TDMATotal))
+						print("PE: {0}".format(a.peTotal))
 
-			except:
-				pass
+						print("PC Responses reached sink: {0}".format(a.responsesReachedSinkPC))
+						#print("PC predicate success rate: {0}".format(a.successRate))
+						print("PC predicates correctly evaluted: {0}".format(a.pcCorrectlyEvaluted))
 
-		# We need to find the average and standard deviation
+					except:
+						pass
 
-		results[peType][size]["pcResponsesReachedSink"] = meanStdAttr(localResults, "responsesReachedSinkPC")
-		#results[peType][size]["pcSuccessRate"] = meanStdAttr(localResults, "successRate")
-		results[peType][size]["pcCorrectlyEvaluted"] = meanStdAttr(localResults, "pcCorrectlyEvaluted")
+				# We need to find the average and standard deviation
 
-		results[peType][size]["messagesPE"] = meanStdAttrTxRx(localResults, "peTotal")
-		results[peType][size]["messagesTDMA"] = meanStdAttrTxRx(localResults, "TDMATotal")
-		results[peType][size]["messagesTotal"] = meanStdAttrTxRx(localResults, "rimeTotal")
+				results[peType][predicateDist][size][period]["pcResponsesReachedSink"] = meanStdAttr(localResults, "responsesReachedSinkPC")
+				#results[peType][size]["pcSuccessRate"] = meanStdAttr(localResults, "successRate")
+				results[peType][predicateDist][size][period]["pcCorrectlyEvaluted"] = meanStdAttr(localResults, "pcCorrectlyEvaluted")
+
+				results[peType][predicateDist][size][period]["messagesPE"] = meanStdAttrTxRx(localResults, "peTotal")
+				results[peType][predicateDist][size][period]["messagesTDMA"] = meanStdAttrTxRx(localResults, "TDMATotal")
+				results[peType][predicateDist][size][period]["messagesTotal"] = meanStdAttrTxRx(localResults, "rimeTotal")
 
 
 pprint(results)

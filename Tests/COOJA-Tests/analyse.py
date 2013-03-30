@@ -154,8 +154,6 @@ class AnalyseFile:
 		self.predicatesIncorrectlyEvaluated = 0
 		
 		for pred in self.data[u"predicate"]:
-			pprint(pred)
-
 			node = int(str(pred[u"node"]).split(".")[0])
 
 			if node != int(pred[u"on"]):
@@ -201,9 +199,6 @@ print("Total Messages: {0}".format(a.rimeTotal))
 print("TDMA: {0}".format(a.TDMATotal))
 print("PE: {0}".format(a.peTotal))
 
-print(a.dataAt(462))
-print(a.dataAt(900))
-
-print(a.responsesReachedSinkPC)
-print(a.successRate)
-print(a.pcCorrectlyEvaluted)
+print("PC Responses reached sink: {0}".format(a.responsesReachedSinkPC))
+print("PC success rate: {0}".format(a.successRate))
+print("PC correctlypredicates evaluted: {0}".format(a.pcCorrectlyEvaluted))

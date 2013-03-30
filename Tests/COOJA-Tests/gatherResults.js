@@ -30,7 +30,7 @@ for (var i = 0; i < allmotes.length; ++i)
 // the units this function takes is in milliseconds
 TIMEOUT(220000);
 
-GENERATE_MSG(100000, "END"); //Wait for 200 secs
+GENERATE_MSG(200000, "END"); //Wait for 200 secs
 
 while (true)
 {

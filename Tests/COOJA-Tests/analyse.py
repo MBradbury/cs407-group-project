@@ -81,6 +81,34 @@ class AnalyseFile:
 		self.peTotal = totalSentRecv(self.pe)
 
 		# Predicate evaluation analysis
+		self.responsesReachedSink = 0
+		self.totalPredicatesSent = 0
+
+		self.totalPredicates = len(self.data[u"predicate"])
+
+		self.predicatesFailed = 0
+		self.predicatesSucceeded = 0
+		
+		for pred in self.data[u"predicate"]:
+			pprint(pred)
+			print(str(pred[u"node"]))
+			print(str(pred[u"on"] + u".0"))
+
+			if str(pred[u"node"]) != str(pred[u"on"] + u".0"):
+				self.responsesReachedSink += 1
+
+			if pred[u"result"] == 0:
+				self.totalPredicatesSent += 1
+				self.predicatesFailed += 1
+			else:
+				self.predicatesSucceeded += 1
+
+		self.responsesReachedSinkPC = float(self.responsesReachedSink) / float(self.totalPredicatesSent)
+		self.successRate = float(self.predicatesSucceeded) / float(self.totalPredicates)
+		self.failureRate = float(self.predicatesFailed) / float(self.totalPredicates)
+
+		# TODO: work of number of successfully evaluated predicates
+
 
 	# Gets the slot value of a given node at the given time
 	def dataAt(self, time):
@@ -93,7 +121,7 @@ class AnalyseFile:
 
 a = AnalyseFile('COOJA.testlog')
 
-pprint(a.data[u"predicate"])
+#pprint(a.data[u"predicate"])
 
 #pprint(a.energy)
 print("Total Messages: {0}".format(a.rimeTotal))
@@ -102,3 +130,7 @@ print("PE: {0}".format(a.peTotal))
 
 print(a.dataAt(462))
 print(a.dataAt(900))
+
+print(a.responsesReachedSinkPC)
+print(a.successRate)
+print(a.failureRate)

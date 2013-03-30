@@ -100,13 +100,39 @@ ZebraNet by \citeauthor{Juang:2002:ECW:635508.605408} in \cite{Juang:2002:ECW:63
 
 Aside from the usual issues associated with sensor networks, having sensors attached to animals presents another very important problem that needs to be solved. Many of the animals that we wish to monitor, are desired to monitor for very good reasons. Most often it is the case that they are endangered or are often the victims of poaching \cite{?}. By attaching wireless devices that broadcast information, it has been found that attackers can trace their way back to a source. There has been much research to develop ways to mitigate this problem, one example is using fake sources to lure an attacker in an alternate direction than that of the real source \cite{Ozturk:2004:SPE:1029102.1029117,Kamat.1437121,6296046}. These additional problems that arise as side-effects of communicating through a wireless medium are often difficult and expensive (in terms of energy) to overcome.
 
+\subsubsection*{Forest Fires}
+\cite{libeliumForestFires}
+\cite{FireWxNet}
+\cite{4428702} Claimed: Ivan
+% http://static.usenix.org/events/mobisys06/full_papers/p28-hartung.pdf
 
+WSN: Multi-tiered portable wireless system for monitoring weather conditions in wildland fire environments
+
+While habitat monitoring has been at the forefront of monitoring wildlife habitat and animal behaviour, there is a need to measure and view fire and weather conditions to predict wildland fires that occurs across the globe. Fire behavior can change drastically, depending on different environmental factors and topological features such as elevation and aspect. It is important for such behaviour to be predicted accurately and wildland firefighters are currently using means like observing current weather conditions and weather forcasts provided by the  National Weather Service to do so. While data provided by the weather forcast gives a general overview of fire behaviours, those solely colleted by the firefighters (e.g. using a belt-weather kit) only provides data for a sparse number of regions which is inadequate in making a full evaluation. With wireless sensor networks, firefighters can safely measure weather conditions over a wide range of locations and elevations anywhere withing the fire environment.
+
+FireWxNet by \citeauthor{FireWxNet} in \cite{FireWxNet} is a robust multi-tiered portable wireless system, designed to be deployed in a rugged environment. Compared to other application deployments, FireWxNet covers a unique topology which ranges from substantial and sharp elevation differences to an extremely wide coverage area of about 160 square kilometers. One of the main challenges was providing wireless communication over a wide area coverage and fine-grained local weather sensing.
+
+Design challenges (notes)
+- providing wide area communication and fine grained local weather sensing coverage. Reay data from many points of interest to base camp through an area with no internet connectivity or electricity.  
+- Internet was 64km away used a small portable satellite receiver
+- large elevation difference between nodes resulted in very different radio propagration models from typical flat-ground, short distance deployments.
+- Some location wehere inaccessible so nodes had to be brought to the peak of the mountain by helicopter
+- protection from moisture and animals - large plastic waterproof breifcase
+- Concerns of overheating since temperatures could rise to 33 degrees. lack of airflow inside case as since there are no fans
+
+Networking challenges
+- Ensuring high-probability of receiving data from the sensors - Developed a best-effort converge-cast protocol. Reduces the need for every pack to reach the base station during a certain time period to only needing a single packet per node.
+
+Deployment Issues
+- Verifying the connectivity between the nodes
+- Downfall in mechanism was that a user would not receive verification when adding a node to current deployed network. Neighboring nodes needs to be restarted to do so.
 
 \subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}
 \cite{wsnpollution} 
 
 \cite{fotuewsnpollution} Claimed: Ivan
+% http://files.cameroonwebnews.com/uploads/2010/01/airpollution.pdf
 
 Air pollution has been a growing concern in congested urban cities as a result of industrialisation and heavy transportation. These concerns include poor air quality and visibility and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densely deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and industrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
 
@@ -137,13 +163,6 @@ To avoid high energy consumptions, data from the sesors to the data server were 
 
 Since the network includes mobile sensors, there are chances that it can lose connectivity with the the fixed sensors. A challenge that the team faced was placing the mesh routers in such a way that they were always connected to the mobile and fixed sensors in order to receive the sensed data. This is crucial for network reliability and quality of service.
 \end{itemize}
-
-
-
-\subsubsection*{Forest Fires}
-\cite{libeliumForestFires}
-\cite{FireWxNet}
-\cite{4428702} Claimed: Ivan
 
 \subsubsection*{Volcano Monitoring}
 Claimed: Ivan

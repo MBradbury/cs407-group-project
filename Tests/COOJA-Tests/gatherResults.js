@@ -9,6 +9,8 @@ if (typeof String.prototype.startsWith != 'function')
 	};
 }
 
+var out = "";
+
 // Use JavaScript object as an associative array
 var results = new Object();
 results["stats"] = new Object();
@@ -24,29 +26,14 @@ for (var i = 0; i < allmotes.length; ++i)
 }
 
 
-// Set a timeout of 220 seconds
+// Set a timeout of 200 seconds
 // the units this function takes is in milliseconds
 TIMEOUT(220000);
-
-GENERATE_MSG(200000, "sleep"); //Wait for 200 secs
-YIELD_THEN_WAIT_UNTIL(msg.equals("sleep"));
+GENERATE_MSG(100000, "END"); //Wait for 200 secs
 
 while (true)
 {
-	try
- 	{
- 		//This is the tricky part. The script is terminated using
- 		// an exception. This needs to be caught.
- 		YIELD();
- 	}
- 	catch (e)
- 	{
-	    // Write out our results
-	    log.log(JSON.stringify(results));
-
- 		// Rethrow exception again, to end the script.
- 		throw e;
-	}
+	YIELD();
 
 	if (msg.startsWith("PF "))
 	{
@@ -125,5 +112,9 @@ while (true)
 		}
 
 		results["stats"]["rime"].push(data);
+	}
+	else if (msg.contains("END"))
+	{
+		log.log(JSON.stringify(results));
 	}
 }

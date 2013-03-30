@@ -3,7 +3,7 @@
 import json
 from pprint import pprint
 
-def latestValues(values, keyName):
+def latestValues(values, keyName, maxTime=None):
 	result = {}
 
 	for value in values:
@@ -13,7 +13,6 @@ def latestValues(values, keyName):
 		# Not seen this node before
 		if nodeId not in result:
 			result[nodeId] = value
-			del result[nodeId][keyName]
 
 		# Seen this node before
 		else:
@@ -21,9 +20,9 @@ def latestValues(values, keyName):
 
 			# Check if this is a latter time
 			if value[u"clock"] > stored[u"clock"]:
-				# Newer so update
-				result[nodeId] = value
-				del result[nodeId][keyName]
+				if maxTime is None or value[u"clock"] <= maxTime:
+					# Newer so update
+					result[nodeId] = value
 
 	return result
 
@@ -35,6 +34,21 @@ def totalSentRecv(moteResults):
 		tx += value[u"tx"]
 
 	return {u"rx": rx, u"tx": tx}
+
+# Evaluates the following predicate
+# This can be used to get the expected result
+#using Neighbours(1) as onehopn in
+#    	@(a : onehopn ~
+#    		slot(a) != slot(this) &
+#    	    @(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
+#    	)
+def predicate(this, onehopn, slots):
+	result = True
+	for a in onehopn:
+		result &= slots[a] != slots[this]
+		for b in onehopn:
+			result &= (a == b or slots[a] != slots[b])
+	return result
 
 class AnalyseFile:
 	def __init__(self, path):
@@ -61,13 +75,30 @@ class AnalyseFile:
 
 			self.pe[mote] = result
 
+		# Calculate totals
+		self.rimeTotal = totalSentRecv(self.rime)
+		self.TDMATotal = totalSentRecv(self.TDMA)
+		self.peTotal = totalSentRecv(self.pe)
+
+		# Predicate evaluation analysis
+
+	# Gets the slot value of a given node at the given time
+	def dataAt(self, time):
+		return {
+			nodeId: nodeData[u"slot"]
+			for (nodeId, nodeData)
+			in latestValues(self.data[u"stats"][u"TDMA"], u"STDMA", time).items()
+		}
 
 
 a = AnalyseFile('COOJA.testlog')
 
-#pprint(a.data)
+pprint(a.data[u"predicate"])
 
 #pprint(a.energy)
-print("Total Messages: {0}".format(totalSentRecv(a.rime)))
-print("TDMA: {0}".format(totalSentRecv(a.TDMA)))
-print("PE: {0}".format(totalSentRecv(a.pe)))
+print("Total Messages: {0}".format(a.rimeTotal))
+print("TDMA: {0}".format(a.TDMATotal))
+print("PE: {0}".format(a.peTotal))
+
+print(a.dataAt(462))
+print(a.dataAt(900))

@@ -24,9 +24,12 @@ for (var i = 0; i < allmotes.length; ++i)
 }
 
 
-// Set a timeout of 200 seconds
+// Set a timeout of 220 seconds
 // the units this function takes is in milliseconds
-TIMEOUT(200000);
+TIMEOUT(220000);
+
+GENERATE_MSG(200000, "sleep"); //Wait for 200 secs
+YIELD_THEN_WAIT_UNTIL(msg.equals("sleep"));
 
 while (true)
 {

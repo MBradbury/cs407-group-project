@@ -9,6 +9,19 @@ if (typeof String.prototype.startsWith != 'function')
 	};
 }
 
+outputDirectory = "/home/user/cs407-group-project/Tests/COOJA-Tests/TDMA/PELE/15/"
+
+// We need a way to generate a 99% sure its unique filename
+function guid() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+	    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+	    return v.toString(16);
+	});
+}
+
+resultsFile = new FileWriter(outputDirectory + guid(), false);
+
+
 // We need to fix strings for some reason
 // http://www.mirthcorp.com/community/forums/showthread.php?t=5128
 // http://nelsonwells.net/2012/02/json-stringify-with-mapped-variables/
@@ -143,6 +156,7 @@ while (true)
 }
 
 // Write out our results
-log.log(JSON.stringify(results) + "\n");
+resultsFile.write(JSON.stringify(results) + "\n");
+resultsFile.close();
 
 log.testOK();

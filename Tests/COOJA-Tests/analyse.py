@@ -1,9 +1,12 @@
 #!/bin/python
 
+import os
 import sys
 import json
 from pprint import pprint
 import xml.etree.ElementTree as ET
+
+from numpy import mean, std
 
 
 # The first thing we need to do is parse the simulation file
@@ -190,15 +193,64 @@ class AnalyseFile:
 		}
 
 
-a = AnalyseFile('COOJA.testlog')
 
-#pprint(a.data[u"predicate"])
+def meanStdAttr(items, attrName):
+	return (mean([getattr(x, attrName) for x in items]), std([getattr(x, attrName) for x in items]))
 
-#pprint(a.energy)
-print("Total Messages: {0}".format(a.rimeTotal))
-print("TDMA: {0}".format(a.TDMATotal))
-print("PE: {0}".format(a.peTotal))
+def meanStdAttrXx(items, attrName, X):
+	return (mean([getattr(x, attrName)[X] for x in items]), std([getattr(x, attrName)[X] for x in items]))
 
-print("PC Responses reached sink: {0}".format(a.responsesReachedSinkPC))
-print("PC success rate: {0}".format(a.successRate))
-print("PC correctlypredicates evaluted: {0}".format(a.pcCorrectlyEvaluted))
+def meanStdAttrTxRx(items, attrName):
+	return {"rx": meanStdAttrXx(items, attrName, u"rx"), "tx": meanStdAttrXx(items, attrName, u"tx")}
+
+peTypes = ["PELE"]
+sizes = [15]
+
+results = {}
+
+for peType in peTypes:
+
+	results[peType] = {}
+
+	for size in sizes:
+
+		results[peType][size] = {}
+
+		path = "TDMA/" + peType + "/" + str(size)
+
+		localResults = []
+
+		for resultsFile in os.listdir(path):
+
+			print(path + "/" + resultsFile)
+
+			try:
+
+				a = AnalyseFile(path + "/" + resultsFile)
+
+				localResults.append(a)
+
+				#pprint(a.energy)
+				print("Total Messages: {0}".format(a.rimeTotal))
+				print("TDMA: {0}".format(a.TDMATotal))
+				print("PE: {0}".format(a.peTotal))
+
+				print("PC Responses reached sink: {0}".format(a.responsesReachedSinkPC))
+				print("PC predicate success rate: {0}".format(a.successRate))
+				print("PC predicates correctly evaluted: {0}".format(a.pcCorrectlyEvaluted))
+
+			except:
+				pass
+
+		# We need to find the average and standard deviation
+
+		results[peType][size]["pcResponsesReachedSink"] = meanStdAttr(localResults, "responsesReachedSinkPC")
+		results[peType][size]["pcSuccessRate"] = meanStdAttr(localResults, "successRate")
+		results[peType][size]["pcCorrectlyEvaluted"] = meanStdAttr(localResults, "pcCorrectlyEvaluted")
+
+		results[peType][size]["messagesPE"] = meanStdAttrTxRx(localResults, "peTotal")
+		results[peType][size]["messagesTDMA"] = meanStdAttrTxRx(localResults, "TDMATotal")
+		results[peType][size]["messagesTotal"] = meanStdAttrTxRx(localResults, "rimeTotal")
+
+
+pprint(results)

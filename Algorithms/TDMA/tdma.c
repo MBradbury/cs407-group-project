@@ -98,6 +98,11 @@ static inline bool rimeaddr_lt(rimeaddr_t const * left, rimeaddr_t const * right
 	return (*(uint16_t const *)left) < (*(uint16_t const *)right);
 }
 
+
+static unsigned int tdma_bcast = 0;
+static unsigned int tdma_recv = 0;
+
+
 static void bcast(struct broadcast_conn * conn, void * data, size_t length, uint8_t type)
 {
 	packetbuf_clear();
@@ -108,7 +113,8 @@ static void bcast(struct broadcast_conn * conn, void * data, size_t length, uint
 
 	packetbuf_set_attr(PACKETBUF_ATTR_PACKET_TYPE, type);
 
-	broadcast_send(conn);
+	if (broadcast_send(conn) != 0)
+		++tdma_bcast;
 }
 
 static void bcast_beacon(struct broadcast_conn * conn, bool is_change)
@@ -149,7 +155,8 @@ static void bcast_beacon(struct broadcast_conn * conn, bool is_change)
 
 	packetbuf_set_attr(PACKETBUF_ATTR_PACKET_TYPE, PACKET_TYPE_PROTOCOL_BEACON);
 
-	broadcast_send(conn);
+	if (broadcast_send(conn) != 0)
+		++tdma_bcast;
 }
 
 static void set_slot(void * ptr)
@@ -161,10 +168,15 @@ static void set_slot(void * ptr)
 	assigned_slot = to_change_assigned_slot;
 
 	bcast_beacon(conn, true);
+
+	printf("STDMA %s clock %lu tx %u rx %u slot %u\n",
+		addr2str(&rimeaddr_node_addr), clock_seconds(), tdma_bcast, tdma_recv, assigned_slot);
 }
 
 static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 {
+	++tdma_recv;
+
 	void * ptr = packetbuf_dataptr();
 	unsigned int length = packetbuf_datalen();
 
@@ -338,8 +350,9 @@ static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_
 {
 	failure_response_t const * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("PELP: Response received from %s, %u, %u hops away. Failed predicate %u.\n",
-		addr2str(from), packetbuf_datalen(), hops, response->predicate_id);
+	printf("Response received from %s, %u, %u hops away. Predicate %u %s.\n",
+		addr2str(from), packetbuf_datalen(), hops, response->predicate_id,
+		response->result ? "succeeded" : "failed");
 
 	printf("PF *%s:%u:", addr2str(from), response->predicate_id);
 
@@ -372,7 +385,7 @@ static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_
 		}
 	}
 
-	printf("*\n");
+	printf(":%lu:%u*\n", clock_seconds(), response->result);
 }
 
 PROCESS_THREAD(startup_process, ev, data)
@@ -451,6 +464,8 @@ PROCESS_THREAD(startup_process, ev, data)
 			bcast_beacon(&bc, false);
 
 			print_stats();
+			printf("STDMA %s clock %lu tx %u rx %u slot %u\n",
+				addr2str(&rimeaddr_node_addr), clock_seconds(), tdma_bcast, tdma_recv, assigned_slot);
 		}
 	}
 

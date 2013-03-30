@@ -21,7 +21,8 @@ var results = new Object();
 results["stats"] = new Object();
 results["stats"]["rime"] = [];
 results["stats"]["energy"] = [];
-results["predicateFailures"] = [];
+results["stats"]["TDMA"] = [];
+results["predicate"] = [];
 results["motes"] = [];
 
 var allmotes = sim.getMotes();
@@ -54,6 +55,8 @@ while (true)
 		pf["on"] = sf(id);
 		pf["node"] = sf(splitMsg[0]);
 		pf["predicateId"] = parseInt(splitMsg[1]);
+		pf["clock"] = parseInt(splitMsg[4]);
+		pf["result"] = parseInt(splitMsg[5]);
 
 		pf["variableDetails"] = [];
 
@@ -90,7 +93,21 @@ while (true)
 			pf["values"].push(nodeData);
 		}
 
-		results["predicateFailures"].push(pf);
+		results["predicate"].push(pf);
+	}
+	else if (msg.startsWith("STDMA "))
+	{
+		var splitMsg = msg.split(" ");
+
+		var data = new Object();
+
+		for (var i = 0; i < splitMsg.length; i += 2)
+		{
+			data[splitMsg[i]] = parseInt(splitMsg[i + 1]);
+		}
+
+		results["stats"]["TDMA"].push(data);
+
 	}
 	else if (msg.startsWith("E "))
 	{

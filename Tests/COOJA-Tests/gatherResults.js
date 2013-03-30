@@ -29,13 +29,18 @@ for (var i = 0; i < allmotes.length; ++i)
 // Set a timeout of 200 seconds
 // the units this function takes is in milliseconds
 TIMEOUT(220000);
+
 GENERATE_MSG(100000, "END"); //Wait for 200 secs
 
 while (true)
 {
 	YIELD();
 
-	if (msg.startsWith("PF "))
+	if (msg.equals("END"))
+	{
+		break;
+	}
+	else if (msg.startsWith("PF "))
 	{
 		var pf = new Object();
 
@@ -118,3 +123,8 @@ while (true)
 		log.log(JSON.stringify(results));
 	}
 }
+
+// Write out our results
+log.log(JSON.stringify(results) + "\n");
+
+log.testOK();

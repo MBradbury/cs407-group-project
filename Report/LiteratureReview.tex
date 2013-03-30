@@ -106,26 +106,13 @@ Aside from the usual issues associated with sensor networks, having sensors atta
 \cite{4428702} Claimed: Ivan
 % http://static.usenix.org/events/mobisys06/full_papers/p28-hartung.pdf
 
-WSN: Multi-tiered portable wireless system for monitoring weather conditions in wildland fire environments
-
 While habitat monitoring has been at the forefront of monitoring wildlife habitat and animal behaviour, there is a need to measure and view fire and weather conditions to predict wildland fires that occurs across the globe. Fire behavior can change drastically, depending on different environmental factors and topological features such as elevation and aspect. It is important for such behaviour to be predicted accurately and wildland firefighters are currently using means like observing current weather conditions and weather forcasts provided by the  National Weather Service to do so. While data provided by the weather forcast gives a general overview of fire behaviours, those solely colleted by the firefighters (e.g. using a belt-weather kit) only provides data for a sparse number of regions which is inadequate in making a full evaluation. With wireless sensor networks, firefighters can safely measure weather conditions over a wide range of locations and elevations anywhere withing the fire environment.
 
-FireWxNet by \citeauthor{FireWxNet} in \cite{FireWxNet} is a robust multi-tiered portable wireless system, designed to be deployed in a rugged environment. Compared to other application deployments, FireWxNet covers a unique topology which ranges from substantial and sharp elevation differences to an extremely wide coverage area of about 160 square kilometers. One of the main challenges was providing wireless communication over a wide area coverage and fine-grained local weather sensing.
+FireWxNet by \citeauthor{FireWxNet} in \cite{FireWxNet} is a robust multi-tiered portable wireless system, designed to be deployed in a rugged environment. Compared to other application deployments, FireWxNet covers a unique topology which ranges from substantial and sharp elevation differences to an extremely wide coverage area of about 160 square kilometers. Wide area communication coverage and fine-grained local weather sensing coverage are some of the main challenges that was faced by the team. 
 
-Design challenges (notes)
-- providing wide area communication and fine grained local weather sensing coverage. Reay data from many points of interest to base camp through an area with no internet connectivity or electricity.  
-- Internet was 64km away used a small portable satellite receiver
-- large elevation difference between nodes resulted in very different radio propagration models from typical flat-ground, short distance deployments.
-- Some location wehere inaccessible so nodes had to be brought to the peak of the mountain by helicopter
-- protection from moisture and animals - large plastic waterproof breifcase
-- Concerns of overheating since temperatures could rise to 33 degrees. lack of airflow inside case as since there are no fans
+Some of the network challenges was ensuring a high-probability of receiving data from the sensors, regardless of interference and asynchronous links and this was tackled by using a best-effort converge-cast protocol. Other issues included verifying the connectivity between nodes and complications were a result of the sparse nature of the deployment and large chages in elevation between nodes. In addtion, a user could not receive verification when adding a node to a currently depoyed network and required the resetting of a neighbour node to gain connectivity.
 
-Networking challenges
-- Ensuring high-probability of receiving data from the sensors - Developed a best-effort converge-cast protocol. Reduces the need for every pack to reach the base station during a certain time period to only needing a single packet per node.
-
-Deployment Issues
-- Verifying the connectivity between the nodes
-- Downfall in mechanism was that a user would not receive verification when adding a node to current deployed network. Neighboring nodes needs to be restarted to do so.
+When testing the performance of the network, results showed that the networks which were deployed on different mountains obtained an average yield of only 40\% and a 78\% unique yield. This may have been the effect of timing limitations, for example some sensors required some settling time once it was activated before it could produce any accurate readings. The CSMA MAC protocol which would back-off in the presence of interference may have also contributed to the number of packets sent. To improve the sucess rate, they chose the option of resending the packets multiple times, but at the cost of some efficiency. In the future, the team aims at designing protocols such as hop-to-hop ACKS, which hopes to cut down on the number of packet they send. 
 
 \subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}

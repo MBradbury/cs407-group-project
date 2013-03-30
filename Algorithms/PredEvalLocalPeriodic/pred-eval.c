@@ -123,7 +123,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 	{
 		printf("PELP: Starting long wait...\n");
 
-		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
+		etimer_set(&et, pelp->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		printf("PELP: Wait finished! About to ask for data!\n");
@@ -219,7 +219,8 @@ exit:
 bool pelp_start(pelp_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pelp_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count)
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period)
 {
 	if (conn == NULL || predicate_failed == NULL || data_fn == NULL ||
 		sink == NULL || data_size == 0)
@@ -235,6 +236,8 @@ bool pelp_start(pelp_conn_t * conn,
 
 	conn->function_details = function_details;
 	conn->functions_count = functions_count;
+
+	conn->predicate_period = predicate_period;
 
 	hop_manager_init(&conn->hop_data);
 
@@ -405,7 +408,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	pelp_start(&pelp,
 		&sink, &node_data, sizeof(node_data_t), &predicate_failed,
-		func_det, sizeof(func_det)/sizeof(func_det[0]));
+		func_det, sizeof(func_det)/sizeof(func_det[0]),
+		4 * 60 * CLOCK_SECOND);
 
 	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
 	{

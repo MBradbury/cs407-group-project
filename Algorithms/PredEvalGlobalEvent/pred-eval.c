@@ -34,7 +34,6 @@
 #endif
 
 #define ROUND_LENGTH (clock_time_t)(5 * 60 * CLOCK_SECOND)
-#define INITIAL_ROUND_LENGTH (clock_time_t)(7 * 60 * CLOCK_SECOND)
 #define TRICKLE_INTERVAL (clock_time_t)(2 * CLOCK_SECOND)
 
 #define NODE_DATA_INDEX(array, index, size) \
@@ -532,7 +531,7 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 
 	while (true)
 	{
-		etimer_set(&et, INITIAL_ROUND_LENGTH);
+		etimer_set(&et, pege->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		data_evaluation(pege);
@@ -571,7 +570,8 @@ void pege_start_delayed1(pege_conn_t * conn)
 bool pege_start(pege_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pege_data_differs_fn differs_fn, pege_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count)
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period)
 {
 	if (conn == NULL || predicate_failed == NULL || data_fn == NULL ||
 		sink == NULL || data_size == 0 || differs_fn == NULL)
@@ -589,6 +589,7 @@ bool pege_start(pege_conn_t * conn,
 	conn->function_details = function_details;
 	conn->functions_count = functions_count;
 
+	conn->predicate_period = predicate_period;
 
 	predicate_manager_open(&conn->predconn, 135, 129, sink, TRICKLE_INTERVAL, &pm_callbacks);
 
@@ -783,7 +784,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	pege_start(&pege,
 		&sink, &node_data, sizeof(node_data_t), &node_data_differs, &predicate_failed,
-		func_det, sizeof(func_det)/sizeof(func_det[0]));
+		func_det, sizeof(func_det)/sizeof(func_det[0]),
+		4 * 60 * CLOCK_SECOND);
 
 	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
 	{

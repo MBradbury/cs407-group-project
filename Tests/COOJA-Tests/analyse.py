@@ -236,7 +236,7 @@ for peType in peTypes:
 				print("PE: {0}".format(a.peTotal))
 
 				print("PC Responses reached sink: {0}".format(a.responsesReachedSinkPC))
-				print("PC predicate success rate: {0}".format(a.successRate))
+				#print("PC predicate success rate: {0}".format(a.successRate))
 				print("PC predicates correctly evaluted: {0}".format(a.pcCorrectlyEvaluted))
 
 			except:
@@ -245,7 +245,7 @@ for peType in peTypes:
 		# We need to find the average and standard deviation
 
 		results[peType][size]["pcResponsesReachedSink"] = meanStdAttr(localResults, "responsesReachedSinkPC")
-		results[peType][size]["pcSuccessRate"] = meanStdAttr(localResults, "successRate")
+		#results[peType][size]["pcSuccessRate"] = meanStdAttr(localResults, "successRate")
 		results[peType][size]["pcCorrectlyEvaluted"] = meanStdAttr(localResults, "pcCorrectlyEvaluted")
 
 		results[peType][size]["messagesPE"] = meanStdAttrTxRx(localResults, "peTotal")

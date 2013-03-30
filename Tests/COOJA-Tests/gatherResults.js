@@ -45,11 +45,11 @@ for (var i = 0; i < allmotes.length; ++i)
 }
 
 
-// Set a timeout of 920 seconds
+// Set a timeout of 30 minutes 20 seconds
 // the units this function takes is in milliseconds
-TIMEOUT(920000);
+TIMEOUT(1820000);
 
-GENERATE_MSG(900000, "END"); //Wait for 900 secs
+GENERATE_MSG(1800000, "END"); //Wait for 30 minutes
 
 while (true)
 {

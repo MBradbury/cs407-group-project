@@ -30,12 +30,15 @@ typedef struct pelp_conn
 	uint8_t functions_count;
 	function_details_t const * function_details;
 
+	clock_time_t predicate_period;
+
 } pelp_conn_t;
 
 bool pelpstart(pelp_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pelp_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count);
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period);
 
 void pelp_stop(pelp_conn_t * conn);
 

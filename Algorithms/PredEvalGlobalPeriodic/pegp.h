@@ -48,12 +48,15 @@ typedef struct pegp_conn
 
 	struct ctimer ct_startup;
 
+	clock_time_t predicate_period;
+
 } pegp_conn_t;
 
 bool pegp_start(pegp_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pegp_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count);
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period);
 
 void pegp_stop(pegp_conn_t * conn);
 

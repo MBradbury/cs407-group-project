@@ -121,7 +121,7 @@ PROCESS_THREAD(pele_process, ev, data)
 	{
 		printf("PELE: Starting long wait...\n");
 
-		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
+		etimer_set(&et, pele->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		printf("PELE: Wait finished!\n");
@@ -197,7 +197,8 @@ exit:
 bool pele_start(pele_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pele_data_differs_fn differs_fn, pele_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count)
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period)
 {
 	if (conn == NULL || predicate_failed == NULL || data_fn == NULL ||
 		sink == NULL || data_size == 0 || differs_fn == NULL)
@@ -214,6 +215,8 @@ bool pele_start(pele_conn_t * conn,
 
 	conn->function_details = function_details;
 	conn->functions_count = functions_count;
+
+	conn->predicate_period = predicate_period;
 
 	hop_manager_init(&conn->hop_data);
 
@@ -418,7 +421,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	pele_start(&pele,
 		&sink, &node_data, sizeof(node_data_t), &node_data_differs, &predicate_failed,
-		func_det, sizeof(func_det)/sizeof(func_det[0]));
+		func_det, sizeof(func_det)/sizeof(func_det[0]),
+		4 * 60 * CLOCK_SECOND);
 
 	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
 	{

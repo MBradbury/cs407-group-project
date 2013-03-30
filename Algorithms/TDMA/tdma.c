@@ -89,7 +89,9 @@ static const unsigned int slot_count = 10;
 static const clock_time_t slot_length = 2 * CLOCK_SECOND;
 
 // The length of each round
-static const clock_time_t round_length = 60 * CLOCK_SECOND;
+static const clock_time_t round_length = 75 * CLOCK_SECOND;
+
+static const clock_time_t predicate_period = 4 * 60 * CLOCK_SECOND;
 
 static struct ctimer ct_change_assigned_slot;
 
@@ -414,7 +416,8 @@ PROCESS_THREAD(startup_process, ev, data)
 	pele_start(&pele,
 		&sink, &node_data, sizeof(node_data_t),
 		&node_data_differs, &predicate_failed,
-		func_det, sizeof(func_det)/sizeof(func_det[0]));
+		func_det, sizeof(func_det)/sizeof(func_det[0]),
+		predicate_period);
 
 	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
 	{

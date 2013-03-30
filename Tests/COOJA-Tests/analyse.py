@@ -1,7 +1,68 @@
 #!/bin/python
 
+import sys
 import json
 from pprint import pprint
+import xml.etree.ElementTree as ET
+
+
+# The first thing we need to do is parse the simulation file
+# to work how what nodes are neighbours of other nodes
+def calculateNeighbours():
+	simulation = sys.argv[1]
+
+	tree = ET.parse(simulation)
+	simNode = tree.getroot().find("simulation")
+
+	txrange = float(simNode.find("radiomedium").find("transmitting_range").text)
+	txrange2 = txrange * txrange
+
+	nodeCoords = {}
+
+	for childNode in simNode.findall("mote"):
+		nodeId = None
+		x = None
+		y = None
+
+		for confNode in childNode.findall("interface_config"):
+			idNode = confNode.find("id")
+			xNode = confNode.find("x")
+			yNode = confNode.find("y")
+
+			if idNode is not None:
+				nodeId = int(idNode.text)
+
+			if xNode is not None:
+				x = float(xNode.text)
+
+			if yNode is not None:
+				y = float(yNode.text)
+
+		nodeCoords[nodeId] = (x, y)
+
+	#pprint(nodeCoords)
+
+	def nodeDistance2(a, b):
+		return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
+
+	n = {}
+
+	for a in nodeCoords.keys():
+		n[a] = []
+
+		for b in nodeCoords.keys():
+			if a != b:
+				# This maths was taken from csc-compute-neighbor-stats
+				if nodeDistance2(nodeCoords[a], nodeCoords[b]) <= txrange2:
+					n[a].append(b)
+
+	return n
+
+neighbours = calculateNeighbours()
+
+#pprint(neighbours)
+# We have now finished finding out neighbours
+
 
 def latestValues(values, keyName, maxTime=None):
 	result = {}
@@ -88,13 +149,16 @@ class AnalyseFile:
 
 		self.predicatesFailed = 0
 		self.predicatesSucceeded = 0
+
+		self.predicatesCorrectlyEvaluated = 0
+		self.predicatesIncorrectlyEvaluated = 0
 		
 		for pred in self.data[u"predicate"]:
 			pprint(pred)
-			print(str(pred[u"node"]))
-			print(str(pred[u"on"] + u".0"))
 
-			if str(pred[u"node"]) != str(pred[u"on"] + u".0"):
+			node = int(str(pred[u"node"]).split(".")[0])
+
+			if node != int(pred[u"on"]):
 				self.responsesReachedSink += 1
 
 			if pred[u"result"] == 0:
@@ -103,11 +167,20 @@ class AnalyseFile:
 			else:
 				self.predicatesSucceeded += 1
 
+			# Lets now evaluate the predicate ourselves
+			r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
+
+			if (r == (pred[u"result"] == 1)):
+				self.predicatesCorrectlyEvaluated += 1
+			else:
+				self.predicatesIncorrectlyEvaluated += 1
+
+
 		self.responsesReachedSinkPC = float(self.responsesReachedSink) / float(self.totalPredicatesSent)
 		self.successRate = float(self.predicatesSucceeded) / float(self.totalPredicates)
 		self.failureRate = float(self.predicatesFailed) / float(self.totalPredicates)
 
-		# TODO: work of number of successfully evaluated predicates
+		self.pcCorrectlyEvaluted = float(self.predicatesCorrectlyEvaluated) / float(self.totalPredicates)
 
 
 	# Gets the slot value of a given node at the given time
@@ -133,4 +206,4 @@ print(a.dataAt(900))
 
 print(a.responsesReachedSinkPC)
 print(a.successRate)
-print(a.failureRate)
+print(a.pcCorrectlyEvaluted)

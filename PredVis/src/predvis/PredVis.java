@@ -11,8 +11,8 @@ import java.awt.geom.Ellipse2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.Random;
 import javax.swing.*;
+import javax.swing.border.*;
 import javax.swing.event.*;
 import org.apache.commons.collections15.Transformer;
 
@@ -29,6 +29,11 @@ class PredicateListRenderer extends DefaultListCellRenderer
         Predicate p = (Predicate)value;
         switch(p.getStatus()) 
         {
+            case UNMONITORED:
+                setForeground(Color.WHITE);
+                setBackground(Color.BLUE);
+                break;
+                
             case SATISFIED:
                 setForeground(Color.BLACK);
                 setBackground(Color.GREEN);
@@ -74,10 +79,14 @@ public class PredVis extends JFrame {
     private JTabbedPane tabbedPane = null;
     
     private JPanel predicatePanel = null;
-    private JPanel predicateControlsPanel = null;
+    private JPanel predicateDetailPanel = null;
     private JList predicateList = null;
     private JTextArea predicateScriptEditor = null;
+    private JTextArea predicateAssemblyEditor = null;
     private JButton savePredicateScriptButton = null;
+    private JButton savePredicateAssemblyButton = null;
+    private JButton deployPredicateButton = null;
+    private JButton rescindPredicateButton = null;
     
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
@@ -240,6 +249,8 @@ public class PredVis extends JFrame {
     private void initPredicateViewer() {
         final JFrame frame = this;
         
+        Border loweredEtched = BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
+        
         //Main panel init
         predicatePanel = new JPanel(new BorderLayout());
         
@@ -247,6 +258,7 @@ public class PredVis extends JFrame {
         predicateList = new JList(predicateListModel);
         predicateList.setCellRenderer(new PredicateListRenderer());
         predicateList.setPreferredSize(new Dimension(200, 600));
+        predicateList.setBorder(loweredEtched);
         predicateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         predicateList.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -260,18 +272,29 @@ public class PredVis extends JFrame {
         });
         predicatePanel.add(predicateList, BorderLayout.WEST);
         
-        //Controls panel
-        predicateControlsPanel = new JPanel();
-        predicateControlsPanel.setLayout(new BoxLayout(predicateControlsPanel, BoxLayout.Y_AXIS));
+        //Detail panel
+        predicateDetailPanel = new JPanel();
+        predicateDetailPanel.setLayout(new BoxLayout(predicateDetailPanel, BoxLayout.Y_AXIS));
         
-        //Script editor
-        predicateScriptEditor = new JTextArea("Click Add Predicate");
-        predicateScriptEditor.setWrapStyleWord(false);
+        //...Script editor
+        predicateScriptEditor = new JTextArea();
         predicateScriptEditor.setFont(MONOSPACE_FONT);
-        predicateScriptEditor.setPreferredSize(new Dimension(400, 300));
-        predicateControlsPanel.add(predicateScriptEditor);
+        predicateScriptEditor.setLineWrap(true);
+        predicateScriptEditor.setWrapStyleWord(true);
+        predicateScriptEditor.setPreferredSize(new Dimension(400, 200));
+        predicateScriptEditor.setBorder(loweredEtched);
+        predicateDetailPanel.add(predicateScriptEditor);
         
-        //Script editor save button
+        //...Assembly editor
+        predicateAssemblyEditor = new JTextArea();
+        predicateAssemblyEditor.setFont(MONOSPACE_FONT);
+        predicateAssemblyEditor.setLineWrap(true);
+        predicateAssemblyEditor.setWrapStyleWord(true);
+        predicateAssemblyEditor.setPreferredSize(new Dimension(400, 200));
+        predicateAssemblyEditor.setBorder(loweredEtched);
+        predicateDetailPanel.add(predicateAssemblyEditor);
+        
+        //...Script editor save button
         savePredicateScriptButton = new JButton("Save Script");
         savePredicateScriptButton.setEnabled(false);
         savePredicateScriptButton.addActionListener(new ActionListener() {
@@ -280,10 +303,51 @@ public class PredVis extends JFrame {
                 currentPredicate.setScript(predicateScriptEditor.getText());
             }
         });
-        predicateControlsPanel.add(savePredicateScriptButton);
+        predicateDetailPanel.add(savePredicateScriptButton);
+        
+        //...Assembly editor save button
+        savePredicateAssemblyButton = new JButton("Save Assembly");
+        savePredicateAssemblyButton.setEnabled(false);
+        savePredicateAssemblyButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                currentPredicate.setAssembly(predicateAssemblyEditor.getText());
+            }
+        });
+        predicateDetailPanel.add(savePredicateAssemblyButton);
+        
+        //...Deploy predicate button
+        deployPredicateButton = new JButton("Start Monitoring");
+        deployPredicateButton.setEnabled(false);
+        deployPredicateButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                //TODO deploy predicate.
+                deployPredicateButton.setEnabled(false);
+                rescindPredicateButton.setEnabled(true);
+                currentPredicate.setMonitored(true);
+                predicateList.repaint();
+            }
+        });
+        predicateDetailPanel.add(deployPredicateButton);
+        
+        //...Rescind predicate button
+        rescindPredicateButton = new JButton("Stop Monitoring");
+        rescindPredicateButton.setEnabled(false);
+        rescindPredicateButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                //TODO rescind predicate.
+                deployPredicateButton.setEnabled(true);
+                rescindPredicateButton.setEnabled(false);
+                currentPredicate.setMonitored(false);
+                predicateList.repaint();
+            }
+        });
+        predicateDetailPanel.add(rescindPredicateButton);
         
         //Fill panels
-        predicatePanel.add(predicateControlsPanel, BorderLayout.EAST);
+        predicatePanel.add(predicateDetailPanel, BorderLayout.EAST);
         tabbedPane.addTab("Predicates", null, predicatePanel, "View Predicate List");
     }
     
@@ -348,7 +412,10 @@ public class PredVis extends JFrame {
     private void setCurrentPredicate(Predicate p) {
         currentPredicate = p;
         predicateScriptEditor.setText(p.getScript());
+        predicateAssemblyEditor.setText(p.getAssembly());
         savePredicateScriptButton.setEnabled(true);
+        savePredicateAssemblyButton.setEnabled(true);
+        deployPredicateButton.setEnabled(true);
     }
     
     private void updateNetworkView(NetworkState ns) {

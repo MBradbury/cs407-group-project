@@ -15,6 +15,7 @@ import predvis.hoppy.Hoppy;
  */
 public class Predicate {
     public enum PredicateStatus {
+        UNMONITORED,
         SATISFIED,
         UNSATISFIED
     }
@@ -26,9 +27,15 @@ public class Predicate {
     //Primary state
     private String name;
     private File scriptFile;
+    private boolean monitored = false;
     
     //Secondary state
     private String script;
+    private String assembly;
+    private String target;
+    private VariableDetails[] vds;
+    
+    //Tertiary state
     private int[] bytecode;
     
     public Predicate() {
@@ -39,6 +46,7 @@ public class Predicate {
         this.name = name;
         this.scriptFile = scriptFile;
         compileScript();
+        assembleScript();
     }
     
     public String getName() {
@@ -69,6 +77,7 @@ public class Predicate {
     public void setScript(String script) {
         this.script = script;
         compileScript();
+        assembleScript();
         
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile));
@@ -79,10 +88,43 @@ public class Predicate {
         }
     }
     
+    public boolean getMonitored() {
+        return monitored;
+    }
+    
+    public void setMonitored(boolean monitored) {
+        this.monitored = monitored;
+    }
+    
+    public String getAssembly() {
+        return assembly;
+    }
+    
+    public void setAssembly(String assembly) {
+        this.assembly = assembly;
+        assembleScript();
+    }
+    
+    public String getTarget() {
+        return target;
+    }
+    
+    public int[] getBytecode() {
+        return bytecode;
+    }
+    
+    public VariableDetails[] getVariableDetails() {
+        return vds;
+    }
+    
     private static int temp = 0;
     public PredicateStatus getStatus() {
-        //TODO: query network, is predicate satisfied?
-        return temp++ % 2 == 0 ? PredicateStatus.SATISFIED : PredicateStatus.UNSATISFIED;
+        if (monitored) {
+            //TODO: query network, is predicate satisfied?
+            return temp++ % 2 == 0 ? PredicateStatus.SATISFIED : PredicateStatus.UNSATISFIED;
+        } else {
+            return PredicateStatus.UNMONITORED;
+        }
     }
     
     private void compileScript() {
@@ -96,11 +138,27 @@ public class Predicate {
                 Hoppy.ReInit(in);
             }
             HashMap<Integer, Integer> vdMap = new HashMap<Integer, Integer>();
-            String target = hoppy.compile(out, vdMap);
+            target = hoppy.compile(out, vdMap);
+            assembly = out.toString();
             
+            //Set up variable details structure
+            vds = new VariableDetails[vdMap.size()];
+            int i = 0;
+            for (int n : vdMap.keySet()) {
+                vds[i++] = new VariableDetails(vdMap.get(n), n);
+            }	
+        } catch (Exception e) {
+            //TODO
+        }
+    }
+    
+    private void assembleScript() {
+        assert(assembly != null);
+        
+        try {
             //Run Dragon
-            in = new ByteArrayInputStream(out.toString().getBytes(Charset.forName("UTF-8")));
-            out = new ByteArrayOutputStream();
+            InputStream in = new ByteArrayInputStream(assembly.getBytes(Charset.forName("UTF-8")));
+            OutputStream out = new ByteArrayOutputStream();
             LittleEndianDataOutputStream leout = new LittleEndianDataOutputStream(out);
             
             if (dragon == null) {
@@ -116,14 +174,6 @@ public class Predicate {
             for (int i = 0; i < bytes.length; ++i) {
                 bytecode[i] = (int)(bytes[i] & 0xFF);
             }
-			
-            //Set up variable details structure
-            VariableDetails[] vds = new VariableDetails[vdMap.size()];
-            int i = 0;
-            for (int n : vdMap.keySet()) {
-                vds[i++] = new VariableDetails(vdMap.get(n), n);
-            }
-			
         } catch (Exception e) {
             //TODO
         }

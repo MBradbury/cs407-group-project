@@ -57,3 +57,4 @@ VarDepthClustering
 *.project
 *.settings
 /PredVis/dist/
+venv/

@@ -53,6 +53,23 @@ TOSSIM \cite{levis2003tossim}
 \paragraph{RIME}
 Claimed - Amit
 \cite{Dunkels:2007:ACA:1322263.1322295} % http://dunkels.com/adam/dunkels07adaptive.pdf
+Notes
+\begin{itemize}
+	\item Running applications over multiple protocols, means that the application cannot rely on on the existence of specific mechanisms (such as retransmissions)
+	\item Developed a common architecture (benefits include code reuse and interoperability)
+	\item Previous work by \cite{Ee:2006:MNL:1298455.1298479,Polastre:2005:ULA:1098918.1098928} did not solve the problem if the protocols running on top of the lower layers 
+	\item Packet headers are a problem, because they need to be small yet adaptive enough to encompass any type of communication. Solve this by using packet attributes, involving modules that transform the data and attributes into packets with headers and payloads. These are better as it allows the developer access to lower level information, without violating layering principles (with similar execution performance). Also allows interopability with all protocols, as all that is needed is a module to adapt the attributes/headers appropriately. Modules may have to perform more than simple header manipulations, depending on the protocol
+	\item Rime stack includeds many broadcast/communication primitives (such as Single-Hop Broadcasting), these primitives were selected based on analysis on common uses in sensor networks
+	\item presented a solution to the cross-layer information-sharing problem of a layered communication stack by separating the protocol logic from the details of the packet headers
+	\item  
+\end{itemize}
+
+TCP/IP
+\begin{itemize}
+	\item Traditionally viewed as unsuitable in sensor networks
+	\item Simplified versions have been suggested as well as optimisations with headers \cite{Dunkels:2003:FTA:1066116.1066118,Dunkels04makingtcp/ip} 
+\end{itemize}
+
 
 \paragraph{Beacon Coordination}
 \cite{Dunkels:2011:ALB:1966251.1966270} % http://dunkels.com/adam/dunkels11announcement.pdf

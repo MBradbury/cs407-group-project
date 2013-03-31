@@ -101,8 +101,14 @@ class NodeCommsResponder implements NodeCommsCallback {
                 ++i;
             }
             
+            int clockTime = Integer.parseInt(splitFirst[4]);
+            
+            boolean result = Integer.parseInt(splitFirst[5]) == 1;
+            
             StringBuilder sb = new StringBuilder();
             sb.append("For predicate ").append(predicateId).append(" on ").append(from).append(":\n");
+            sb.append("\tResult ").append(result).append("\n");
+            sb.append("\tTime ").append(clockTime).append("\n");
             sb.append("\tGot variable details ").append(vds).append("\n");
             sb.append("\tGot variable data ").append(Arrays.toString(nodeData)).append("\n");
             

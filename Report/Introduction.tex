@@ -1,7 +1,12 @@
 % !TeX root = Report.tex
 \section{Introduction}
 
+\subsection{What is a Wireless Sensor Network?}
+
 Wireless Sensor Networks (WSNs) are becoming increasingly prevalent due to decreasing hardware costs and hardware size \cite{TankBible}. Therefore, it is important that we consider issues with them now, so we are prepared for when they become widely used. A major issue with any system is that it may contain bugs, fortunately, there are many well known methodologies for detecting and eliminating bugs \cite{1382572, 749477, ?}. However, in distributed systems there are additional challenges to overcome \cite{5010224} and there are additional challenges to overcome with WSNs due to the energy constrained environment they work in \cite{?}.
+
+
+\subsection{Debugging Distributed Systems}
 
 What can be meant by `detecting bugs', in non-distributed systems there are many different classes of bugs \cite{?}, when we consider distributed systems many of those bugs have new vectors in which they can arise. For example deadlock can now occur across motes if both motes are waiting on receiving a message the other mote should be sending. The fact that these systems are distributed means that debugging these kind of problems becomes harder \cite{?}. Also there are new ways bugs can arise, for example in the routing of information, if a message being sent is stuck being transmitted in a cycle of nodes it will never reach its destination. This type of problem requires lots of resources (either memory or large messages) to be able to effectively debug \cite{?}.
 

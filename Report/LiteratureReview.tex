@@ -32,11 +32,12 @@ TOSSIM \cite{levis2003tossim}
 \cite{Tsiftes:2011:DS:2070942.2070974} %http://dunkels.com/adam/tsiftes11database.pdf
 \cite{TinyDB}
 
-\paragraph{Sensor Network IP Stacks}
-\cite{ko2011beyond} % http://dunkels.com/adam/ko11beyond.pdf
-\cite{dunkels2009efficient} % http://dunkels.com/adam/yazar09efficient.pdf
-\cite{Durvy:2008:MSN:1460412.1460483} %http://dunkels.com/adam/durvy08making.pdf
-\cite{dunkels2003full} % http://dunkels.com/adam/mobisys2003.pdf
+
+%\paragraph{Sensor Network IP Stacks} -- Not really need, IP work done in RIME
+%\cite{ko2011beyond} % http://dunkels.com/adam/ko11beyond.pdf
+%\cite{dunkels2009efficient} % http://dunkels.com/adam/yazar09efficient.pdf
+%\cite{Durvy:2008:MSN:1460412.1460483} %http://dunkels.com/adam/durvy08making.pdf
+%\cite{Dunkels:2003:FTA:1066116.1066118} % http://dunkels.com/adam/mobisys2003.pdf
 
 %Bring into interoperability with the Internet of Things
 \cite{Christin_Reinhardt_Mogre_Steinmetz_2009}
@@ -50,26 +51,19 @@ TOSSIM \cite{levis2003tossim}
 \paragraph{Energy Estimation}
 \cite{Dunkels:2007:SOE:1278972.1278979} % http://dunkels.com/adam/dunkels07softwarebased.pdf
 
-\paragraph{RIME}
-Claimed - Amit
-\cite{Dunkels:2007:ACA:1322263.1322295} % http://dunkels.com/adam/dunkels07adaptive.pdf
-Notes
-\begin{itemize}
-	\item Running applications over multiple protocols, means that the application cannot rely on on the existence of specific mechanisms (such as retransmissions)
-	\item Developed a common architecture (benefits include code reuse and interoperability)
-	\item Previous work by \cite{Ee:2006:MNL:1298455.1298479,Polastre:2005:ULA:1098918.1098928} did not solve the problem if the protocols running on top of the lower layers 
-	\item Packet headers are a problem, because they need to be small yet adaptive enough to encompass any type of communication. Solve this by using packet attributes, involving modules that transform the data and attributes into packets with headers and payloads. These are better as it allows the developer access to lower level information, without violating layering principles (with similar execution performance). Also allows interopability with all protocols, as all that is needed is a module to adapt the attributes/headers appropriately. Modules may have to perform more than simple header manipulations, depending on the protocol
-	\item Rime stack includeds many broadcast/communication primitives (such as Single-Hop Broadcasting), these primitives were selected based on analysis on common uses in sensor networks
-	\item presented a solution to the cross-layer information-sharing problem of a layered communication stack by separating the protocol logic from the details of the packet headers
-	\item  
-\end{itemize}
+\paragraph{RIME and IP Stacks}
 
-TCP/IP
+TCP/IP is traditionally viewed as unsuitable in sensor networks, \citeauthor{Estrin:1999:NCC:313451.313556} suggested that sensor networks have such different requirements to traditional networks, and that the overall structure of these networks needs to be reconsidered \cite{Estrin:1999:NCC:313451.313556}. Some of the problems \citeauthor{Estrin:1999:NCC:313451.313556} associated with IP in sensor networks included \cite{Estrin:1999:NCC:313451.313556}:
 \begin{itemize}
-	\item Traditionally viewed as unsuitable in sensor networks
-	\item Simplified versions have been suggested as well as optimisations with headers \cite{Dunkels:2003:FTA:1066116.1066118,Dunkels04makingtcp/ip} 
+	\item ``The sheer numbers of these devices, and their unattended deployment, will preclude reliance on a broadcast communication or the conﬁguration currently needed to deploy and operate networked devices.''
+	\item ``Unlike traditional networks, a sensor node may not need an identity (e.g., an address).''
+	\item ``Traditional networks are designed to accommodate a wide range of applications.''
 \end{itemize}
+\citeauthor{Hui:2008:IDL:1460412.1460415} suggested that these problems are largely due to IPv4 and not the later IPv6 stating ``IPv6 is better suited to the needs of WSNs than IPv4 in every dimension'' \cite{Hui:2008:IDL:1460412.1460415}, further showing that a IPv6 based network architecture could be used in sensor networks, and provides a strong foundation in which to base further work \cite{Durvy:2008:MSN:1460412.1460483}. Simplified versions have been suggested as well as optimisations performed with headers \cite{Dunkels:2003:FTA:1066116.1066118,Dunkels04makingtcp/ip}, but they still had issues with regards to being based on IPv4.  \citeauthor{Estrin:1999:NCC:313451.313556} implementation of an IPv6 based architecture still had some problems, such as large headers, and the reliance on routing tables. The implementation had many benefits when concerning applications involving Neighbour Discovery and routing, but provided little improvements towards applications not involving identities (such as Flooding).
 
+\citeauthor{Dunkels:2007:ACA:1322263.1322295} developed a common architecture, which allowed for much more code reuse and interoperability between protocols, this involved the RIME communication stack. The need for this new layer was brought about from applications needing to run over multiple protocols, leaving them unable to rely on specific communication mechanisms (such as retransmissions and acknowledgements) \cite{Dunkels:2007:ACA:1322263.1322295}. Previous work by \citeauthor{Ee:2006:MNL:1298455.1298479,Polastre:2005:ULA:1098918.1098928} \cite{Ee:2006:MNL:1298455.1298479,Polastre:2005:ULA:1098918.1098928} did not effectively solve the problem of protocols running on top of the lower layers, but did provide a basis for the RIME stack \cite{Dunkels:2007:ACA:1322263.1322295}. 
+
+The RIME communication stack presents a solution to the cross-layer information-sharing problem of a layered communication stack by separating the protocol logic from the details of the packet headers. Packet headers need to be small, yet adaptive enough to encompass any type of communications. They solved this by using the notion of Packet Attributes. Modules would be used to transform data and the attributes into the corresponding packets (with headers and payloads). This provides the developer access too lower level information, without violating layering principles, yet with similar execution performance. This also allows interoperability with all protocols, abstracting the networking layers from the main application layer. For the application layer, RIME provides many communication primitives (such as Single-Hop Broadcasting) \cite{Dunkels:2007:ACA:1322263.1322295}, these primitives were selected based on analysis on the common use cases in WSNs.
 
 \paragraph{Beacon Coordination}
 \cite{Dunkels:2011:ALB:1966251.1966270} % http://dunkels.com/adam/dunkels11announcement.pdf

@@ -38,6 +38,9 @@ public class Predicate {
     //Tertiary state
     private int[] bytecode;
     
+    //Return data
+    private String data;
+    
     public Predicate() {
         //Do nothing.
     }
@@ -115,6 +118,14 @@ public class Predicate {
     
     public VariableDetails[] getVariableDetails() {
         return vds;
+    }
+    
+    public String getData() {
+        return data;
+    }
+    
+    public void setData(String data) {
+        this.data = data;
     }
     
     private static int temp = 0;

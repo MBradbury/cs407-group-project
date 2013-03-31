@@ -225,7 +225,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("PEGE: Writing len=%d dlen=%d\n", msg->length, *packet_length);
+	PEDPRINTF("PEGE: Writing len=%d dlen=%d\n", msg->length, *packet_length);
 
 	// Get the pointer after the message
 	void * msgdata = (msg + 1);
@@ -395,7 +395,7 @@ static void data_evaluation(pege_conn_t * pege)
 				target = unique_array_next(target))
 			{
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-				printf("PEGE: Eval: Checking=%s %d hops\n", addr2str(t), hops);
+				PEDPRINTF("PEGE: Eval: Checking=%s %d hops\n", addr2str(t), hops);
 
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbours_elem;
@@ -429,7 +429,7 @@ static void data_evaluation(pege_conn_t * pege)
 
 							if (nd == NULL)
 							{
-								printf("PEGE: ERROR: no info on %s\n", addr2str(neighbour));
+								PEDPRINTF("PEGE: ERROR: no info on %s\n", addr2str(neighbour));
 							}
 							else
 							{
@@ -477,7 +477,7 @@ static void data_evaluation(pege_conn_t * pege)
 					++count;
 				}
 
-				printf("PEGE: Eval: i=%d Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
+				PEDPRINTF("PEGE: Eval: i=%d Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
@@ -490,14 +490,16 @@ static void data_evaluation(pege_conn_t * pege)
 			&hop_data,
 			all_neighbour_data, max_size, pred);
 
+#if 0
 		if (evaluation_result)
 		{
-			printf("PEGE: TRUE\n");
+			PEDPRINTF("PEGE: TRUE\n");
 		}
 		else
 		{
-			printf("PEGE: FAILED (%s)\n", error_message());
+			PEDPRINTF("PEGE: FAILED (%s)\n", error_message());
 		}
+#endif
 
 		free(all_neighbour_data);
 
@@ -511,7 +513,7 @@ static void data_evaluation(pege_conn_t * pege)
 	// We do not clear received_data, as that is sent only when it changes
 	unique_array_clear(&pege->neighbour_info);
 
-	printf("PEGE: Finishing=%u received_data=%u\n",
+	PEDPRINTF("PEGE: Finishing=%u received_data=%u\n",
 		pege->pred_round_count, map_length(&pege->received_data));
 	
 	pege->pred_round_count += 1;

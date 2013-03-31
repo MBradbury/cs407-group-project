@@ -78,7 +78,7 @@ static void handle_neighbour_data(neighbour_agg_conn_t * conn,
 {
 	pegp_conn_t * pegp = conncvt_neighbour_agg(conn);
 
-	printf("PEGP: Neighbour r=%u len=%u\n", round_count, length);
+	PEDPRINTF("PEGP: Neighbour r=%u len=%u\n", round_count, length);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -189,7 +189,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
-	printf("PEGP: Store len=%u\n", length);
+	PEDPRINTF("PEGP: Store len=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -225,7 +225,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("PEGP: Write len=%d dlen=%d\n", msg->length, *packet_length);
+	PEDPRINTF("PEGP: Write len=%d dlen=%d\n", msg->length, *packet_length);
 
 	// Get the pointer after the message
 	void * msgdata = (msg + 1);
@@ -326,7 +326,7 @@ static void pretend_node_data(void * data)
 
 static void data_evaluation(pegp_conn_t * pegp)
 {
-	printf("PEGP: Start Eval\n");
+	PEDPRINTF("PEGP: Start Eval\n");
 
 	map_t const * predicate_map = predicate_manager_get_map(&pegp->predconn);
 
@@ -372,7 +372,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 				target = unique_array_next(target))
 			{
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-				printf("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
+				PEDPRINTF("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
 
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbours_elem;
@@ -406,7 +406,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 
 							if (nd == NULL)
 							{
-								printf("PEGP: ERROR no info on %s\n", addr2str(neighbour));
+								PEDPRINTF("PEGP: ERROR no info on %s\n", addr2str(neighbour));
 							}
 							else
 							{
@@ -454,7 +454,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 					++count;
 				}
 
-				printf("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
+				PEDPRINTF("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
@@ -468,15 +468,17 @@ static void data_evaluation(pegp_conn_t * pegp)
 			&pegp->hop_data,
 			all_neighbour_data, max_size, pred);
 
+#if 0
 		if (evaluation_result)
 		{
-			printf("PEGP: TRUE\n");
+			PEDPRINTF("PEGP: TRUE\n");
 		}
 		else
 		{
-			printf("PEGP: FAILED (%s)\n", error_message());
+			PEDPRINTF("PEGP: FAILED (%s)\n", error_message());
 		}
-
+#endif
+		
 		//predicate_manager_send_response(&predconn, &hop_data,
 		//	pe, all_neighbour_data, sizeof(node_data_t), max_size);
 
@@ -492,7 +494,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 	map_clear(&pegp->received_data);
 	unique_array_clear(&pegp->neighbour_info);
 
-	printf("PEGP: Round=%u\n", pegp->pred_round_count);
+	PEDPRINTF("PEGP: Round=%u\n", pegp->pred_round_count);
 	
 	pegp->pred_round_count += 1;
 }

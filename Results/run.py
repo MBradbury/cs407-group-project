@@ -10,7 +10,7 @@ cscPath = "/home/user/TDMA.csc"
 command = ["ant", "run_nogui", "-Dargs={0}".format(cscPath)]
 
 # Simulation
-repeats = 46
+repeats = 50
 simultaneousProcs = multiprocessing.cpu_count()
 
 

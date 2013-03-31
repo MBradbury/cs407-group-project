@@ -3,30 +3,27 @@
 
 \subsection{What is a Wireless Sensor Network?}
 
-Wireless Sensor Networks (WSNs) are becoming increasingly prevalent due to decreasing hardware costs and hardware size \cite{TankBible}. Therefore, it is important that we consider issues with them now, so we are prepared for when they become widely used. A major issue with any system is that it may contain bugs, fortunately, there are many well known methodologies for detecting and eliminating bugs \cite{1382572, 749477, ?}. However, in distributed systems there are additional challenges to overcome \cite{5010224} and there are additional challenges to overcome with WSNs due to the energy constrained environment they work in \cite{?}.
+A wireless sensor network (WSN) is a collection of motes that are capable of wireless communication and ability to sense their surrounding environment \cite{Mica2002,TankBible}. To communicate wirelessly each node is equipped with a radio that allows them to communicate with their neighbouring nodes within a given range. They typically contain a simple CPU that is capable of controlling the hardware such as the radio and sensors, processing events (such as messages being sent and received) and all the other computation necessary for operation. As the hardware is wireless in all meanings of the word, the motes are not plugged into the mains power supply - this means the motes must run off stored energy in a battery. The fact that they run off a battery is very important as it means there is only a finite supply of energy. As the energy available will eventually run out the platform being deployed (the hardware and the software) must be developed around this limitation to maximise the system's lifetime to maximise the utility that can be got out of the system \cite{1331424}.
 
+While a limited energy source is the predominant characteristic of a wireless sensor node, there are numerous other traits or issues that can be considered. For instance it is possible for these nodes to be mobile (for example an ad-hoc network of PDAs) \cite{4224091} which leads to very interesting behaviour in handling communication between these nodes. Nodes are usually equipped with the same features (such as the same wireless radio), need to withstand harsh outdoor conditions (as that is where they are typically deployed) \cite{SzewczykPMC04, Werner-Allen:2006:FYV:1298455.1298491} and are used in an unattended fashion \cite{1437066}.
+
+As energy usage is limited wireless sensor nodes tend not to use expensive broadcasting protocols such as IEEE 802.11 \cite{Mica2002}, but instead use much simpler alternatives to save energy. For example wireless protocols such as IEEE 802.15.4 ZigBee \cite{1253873, 4014617} are designed to be used by wireless sensor networks and have a lower energy usage associated with them. Some applications rely on even lower level behaviour specified by a certain MAC layer \cite{5751321,4469515,?,BMAC,SMAC,XMAC}, these applications involve a trade-off between development time and energy usage. Where simplicity is often sacrificed for decreased energy usage. Using these simple protocols unfortunately has the downside of meaning that broadcasts are subject to several types of collisions and message losses. So it is very important that the software running on the nodes is designed to handle these cases.
+
+As wireless sensor nodes operate in harsh outdoors condition, there is a high probability of them failing. These faults can range from hardware damage caused by environmental conditions or tampering, software bugs, or simply a denial of service caused by nodes running out of power. So algorithms and software need to be designed to handle these potential failures, otherwise they risk catastrophic failure when they encounter these issues.
 
 \subsection{Debugging Distributed Systems}
 
+Like any system, software or otherwise, developed by humans there is the potential for humans to make mistakes. Mistakes can be benign or they can cause incorrect behaviour and failures. Developing tools to detect these issues and notify the developer so they can be corrected is an incredibly important part of any toolchain. For example the GNU toolchain has utilities such as gdb \cite{?} which allows breakpoint in code to be set and program state to be examined at that point. There are also numerous other tools that look for memory issues (valgrind \cite{?}), security flaws \cite{?} and other classes of bugs. Debugging isolated systems is considered to be a difficult task \cite{?}, debugging distributed systems is considered even harder.
+
+When considering a distributed system if you want to examine the state of a system at a given point you cannot simply set a breakpoint in your local binary. You have to introduce a point across the entire network of device where they need to halt and report their state.
+
+
+
+\begin{comment}
+\cite{1382572, 749477, ?}. However, in distributed systems there are additional challenges to overcome \cite{5010224}
+
 What can be meant by `detecting bugs', in non-distributed systems there are many different classes of bugs \cite{?}, when we consider distributed systems many of those bugs have new vectors in which they can arise. For example deadlock can now occur across motes if both motes are waiting on receiving a message the other mote should be sending. The fact that these systems are distributed means that debugging these kind of problems becomes harder \cite{?}. Also there are new ways bugs can arise, for example in the routing of information, if a message being sent is stuck being transmitted in a cycle of nodes it will never reach its destination. This type of problem requires lots of resources (either memory or large messages) to be able to effectively debug \cite{?}.
-
-So, for our project we focus on a subset of the problem. Instead of handling many low level faults (that has been approached before \cite{NodeMD}), we are instead going to focus on bugs that occur in the applications that users develop for WSNs. It is important that good debugging tools are available for the platform being developed on because they will help improve the quality of the software developed for those platforms \cite{?}.
-
-\begin{mydef}
-\emph{Stateless Predicate}: Without state. A stateless predicate will only be able to evaluate some truth from some data based on what it knows at that instance. It does not have any history of the data it has used to evaluate the predicate in the past, so cannot evaluate a relationship between current data and past data.
-\end{mydef}
-
-\begin{mydef}
-\emph{Application Predicate}: A predicate that evaluates some data on a running application.
-\end{mydef}
-
-We intend to deal with \emph{stateless} \emph{application} predicates. An few examples of these are: (1) checking that there is one and only one cluster head, (2) that in an aggregations tree your parent is closer than your children, and (3) checking that the average temperature of the nodes surrounding yourself is within some tolerance of your temperature. The idea here being that developers can check their application is in a state that is correct and also can be told that their application is in an incorrect state. This last point is useful because, for example, in the case of clustering if a node reports it has no cluster head, then the manager of the network can simply run a reconfiguration phase.
-
-Another important issue that we intend to address is where should a predicate be evaluated in the network. Should it be evaluated in the network (by gathering data from surrounding motes) or should the predicate be evaluated at the base station after the network's data has been aggregated to it? Investigating these means of evaluation is important as there may be a trade-off between energy and accuracy of predicate evaluation. As these two points are important metrics to us we will also investigate if there is a benefit to using periodic or event-driven communication of data. WSNs typically use event driven communication \cite{?} as that tends to save energy \cite{?}, however, it may be the case that periodic communication of data produces better results. Overall we expect some predicates will produce better results in some situations, so we will vary the applications predicates that we will test.
-
-Finally, as part of this project we looked into running our applications on physical hardware (instead of just simulating our software). In doing so we gained practical experience that we believe will be useful for people starting to develop for WSN platforms in the future. We decided not to investigate our algorithms extensively on the hardware due to logistical constraints (where we could do it) and time constraints.
-
-\textbf{TODO: link better with lit review}
+\end{comment}
 
 
 

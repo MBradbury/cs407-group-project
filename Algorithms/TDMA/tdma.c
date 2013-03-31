@@ -10,6 +10,7 @@
 #include "dev/leds.h"
 
 #include "lib/print-stats.h"
+#include "lib/random.h"
 
 #include "net/rime/broadcast.h"
 
@@ -19,7 +20,39 @@
 #include "net/rimeaddr-helpers.h"
 #include "debug-helper.h"
 
-#include "pele.h"
+#define PPCAT_IMPL(A, B) A ## B
+#define PPCAT(A, B) PPCAT_IMPL(A, B)
+
+#define STRINGIZE_IMPL(A) #A
+#define STRINGIZE(A) STRINGIZE_IMPL(A)
+
+#if defined(PREDICATE_TYPE_PELP)
+#	define PREDICATE_NAME pelp
+#	include "pelp.h"
+#	define PREDICATE_PERIODIC
+
+#elif defined(PREDICATE_TYPE_PELE)
+#	define PREDICATE_NAME pele
+#	include "pele.h"
+#	define PREDICATE_EVENT
+
+#elif defined(PREDICATE_TYPE_PEGP)
+#	define PREDICATE_NAME pegp
+#	include "pegp.h"
+#	define PREDICATE_PERIODIC
+
+#elif defined(PREDICATE_TYPE_PEGE)
+#	define PREDICATE_NAME pege
+#	include "pege.h"
+#	define PREDICATE_EVENT
+
+#else
+#	error "No predicate type defined"
+#endif
+
+#define pe_conn_t PPCAT(PREDICATE_NAME, _conn_t)
+#define pe_start PPCAT(PREDICATE_NAME, _start)
+#define pe_stop PPCAT(PREDICATE_NAME, _stop)
 
 //
 // See: arxiv.org/pdf/0808.0920v1.pdf
@@ -83,7 +116,7 @@ static unique_array_t one_hop_neighbours;
 
 // The maximum number of slots that can be assigned
 // The lower this is the lower the latency
-static const unsigned int slot_count = 50;
+static const unsigned int slot_count = 75;
 
 // The length of each slot
 static const clock_time_t slot_length = 2 * CLOCK_SECOND;
@@ -322,9 +355,9 @@ static bool node_data_differs(void const * left, void const * right)
 	return l->slot != r->slot;
 }
 
-static bool send_example_predicate(pele_conn_t * pele, rimeaddr_t const * destination, uint8_t id)
+static bool send_example_predicate(pe_conn_t * conn, rimeaddr_t const * destination, uint8_t id)
 {
-	if (pele == NULL || destination == NULL)
+	if (conn == NULL || destination == NULL)
 		return false;
 
 	static ubyte const program_bytecode[] = {
@@ -342,19 +375,19 @@ static bool send_example_predicate(pele_conn_t * pele, rimeaddr_t const * destin
 	const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
 	const uint8_t var_details_length = sizeof(var_details)/sizeof(var_details[0]);
 
-	return predicate_manager_create(&pele->predconn,
+	return predicate_manager_create(&conn->predconn,
 		id, destination,
 		program_bytecode, bytecode_length,
 		var_details, var_details_length);
 }
 
-static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+static void predicate_failed(pe_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
 {
 	failure_response_t const * response = (failure_response_t *)packetbuf_dataptr();
 
-	printf("Response received from %s, %u, %u hops away. Predicate %u %s.\n",
-		addr2str(from), packetbuf_datalen(), hops, response->predicate_id,
-		response->result ? "succeeded" : "failed");
+	//printf("Response received from %s, %u, %u hops away. Predicate %u %s.\n",
+	//	addr2str(from), packetbuf_datalen(), hops, response->predicate_id,
+	//	response->result ? "succeeded" : "failed");
 
 	printf("PF *%s:%u:", addr2str(from), response->predicate_id);
 
@@ -392,9 +425,9 @@ static void predicate_failed(pele_conn_t * conn, rimeaddr_t const * from, uint8_
 
 PROCESS_THREAD(startup_process, ev, data)
 {
-	static struct etimer et_tdma, et_round, et_initial;
-	static unsigned int current_slot = 0;
-	static pele_conn_t pele;
+	static struct etimer /*et_tdma,*/ et_round, et_initial;
+	//static unsigned int current_slot = 0;
+	static pe_conn_t predeval;
 	static rimeaddr_t sink;
 
 	PROCESS_EXITHANDLER(goto exit;)
@@ -403,6 +436,11 @@ PROCESS_THREAD(startup_process, ev, data)
 	sink.u8[0] = 1;
 	sink.u8[1] = 0;
 
+	printf("StartPE " STRINGIZE(PREDICATE_NAME) " %lu/%lu\n", predicate_period, CLOCK_SECOND);
+
+	// We need to set the random number generator here
+	random_init(*(uint16_t*)(&rimeaddr_node_addr));
+
 	linked_list_init(&packet_queue, &free_queue_entry);
 	map_init(&neighbour_details, &rimeaddr_equality, &free);
 	unique_array_init(&one_hop_neighbours, &rimeaddr_equality, &free);
@@ -410,9 +448,12 @@ PROCESS_THREAD(startup_process, ev, data)
 	broadcast_open(&bc, 90, &callbacks);
 	channel_set_attributes(90, attributes);
 
-	pele_start(&pele,
+	pe_start(&predeval,
 		&sink, &node_data, sizeof(node_data_t),
-		&node_data_differs, &predicate_failed,
+#ifdef PREDICATE_EVENT
+		&node_data_differs,
+#endif
+		&predicate_failed,
 		func_det, sizeof(func_det)/sizeof(func_det[0]),
 		predicate_period);
 
@@ -420,7 +461,7 @@ PROCESS_THREAD(startup_process, ev, data)
 	etimer_set(&et_initial, 5 * 60 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et_initial));
 
-	etimer_set(&et_tdma, slot_length);
+	//etimer_set(&et_tdma, slot_length);
 	etimer_set(&et_round, round_length);
 
 	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
@@ -430,13 +471,15 @@ PROCESS_THREAD(startup_process, ev, data)
 		//target.u8[0] = 5;
 		//target.u8[1] = 0;
 
-		send_example_predicate(&pele, &target, 0);
+		send_example_predicate(&predeval, &target, 0);
 	}
 
 	while (true)
 	{
 		PROCESS_WAIT_EVENT();
 
+	// Not used remove to save space
+#if 0
 		if (etimer_expired(&et_tdma))
 		{
 			etimer_set(&et_tdma, slot_length);
@@ -461,6 +504,7 @@ PROCESS_THREAD(startup_process, ev, data)
 			current_slot += 1;
 			current_slot %= slot_count;
 		}
+#endif
 
 		if (etimer_expired(&et_round))
 		{
@@ -476,11 +520,15 @@ PROCESS_THREAD(startup_process, ev, data)
 		}
 	}
 
+	// Never going to get here so remove it to save space
 exit:
-	pele_stop(&pele);
+	(void)0;
+#if 0
+	pe_stop(&predeval);
 	broadcast_close(&bc);
 	map_free(&neighbour_details);
 	linked_list_free(&packet_queue);
 	unique_array_free(&one_hop_neighbours);
+#endif
 	PROCESS_END();
 }

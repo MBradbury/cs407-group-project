@@ -1,17 +1,34 @@
 CONTIKI_PROJECT = tdma
 all: $(CONTIKI_PROJECT)
 
+# Valid TYPEs are PELP PELE PEGP PEGE
+PRED_TYPE = PEGP
+
+ifeq ($(PRED_TYPE),PELP)
+	PREDICATE_TYPE_DIR = PredEvalLocalPeriodic
+endif
+ifeq ($(PRED_TYPE),PELE)
+	PREDICATE_TYPE_DIR = PredEvalLocalEvent
+endif
+ifeq ($(PRED_TYPE),PEGP)
+	PREDICATE_TYPE_DIR = PredEvalGlobalPeriodic
+endif
+ifeq ($(PRED_TYPE),PEGE)
+	PREDICATE_TYPE_DIR = PredEvalGlobalEvent
+endif
+
+
 PROJECTDIRS := $(CS407DIR)/Algorithms/Common $(CS407DIR)/Algorithms/Common/containers \
 $(CS407DIR)/Algorithms/Common/net $(CS407DIR)/PredicateLanguage \
 $(CS407DIR)/Algorithms/TreeAggregator $(CS407DIR)/Algorithms/NeighbourAggregate \
-$(CS407DIR)/Algorithms/PredEval $(CS407DIR)/Algorithms/PredEvalLocalEvent
-PROJECT_SOURCEFILES = 
+$(CS407DIR)/Algorithms/PredEval $(CS407DIR)/Algorithms/$(PREDICATE_TYPE_DIR)
+PROJECT_SOURCEFILES := 
 
 CONTIKIDIRS :=
-CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c predlang.c array-list.c map.c \
+CONTIKI_SOURCEFILES := debug-helper.c sensor-converter.c predlang.c array-list.c map.c \
 unique-array.c random-range.c tree-aggregator.c led-helper.c neighbour-detect.c \
 neighbour-aggregate.c rimeaddr-helpers.c multipacket.c linked-list.c predicate-manager.c hop-data-manager.c \
-eventupdate.c nhopflood.c pred-eval.c
+eventupdate.c nhopflood.c pred-eval.c nhopreq.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \
@@ -23,7 +40,9 @@ CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 CFLAGS += -Werror=bad-function-cast -Werror=implicit-function-declaration -Werror=format
 
 #CFLAGS += -DNDEBUG
-CFLAGS += -DNDEBUGVM -DRIMESTATS_CONF_ENABLED=1 -DENERGEST_CONF_ON=1
+CFLAGS += -DNDEBUGVM -DRIMESTATS_CONF_ENABLED=1 -DENERGEST_CONF_ON=1 -DPREDICATE_TYPE_$(PRED_TYPE)=1
+
+CFLAGS += -fdata-sections -DPROCESS_CONF_NO_PROCESS_NAMES=1
 
 CONTIKI = $(CS407DIR)/contiki
 include $(CONTIKI)/Makefile.include

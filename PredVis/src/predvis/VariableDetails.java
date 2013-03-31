@@ -24,8 +24,7 @@ public final class VariableDetails {
      * @param id the id to set
      */
     public void setId(int id) {
-        if (id < 0 || id > 255)
-        {
+        if (id < 0 || id > 255) {
             throw new RuntimeException("ID must be in the range of 0-255");
         }
         
@@ -43,8 +42,7 @@ public final class VariableDetails {
      * @param hops the hops to set
      */
     public void setHops(int hops) {
-        if (hops < 0 || hops > 255)
-        {
+        if (hops < 0 || hops > 255) {
             throw new RuntimeException("Hops must be in the range of 0-255");
         }
         
@@ -52,8 +50,7 @@ public final class VariableDetails {
     }
     
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "(id=" + id + ", hops=" + hops + ")";
     } 
 }

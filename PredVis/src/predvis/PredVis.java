@@ -14,39 +14,67 @@ import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;
+import java.util.*;
 import org.apache.commons.collections15.Transformer;
 
-class PredicateListRenderer extends DefaultListCellRenderer  
-{  
+class PredicateListRenderer extends DefaultListCellRenderer {
+    private static final Map<PredicateData.PredicateStatus, Color> FOREGROUND_MAPPING;
+    private static final Map<PredicateData.PredicateStatus, Color> BACKGROUND_MAPPING;
+    static {
+        //Initialise mapping of status to foreground colour.
+        Map<PredicateData.PredicateStatus, Color> fg = new EnumMap<PredicateData.PredicateStatus, Color>(PredicateData.PredicateStatus.class);
+        fg.put(PredicateData.PredicateStatus.UNMONITORED, Color.WHITE);
+        fg.put(PredicateData.PredicateStatus.UNEVALUATED, Color.BLACK);
+        fg.put(PredicateData.PredicateStatus.SATISFIED, Color.BLACK);
+        fg.put(PredicateData.PredicateStatus.UNSATISFIED, Color.WHITE);
+        FOREGROUND_MAPPING = Collections.unmodifiableMap(fg);
+        
+        //Initialise mapping of status to background colour.
+        Map<PredicateData.PredicateStatus, Color> bg = new EnumMap<PredicateData.PredicateStatus, Color>(PredicateData.PredicateStatus.class);
+        fg.put(PredicateData.PredicateStatus.UNMONITORED, Color.BLUE);
+        fg.put(PredicateData.PredicateStatus.UNEVALUATED, Color.YELLOW);
+        fg.put(PredicateData.PredicateStatus.SATISFIED, Color.GREEN);
+        fg.put(PredicateData.PredicateStatus.UNSATISFIED, Color.RED);
+        BACKGROUND_MAPPING = Collections.unmodifiableMap(bg);
+    }
+    
+    private java.util.List<RoundData> previousRounds;
+    
+    public PredicateListRenderer(java.util.List<RoundData> previousRounds) {
+        super();
+        this.previousRounds = previousRounds;
+    }
+    
     @Override
-    public Component getListCellRendererComponent( JList list,  
-            Object value, int index, boolean isSelected,  
-            boolean cellHasFocus )  
-    {  
-        super.getListCellRendererComponent( list, value, index,  
-                isSelected, cellHasFocus );  
+    public Component getListCellRendererComponent(JList list, Object value, int index, 
+            boolean isSelected, boolean cellHasFocus) {  
+        super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);  
         
         Predicate p = (Predicate)value;
-        switch(p.getStatus()) 
-        {
-            case UNMONITORED:
-                setForeground(Color.WHITE);
-                setBackground(Color.BLUE);
-                break;
-                
-            case SATISFIED:
-                setForeground(Color.BLACK);
-                setBackground(Color.GREEN);
-                break;
-
-            case UNSATISFIED:
-                setForeground(Color.WHITE);
-                setBackground(Color.RED);
-                break;
-
-            default:
-                setForeground(Color.BLACK);
-                setBackground(Color.WHITE);
+        
+        if (p.isMonitored()) {
+            if (previousRounds.isEmpty()) {
+                //Not yet evaluated.
+                setForeground(FOREGROUND_MAPPING.get(PredicateData.PredicateStatus.UNEVALUATED));
+                setBackground(BACKGROUND_MAPPING.get(PredicateData.PredicateStatus.UNEVALUATED));
+            } else {
+                RoundData previousRound = previousRounds.get(previousRounds.size() - 1);
+                Set<Predicate> keySet = previousRound.getPredicateData().keySet();
+                if (keySet.contains(p)) {
+                    //Colour as per last evaluation.
+                    PredicateData pd = previousRound.getPredicateData().get(p);
+                    setForeground(FOREGROUND_MAPPING.get(pd.getStatus()));
+                    setBackground(BACKGROUND_MAPPING.get(pd.getStatus()));
+                } else {
+                    //Not yet evaluated.
+                setForeground(FOREGROUND_MAPPING.get(PredicateData.PredicateStatus.UNEVALUATED));
+                setBackground(BACKGROUND_MAPPING.get(PredicateData.PredicateStatus.UNEVALUATED));
+                }
+            }
+        } else {
+            //Not being monitored.
+            setForeground(FOREGROUND_MAPPING.get(PredicateData.PredicateStatus.UNMONITORED));
+            setBackground(BACKGROUND_MAPPING.get(PredicateData.PredicateStatus.UNMONITORED));
         }
 
         return this;  
@@ -61,12 +89,16 @@ public class PredVis extends JFrame {
     public static final Font MONOSPACE_FONT = new Font(Font.MONOSPACED, Font.PLAIN, 12);
     public static final Font SANS_FONT = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
     public static final Font SERIF_FONT = new Font(Font.SERIF, Font.PLAIN, 12);
+    public static final Border WIDGET_BORDER = BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
+    
+    //Round data.
+    private java.util.List<RoundData> previousRounds = new ArrayList<RoundData>();
     
     //Predicate data.
-    private DefaultListModel/*<Predicate>*/ predicateListModel = null;
+    private DefaultListModel predicateListModel = new DefaultListModel();
     private Predicate currentPredicate = null;
     
-    //Network data.
+    //Network visualisation data.
     private Layout<NodeId, String> layout = null;
     private BasicVisualizationServer<NodeId, String> vv = null;
     
@@ -75,9 +107,7 @@ public class PredVis extends JFrame {
     
     //GUI widgets.
     private JMenuBar menuBar = null;
-    
     private JTabbedPane tabbedPane = null;
-    
     private JPanel predicatePanel = null;
     private JPanel predicateDetailPanel = null;
     private JList predicateList = null;
@@ -88,12 +118,9 @@ public class PredVis extends JFrame {
     private JButton savePredicateAssemblyButton = null;
     private JButton deployPredicateButton = null;
     private JButton rescindPredicateButton = null;
-    
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
     private JSlider historySlider = null;
-    
-    private int currentRound = 0;
     
     public PredVis(String port) {
         super("Predicate Visualiser");
@@ -107,7 +134,7 @@ public class PredVis extends JFrame {
         });
         
         //Init base state.
-        initPredicates();
+        //initPredicates();
         
         //Init gui.
         initMenuBar();
@@ -122,23 +149,22 @@ public class PredVis extends JFrame {
     }
     
     private void initPredicates() {
-        predicateListModel = new DefaultListModel/*<>*/();
-        predicateListModel.addListDataListener(new ListDataListener() {
+        /*predicateListModel.addListDataListener(new ListDataListener() {
             @Override
             public void intervalAdded(ListDataEvent e) {
-                
+                //TODO
             }
 
             @Override
             public void intervalRemoved(ListDataEvent e) {
-                
+                //TODO
             }
 
             @Override
             public void contentsChanged(ListDataEvent e) {
-                
+                //TODO
             }
-        });
+        });*/
     }
     
     private void initMenuBar() {
@@ -169,7 +195,7 @@ public class PredVis extends JFrame {
                 }
                 
                 //Pick directory
-                File directory = null;
+                File directory;
                 final JFileChooser fileDialog = new JFileChooser("../PredicateLanguage/Hoppy-Tests/");
                 fileDialog.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 fileDialog.setDialogTitle("Predicate Directory");
@@ -198,7 +224,7 @@ public class PredVis extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 //Get user to locate existing script file
-                File scriptFile = null;
+                File scriptFile;
                 final JFileChooser fileDialog = new JFileChooser("../PredicateLanguage/Hoppy-Tests/");
                 fileDialog.setDialogTitle("Predicate Script");
                 int retval = fileDialog.showOpenDialog(frame);
@@ -224,6 +250,7 @@ public class PredVis extends JFrame {
         menuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                //Imitate user clicking cross on window corner.
                 WindowEvent wev = new WindowEvent(frame, WindowEvent.WINDOW_CLOSING);
                 Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(wev);
             }
@@ -248,10 +275,29 @@ public class PredVis extends JFrame {
     }
     
     private void initPredicateViewer() {
-        final JFrame frame = this;
+        //final JFrame frame = this;
+        
+        //Temporaries
         JPanel panel;
         JScrollPane scrollPane;
-        Border loweredEtched = BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
+        
+        /*
+         * LAYOUT HIERARCHY
+         * 
+         * horizontal box layout
+         *      flow layout
+         *          predicate list
+         *      vertical box layout
+         *          script editor
+         *          assembly editor
+         *          flow layout
+         *              predicate details
+         *          flow layout
+         *              save buttons
+         *          flow layout
+         *              monitoring buttons
+         *      
+         */
         
         //Main panel init
         predicatePanel = new JPanel();
@@ -260,9 +306,9 @@ public class PredVis extends JFrame {
         //List init
         panel = new JPanel();
         predicateList = new JList(predicateListModel);
-        predicateList.setCellRenderer(new PredicateListRenderer());
+        predicateList.setCellRenderer(new PredicateListRenderer(previousRounds));
         predicateList.setPreferredSize(new Dimension(200, 600));
-        predicateList.setBorder(loweredEtched);
+        predicateList.setBorder(WIDGET_BORDER);
         predicateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         predicateList.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -287,7 +333,7 @@ public class PredVis extends JFrame {
         predicateScriptEditor.setFont(MONOSPACE_FONT);
         predicateScriptEditor.setLineWrap(true);
         predicateScriptEditor.setWrapStyleWord(true);
-        predicateScriptEditor.setBorder(loweredEtched);
+        predicateScriptEditor.setBorder(WIDGET_BORDER);
         scrollPane = new JScrollPane(predicateScriptEditor);
         scrollPane.setPreferredSize(new Dimension(400, 200));
         predicateDetailPanel.add(scrollPane);
@@ -297,7 +343,7 @@ public class PredVis extends JFrame {
         predicateAssemblyEditor.setFont(MONOSPACE_FONT);
         predicateAssemblyEditor.setLineWrap(true);
         predicateAssemblyEditor.setWrapStyleWord(true);
-        predicateAssemblyEditor.setBorder(loweredEtched);
+        predicateAssemblyEditor.setBorder(WIDGET_BORDER);
         scrollPane = new JScrollPane(predicateAssemblyEditor);
         scrollPane.setPreferredSize(new Dimension(400, 200));
         predicateDetailPanel.add(scrollPane);
@@ -305,7 +351,7 @@ public class PredVis extends JFrame {
         //...Predicate statistics
         predicateStatsPanel = new JPanel(new FlowLayout());
         predicateStatsPanel.setPreferredSize(new Dimension(400, 200));
-        predicateStatsPanel.setBorder(new TitledBorder(loweredEtched, "Statistics"));
+        predicateStatsPanel.setBorder(new TitledBorder(WIDGET_BORDER, "Statistics"));
         predicateDetailPanel.add(predicateStatsPanel);
         
         panel = new JPanel(new FlowLayout());
@@ -384,9 +430,9 @@ public class PredVis extends JFrame {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                if (networkstates.containsKey(currentRound)) {
+                /*if (networkstates.containsKey(currentRound)) {
                     updateNetworkView(networkstates.get(currentRound));
-                }
+                }*/
                 // TODO: Work out what the java 6 alternative of this is!
                 // it doesn't work anyway... still need to figure it out - tim
                 //revalidate();
@@ -400,14 +446,13 @@ public class PredVis extends JFrame {
         graphPanel = new JPanel(new BorderLayout());
         updateNetworkView(null);
         networkPanel.add(graphPanel);
-        //networkPanel.add(new JLabel("Monitoring " + predicateListModel.size() + " predicates. TODO update me"));
         
         historySlider = new JSlider(JSlider.VERTICAL, 0, 0, 0);
         historySlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent ce) {
                 if (!historySlider.getValueIsAdjusting()) {
-                    currentRound = historySlider.getValue();
+                    //currentRound = historySlider.getValue();
                     handleNetworkUpdated(wsnMonitor.getStates());
                 }
             }
@@ -444,7 +489,7 @@ public class PredVis extends JFrame {
         predicateAssemblyEditor.setText(p.getAssembly());
         
         //Set active states based on whether the predicate is being monitored.
-        if (!p.getMonitored()) {
+        if (!p.isMonitored()) {
             predicateScriptEditor.setEditable(true);
             predicateAssemblyEditor.setEditable(true);
             savePredicateScriptButton.setEnabled(true);

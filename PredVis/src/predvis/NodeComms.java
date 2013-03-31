@@ -1,7 +1,6 @@
 package predvis;
 
 import com.google.common.base.Strings;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,6 +12,7 @@ import java.io.InputStreamReader;
  */
 public class NodeComms {
     public static final String SERIALDUMP_LINUX = "/home/user/contiki/tools/sky/serialdump-linux";
+    private static final int MOTE_BUFFER_SIZE = 127;
     
     private final String port;
     private Thread readInput = null;
@@ -23,9 +23,6 @@ public class NodeComms {
     
     private Process serialDumpProcess = null;
     
-    // This is the buffer size inside the contiki motes
-    private static final int bufferSize = 127;
-
     public NodeComms(String port) {
         this.port = port;
     }
@@ -37,8 +34,7 @@ public class NodeComms {
         try {
             serialDumpProcess = Runtime.getRuntime().exec(cmd);
             input = new BufferedReader(new InputStreamReader(serialDumpProcess.getInputStream()));
-            err = new BufferedReader(new InputStreamReader(serialDumpProcess.getErrorStream()));
-            
+            err = new BufferedReader(new InputStreamReader(serialDumpProcess.getErrorStream()));            
             output = new BufferedOutputStream(serialDumpProcess.getOutputStream());
             
             readInput = new Thread(new Runnable() {
@@ -52,9 +48,8 @@ public class NodeComms {
                                 break;
                             }
                             
+                            //Act on received line.
                             assert(line != null);
-                            
-                            // We have a line, now we need to send it to the callback
                             callback.receivedLine(line);
                         }
                         
@@ -87,8 +82,7 @@ public class NodeComms {
     public void writeln(String line) throws RuntimeException, IOException {
        byte[] characters = (line + '\n').getBytes("ISO-8859-1");
        
-       if (characters.length > bufferSize)
-       {
+       if (characters.length > MOTE_BUFFER_SIZE) {
            throw new RuntimeException("Message (" + line + ") is too long (" + characters.length + ").");
        }
        
@@ -96,38 +90,31 @@ public class NodeComms {
        output.flush();
     }
     
-    public void writePredicate(int id, String target, int[] bytecode, VariableDetails[] vars)
-            throws RuntimeException, IOException
-    {
-        writeln("[");
-        
-        writeln(Integer.toString(id));
-        
+    public void writePredicate(int id, String target, int[] bytecode, VariableDetails[] vars) 
+            throws RuntimeException, IOException {
+        writeln("[");       
+        writeln(Integer.toString(id));       
         writeln(target);
         
         String toWrite = "b";
         int written = 1;
         
-        for (int i = 0; i < bytecode.length; ++i)
-        {
+        for (int i = 0; i < bytecode.length; ++i) {
             String inHex = Integer.toHexString(bytecode[i]);
             String padded = Strings.padStart(inHex, 2, '0');
             toWrite += padded;
             written += 2;
             
-            if ((written + 2) >= bufferSize || (i + 1) == bytecode.length)
-            {
+            if ((written + 2) >= MOTE_BUFFER_SIZE || (i + 1) == bytecode.length) {
                 writeln(toWrite);
                 written = 1;
                 toWrite = "b";
             }
         }
         
-        for (VariableDetails vd : vars)
-        {
+        for (VariableDetails vd : vars) {
             writeln("v" + vd.getHops() + "." + vd.getId());
         }
-        
         
         writeln("]");
     }
@@ -183,8 +170,7 @@ public class NodeComms {
     }
     
     @Override
-    protected void finalize() throws Throwable
-    {
+    protected void finalize() throws Throwable {
         super.finalize();
         
         // Make sure we have killed the process we spawned

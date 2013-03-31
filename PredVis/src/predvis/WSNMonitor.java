@@ -101,10 +101,11 @@ class NodeCommsResponder implements NodeCommsCallback {
                 ++i;
             }
             
-            System.out.println("For predicate " + predicateId + " on " + from + ":");
-            System.out.println("\tGot variable details " + vds);
-            System.out.println("\tGot variable data " + Arrays.toString(nodeData));
-
+            StringBuilder sb = new StringBuilder();
+            sb.append("For predicate ").append(predicateId).append(" on ").append(from).append(":\n");
+            sb.append("\tGot variable details ").append(vds).append("\n");
+            sb.append("\tGot variable data ").append(Arrays.toString(nodeData)).append("\n");
+            
         }
     }
 

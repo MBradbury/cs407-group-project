@@ -20,6 +20,12 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+#ifdef PE_DEBUG
+#	define PEDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define PEDPRINTF(...)
+#endif
+
 #define trickle_interval ((clock_time_t)2 * CLOCK_SECOND)
 #define EVENT_CHECK_PERIOD ((clock_time_t)30 * CLOCK_SECOND)
 #define CHANCE_OF_EVENT_UPDATE 0.01
@@ -51,7 +57,7 @@ static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uin
 
 	void * nd = packetbuf_dataptr();
 
-	printf("PELE: Obtained information from %s hops:%u (prev:%d)\n",
+	PEDPRINTF("PELE: Obtained information from %s hops:%u (prev:%d)\n",
 		addr2str(from), hops, previous_hops);
 
 	// If we have previously stored data from this node at
@@ -111,7 +117,7 @@ PROCESS_THREAD(pele_process, ev, data)
 
 	pele = (pele_conn_t *)data;
 	
-	printf("PELE: Process Started.\n");
+	PEDPRINTF("PELE: Process Started.\n");
 
 	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
@@ -119,12 +125,12 @@ PROCESS_THREAD(pele_process, ev, data)
 
 	while (true)
 	{
-		printf("PELE: Starting long wait...\n");
+		PEDPRINTF("PELE: Starting long wait...\n");
 
 		etimer_set(&et, pele->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-		printf("PELE: Wait finished!\n");
+		PEDPRINTF("PELE: Wait finished!\n");
 	
 		const unsigned int max_size = hop_manager_max_size(&pele->hop_data);
 
@@ -150,7 +156,7 @@ PROCESS_THREAD(pele_process, ev, data)
 					++count;
 				}
 
-				printf("PELE: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+				PEDPRINTF("PELE: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
@@ -163,7 +169,7 @@ PROCESS_THREAD(pele_process, ev, data)
 
 			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
 			{
-				printf("PELE: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
+				PEDPRINTF("PELE: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 	
 				bool evaluation_result = evaluate_predicate(&pele->predconn,
 					pele->data_fn, pele->data_size,
@@ -173,11 +179,11 @@ PROCESS_THREAD(pele_process, ev, data)
 
 				if (evaluation_result)
 				{
-					printf("PELE: Pred: TRUE\n");
+					PEDPRINTF("PELE: Pred: TRUE\n");
 				}
 				else
 				{
-					printf("PELE: Pred: FAILED (%s)\n", error_message());
+					PEDPRINTF("PELE: Pred: FAILED (%s)\n", error_message());
 				}
 			}
 		}
@@ -228,12 +234,12 @@ bool pele_start(pele_conn_t * conn,
 			CHANCE_OF_EVENT_UPDATE)
 		)
 	{
-		printf("PELE: nhopreq start function failed\n");
+		PEDPRINTF("PELE: nhopreq start function failed\n");
 	}
 
 	if (rimeaddr_cmp(sink, &rimeaddr_node_addr)) // Sink
 	{
-		printf("PELE: Is the base station!\n");
+		PEDPRINTF("PELE: Is the base station!\n");
 
 		// As we are the base station we need to start reading the serial input
 		predicate_manager_start_serial_input(&conn->predconn);

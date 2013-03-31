@@ -34,7 +34,7 @@ typedef struct pelp_conn
 
 } pelp_conn_t;
 
-bool pelpstart(pelp_conn_t * conn,
+bool pelp_start(pelp_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pelp_predicate_failed_fn predicate_failed,
 	function_details_t const * function_details, uint8_t functions_count,

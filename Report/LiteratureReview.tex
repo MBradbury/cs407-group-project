@@ -114,6 +114,31 @@ Some of the network challenges was ensuring a high-probability of receiving data
 
 When testing the performance of the network, results showed that the networks which were deployed on different mountains obtained an average yield of only 40\% and a 78\% unique yield. This may have been the effect of timing limitations, for example some sensors required some settling time once it was activated before it could produce any accurate readings. The CSMA MAC protocol which would back-off in the presence of interference may have also contributed to the number of packets sent. To improve the sucess rate, they chose the option of resending the packets multiple times, but at the cost of some efficiency. In the future, the team aims at designing protocols such as hop-to-hop ACKS, which hopes to cut down on the number of packet they send. 
 
+\subsubsection*{Structural Monitoring}
+\cite{5508230} Claimed: Ivan
+% http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=5508230
+
+GENESI: Green sEnsor NEtworks for Structural monItoring - Structural health monitoring systems for critical infrastructure
+
+Primary issues
+- GENESI considers energy constraints
+- Solutions that will harvest energy based on ambient temperatur, vibration, motion and solar energy. Implement an efficient method for energy harvesting from multiple independent sources.
+
+Primary Objectives
+- design of power-scalable, high efficiency DC-DC converters and low-drop-ou regulators
+
+Critical
+- Selection of transducer to adopt because operating point of max power may change
+- investivate the best combination of batteries and supercapacitors to responde to good dynamics to peaks in the suppy demands
+- Design of distributed scheme will reduce power losses. From heterogeneous to different storage systems.
+
+Factors that will reduce energy consumptions
+- Radio triggering, information fusion/filtering and interference avoidance
+- Selectively activating and deactivating nodes for enerygy optimization. - Considers heterogenous networks.
+- Task allocation - deciding which sensor to complete a task based on several factors such as node residual energy, field coverage, type of sensing
+
+
+
 \subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}
 \cite{wsnpollution} 
@@ -179,11 +204,6 @@ During the deployment, the team managed to log 54 hours of continuous data which
 \paragraph{Conclusion and Improvements}
 
 In general, the event-triggered model was successful in detecting eruptions and other volcanic events and was able to verify the working of the local and global event detectors by examining the downloaded data. However, since the experiment was deployed over a limited area space of the volcano, further work is to be done to instrument volcanoes at a larger scale. This includes, and most importantly, the management of energy and bandwidth usage of the sensors and increasing its computational power to deviate from continuous data collection to enabling the collection of well-correlated signals. 
-
-\subsubsection*{Structural Monitoring}
-\cite{5508230} Claimed: Ivan
-% http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=5508230
-
 
 \subsubsection*{Development of Applications}
 \cite{Fagerstrom:1988:DTD:55823.55833}

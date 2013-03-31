@@ -10,7 +10,7 @@ if (typeof String.prototype.startsWith != 'function')
 	};
 }
 
-outputDirectory = "/home/user/cs407-group-project/Results/TDMA/PELE/1HOP/15/4.0/"
+outputDirectory = "/home/user/cs407-group-project/Results/TDMA/PELP/1HOP/15/4.0/"
 
 // We need a way to generate a 99% sure its unique filename
 function guid() {
@@ -46,11 +46,11 @@ for (var i = 0; i < allmotes.length; ++i)
 }
 
 
-// Set a timeout of 45 minutes 20 seconds
+// Set a timeout of 35 minutes 20 seconds
 // the units this function takes is in milliseconds
-TIMEOUT(2720000);
+TIMEOUT(2120000);
 
-GENERATE_MSG(2700000, "END"); //Wait for 45 minutes
+GENERATE_MSG(2100000, "END"); //Wait for 35 minutes
 
 while (true)
 {
@@ -59,6 +59,13 @@ while (true)
 	if (msg.equals("END"))
 	{
 		break;
+	}
+	else if (msg.startsWith("StartPE"))
+	{
+		var splitMsg = msg.split(" ");
+
+		results["peType"] = sf(splitMsg[1]);
+		results["pePeriod"] = sf(splitMsg[2]);
 	}
 	else if (msg.startsWith("PF "))
 	{

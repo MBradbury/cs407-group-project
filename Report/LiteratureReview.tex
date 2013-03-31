@@ -118,27 +118,17 @@ When testing the performance of the network, results showed that the networks wh
 \subsubsection*{Structural Monitoring}
 \cite{5508230} Claimed: Ivan
 % http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=5508230
+% Drawbacks on conventional methods: http://www.eecs.berkeley.edu/~binetude/work/report.pdf
 
 GENESI: Green sEnsor NEtworks for Structural monItoring - Structural health monitoring systems for critical infrastructure
 
-Primary issues
-- GENESI considers energy constraints
-- Solutions that will harvest energy based on ambient temperatur, vibration, motion and solar energy. Implement an efficient method for energy harvesting from multiple independent sources.
+Another class of application for wireless sensor networks is the structural health monitoring (SHM) of critical infrastructure such as bridges, tunnels and dams, to estimate the state of structural health or detecting the changes in structure that may affect its performance. The conventional method uses PCs wired to piezoelectrical accelerometers and has drawbacks such as (i) use of long wires over the structure, (ii) high cost of equipment, and (iii) expensive to install and maintain. Since SHM requies high data rate, large data size, and a relatively high duty cycle, it would be more efficient to use a WSN which would provide the same functionality as conventional methods but at a much lower price and permits denser monitoring.
 
-Primary Objectives
-- design of power-scalable, high efficiency DC-DC converters and low-drop-ou regulators
+\citeauthor{5508230} in \cite{5508230} developed GENESI or Green sEnsor NEtworks for Structural monItoring, which aims to efficiently harvest and generate energy from multiple-sources with radio triggering capabilities and using new algorithms and protocols to dynamically allocate the sensing and communication of tasks to the sensors. GENESI uses a wide range of electronic such as a power-scalable, high efficiency  DC-DC converters and low-drop regulators as well as different harvesting and power distribution strategies to maximise the provision and collection of energy under a large range of environmental conditions. The system also uses an effective power management strategy to compliment the energy harvester mechanism which improves the battery lifetime up to the theoretical limit.
 
-Critical
-- Selection of transducer to adopt because operating point of max power may change
-- investivate the best combination of batteries and supercapacitors to responde to good dynamics to peaks in the suppy demands
-- Design of distributed scheme will reduce power losses. From heterogeneous to different storage systems.
+Besides efficient energy harvesting methods, GENESI also emphasizes on reducing energy consumptions for communication and uses a selective activation scheme to dynamically schedule the activation of a set of passive and active sensors. A task allocation algorithm is used alongisde the scheme to decide which sensors are to be activated and considers factors like node residual energy and field coverage. Chosing the best assignment of the available sensors to task proved a great challenge for the team since this problem involving nodes with radio triggering and harvesting capabilities has never been studied before.
 
-Factors that will reduce energy consumptions
-- Radio triggering, information fusion/filtering and interference avoidance
-- Selectively activating and deactivating nodes for enerygy optimization. - Considers heterogenous networks.
-- Task allocation - deciding which sensor to complete a task based on several factors such as node residual energy, field coverage, type of sensing
-
-
+% This article doesn't really talk about the issues faced in the development...
 
 \subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}

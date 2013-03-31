@@ -447,7 +447,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 				map_t * hop_map = hop_manager_get(&pegp->hop_data, i);
 
 				map_elem_t aelem;
-				for (aelem = map_first(hop_map); map_continue(hop_map, aelem); elem = map_next(aelem))
+				for (aelem = map_first(hop_map); map_continue(hop_map, aelem); aelem = map_next(aelem))
 				{
 					void * mapdata = map_data(hop_map, aelem);
 					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pegp->data_size), mapdata, pegp->data_size);

@@ -11,9 +11,7 @@ from numpy import mean, std
 
 # The first thing we need to do is parse the simulation file
 # to work how what nodes are neighbours of other nodes
-def calculateNeighbours():
-	simulation = sys.argv[1]
-
+def calculateNeighbours(simulation):
 	tree = ET.parse(simulation)
 	simNode = tree.getroot().find("simulation")
 
@@ -60,8 +58,6 @@ def calculateNeighbours():
 					n[a].append(b)
 
 	return n
-
-neighbours = calculateNeighbours()
 
 #pprint(neighbours)
 # We have now finished finding out neighbours
@@ -115,7 +111,7 @@ def predicate(this, onehopn, slots):
 	return result
 
 class AnalyseFile:
-	def __init__(self, path):
+	def __init__(self, path, neighbours):
 		with gzip.open(path, 'rb') as f:
 			self.data = json.load(f)
 
@@ -203,9 +199,6 @@ def meanStdAttrXx(items, attrName, X):
 def meanStdAttrTxRx(items, attrName):
 	return {"rx": meanStdAttrXx(items, attrName, u"rx"), "tx": meanStdAttrXx(items, attrName, u"tx")}
 
-peTypes = ["PELE"]
-sizes = [15]
-
 results = {}
 
 for peType in os.listdir('TDMA'):
@@ -217,7 +210,14 @@ for peType in os.listdir('TDMA'):
 		for size in os.listdir('TDMA/' + peType + "/" + predicateDist):
 			results[peType][predicateDist][size] = {}
 
+			neighbours = calculateNeighbours(
+				'TDMA/' + peType + "/" + predicateDist + "/" + size + "/TDMA.csc")
+
 			for period in os.listdir('TDMA/' + peType + "/" + predicateDist + "/" + size):
+
+				if not os.path.isdir('TDMA/' + peType + "/" + predicateDist + "/" + size + "/" + period):
+					continue
+
 				results[peType][predicateDist][size][period] = {}
 
 				path = 'TDMA/' + peType + "/" + predicateDist + "/" + size + "/" + period
@@ -230,21 +230,12 @@ for peType in os.listdir('TDMA'):
 
 					try:
 
-						a = AnalyseFile(path + "/" + resultsFile)
+						a = AnalyseFile(path + "/" + resultsFile, neighbours)
 
 						localResults.append(a)
 
-						#pprint(a.energy)
-						print("Total Messages: {0}".format(a.rimeTotal))
-						print("TDMA: {0}".format(a.TDMATotal))
-						print("PE: {0}".format(a.peTotal))
-
-						print("PC Responses reached sink: {0}".format(a.responsesReachedSinkPC))
-						#print("PC predicate success rate: {0}".format(a.successRate))
-						print("PC predicates correctly evaluted: {0}".format(a.pcCorrectlyEvaluted))
-
-					except:
-						pass
+					except Exception as e:
+						print(e)
 
 				# We need to find the average and standard deviation
 

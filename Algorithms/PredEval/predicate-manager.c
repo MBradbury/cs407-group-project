@@ -346,7 +346,7 @@ bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimea
 
 bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t * hop_data,
 	predicate_detail_entry_t const * pe, void const * data, size_t data_size, size_t data_length,
-	node_data_fn node_data)
+	node_data_fn node_data, bool result)
 {
 	if (conn == NULL || pe == NULL)
 	{
@@ -376,6 +376,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	msg->predicate_id = pe->id;
 	msg->num_hops_positions = pe->variables_details_length;
 	msg->data_length = data_length + 1;
+	msg->result = result ? 1 : 0;
 
 	hops_position_t * hops_details = (hops_position_t *)(msg + 1);
 
@@ -407,7 +408,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 	mesh_rcv(&conn->mc, &rimeaddr_node_addr, 0);
 
 	// If the target is not the current node send the message
-	if (!rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr))
+	if (!rimeaddr_cmp(&conn->basestation, &rimeaddr_node_addr) && !result)
 	{
 		packetbuf_clear();
 		packetbuf_set_datalen(packet_length);
@@ -483,11 +484,8 @@ bool evaluate_predicate(predicate_manager_conn_t * conn,
 
 	bool result = evaluate(pe->bytecode, pe->bytecode_length);
 
-	if (!result)
-	{
-		predicate_manager_send_response(conn, hop_data,
-					pe, all_neighbour_data, data_size, nd_length, data_fn);
-	}
+	predicate_manager_send_response(conn, hop_data,
+		pe, all_neighbour_data, data_size, nd_length, data_fn, result);
 
 	return result;
 }
@@ -693,15 +691,15 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				{
 					if (current.bytecode_length == 0)
 					{
-						PMDPRINTF("PredMan: going to error handler\n");
-						state = 99;
-						continue;
+						predicate_manager_cancel(conn, current.id, &current.target);
 					}
-
-					predicate_manager_create(conn,
-						current.id, &current.target,
-						current.bytecode, current.bytecode_length,
-						current.variables_details, current.variables_details_length);
+					else
+					{
+						predicate_manager_create(conn,
+							current.id, &current.target,
+							current.bytecode, current.bytecode_length,
+							current.variables_details, current.variables_details_length);
+					}
 
 					free(current.bytecode);
 					free(current.variables_details);

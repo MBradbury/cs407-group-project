@@ -24,6 +24,12 @@
 #include "sensor-converter.h"
 #include "debug-helper.h"
 
+#ifdef PE_DEBUG
+#	define PEDPRINTF(...) printf(__VA_ARGS__)
+#else
+#	define PEDPRINTF(...)
+#endif
+
 #define trickle_interval ((clock_time_t) 2 * CLOCK_SECOND)
 
 #define NODE_DATA_INDEX(array, index, size) \
@@ -59,7 +65,7 @@ static void receieved_data(nhopreq_conn_t * conn, rimeaddr_t const * from, uint8
 {
 	pelp_conn_t * pelp = conncvt_nhopreq(conn);
 
-	printf("PELP: Obtained information from %s hops:%u\n", addr2str(from), hops);
+	PEDPRINTF("PELP: Obtained information from %s hops:%u\n", addr2str(from), hops);
 
 	hop_manager_record(&pelp->hop_data, hops, data, pelp->data_size);
 }
@@ -113,7 +119,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 	pelp = (pelp_conn_t *)data;
 	
-	printf("PELP: Process Started.\n");
+	PEDPRINTF("PELP: Process Started.\n");
 	
 	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
@@ -121,17 +127,17 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 	while (true)
 	{
-		printf("PELP: Starting long wait...\n");
+		PEDPRINTF("PELP: Starting long wait...\n");
 
-		etimer_set(&et, 5 * 60 * CLOCK_SECOND);
+		etimer_set(&et, pelp->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-		printf("PELP: Wait finished! About to ask for data!\n");
+		PEDPRINTF("PELP: Wait finished! About to ask for data!\n");
 
 		// Only ask for data if the predicate needs it
 		if (pelp->max_comm_hops != 0)
 		{
-			printf("PELP: Starting request for %d hops of data...\n", pelp->max_comm_hops);
+			PEDPRINTF("PELP: Starting request for %d hops of data...\n", pelp->max_comm_hops);
 
 			nhopreq_request_info(&pelp->nhr, pelp->max_comm_hops);
 	
@@ -139,7 +145,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 			etimer_set(&et, 120 * CLOCK_SECOND);
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-			printf("PELP: Finished collecting hop data.\n");
+			PEDPRINTF("PELP: Finished collecting hop data.\n");
 
 			const unsigned int max_size = hop_manager_max_size(&pelp->hop_data);
 
@@ -164,7 +170,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 						++count;
 					}
 
-					printf("PELP: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+					PEDPRINTF("PELP: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
 				}
 			}
 		}
@@ -180,7 +186,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
 			{
-				printf("PELP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
+				PEDPRINTF("PELP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
 		
 				bool evaluation_result = evaluate_predicate(&pelp->predconn,
 					pelp->data_fn, pelp->data_size,
@@ -190,11 +196,11 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 				if (evaluation_result)
 				{
-					printf("PELP: Pred: TRUE\n");
+					PEDPRINTF("PELP: Pred: TRUE\n");
 				}
 				else
 				{
-					printf("PELP: Pred: FAILED (%s)\n", error_message());
+					PEDPRINTF("PELP: Pred: FAILED (%s)\n", error_message());
 				}
 			}
 		}
@@ -219,7 +225,8 @@ exit:
 bool pelp_start(pelp_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pelp_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count)
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period)
 {
 	if (conn == NULL || predicate_failed == NULL || data_fn == NULL ||
 		sink == NULL || data_size == 0)
@@ -236,18 +243,20 @@ bool pelp_start(pelp_conn_t * conn,
 	conn->function_details = function_details;
 	conn->functions_count = functions_count;
 
+	conn->predicate_period = predicate_period;
+
 	hop_manager_init(&conn->hop_data);
 
 	predicate_manager_open(&conn->predconn, 121, 126, sink, trickle_interval, &pm_callbacks);
 
 	if (!nhopreq_start(&conn->nhr, 149, 132, conn->data_size, &nhopreq_callbacks))
 	{
-		printf("PELP: nhopreq start function failed\n");
+		PEDPRINTF("PELP: nhopreq start function failed\n");
 	}
 
 	if (rimeaddr_cmp(sink, &rimeaddr_node_addr)) // Sink
 	{
-		printf("PELP: Is the base station!\n");
+		PEDPRINTF("PELP: Is the base station!\n");
 
 		// As we are the base station we need to start reading the serial input
 		predicate_manager_start_serial_input(&conn->predconn);
@@ -405,7 +414,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	pelp_start(&pelp,
 		&sink, &node_data, sizeof(node_data_t), &predicate_failed,
-		func_det, sizeof(func_det)/sizeof(func_det[0]));
+		func_det, sizeof(func_det)/sizeof(func_det[0]),
+		4 * 60 * CLOCK_SECOND);
 
 	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
 	{

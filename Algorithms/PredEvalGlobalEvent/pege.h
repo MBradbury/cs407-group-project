@@ -49,12 +49,15 @@ typedef struct pege_conn
 
 	struct ctimer ct_startup;
 
+	clock_time_t predicate_period;
+
 } pege_conn_t;
 
 bool pege_start(pege_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pege_data_differs_fn differs_fn, pege_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count);
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period);
 
 void pege_stop(pege_conn_t * conn);
 

@@ -32,12 +32,15 @@ typedef struct pele_conn
 	uint8_t functions_count;
 	function_details_t const * function_details;
 
+	clock_time_t predicate_period;
+
 } pele_conn_t;
 
 bool pele_start(pele_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pele_data_differs_fn differs_fn, pele_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count);
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period);
 
 void pele_stop(pele_conn_t * conn);
 

@@ -16,6 +16,9 @@
 
 \subsubsection*{Clustering}
 
+The technique of clustering has a long history in increasing the efficiency of networks, originally being applied to the optimal placement of logic gates in digital circuits\cite{clustering}. Both in these applications and more modern variations, the basic principle is to group nodes of the network according to their (typically geographic) locality. Each of these clusters has a single point of contact with the rest of the network -- in a wireless sensor network this is a specific node in each cluster known as a clusterhead (CH). The benefit of adding clusters to a network is in reducing traffic as each node needs only route messages to its CH rather than all the way to its destination, and in some applications the CH can perform some aggregation or compression function\cite{1285913}\cite{aggregation} on the messages it forwards to reduce traffic between clusters. The nature of these functions is application-specific. For example, an application may require the CH to simply select the node which has forwarded the most relevant data and only forward the message from this node (if this node presented the maximum data value, say). Alternatively, the CH may take some average of all the data supplied to it, and pass on data representative of the entire cluster -- perhaps representing the mean temperature over a specific geographic region. In wireless networks, standard clustering applications are configured towards nodes sending data towards some base station, rather than communicating with arbitrary nodes in either the same or different clusters.
+
+The nature of clustering means that a clusterhead has a significantly higher workload than other nodes in its cluster, as it must listen to every message sent from these nodes and may also have to pass on as many messages. In domains where nodes do not have permanent power source (such as WSNs), this leads to greater energy usage, causing CH batteries to drain faster\cite{placement}. As a result of this disadvantage, many modern clustering algorithms (e.g. \cite{eemc},\cite{secc}) rely on or take inspiration from the Low Energy Adaptive Clustering Hierarchy\cite{LEACH}. LEACH operates in a series of fixed-duration rounds, each beginning with a subset of nodes selecting themselves to be clusterheads. This is done with some probability related to a function of how long ago the node was last selected, giving an even distribution of CHs as the number of rounds increases. Once the CHs have selected themselves, they each broadcast an advertisement, the received strength of which used by non-CHs to determine which cluster to join for the round. Once the clusters have been formed, each CH creates a TDMA schedule for intra-cluster communications and data transmission for the round can begin. There also exists a variation of LEACH, LEACH-C, in which cluster(head) allocation is performed centrally by a base station. In both versions of the protocol, processing occurs locally and clusterheads aggregate or compress messages; both of these features reduce the number of messages needed to be sent. In accordance with the general case for clustering protocols mentioned above, CHs in LEACH can perform aggregation or compression operations that are application-specific. In their paper presenting LEACH and LEACH-C, Heinzelman \textit{et al.} found that the standard LEACH protocol performed significantly better than static clustering in terms of energy efficiency, with LEACH-C performing better still. The authors also derived an expression for the optimal number of clusters, based on the number of nodes and physical area covered by the network. However, the inclusion of both rounds and TDMA means that LEACH requires nodes in a WSN to be synchronised, which comes with significant implications in terms of operational complexity. LEACH itself offers no solutions either towards ensuring that nodes maintain synchronisation, or towards detecting if some nodes (or more likely, an entire cluster) is not performing correctly due to slipping from the prescribed TDMA schedule. However, the authors themselves suggest that a possible improvement to negate the need for TDMA is some event-based method for applications in which nodes do not generate transmissible data constantly or at prescribed intervals.
 
 \subsection{Simulating Sensor Networks}
 
@@ -30,11 +33,12 @@ TOSSIM \cite{levis2003tossim}
 \cite{Tsiftes:2011:DS:2070942.2070974} %http://dunkels.com/adam/tsiftes11database.pdf
 \cite{TinyDB}
 
-\paragraph{Sensor Network IP Stacks}
-\cite{ko2011beyond} % http://dunkels.com/adam/ko11beyond.pdf
-\cite{dunkels2009efficient} % http://dunkels.com/adam/yazar09efficient.pdf
-\cite{Durvy:2008:MSN:1460412.1460483} %http://dunkels.com/adam/durvy08making.pdf
-\cite{dunkels2003full} % http://dunkels.com/adam/mobisys2003.pdf
+
+%\paragraph{Sensor Network IP Stacks} -- Not really need, IP work done in RIME
+%\cite{ko2011beyond} % http://dunkels.com/adam/ko11beyond.pdf
+%\cite{dunkels2009efficient} % http://dunkels.com/adam/yazar09efficient.pdf
+%\cite{Durvy:2008:MSN:1460412.1460483} %http://dunkels.com/adam/durvy08making.pdf
+%\cite{Dunkels:2003:FTA:1066116.1066118} % http://dunkels.com/adam/mobisys2003.pdf
 
 %Bring into interoperability with the Internet of Things
 \cite{Christin_Reinhardt_Mogre_Steinmetz_2009}
@@ -48,8 +52,19 @@ TOSSIM \cite{levis2003tossim}
 \paragraph{Energy Estimation}
 \cite{Dunkels:2007:SOE:1278972.1278979} % http://dunkels.com/adam/dunkels07softwarebased.pdf
 
-\paragraph{RIME}
-\cite{Dunkels:2007:ACA:1322263.1322295} % http://dunkels.com/adam/dunkels07adaptive.pdf
+\paragraph{RIME and IP Stacks}
+
+TCP/IP is traditionally viewed as unsuitable in sensor networks, \citeauthor{Estrin:1999:NCC:313451.313556} suggested that sensor networks have such different requirements to traditional networks, and that the overall structure of these networks needs to be reconsidered \cite{Estrin:1999:NCC:313451.313556}. Some of the problems \citeauthor{Estrin:1999:NCC:313451.313556} associated with IP in sensor networks included \cite{Estrin:1999:NCC:313451.313556}:
+\begin{itemize}
+	\item ``The sheer numbers of these devices, and their unattended deployment, will preclude reliance on a broadcast communication or the conﬁguration currently needed to deploy and operate networked devices.''
+	\item ``Unlike traditional networks, a sensor node may not need an identity (e.g., an address).''
+	\item ``Traditional networks are designed to accommodate a wide range of applications.''
+\end{itemize}
+\citeauthor{Hui:2008:IDL:1460412.1460415} suggested that these problems are largely due to IPv4 and not the later IPv6 stating ``IPv6 is better suited to the needs of WSNs than IPv4 in every dimension'' \cite{Hui:2008:IDL:1460412.1460415}, further showing that a IPv6 based network architecture could be used in sensor networks, and provides a strong foundation in which to base further work \cite{Durvy:2008:MSN:1460412.1460483}. Simplified versions have been suggested as well as optimisations performed with headers \cite{Dunkels:2003:FTA:1066116.1066118,Dunkels04makingtcp/ip}, but they still had issues with regards to being based on IPv4.  \citeauthor{Estrin:1999:NCC:313451.313556} implementation of an IPv6 based architecture still had some problems, such as large headers, and the reliance on routing tables. The implementation had many benefits when concerning applications involving Neighbour Discovery and routing, but provided little improvements towards applications not involving identities (such as Flooding).
+
+\citeauthor{Dunkels:2007:ACA:1322263.1322295} developed a common architecture, which allowed for much more code reuse and interoperability between protocols, this involved the RIME communication stack. The need for this new layer was brought about from applications needing to run over multiple protocols, leaving them unable to rely on specific communication mechanisms (such as retransmissions and acknowledgements) \cite{Dunkels:2007:ACA:1322263.1322295}. Previous work by \citeauthor{Ee:2006:MNL:1298455.1298479,Polastre:2005:ULA:1098918.1098928} \cite{Ee:2006:MNL:1298455.1298479,Polastre:2005:ULA:1098918.1098928} did not effectively solve the problem of protocols running on top of the lower layers, but did provide a basis for the RIME stack \cite{Dunkels:2007:ACA:1322263.1322295}. 
+
+The RIME communication stack presents a solution to the cross-layer information-sharing problem of a layered communication stack by separating the protocol logic from the details of the packet headers. Packet headers need to be small, yet adaptive enough to encompass any type of communications. They solved this by using the notion of Packet Attributes. Modules would be used to transform data and the attributes into the corresponding packets (with headers and payloads). This provides the developer access too lower level information, without violating layering principles, yet with similar execution performance. This also allows interoperability with all protocols, abstracting the networking layers from the main application layer. For the application layer, RIME provides many communication primitives (such as Single-Hop Broadcasting) \cite{Dunkels:2007:ACA:1322263.1322295}, these primitives were selected based on analysis on the common use cases in WSNs.
 
 \paragraph{Beacon Coordination}
 \cite{Dunkels:2011:ALB:1966251.1966270} % http://dunkels.com/adam/dunkels11announcement.pdf
@@ -98,13 +113,41 @@ ZebraNet by \citeauthor{Juang:2002:ECW:635508.605408} in \cite{Juang:2002:ECW:63
 
 Aside from the usual issues associated with sensor networks, having sensors attached to animals presents another very important problem that needs to be solved. Many of the animals that we wish to monitor, are desired to monitor for very good reasons. Most often it is the case that they are endangered or are often the victims of poaching \cite{?}. By attaching wireless devices that broadcast information, it has been found that attackers can trace their way back to a source. There has been much research to develop ways to mitigate this problem, one example is using fake sources to lure an attacker in an alternate direction than that of the real source \cite{Ozturk:2004:SPE:1029102.1029117,Kamat.1437121,6296046}. These additional problems that arise as side-effects of communicating through a wireless medium are often difficult and expensive (in terms of energy) to overcome.
 
+\subsubsection*{Forest Fires}
+\cite{libeliumForestFires}
+\cite{FireWxNet}
+\cite{4428702}
+% http://static.usenix.org/events/mobisys06/full_papers/p28-hartung.pdf
 
+While habitat monitoring has been at the forefront of monitoring wildlife habitat and animal behaviour, there is a need to measure and view fire and weather conditions to predict wildland fires that occurs across the globe. Fire behavior can change drastically, depending on different environmental factors and topological features such as elevation and aspect. It is important for such behaviour to be predicted accurately and wildland firefighters are currently using means like observing current weather conditions and weather forcasts provided by the  National Weather Service to do so. While data provided by the weather forcast gives a general overview of fire behaviours, those solely colleted by the firefighters (e.g. using a belt-weather kit) only provides data for a sparse number of regions which is inadequate in making a full evaluation. With wireless sensor networks, firefighters can safely measure weather conditions over a wide range of locations and elevations anywhere withing the fire environment.
+
+FireWxNet by \citeauthor{FireWxNet} in \cite{FireWxNet} is a robust multi-tiered portable wireless system, designed to be deployed in a rugged environment. Compared to other application deployments, FireWxNet covers a unique topology which ranges from substantial and sharp elevation differences to an extremely wide coverage area of about 160 square kilometers. Wide area communication coverage and fine-grained local weather sensing coverage are some of the main challenges that was faced by the team. 
+
+Some of the network challenges was ensuring a high-probability of receiving data from the sensors, regardless of interference and asynchronous links and this was tackled by using a best-effort converge-cast protocol. Other issues included verifying the connectivity between nodes and complications were a result of the sparse nature of the deployment and large chages in elevation between nodes. In addtion, a user could not receive verification when adding a node to a currently depoyed network and required the resetting of a neighbour node to gain connectivity.
+
+When testing the performance of the network, results showed that the networks which were deployed on different mountains obtained an average yield of only 40\% and a 78\% unique yield. This may have been the effect of timing limitations, for example some sensors required some settling time once it was activated before it could produce any accurate readings. The CSMA MAC protocol which would back-off in the presence of interference may have also contributed to the number of packets sent. To improve the sucess rate, they chose the option of resending the packets multiple times, but at the cost of some efficiency. In the future, the team aims at designing protocols such as hop-to-hop ACKS, which hopes to cut down on the number of packet they send. 
+
+\subsubsection*{Structural Monitoring}
+\cite{5508230} Claimed: Ivan
+% http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=5508230
+% Drawbacks on conventional methods: http://www.eecs.berkeley.edu/~binetude/work/report.pdf
+
+GENESI: Green sEnsor NEtworks for Structural monItoring - Structural health monitoring systems for critical infrastructure
+
+Another class of application for wireless sensor networks is the structural health monitoring (SHM) of critical infrastructure such as bridges, tunnels and dams, to estimate the state of structural health or detecting the changes in structure that may affect its performance. The conventional method uses PCs wired to piezoelectrical accelerometers and has drawbacks such as (i) use of long wires over the structure, (ii) high cost of equipment, and (iii) expensive to install and maintain. Since SHM requies high data rate, large data size, and a relatively high duty cycle, it would be more efficient to use a WSN which would provide the same functionality as conventional methods but at a much lower price and permits denser monitoring.
+
+\citeauthor{5508230} in \cite{5508230} developed GENESI or Green sEnsor NEtworks for Structural monItoring, which aims to efficiently harvest and generate energy from multiple-sources with radio triggering capabilities and using new algorithms and protocols to dynamically allocate the sensing and communication of tasks to the sensors. GENESI uses a wide range of electronic such as a power-scalable, high efficiency  DC-DC converters and low-drop regulators as well as different harvesting and power distribution strategies to maximise the provision and collection of energy under a large range of environmental conditions. The system also uses an effective power management strategy to compliment the energy harvester mechanism which improves the battery lifetime up to the theoretical limit.
+
+Besides efficient energy harvesting methods, GENESI also emphasizes on reducing energy consumptions for communication and uses a selective activation scheme to dynamically schedule the activation of a set of passive and active sensors. A task allocation algorithm is used alongisde the scheme to decide which sensors are to be activated and considers factors like node residual energy and field coverage. Chosing the best assignment of the available sensors to task proved a great challenge for the team since this problem involving nodes with radio triggering and harvesting capabilities has never been studied before.
+
+% This article doesn't really talk about the issues faced in the development...
 
 \subsubsection*{Air Pollution}
 \cite{libeliumAirPollution}
 \cite{wsnpollution} 
 
-\cite{fotuewsnpollution} Claimed: Ivan
+\cite{fotuewsnpollution}
+% http://files.cameroonwebnews.com/uploads/2010/01/airpollution.pdf
 
 Air pollution has been a growing concern in congested urban cities as a result of industrialisation and heavy transportation. These concerns include poor air quality and visibility and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densely deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and industrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
 
@@ -136,15 +179,7 @@ To avoid high energy consumptions, data from the sesors to the data server were 
 Since the network includes mobile sensors, there are chances that it can lose connectivity with the the fixed sensors. A challenge that the team faced was placing the mesh routers in such a way that they were always connected to the mobile and fixed sensors in order to receive the sensed data. This is crucial for network reliability and quality of service.
 \end{itemize}
 
-
-
-\subsubsection*{Forest Fires}
-\cite{libeliumForestFires}
-\cite{FireWxNet}
-\cite{4428702}
-
 \subsubsection*{Volcano Monitoring}
-Claimed: Ivan
 
 Active volcanoes need to be monitored to predict the likelihood of future eruptions so that early-warning signs can be issued for the evacuation of habitants near the volcano. Today, volcanoes use wired arrays of sensors such as seismometers and acoustic microphones to collect seismic and infrared (low-frequency acoustic) signals and determining a wide range of factors such as sources of volcanic eruptions, interior structure of a volcano and differentiating eruption signals from noise. A typical study can indlue the placement of several stations around the volcano where each contains a low distribution of wired sensors that collects data to a hard drive. Data is then collected manually in a possibly inconvenient location.
 
@@ -173,23 +208,11 @@ During the deployment, the team managed to log 54 hours of continuous data which
 
 In general, the event-triggered model was successful in detecting eruptions and other volcanic events and was able to verify the working of the local and global event detectors by examining the downloaded data. However, since the experiment was deployed over a limited area space of the volcano, further work is to be done to instrument volcanoes at a larger scale. This includes, and most importantly, the management of energy and bandwidth usage of the sensors and increasing its computational power to deviate from continuous data collection to enabling the collection of well-correlated signals. 
 
-\subsubsection*{Structural Monitoring}
-\cite{5508230}
-
 \subsubsection*{Development of Applications}
 \cite{Fagerstrom:1988:DTD:55823.55833}
 
 
 \subsubsection*{Power Considerations}
-
-
-\subsection{Predicates}
-
-Before we can consider what predicates we can try to check for, or how we should check those predicates, we first need to understand what we are detecting and why. In dependable systems we need to consider the fault-error-failure cycle. This cycle says that a \emph{fault} once caused by either some external influence (e.g. radiation leading to bit-flips in memory \cite{?}) or internal influence (e.g. code bugs) will lead to an \emph{error}, this is the \emph{activation} step. An error is the manifestation of the fault (e.g. memory holding the incorrect value). An error then leads to a \emph{failure} in the step called \emph{propagation}, the failure of the system is an observable deviation from the system's specification (e.g. allowing doors to be opened that should remain closed). It is not always the case the faults lead to errors, or errors lead to failures, sometimes multiple faults or errors are respectively required to cause a single error or failure. \cite{1335465}
-
-There is a choice of what should be measured and checked in predicates, should faults, errors or failures be measured? Faults cannot be measured \cite{?} in a way that is possible for a mote, so they are discounted. That leaves measuring errors and failures. Typically failures would be the event being measured \cite{?} as that is what arises after an error actually causes the issue to happen. However, errors can also be measured if there is a dedicated program checking the state and comparing it to an expected state \cite{?}. For example an ECC (error correcting code) such as a Hamming Code can be used to detect and correct an error (in this case a bit-flip) in some memory after a fault (such as a voltage surge ) \cite{hamming1950error}.
-
-Much of what has been discussed has involved transient faults such as those caused by environmental conditions, however, there is a class of faults that are a lot more common and much easier to resolve - faults caused by software bugs. These faults can lead to programs ending up in the wrong state and just performing incorrectly. There has been a certain amount of work that looks into detecting traditional distributed system bugs (such as deadlock \cite{?}) in wireless sensor networks. However, there has been little work in looking into providing tools to aid in system debugging. The rest of this section will cover work on predicates in sensor networks, including detection of them and methods for identifying why is system is not performing correctly.
 
 
 \subsubsection*{Global Predicate Detection}

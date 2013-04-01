@@ -14,31 +14,36 @@ import predvis.hoppy.Hoppy;
  * @author Tim
  */
 public class Predicate {
-    public enum PredicateStatus {
-        SATISFIED,
-        UNSATISFIED
-    }
-    
     //Static parser so single instance only, call ReInit() between executions.
-    private static Hoppy hoppy = null;
-    private static Dragon dragon = null;
+    private static Hoppy HOPPY = null;
+    private static Dragon DRAGON = null;
+    private static int NEXT_ID = 0;
     
     //Primary state
+    private final int id;
     private String name;
     private File scriptFile;
+    private boolean monitored = false;
     
     //Secondary state
     private String script;
+    private String assembly;
+    private String target;
+    private VariableDetails[] vds;
+    
+    //Tertiary state
     private int[] bytecode;
     
     public Predicate() {
-        //Do nothing.
+        id = getId();
     }
     
     public Predicate(String name, File scriptFile) {
+        id = getId();
         this.name = name;
         this.scriptFile = scriptFile;
         compileScript();
+        assembleScript();
     }
     
     public String getName() {
@@ -50,6 +55,7 @@ public class Predicate {
     }
     
     public String getScript() {
+        //Lazily load script from script file.
         if (script != null) {
             return script;
         }
@@ -60,77 +66,156 @@ public class Predicate {
             MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
             script = Charset.forName("UTF-8").decode(bb).toString();
         } catch (IOException e) {
-            //TODO
+            //Ignore
         }
         
         return script;
     }
     
     public void setScript(String script) {
+        //Compile and assemble the new script, and write it out to the script file.
         this.script = script;
         compileScript();
+        assembleScript();
         
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile));
             writer.write(script);
             writer.close();
         } catch (IOException e) {
-            //TODO
+            //Ignore
         }
     }
     
-    private static int temp = 0;
-    public PredicateStatus getStatus() {
-        //TODO: query network, is predicate satisfied?
-        return temp++ % 2 == 0 ? PredicateStatus.SATISFIED : PredicateStatus.UNSATISFIED;
+    public boolean isMonitored() {
+        return monitored;
     }
     
-    private void compileScript() {
+    public void setMonitored(boolean monitored) {
+        this.monitored = monitored;
+    }
+    
+    public String getAssembly() {
+        return assembly;
+    }
+    
+    public void setAssembly(String assembly) {
+        //Need to re-assemble the code when it is set.
+        this.assembly = assembly;
+        assembleScript();
+    }
+    
+    public String getTarget() {
+        return target;
+    }
+    
+    public VariableDetails[] getVariableDetails() {
+        return vds;
+    }
+    
+    public int[] getBytecode() {
+        return bytecode;
+    }
+    
+    private boolean compileScript() {
+        String target;
+        HashMap<Integer, Integer> vdMap = new HashMap<Integer, Integer>();
+        
+        InputStream in;
+        OutputStream out;
         try {
-            //Run Hoppy
-            InputStream in = new ByteArrayInputStream(getScript().getBytes(Charset.forName("UTF-8")));
-            OutputStream out = new ByteArrayOutputStream();
-            if (hoppy == null) {
-                hoppy = new Hoppy(in);
+            //Initialise Hoppy's I/O streams.
+            in = new ByteArrayInputStream(getScript().getBytes(Charset.forName("UTF-8")));
+            out = new ByteArrayOutputStream();
+            
+            //Ensure Hoppy is ready to parse.
+            if (HOPPY == null) {
+                HOPPY = new Hoppy(in);
             } else {
                 Hoppy.ReInit(in);
             }
-            HashMap<Integer, Integer> vdMap = new HashMap<Integer, Integer>();
-            String target = hoppy.compile(out, vdMap);
             
-            //Run Dragon
-            in = new ByteArrayInputStream(out.toString().getBytes(Charset.forName("UTF-8")));
+            //Run Hoppy.
+            target = HOPPY.compile(out, vdMap);
+        } catch (Exception e) {
+            return false;
+        }
+        
+        //Store predicate target.
+        this.target = target;
+        
+        //Store generated predicate assembly code.
+        assembly = out.toString();
+        
+        //Set up variable details structure
+        vds = new VariableDetails[vdMap.size()];
+        int i = 0;
+        for (int n : vdMap.keySet()) {
+            vds[i++] = new VariableDetails(vdMap.get(n), n);
+        }
+        
+        return true;
+    }
+    
+    private boolean assembleScript() {
+        assert(assembly != null);   //compileScript() must have been successfully run already.
+        
+        InputStream in;
+        ByteArrayOutputStream out;
+        try {
+            //Initialise Dragon's I/O streams.
+            in = new ByteArrayInputStream(assembly.getBytes(Charset.forName("UTF-8")));
             out = new ByteArrayOutputStream();
+            
+            //Wrap output stream for conversion to little-endian.
             LittleEndianDataOutputStream leout = new LittleEndianDataOutputStream(out);
             
-            if (dragon == null) {
-                dragon = new Dragon(in);
+            //Ensure Dragon is ready to parse.
+            if (DRAGON == null) {
+                DRAGON = new Dragon(in);
             } else {
                 Dragon.ReInit(in);
             }
-            dragon.run(leout);
             
-            //Store bytecode.
-            byte[] bytes = ((ByteArrayOutputStream)out).toByteArray();
-            bytecode = new int[bytes.length];
-            for (int i = 0; i < bytes.length; ++i) {
-                bytecode[i] = (int)(bytes[i] & 0xFF);
-            }
-			
-            //Set up variable details structure
-            VariableDetails[] vds = new VariableDetails[vdMap.size()];
-            int i = 0;
-            for (int n : vdMap.keySet()) {
-                vds[i++] = new VariableDetails(vdMap.get(n), n);
-            }
-			
+            //Run Dragon.
+            DRAGON.run(leout);
+            
+            
         } catch (Exception e) {
-            //TODO
+            return false;
         }
+        
+        //Store generated bytecode.
+        byte[] bytes = out.toByteArray();
+        bytecode = new int[bytes.length];
+        for (int i = 0; i < bytes.length; ++i) {
+            bytecode[i] = (int)(bytes[i] & 0xFF);
+        }
+        
+        return true;
     }
     
     @Override
     public String toString() {
         return name;
+    }
+    
+    @Override
+    public int hashCode() {
+        return id;
+    }
+    
+    @Override
+    public boolean equals(Object other) {
+        if (other instanceof Predicate) {
+    		Predicate p = (Predicate) other;
+                return this.id == p.id;
+    	}
+
+    	return false;
+    }
+    
+    private int getId() {
+        return NEXT_ID++;
     }
 }

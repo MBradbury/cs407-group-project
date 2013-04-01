@@ -31,7 +31,6 @@
 #endif
 
 #define ROUND_LENGTH ((clock_time_t) 5 * 60 * CLOCK_SECOND)
-#define INITIAL_ROUND_LENGTH ((clock_time_t) 7 * 60 * CLOCK_SECOND)
 #define TRICKLE_INTERVAL (clock_time_t)(2 * CLOCK_SECOND)
 
 #define NODE_DATA_INDEX(array, index, size) \
@@ -79,7 +78,7 @@ static void handle_neighbour_data(neighbour_agg_conn_t * conn,
 {
 	pegp_conn_t * pegp = conncvt_neighbour_agg(conn);
 
-	printf("PEGP: Neighbour r=%u len=%u\n", round_count, length);
+	PEDPRINTF("PEGP: Neighbour r=%u len=%u\n", round_count, length);
 
 	unsigned int i;
 	for (i = 0; i < length; ++i)
@@ -190,7 +189,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
-	printf("PEGP: Store len=%u\n", length);
+	PEDPRINTF("PEGP: Store len=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -226,7 +225,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, 
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
 
-	printf("PEGP: Write len=%d dlen=%d\n", msg->length, *packet_length);
+	PEDPRINTF("PEGP: Write len=%d dlen=%d\n", msg->length, *packet_length);
 
 	// Get the pointer after the message
 	void * msgdata = (msg + 1);
@@ -327,7 +326,7 @@ static void pretend_node_data(void * data)
 
 static void data_evaluation(pegp_conn_t * pegp)
 {
-	printf("PEGP: Start Eval\n");
+	PEDPRINTF("PEGP: Start Eval\n");
 
 	map_t const * predicate_map = predicate_manager_get_map(&pegp->predconn);
 
@@ -373,7 +372,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 				target = unique_array_next(target))
 			{
 				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-				printf("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
+				PEDPRINTF("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
 
 				// Go through the neighbours for the node
 				unique_array_elem_t neighbours_elem;
@@ -407,7 +406,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 
 							if (nd == NULL)
 							{
-								printf("PEGP: ERROR no info on %s\n", addr2str(neighbour));
+								PEDPRINTF("PEGP: ERROR no info on %s\n", addr2str(neighbour));
 							}
 							else
 							{
@@ -448,14 +447,14 @@ static void data_evaluation(pegp_conn_t * pegp)
 				map_t * hop_map = hop_manager_get(&pegp->hop_data, i);
 
 				map_elem_t aelem;
-				for (aelem = map_first(hop_map); map_continue(hop_map, aelem); elem = map_next(aelem))
+				for (aelem = map_first(hop_map); map_continue(hop_map, aelem); aelem = map_next(aelem))
 				{
 					void * mapdata = map_data(hop_map, aelem);
 					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pegp->data_size), mapdata, pegp->data_size);
 					++count;
 				}
 
-				printf("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
+				PEDPRINTF("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
@@ -469,15 +468,17 @@ static void data_evaluation(pegp_conn_t * pegp)
 			&pegp->hop_data,
 			all_neighbour_data, max_size, pred);
 
+#if 0
 		if (evaluation_result)
 		{
-			printf("PEGP: TRUE\n");
+			PEDPRINTF("PEGP: TRUE\n");
 		}
 		else
 		{
-			printf("PEGP: FAILED (%s)\n", error_message());
+			PEDPRINTF("PEGP: FAILED (%s)\n", error_message());
 		}
-
+#endif
+		
 		//predicate_manager_send_response(&predconn, &hop_data,
 		//	pe, all_neighbour_data, sizeof(node_data_t), max_size);
 
@@ -493,7 +494,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 	map_clear(&pegp->received_data);
 	unique_array_clear(&pegp->neighbour_info);
 
-	printf("PEGP: Round=%u\n", pegp->pred_round_count);
+	PEDPRINTF("PEGP: Round=%u\n", pegp->pred_round_count);
 	
 	pegp->pred_round_count += 1;
 }
@@ -512,7 +513,7 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 
 	while (true)
 	{
-		etimer_set(&et, INITIAL_ROUND_LENGTH);
+		etimer_set(&et, pegp->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 		data_evaluation(pegp);
@@ -551,7 +552,8 @@ void pegp_start_delayed1(pegp_conn_t * conn)
 bool pegp_start(pegp_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,
 	pegp_predicate_failed_fn predicate_failed,
-	function_details_t const * function_details, uint8_t functions_count)
+	function_details_t const * function_details, uint8_t functions_count,
+	clock_time_t predicate_period)
 {
 	if (conn == NULL || predicate_failed == NULL || data_fn == NULL ||
 		sink == NULL || data_size == 0)
@@ -567,6 +569,8 @@ bool pegp_start(pegp_conn_t * conn,
 
 	conn->function_details = function_details;
 	conn->functions_count = functions_count;
+
+	conn->predicate_period = predicate_period;
 
 
 	predicate_manager_open(&conn->predconn, 135, 129, sink, TRICKLE_INTERVAL, &pm_callbacks);
@@ -732,7 +736,8 @@ PROCESS_THREAD(mainProcess, ev, data)
 
 	pegp_start(&pegp,
 		&sink, &node_data, sizeof(node_data_t), &predicate_failed,
-		func_det, sizeof(func_det)/sizeof(func_det[0]));
+		func_det, sizeof(func_det)/sizeof(func_det[0]),
+		4 * 60 * CLOCK_SECOND);
 
 	if (rimeaddr_cmp(&sink, &rimeaddr_node_addr))
 	{

@@ -119,6 +119,10 @@ public class NodeComms {
         writeln("]");
     }
     
+    public void writeCancelPredicate(int id, String target) {
+        //TODO
+    }
+    
     public void close()
     {
         stop = true;

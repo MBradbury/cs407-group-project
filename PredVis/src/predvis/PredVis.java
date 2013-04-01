@@ -39,9 +39,14 @@ class PredicateListRenderer extends DefaultListCellRenderer {
     }
 
     private RoundData visibleRound = null;
+    private RoundData currentRound = null;
     
     public void setVisibleRound(RoundData visibleRound) {
         this.visibleRound = visibleRound;
+    }
+    
+    public void setCurrentRound(RoundData currentRound) {
+        this.currentRound = currentRound;
     }
     
     @Override
@@ -56,6 +61,10 @@ class PredicateListRenderer extends DefaultListCellRenderer {
             if (pd != null) {
                 setForeground(FOREGROUND_MAPPING.get(pd.getStatus()));
                 setBackground(BACKGROUND_MAPPING.get(pd.getStatus()));
+            } else if (visibleRound != currentRound) {
+                //If it's not the current round, don't display evaluation pending.
+                setForeground(FOREGROUND_MAPPING.get(PredicateData.PredicateStatus.UNMONITORED));
+                setBackground(BACKGROUND_MAPPING.get(PredicateData.PredicateStatus.UNMONITORED));
             } else {
                 //Not yet evaluated.
                 setForeground(FOREGROUND_MAPPING.get(PredicateData.PredicateStatus.UNEVALUATED));
@@ -340,7 +349,7 @@ public class PredVis extends JFrame {
         panel = new JPanel();
         predicateList = new JList(predicateListModel);
         predicateList.setCellRenderer(predicateListRenderer);
-        predicateList.setPreferredSize(new Dimension(200, 600));
+        predicateList.setPreferredSize(new Dimension(200, 550));
         predicateList.setBorder(WIDGET_BORDER);
         predicateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         predicateList.addListSelectionListener(new ListSelectionListener() {
@@ -614,6 +623,8 @@ public class PredVis extends JFrame {
         for (Predicate p : oldCurrent.getPredicateData().keySet()) {
             currentRound.getPredicateData().put(p, null);
         }
+        
+        predicateListRenderer.setCurrentRound(currentRound);
         
         //Update slider values and rerender visible round.
         roundSliderModel.setMaximum(roundSliderModel.getMaximum() + 1);

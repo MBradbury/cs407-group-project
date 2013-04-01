@@ -19,15 +19,24 @@ Developing a distributed system is considered harder because (i) multiple proces
 
 When considering a distributed system if you want to examine the state of a system at a given point you cannot simply set a breakpoint in your local binary. The solution to this debugging is non-trivial due to the difficulties that arise because distributed systems are non-deterministic with respect to message communications \cite{?}. Be it when the message started transmission, how long it took, if it succeeded or in what order transmissions occurred. So every time a distributed program is run it is possible for a different result to be obtained, due to the different order of execution. This goes against one of the usual assumptions of debugging traditional applications where it is assume that one execution with a set of inputs will execute in exactly the same way again with the same set of inputs \cite{?} (i.e. determinism).
 
-As the execution may be different each time it is not suitable to wait for a bug to effect the system and then try to work out what the bug is and how to fix it. But the system needs to be paying attention to itself and be able to report if there is an issue. One way to do this it to test if the system satisfies some global predicate \cite{553309,345131,277788}
+As the execution may be different each time it is not suitable to wait for a bug to effect the system and then try to work out what the bug is and how to fix it. But the system needs to be paying attention to itself and be able to report if there is an issue. One way to do this it to test if the system satisfies some global predicate, of which there has been much work to find an check different classes of these predicates \cite{553309,345831,277788}. However, of all the work that has been done little of it has focused on wireless sensor networks, where an important focus is perhaps a trade-off of the accuracy or the reportability of a predicate with the aim of reducing energy usage. We intend to focus on developing a system that can accurately evaluate predicates and provide useful information about real sensor networks running outside of a simulator.
 
 
+\subsection{Related Work}
+
+\subsubsection*{Classes of Distributed Predicates}
 
 \begin{comment}
 \cite{1382572, 749477, ?}. However, in distributed systems there are additional challenges to overcome \cite{5010224}
 
 What can be meant by `detecting bugs', in non-distributed systems there are many different classes of bugs \cite{?}, when we consider distributed systems many of those bugs have new vectors in which they can arise. For example deadlock can now occur across motes if both motes are waiting on receiving a message the other mote should be sending. The fact that these systems are distributed means that debugging these kind of problems becomes harder \cite{?}. Also there are new ways bugs can arise, for example in the routing of information, if a message being sent is stuck being transmitted in a cycle of nodes it will never reach its destination. This type of problem requires lots of resources (either memory or large messages) to be able to effectively debug \cite{?}.
 \end{comment}
+
+
+\subsubsection*{Existing Sensor Network Predicate Checking Tools}
+
+
+\subsubsection*{Practical Sensor Network Deployments}
 
 
 

@@ -92,8 +92,8 @@ public class NodeComms {
     
     public void writePredicate(int id, String target, int[] bytecode, VariableDetails[] vars) 
             throws RuntimeException, IOException {
-        writeln("[");       
-        writeln(Integer.toString(id));       
+        writeln("[");
+        writeln(Integer.toString(id));
         writeln(target);
         
         String toWrite = "b";
@@ -119,8 +119,12 @@ public class NodeComms {
         writeln("]");
     }
     
-    public void writeCancelPredicate(int id, String target) {
-        //TODO
+    public void writeCancelPredicate(int id, String target)
+            throws RuntimeException, IOException {
+        writeln("[");       
+        writeln(Integer.toString(id));
+        writeln(target);
+        writeln("]");
     }
     
     public void close()

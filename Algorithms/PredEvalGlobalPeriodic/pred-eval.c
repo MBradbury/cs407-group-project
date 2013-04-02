@@ -680,14 +680,12 @@ static bool send_example_predicate(pegp_conn_t * pegp, rimeaddr_t const * destin
 
 	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 	
-	static var_elem_t var_details[2];
-	var_details[0].hops = 2;
-	var_details[0].var_id = 255;
-	var_details[1].hops = 1;
-	var_details[1].var_id = 254;
+	static var_elem_t const var_details[2] = {
+		{2, 255}, {1, 254}
+	};
 
-	uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
-	uint8_t var_details_length = 2;
+	static const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+	static const uint8_t var_details_length = sizeof(var_details)/sizeof(var_details[0]);
 
 	return predicate_manager_create(&pegp->predconn,
 		id, destination,

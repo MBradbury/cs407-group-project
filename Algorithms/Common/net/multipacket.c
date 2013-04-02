@@ -291,10 +291,13 @@ void multipacket_close(multipacket_conn_t * conn)
 	}
 }
 
-void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void * data, unsigned int length)
+void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target,
+	void * data, unsigned int length)
 {
 	// Allocate the packet
-	multipacket_sending_packet_t * details = (multipacket_sending_packet_t *)malloc(sizeof(multipacket_sending_packet_t) + length);
+	multipacket_sending_packet_t * details =
+		(multipacket_sending_packet_t *)
+			malloc(sizeof(multipacket_sending_packet_t) + length);
 	details->id = conn->id++;
 	details->length = length;
 	details->sent = 0;
@@ -302,11 +305,13 @@ void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target, void
 	rimeaddr_copy(&details->target, target);
 	rimeaddr_copy(&details->source, &rimeaddr_node_addr);
 
+	MPDPRINTF("multipacket: Adding data of length %d to send to %s with id %d. %u packets queued.\n",
+		length, addr2str(target), details->id, linked_list_length(&conn->sending_packets));
+
 	memcpy(sending_data(details), data, length);
 
 	// Add to the queue to send
 	linked_list_append(&conn->sending_packets, details);
 
-	MPDPRINTF("multipacket: Adding data of length %d to send to %s with id %d. %u packets queued.\n",
-		length, addr2str(target), details->id, linked_list_length(&conn->sending_packets));
+	
 }

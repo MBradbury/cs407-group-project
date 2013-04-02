@@ -125,6 +125,7 @@ static void finish_aggregate_collect(void * ptr)
 
 	multipacket_send(&conn->mc, &conn->best_parent, data, length);
 
+	// We need to free the allocated packet data
 	free(data);
 
 	TADPRINTF("Tree Agg: Send Agg\n");
@@ -135,7 +136,7 @@ static void finish_aggregate_collect(void * ptr)
 	conn->is_collecting = false;
 
 	// Reset the data we have stored to nothing
-	// We cano do this as write_data_to_packet should have freed the memory
+	// We can do this as write_data_to_packet should have freed the memory
 	// if anything was allocated.
 	memset(conn->data, 0, conn->data_length);
 }

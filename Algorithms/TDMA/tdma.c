@@ -198,7 +198,7 @@ static void set_slot(void * ptr)
 {
 	struct broadcast_conn * conn = (struct broadcast_conn *)ptr;
 
-	printf("Set slot to %u from %u\n", to_change_assigned_slot, assigned_slot);
+	printf("Set %u was %u\n", to_change_assigned_slot, assigned_slot);
 
 	assigned_slot = to_change_assigned_slot;
 
@@ -213,9 +213,9 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 	++tdma_recv;
 
 	void * ptr = packetbuf_dataptr();
-	unsigned int length = packetbuf_datalen();
+	const unsigned int length = packetbuf_datalen();
 
-	uint8_t type = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_PACKET_TYPE);
+	const uint8_t type = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_PACKET_TYPE);
 
 	// Record who is in our one hop neighbourhood
 	if (!unique_array_contains(&one_hop_neighbours, sender))
@@ -234,7 +234,7 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 			msg_t * msg = (msg_t *)ptr;
 			neighbour_entry_t const * entries = (neighbour_entry_t const *)(msg + 1);
 
-			printf("Received beacon from %s length=%u change=%u\n",
+			printf("Recv from %s len=%u chng=%u\n",
 				addr2str(sender), msg->length, msg->is_change);
 
 			// Cancel, if a node with a lower id is also changing
@@ -242,7 +242,7 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 			{
 				if (ctimer_expired(&ct_change_assigned_slot) != 0)
 				{
-					printf("Stopping change slot timer\n");
+					printf("Stop change timer\n");
 
 					ctimer_stop(&ct_change_assigned_slot);
 				}
@@ -271,7 +271,7 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 				}
 			}
 
-			printf("Searching for better slot...\n");
+			printf("Looking for slot\n");
 
 			// Find the smallest slot not in use by other nodes
 			for (i = 0; i != slot_count; ++i)
@@ -299,7 +299,7 @@ static void recv(struct broadcast_conn * conn, rimeaddr_t const * sender)
 				{
 					if (i != assigned_slot)
 					{
-						printf("Found a better slot of %u compared to %u\n", i, assigned_slot);
+						printf("Found better slot %u than %u\n", i, assigned_slot);
 
 						to_change_assigned_slot = i;
 						ctimer_set(&ct_change_assigned_slot, round_length / 2, &set_slot, conn);
@@ -368,12 +368,10 @@ static bool send_example_predicate(pe_conn_t * conn, rimeaddr_t const * destinat
 		0xFF,0x01,0x37,0x02,0xFF,0x01,0x1C,0x3B,0x2C,0x35,0x02,0x12,
 		0x20,0x2C,0x2C,0x35,0x01,0x12,0x0A,0x00};
 
-	static var_elem_t var_details[1];
-	var_details[0].hops = 1;
-	var_details[0].var_id = 255;
+	static const var_elem_t var_details[1] = { {1, 255} };
 
-	const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
-	const uint8_t var_details_length = sizeof(var_details)/sizeof(var_details[0]);
+	static const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+	static const uint8_t var_details_length = sizeof(var_details)/sizeof(var_details[0]);
 
 	return predicate_manager_create(&conn->predconn,
 		id, destination,
@@ -510,7 +508,7 @@ PROCESS_THREAD(startup_process, ev, data)
 		{
 			etimer_set(&et_round, round_length);
 
-			printf("Broadcasting our slot %u\n", assigned_slot);
+			printf("bcast slot %u\n", assigned_slot);
 
 			bcast_beacon(&bc, false);
 

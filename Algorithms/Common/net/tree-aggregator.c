@@ -125,6 +125,8 @@ static void finish_aggregate_collect(void * ptr)
 
 	multipacket_send(&conn->mc, &conn->best_parent, data, length);
 
+	free(data);
+
 	TADPRINTF("Tree Agg: Send Agg\n");
 
 	toggle_led_for(LEDS_GREEN, 1 * CLOCK_SECOND);

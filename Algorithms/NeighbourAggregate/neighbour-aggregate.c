@@ -340,7 +340,7 @@ static void neighbour_agg_send_data(void * ptr)
 	ctimer_set(&conn->ct_send_data, ROUND_LENGTH, &neighbour_agg_send_data, conn);
 }
 
-static neighbour_detect_callbacks_t neighbour_detect_callbacks = {&neighbour_agg_round_complete};
+static const neighbour_detect_callbacks_t neighbour_detect_callbacks = {&neighbour_agg_round_complete};
 
 bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 	rimeaddr_t const * sink,

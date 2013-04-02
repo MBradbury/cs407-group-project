@@ -160,20 +160,21 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	multipacket_conn_t * conn = runicast_conncvt(rc);
 
 	// We have received a packet, now we need to join stuff back together
-	uint16_t packet_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
-	uint8_t seq = packetbuf_attr(PACKETBUF_ATTR_EPACKET_SEQNO);
-	unsigned int data_length = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ELENGTH);
+	const uint16_t packet_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
+	const uint8_t seq = packetbuf_attr(PACKETBUF_ATTR_EPACKET_SEQNO);
+	const unsigned int data_length = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ELENGTH);
 
 	rimeaddr_t const * source = packetbuf_addr(PACKETBUF_ADDR_ESENDER);
 
-	void * data_recv = packetbuf_dataptr();
-	unsigned int recv_length = packetbuf_datalen();
+	void const * data_recv = packetbuf_dataptr();
+	const unsigned int recv_length = packetbuf_datalen();
 
 	recv_key_t key;
 	key.data.id = packet_id;
 	rimeaddr_copy(&key.data.originator, source);
 
-	multipacket_receiving_packet_t * details = (multipacket_receiving_packet_t *)map_get(&conn->receiving_packets, &key);
+	multipacket_receiving_packet_t * details =
+		(multipacket_receiving_packet_t *)map_get(&conn->receiving_packets, &key);
 
 
 	void * data_to_pass_onwards = NULL;
@@ -198,7 +199,8 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 			}
 			else
 			{
-				details = (multipacket_receiving_packet_t *)malloc(sizeof(multipacket_receiving_packet_t) + data_length);
+				details = (multipacket_receiving_packet_t *)
+					malloc(sizeof(multipacket_receiving_packet_t) + data_length);
 				details->key = key;
 				details->length = data_length;
 				details->last_seqno = seq;
@@ -312,6 +314,4 @@ void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target,
 
 	// Add to the queue to send
 	linked_list_append(&conn->sending_packets, details);
-
-	
 }

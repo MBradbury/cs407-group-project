@@ -27,7 +27,6 @@
 #include "debug-helper.h"
 #include "containers/unique-array.h"
 
-
 #ifdef NEIGHBOUR_AGG_DEBUG
 #	define NADPRINTF(...) printf(__VA_ARGS__)
 #else
@@ -296,7 +295,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data,
 	}
 
 	// Free the data here
-	unique_array_clear(&data_array->list);
+	unique_array_free(&data_array->list);
 }
 
 
@@ -394,7 +393,8 @@ PROCESS(neighbour_agg_process, "Neighbour Agg process");
 
 AUTOSTART_PROCESSES(&neighbour_agg_process);
 
-static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
+static void handle_neighbour_data(neighbour_agg_conn_t * conn, rimeaddr_pair_t const * pairs,
+	unsigned int length, unsigned int round_count)
 {
 	printf("Got some data of length:%d in round %d\n", length, round_count);
 }

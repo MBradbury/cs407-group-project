@@ -269,11 +269,17 @@ PROCESS_THREAD(send_data_process, ev, data)
 	static struct etimer et;
 	static uint8_t round_count;
 	static pegp_conn_t * pegp;
+	static size_t data_length;
+	static collected_data_t * msg;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 	pegp = (pegp_conn_t *)data;
+
+	// Allocate once to reduce number of calls to malloc
+	data_length = sizeof(collected_data_t) + pegp->data_size;
+	msg = (collected_data_t *)malloc(data_length);
 	
 	round_count = 0;
 
@@ -287,9 +293,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 			// We should be set up by now
 			// Start sending data up the tree
 
-			size_t data_length = sizeof(collected_data_t) + pegp->data_size;
-			collected_data_t * msg = (collected_data_t *)malloc(data_length);
-
 			msg->round_count = round_count;
 			msg->length = 1;
 
@@ -298,8 +301,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 			pegp->data_fn(msgdata);
 
 			tree_agg_send(&pegp->aggconn, msg, data_length);
-
-			free(msg);
 		}
 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
@@ -308,7 +309,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 	}
 
 exit:
-	(void)0;
+	free(msg);
 	PROCESS_END();
 }
 

@@ -81,7 +81,7 @@ bool array_list_clear(array_list_t * list)
 	{
 		void * data = array_list_data(list, elem);
 
-		if (list->cleanup != NULL)
+		if (list->data != NULL && list->cleanup != NULL)
 		{
 			list->cleanup(data);
 		}

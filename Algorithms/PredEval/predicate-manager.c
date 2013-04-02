@@ -691,15 +691,15 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				{
 					if (current.bytecode_length == 0)
 					{
-						PMDPRINTF("PredMan: going to error handler\n");
-						state = 99;
-						continue;
+						predicate_manager_cancel(conn, current.id, &current.target);
 					}
-
-					predicate_manager_create(conn,
-						current.id, &current.target,
-						current.bytecode, current.bytecode_length,
-						current.variables_details, current.variables_details_length);
+					else
+					{
+						predicate_manager_create(conn,
+							current.id, &current.target,
+							current.bytecode, current.bytecode_length,
+							current.variables_details, current.variables_details_length);
+					}
 
 					free(current.bytecode);
 					free(current.variables_details);

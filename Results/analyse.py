@@ -98,10 +98,10 @@ def totalSentRecv(moteResults):
 # Evaluates the following predicate
 # This can be used to get the expected result
 #using Neighbours(1) as onehopn in
-#    	@(a : onehopn ~
-#    		slot(a) != slot(this) &
-#    	    @(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
-#    	)
+#		@(a : onehopn ~
+#			slot(a) != slot(this) &
+#			@(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
+#		)
 def predicate(this, onehopn, slots):
 	result = True
 	for a in onehopn:
@@ -177,7 +177,7 @@ class AnalyseFile:
 		self.successRate = float(self.predicatesSucceeded) / float(self.totalPredicates)
 		self.failureRate = float(self.predicatesFailed) / float(self.totalPredicates)
 
-		self.pcCorrectlyEvaluted = float(self.predicatesCorrectlyEvaluated) / float(self.totalPredicates)
+		self.pcCorrectlyEvaluated = float(self.predicatesCorrectlyEvaluated) / float(self.totalPredicates)
 
 
 	# Gets the slot value of a given node at the given time
@@ -241,7 +241,7 @@ for peType in os.listdir('TDMA'):
 
 				results[peType][predicateDist][size][period]["pcResponsesReachedSink"] = meanStdAttr(localResults, "responsesReachedSinkPC")
 				#results[peType][size]["pcSuccessRate"] = meanStdAttr(localResults, "successRate")
-				results[peType][predicateDist][size][period]["pcCorrectlyEvaluted"] = meanStdAttr(localResults, "pcCorrectlyEvaluted")
+				results[peType][predicateDist][size][period]["pcCorrectlyEvaluated"] = meanStdAttr(localResults, "pcCorrectlyEvaluated")
 
 				results[peType][predicateDist][size][period]["messagesPE"] = meanStdAttrTxRx(localResults, "peTotal")
 				results[peType][predicateDist][size][period]["messagesTDMA"] = meanStdAttrTxRx(localResults, "TDMATotal")
@@ -249,3 +249,147 @@ for peType in os.listdir('TDMA'):
 
 
 pprint(results)
+
+
+# Done with the processing of results, now lets generate some graph files
+
+
+# Some utility functions
+# From:  http://ginstrom.com/scribbles/2007/09/04/pretty-printing-a-table-in-python/
+def get_max_width(table, index):
+	"""Get the maximum width of the given column index."""
+
+	return max([len(str(row[index])) for row in table])
+	
+# From:  http://ginstrom.com/scribbles/2007/09/04/pretty-printing-a-table-in-python/
+def pprint_table(out, table):
+	"""Prints out a table of data, padded for alignment
+	@param out: Output stream (file-like object)
+	@param table: The table to print. A list of lists.
+	Each row must have the same number of columns."""
+
+	col_paddings = []
+
+	for i in range(len(table[0])):
+		col_paddings.append(get_max_width(table, i))
+
+	for row in table:
+		# left col
+		out.write(str(row[0]).ljust(col_paddings[0] + 1))
+		
+		# rest of the cols
+		for i in range(1, len(row)):
+			out.write(str(row[i]).rjust(col_paddings[i] + 2))
+		
+		out.write('\n')
+
+# From: http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write
+def ensureDir(f):
+	d = os.path.dirname(f)
+	if not os.path.exists(d):
+		os.makedirs(d)
+		
+def keyToDirName(period, bytecode, about, accessor):
+	return 'Graphs/' + period + '/' + bytecode + '/' + about + '/' + ('' if accessor is None else accessor + '/')
+		
+def graph(allvalues, title, labelX, labelY, keyName, accessorKey=None, rangeY=None, keypos='right top', kind='pdf'):
+
+	rearranged = {}
+
+	for (algorithm, items0) in allvalues.items():
+		for (bytecode, items1) in items0.items():
+			for (size, items2) in items1.items():
+				for (period, items3) in items2.items():
+					dirName = keyToDirName(period, bytecode, keyName, accessorKey)
+					
+					# Ensure that the dir we want to put the files in
+					# actually exists
+					ensureDir(dirName)
+				
+					if accessorKey is None:
+						rearranged.setdefault((period, bytecode, keyName, None), {}).setdefault(int(size), {})[algorithm] = items3[keyName]
+					else:
+						rearranged.setdefault((period, bytecode, keyName, accessorKey), {}).setdefault(int(size), {})[algorithm] = items3[keyName][accessorKey]
+				
+	pprint(rearranged)
+	
+	for (key, values) in rearranged.items():
+		dirName = keyToDirName(*key)
+		
+		sizes = list(sorted(values.keys()))
+		
+		varying = {x for item in values.values() for x in item.keys()}
+		
+		# Write our data
+		datFileName = dirName + 'graph.dat'
+		with open(datFileName, 'w') as datFile:
+
+			table = [ ['#Size'] + ['Value', 'StdDev']*len(varying) ]
+			
+			# We want to print out rows in the correct
+			# size order, so iterate through sizes this way
+			for size in sizes:
+				row = [ size ]
+				for vary in varying:
+					if vary in values[size]:
+						row += [ values[size][vary][0], values[size][vary][1] ]
+					else:
+						row += [ '?', '?' ]
+					
+				table.append( row )
+			
+			pprint_table(datFile, table)
+	
+		# Write out the graph definition file
+		pFileName = dirName + 'graph.p'
+		with open(pFileName, 'w') as pFile:
+
+			pFile.write('set xlabel "{0}"\n'.format(labelX))
+			pFile.write('set ylabel "{0}"\n'.format(labelY))
+			pFile.write('set pointsize 1\n')
+			pFile.write('set key {0}\n'.format(keypos))
+			pFile.write('set title "{0}"\n'.format(title))
+
+			# Should remain the same as we are testing with
+			# a limited sized grid of nodes
+			pFile.write('set xrange [{0}:{1}]\n'.format(min(sizes) - 1, max(sizes) + 1))
+			pFile.write('set xtics ({0})\n'.format(','.join(map(str, sizes))))
+
+			if rangeY is not None:
+				pFile.write('set yrange [{0}:{1}]\n'.format(rangeY[0], rangeY[1]))
+			else:
+				pFile.write('set yrange auto\n')
+				
+			pFile.write('set ytics auto\n')
+			
+			if kind == 'pdf':
+				pFile.write('set terminal pdf enhanced\n')
+				pFile.write('set output "graph.pdf" \n')
+			elif kind == 'ps':
+				pFile.write('set terminal postscript enhanced 22\n')
+				pFile.write('set output "graph.ps"\n')
+			else:
+				pFile.write('set terminal postscript eps enhanced 22\n')
+				pFile.write('set output "graph.eps"\n')
+			
+			pFile.write('plot ')
+			
+			for (i, vary) in enumerate(varying):
+			
+				valueIndex = 2 * (i + 1)
+				stddevIndex = valueIndex + 1
+			
+				pFile.write('"graph.dat" u 1:{1}:{2} w errorlines ti "{0}"'.format(vary, valueIndex, stddevIndex))
+				
+				if i + 1 != len(varying):
+					pFile.write(',\\\n')
+			
+			pFile.write('\n')
+		
+graph(results, 'Predicates Correctly Evaluated', 'Network Size', 'Percentage Correctly Evaluated', 'pcCorrectlyEvaluated', rangeY=(0, 1))
+
+graph(results, 'Response Reached Sink', 'Network Size', 'Percentage Correctly Evaluated', 'pcResponsesReachedSink', rangeY=(0, 1))
+
+graph(results, 'PE Tx', 'Network Size', 'Messages Sent', 'messagesPE', accessorKey='tx', rangeY=(0, '*'))
+graph(results, 'PE Rx', 'Network Size', 'Messages Received', 'messagesPE', accessorKey='rx', rangeY=(0, '*'))
+

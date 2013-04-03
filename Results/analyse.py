@@ -289,26 +289,27 @@ def ensureDir(f):
 	if not os.path.exists(d):
 		os.makedirs(d)
 		
-def keyToDirName(algorithm, bytecode, about, accessor):
-	return 'Graphs/' + algorithm + '/' + bytecode + '/' + about + '/' + ('' if accessor is None else accessor + '/')
+def keyToDirName(period, bytecode, about, accessor):
+	return 'Graphs/' + period + '/' + bytecode + '/' + about + '/' + ('' if accessor is None else accessor + '/')
 		
-def graph(allvalues, algorithm, title, labelX, labelY, keyName, accessorKey=None, rangeY=None, keypos='right top', kind='pdf'):
+def graph(allvalues, title, labelX, labelY, keyName, accessorKey=None, rangeY=None, keypos='right top', kind='pdf'):
 
 	rearranged = {}
 
-	for (bytecode, items1) in allvalues[algorithm].items():
-		for (size, items2) in items1.items():
-			for (period, items3) in items2.items():
-				dirName = keyToDirName(algorithm, bytecode, keyName, accessorKey)
+	for (algorithm, items0) in allvalues.items():
+		for (bytecode, items1) in items0.items():
+			for (size, items2) in items1.items():
+				for (period, items3) in items2.items():
+					dirName = keyToDirName(period, bytecode, keyName, accessorKey)
+					
+					# Ensure that the dir we want to put the files in
+					# actually exists
+					ensureDir(dirName)
 				
-				# Ensure that the dir we want to put the files in
-				# actually exists
-				ensureDir(dirName)
-			
-				if accessorKey is None:
-					rearranged.setdefault((algorithm, bytecode, keyName, None), {}).setdefault(int(size), {})[period] = items3[keyName]
-				else:
-					rearranged.setdefault((algorithm, bytecode, keyName, accessorKey), {}).setdefault(int(size), {})[period] = items3[keyName][accessorKey]
+					if accessorKey is None:
+						rearranged.setdefault((period, bytecode, keyName, None), {}).setdefault(int(size), {})[algorithm] = items3[keyName]
+					else:
+						rearranged.setdefault((period, bytecode, keyName, accessorKey), {}).setdefault(int(size), {})[algorithm] = items3[keyName][accessorKey]
 				
 	pprint(rearranged)
 	
@@ -317,7 +318,7 @@ def graph(allvalues, algorithm, title, labelX, labelY, keyName, accessorKey=None
 		
 		sizes = list(sorted(values.keys()))
 		
-		varying = values[sizes[0]].keys()
+		varying = {x for item in values.values() for x in item.keys()}
 		
 		# Write our data
 		datFileName = dirName + 'graph.dat'
@@ -330,7 +331,10 @@ def graph(allvalues, algorithm, title, labelX, labelY, keyName, accessorKey=None
 			for size in sizes:
 				row = [ size ]
 				for vary in varying:
-					row += [ values[size][vary][0], values[size][vary][1] ]
+					if vary in values[size]:
+						row += [ values[size][vary][0], values[size][vary][1] ]
+					else:
+						row += [ '?', '?' ]
 					
 				table.append( row )
 			
@@ -375,21 +379,17 @@ def graph(allvalues, algorithm, title, labelX, labelY, keyName, accessorKey=None
 				valueIndex = 2 * (i + 1)
 				stddevIndex = valueIndex + 1
 			
-				pFile.write('"graph.dat" u 1:2:3 w errorlines ti "Period={0} sec"'.format(vary, valueIndex, stddevIndex))
+				pFile.write('"graph.dat" u 1:{1}:{2} w errorlines ti "{0}"'.format(vary, valueIndex, stddevIndex))
 				
 				if i + 1 != len(varying):
 					pFile.write(',\\\n')
 			
 			pFile.write('\n')
+		
+graph(results, 'Predicates Correctly Evaluated', 'Network Size', 'Percentage Correctly Evaluated', 'pcCorrectlyEvaluated', rangeY=(0, 1))
 
-for predicate in results.keys():		
-	graph(results, predicate, predicate + '(Correctly Evaluated)', 'Network Size', 'Percentage Correctly Evaluated', 'pcCorrectlyEvaluated', rangeY=(0, 1))
-	
-	# Makes no sense to graph global results reaching the sink
-	if predicate in ('PELP', 'PELE'):
-		graph(results, predicate, predicate + '(Response Reached Sink)', 'Network Size', 'Percentage Correctly Evaluated', 'pcResponsesReachedSink', rangeY=(0, 1))
-	
-	graph(results, predicate, predicate + '(PE Tx)', 'Network Size', 'Messages Sent', 'messagesPE', accessorKey='tx', rangeY=(0, '*'))
-	
-	graph(results, predicate, predicate + '(PE Rx)', 'Network Size', 'Messages Received', 'messagesPE', accessorKey='rx', rangeY=(0, '*'))
+graph(results, 'Response Reached Sink', 'Network Size', 'Percentage Correctly Evaluated', 'pcResponsesReachedSink', rangeY=(0, 1))
+
+graph(results, 'PE Tx', 'Network Size', 'Messages Sent', 'messagesPE', accessorKey='tx', rangeY=(0, '*'))
+graph(results, 'PE Rx', 'Network Size', 'Messages Received', 'messagesPE', accessorKey='rx', rangeY=(0, '*'))
 

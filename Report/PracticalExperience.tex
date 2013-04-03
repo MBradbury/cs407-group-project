@@ -127,6 +127,13 @@ Reducing firmware size is a very important issue for WSN applications. As there 
 
 The most important thing is to make small changes at a time and then test every change that is made. This way the impact of the change on the program's size can be observed and if it made the size larger, then the change can be reverted. Doing multiple changes at once, may be faster to code, but may not lead to the desired result quicker.
 
+\subsection{Memory Management}
+
+When developing applications in C it is almost a given that memory management problems would be encountered. This is an inherent issue when developing with C, due to the low level control the developers are given it is very easy to ``shoot yourself in the foot'' (Bjarne Stroustrup). Which leads us back to our initial point as mentioned in the introduction that without good tools the quality of the system being developed will be poor. What is now clear to us is that C is not a good language for developing these kinds of applications. So it would appear that developing a new language should be a priority for wireless sensor network developers, such as C++ was to C. \cite{1281625} proposes a high level language that allows the developers to specify what they want to happen rather than how they would like it to happen, and there has been work on developing virtual machines not just for limited purposes (as was ours), but to run the entire application \cite{Levis:2002:MTV:635508.605407,Muller:2007:VMS:1272998.1273013}. With these virtual machines there are several advantages, the first is that experimenting with higher level languages becomes easier as they will all compile down to the same bytecode and the second is that memory management can be taken out of the hand of the programmer and put in control of the compiler. The problem here is that the main reason why that C is a popular language for developing sensor network applications is the control over memory that is provided. Due to the low resources of the motes, developers must be very careful as to how they allocate memory. So perhaps developments in low powered memory to allow more of it or improvements to how virtual machines can allocate memory efficiently will be required before these solutions become feasible.
+
+% TODO: mention development of tools such as leak detectors
+% Problem that WSN apps never really terminate, so the problem is harder in that sense
+
 
 
 

@@ -41,7 +41,7 @@ static const struct packetbuf_attrlist trickle_attributes[] = {
 
 	{ PACKETBUF_ADDR_ERECEIVER, PACKETBUF_ADDRSIZE },
 	TRICKLE_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 
 

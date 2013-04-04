@@ -34,13 +34,15 @@ static inline tree_agg_conn_t * conncvt_multipacket(struct multipacket_conn * co
 
 
 // The amount of subborn broadcasts to allow time for
-#define STUBBORN_WAIT_COUNT 5u
+#define STUBBORN_WAIT_COUNT 3u
+#define MIN_SEND_TIME 1
+#define MAX_SEND_TIME 3
 
 // Time to gather aggregations over
-#define AGGREGATION_WAIT (clock_time_t)(45 * CLOCK_SECOND)
+#define AGGREGATION_WAIT (clock_time_t)(30 * CLOCK_SECOND)
 
 // Time to wait to detect parents
-#define PARENT_DETECT_WAIT (clock_time_t)(35 * CLOCK_SECOND)
+#define PARENT_DETECT_WAIT (clock_time_t)((MAX_SEND_TIME * (1 + STUBBORN_WAIT_COUNT)) * CLOCK_SECOND)
 
 
 static void stbroadcast_cancel_void_and_callback(void * ptr)
@@ -97,7 +99,7 @@ static void parent_detect_finished(void * ptr)
 	}
 
 
-	clock_time_t send_period = random_time(2, 4, 0.1);
+	clock_time_t send_period = random_time(MIN_SEND_TIME, MAX_SEND_TIME, 0.1);
 	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
 
 	TADPRINTF("Sending setup message onwards with hop count=%u, send=%lu/%lu, wait = %lu/%lu\n",
@@ -302,7 +304,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 	rimeaddr_copy(&msg->parent, &rimeaddr_null);
 	msg->hop_count = 1;
 
-	clock_time_t send_period = random_time(2, 4, 0.1);
+	clock_time_t send_period = random_time(MIN_SEND_TIME, MAX_SEND_TIME, 0.1);
 	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
 
 	TADPRINTF("Tree Agg: IsSink, sending initial message... (send=%lu/%lu, wait=%lu/%lu)\n",

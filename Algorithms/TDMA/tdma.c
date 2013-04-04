@@ -61,7 +61,7 @@
 static const struct packetbuf_attrlist attributes[] = {
 	{ PACKETBUF_ATTR_PACKET_TYPE, PACKETBUF_ATTR_BYTE * sizeof(uint8_t) },	// Type
 	BROADCAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 
 
@@ -106,7 +106,7 @@ static unsigned int assigned_slot = 0;
 static unsigned int to_change_assigned_slot;
 
 // List of queue_entry_t
-static linked_list_t packet_queue;
+//static linked_list_t packet_queue;
 
 // Map of neighbour_entry_t
 static map_t neighbour_details;
@@ -439,7 +439,7 @@ PROCESS_THREAD(startup_process, ev, data)
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
-	linked_list_init(&packet_queue, &free_queue_entry);
+	//linked_list_init(&packet_queue, &free_queue_entry);
 	map_init(&neighbour_details, &rimeaddr_equality, &free);
 	unique_array_init(&one_hop_neighbours, &rimeaddr_equality, &free);
 

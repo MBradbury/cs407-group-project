@@ -114,7 +114,7 @@ class AnalyseFile:
 	def __init__(self, path, neighbours):
 		with gzip.open(path, 'rb') as f:
 			self.data = json.load(f)
-
+			
 		self.motes = self.data[u"motes"]
 
 		# Extract the last energy results
@@ -144,7 +144,7 @@ class AnalyseFile:
 		self.responsesReachedSink = 0
 		self.totalPredicatesSent = 0
 
-		self.totalPredicates = len(self.data[u"predicate"])
+		self.totalPredicates = 0
 
 		self.predicatesFailed = 0
 		self.predicatesSucceeded = 0
@@ -154,23 +154,31 @@ class AnalyseFile:
 		
 		for pred in self.data[u"predicate"]:
 			node = int(str(pred[u"node"]).split(".")[0])
-
-			if node != int(pred[u"on"]):
+			
+			# Reached the sink if they got to node 1
+			# which was the sink
+			if int(pred[u"on"]) == 1:
 				self.responsesReachedSink += 1
+			
+			# Count only the predicates that were printed out from
+			# the origin, not after they were preprinted at the sink
+			if int(pred[u"on"]) != 1 or node == 1:
 
-			if pred[u"result"] == 0:
-				self.totalPredicatesSent += 1
-				self.predicatesFailed += 1
-			else:
-				self.predicatesSucceeded += 1
+				if pred[u"result"] == 0:
+					self.totalPredicatesSent += 1
+					self.predicatesFailed += 1
+				else:
+					self.predicatesSucceeded += 1
 
-			# Lets now evaluate the predicate ourselves
-			r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
+				# Lets now evaluate the predicate ourselves
+				r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
 
-			if (r == (pred[u"result"] == 1)):
-				self.predicatesCorrectlyEvaluated += 1
-			else:
-				self.predicatesIncorrectlyEvaluated += 1
+				if (r == (pred[u"result"] == 1)):
+					self.predicatesCorrectlyEvaluated += 1
+				else:
+					self.predicatesIncorrectlyEvaluated += 1
+					
+				self.totalPredicates += 1
 
 
 		self.responsesReachedSinkPC = float(self.responsesReachedSink) / float(self.totalPredicatesSent)

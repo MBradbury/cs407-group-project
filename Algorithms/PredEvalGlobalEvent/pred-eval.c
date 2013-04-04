@@ -251,6 +251,7 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t cons
 {
 	pege_conn_t * pege = conncvt_predicate_manager(conn);
 
+	// Pass the simulated node as the node that this reponse is from
 	pege->predicate_failed(pege, &pege->pred_simulated_node, hops);
 }
 
@@ -393,7 +394,7 @@ static void data_evaluation(pege_conn_t * pege)
 			 unique_array_continue(&evaluate_over, eoelem); 
 			 eoelem = unique_array_next(eoelem))
 		{
-			rimeaddr_t * current = (rimeaddr_t *)
+			rimeaddr_t const * current = (rimeaddr_t const *)
 				unique_array_data(&evaluate_over, eoelem);
 
 			// Copy in the simulated node
@@ -513,7 +514,7 @@ static void data_evaluation(pege_conn_t * pege)
 						 map_continue(hop_map, aelem);
 						 aelem = map_next(aelem))
 					{
-						void * mapdata = map_data(hop_map, aelem);
+						void const * mapdata = map_data(hop_map, aelem);
 
 						memcpy(
 							NODE_DATA_INDEX(all_neighbour_data, count, pege->data_size),
@@ -560,7 +561,7 @@ static void data_evaluation(pege_conn_t * pege)
 
 	// Empty details received and let the next round fill them up
 	// We do not clear received_data, as that is sent only when it changes
-	unique_array_clear(&pege->neighbour_info);
+	unique_array_free(&pege->neighbour_info);
 
 	PEDPRINTF("PEGE: Finishing=%u received_data=%u\n",
 		pege->pred_round_count, map_length(&pege->received_data));

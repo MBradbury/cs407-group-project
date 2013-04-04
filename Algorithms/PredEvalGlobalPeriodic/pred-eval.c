@@ -94,7 +94,8 @@ PROCESS(data_evaluation_process, "Data eval");
 PROCESS(send_data_process, "Send data process");
 
 // Sink recieved final set of data
-static void tree_agg_recv(tree_agg_conn_t * conn, rimeaddr_t const * source, void const * packet, unsigned int packet_length)
+static void tree_agg_recv(tree_agg_conn_t * conn,
+	rimeaddr_t const * source, void const * packet, unsigned int packet_length)
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
@@ -140,7 +141,8 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 	process_start(&send_data_process, (void *)pegp);
 }
 
-static void tree_aggregate_update(tree_agg_conn_t * tconn, void * voiddata, void const * to_apply, unsigned int to_apply_length)
+static void tree_aggregate_update(tree_agg_conn_t * tconn,
+	void * voiddata, void const * to_apply, unsigned int to_apply_length)
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(tconn);
 
@@ -204,7 +206,8 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, u
 }
 
 // Write the data structure to the outbout packet buffer
-static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn, void ** data, size_t * packet_length)
+static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn,
+	void ** data, size_t * packet_length)
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
@@ -251,6 +254,7 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t cons
 {
 	pegp_conn_t * pegp = conncvt_predicate_manager(conn);
 
+	// Pass the simulated node as the node that this reponse is from
 	pegp->predicate_failed(pegp, &pegp->pred_simulated_node, hops);
 }
 
@@ -321,7 +325,9 @@ static void pretend_node_data(void * data)
 {
 	if (data != NULL)
 	{
-		void * stored_data = map_get(&global_pegp_conn->received_data, &global_pegp_conn->pred_simulated_node);
+		void * stored_data = map_get(
+			&global_pegp_conn->received_data,
+			&global_pegp_conn->pred_simulated_node);
 
 		memcpy(data, stored_data, global_pegp_conn->data_size);
 	}
@@ -336,7 +342,8 @@ static void data_evaluation(pegp_conn_t * pegp)
 	map_elem_t elem;
 	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
 	{
-		predicate_detail_entry_t const * pred = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+		predicate_detail_entry_t const * pred =
+			(predicate_detail_entry_t const *)map_data(predicate_map, elem);
 		
 		unique_array_t evaluate_over;
 		unique_array_init(&evaluate_over, &rimeaddr_equality, &free);
@@ -346,15 +353,14 @@ static void data_evaluation(pegp_conn_t * pegp)
 		{
 			// Add all nodes that we know about
 			unique_array_elem_t nielem;
-			for (nielem = unique_array_first(&pege->neighbour_info);
-				unique_array_continue(&pege->neighbour_info, nielem);
+			for (nielem = unique_array_first(&pegp->neighbour_info);
+				unique_array_continue(&pegp->neighbour_info, nielem);
 				nielem = unique_array_next(nielem))
 			{
 				rimeaddr_pair_t * pair = (rimeaddr_pair_t *)
-					unique_array_data(&pege->neighbour_info, nielem);
+					unique_array_data(&pegp->neighbour_info, nielem);
 
 				unique_array_append_precheck(&evaluate_over, &pair->first, rimeaddr_clone);
-
 				unique_array_append_precheck(&evaluate_over, &pair->second, rimeaddr_clone);
 			}
 		}
@@ -368,7 +374,7 @@ static void data_evaluation(pegp_conn_t * pegp)
 			 unique_array_continue(&evaluate_over, eoelem); 
 			 eoelem = unique_array_next(eoelem))
 		{
-			rimeaddr_t * current = (rimeaddr_t *)
+			rimeaddr_t const * current = (rimeaddr_t const *)
 				unique_array_data(&evaluate_over, eoelem);
 
 			// Copy in the simulated node
@@ -417,7 +423,8 @@ static void data_evaluation(pegp_conn_t * pegp)
 						neighbours_elem = unique_array_next(neighbours_elem))
 					{
 						// The neighbour found
-						rimeaddr_pair_t * neighbours = unique_array_data(&pegp->neighbour_info, neighbours_elem);
+						rimeaddr_pair_t * neighbours = (rimeaddr_pair_t *)
+							unique_array_data(&pegp->neighbour_info, neighbours_elem);
 
 						rimeaddr_t * neighbour = NULL;
 
@@ -425,7 +432,6 @@ static void data_evaluation(pegp_conn_t * pegp)
 						{
 							neighbour = &neighbours->second;
 						}
-
 						if (rimeaddr_cmp(&neighbours->second, t))
 						{
 							neighbour = &neighbours->first;
@@ -483,14 +489,22 @@ static void data_evaluation(pegp_conn_t * pegp)
 					map_t * hop_map = hop_manager_get(&pegp->hop_data, i);
 
 					map_elem_t aelem;
-					for (aelem = map_first(hop_map); map_continue(hop_map, aelem); aelem = map_next(aelem))
+					for (aelem = map_first(hop_map);
+						 map_continue(hop_map, aelem);
+						 aelem = map_next(aelem))
 					{
-						void * mapdata = map_data(hop_map, aelem);
-						memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pegp->data_size), mapdata, pegp->data_size);
+						void const * mapdata = map_data(hop_map, aelem);
+						
+						memcpy(
+							NODE_DATA_INDEX(all_neighbour_data, count, pegp->data_size),
+							mapdata,
+							pegp->data_size);
+
 						++count;
 					}
 
-					PEDPRINTF("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
+					PEDPRINTF("PEGP: Eval: i=%u Count=%d/%d len=%d\n",
+						i, count, max_size, map_length(hop_map));
 				}
 			}
 
@@ -530,8 +544,8 @@ static void data_evaluation(pegp_conn_t * pegp)
 	}
 
 	// Empty details received and let the next round fill them up
-	map_clear(&pegp->received_data);
-	unique_array_clear(&pegp->neighbour_info);
+	map_free(&pegp->received_data);
+	unique_array_free(&pegp->neighbour_info);
 
 	PEDPRINTF("PEGP: Round=%u\n", pegp->pred_round_count);
 	
@@ -584,7 +598,7 @@ void pegp_start_delayed1(pegp_conn_t * conn)
 
 	neighbour_aggregate_open(&conn->nconn, conn->sink, 121, 110, 150, &neighbour_callbacks);
 
-	ctimer_set(&conn->ct_startup, 120 * CLOCK_SECOND, &pegp_start_delayed2, conn);
+	ctimer_set(&conn->ct_startup, 80 * CLOCK_SECOND, &pegp_start_delayed2, conn);
 }
 
 
@@ -717,9 +731,15 @@ static bool send_example_predicate(pegp_conn_t * pegp, rimeaddr_t const * destin
 	if (pegp == NULL || destination == NULL)
 		return false;
 
-	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
+	static ubyte const program_bytecode[] = {
+		0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,
+		0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,
+		0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,
+		0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,
+		0x2c,0x35,0x01,0x12,0x0a,0x00
+	};
 	
-	static var_elem_t const var_details[2] = {
+	static const var_elem_t var_details[2] = {
 		{2, 255}, {1, 254}
 	};
 

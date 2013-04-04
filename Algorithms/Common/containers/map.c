@@ -4,14 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_cleanup_t cleanup)
-{
-	if (map == NULL)
-		return false;
-
-	return unique_array_init(map, key_equality, cleanup);
-}
-
 bool map_remove(map_t * map, void const * key)
 {
 	if (map == NULL || key == NULL)

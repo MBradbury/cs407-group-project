@@ -53,6 +53,10 @@ bool unique_array_merge(unique_array_t * first, unique_array_t * second, unique_
 		return false;
 	}
 
+	array_list_cleanup_t cleanup = (copy == NULL)
+		? second->list.cleanup
+		: first->list.cleanup;
+
 	bool result = true;
 
 	unique_array_elem_t elem;
@@ -77,21 +81,10 @@ bool unique_array_merge(unique_array_t * first, unique_array_t * second, unique_
 			// in the list, so just use the array_list operation
 			if (!array_list_append(&first->list, item_copy))
 			{
-				if (copy == NULL)
+				if (cleanup != NULL)
 				{
-					if (second->list.cleanup != NULL)
-					{
-						// Tidy up the copy we made to prevent memory leaks
-						second->list.cleanup(item_copy);
-					}
-				}
-				else
-				{
-					if (first->list.cleanup != NULL)
-					{
-						// Tidy up the copy we made to prevent memory leaks
-						first->list.cleanup(item_copy);
-					}
+					// Tidy up the copy we made to prevent memory leaks
+					cleanup(item_copy);
 				}
 
 				result = false;
@@ -103,9 +96,9 @@ bool unique_array_merge(unique_array_t * first, unique_array_t * second, unique_
 			// that we are not going to use
 			if (copy == NULL)
 			{
-				if (second->list.cleanup != NULL)
+				if (cleanup != NULL)
 				{
-					second->list.cleanup(item);
+					cleanup(item);
 				}
 			}
 		}
@@ -129,7 +122,9 @@ bool unique_array_contains(unique_array_t const * list, void const * data)
 	}
 
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(list); unique_array_continue(list, elem); elem = unique_array_next(elem))
+	for (elem = unique_array_first(list);
+		 unique_array_continue(list, elem);
+		 elem = unique_array_next(elem))
 	{
 		void const * item = unique_array_data(list, elem);
 

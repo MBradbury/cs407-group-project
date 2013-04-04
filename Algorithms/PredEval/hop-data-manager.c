@@ -7,12 +7,9 @@
 
 static void free_hops_data(void * voiddata)
 {
-	if (voiddata != NULL)
-	{
-		map_t * data = (map_t *)voiddata;
-		map_free(data);
-		free(data);
-	}
+	map_t * data = (map_t *)voiddata;
+	map_free(data);
+	free(data);
 }
 
 
@@ -87,7 +84,7 @@ void hop_manager_reset(hop_data_t * hop_data)
 	if (hop_data != NULL)
 	{
 		hop_data->max_size = 0;
-		array_list_clear(&hop_data->maps);
+		array_list_free(&hop_data->maps);
 	}
 }
 

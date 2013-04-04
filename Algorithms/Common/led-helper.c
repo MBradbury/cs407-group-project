@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 
+#ifdef ENABLE_LED_TOGGLE
 typedef struct
 {
 	struct ctimer ct;
@@ -27,4 +28,4 @@ void toggle_led_for(unsigned char led, clock_time_t time)
 
 	ctimer_set(&ptr->ct, time, &toggle_callback, ptr);
 }
-
+#endif

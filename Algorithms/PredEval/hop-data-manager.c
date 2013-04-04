@@ -71,9 +71,12 @@ bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, 
 
 void hop_manager_remove(hop_data_t * hop_data, uint8_t hops, rimeaddr_t const * from)
 {
-	map_t * map = hop_manager_get(hop_data, hops);
+	if (hop_data != NULL)
+	{
+		map_t * map = hop_manager_get(hop_data, hops);
 
-	map_remove(map, from);
+		map_remove(map, from);
+	}
 }
 
 void hop_manager_reset(hop_data_t * hop_data)
@@ -81,7 +84,7 @@ void hop_manager_reset(hop_data_t * hop_data)
 	if (hop_data != NULL)
 	{
 		hop_data->max_size = 0;
-		array_list_clear(&hop_data->maps);
+		array_list_free(&hop_data->maps);
 	}
 }
 

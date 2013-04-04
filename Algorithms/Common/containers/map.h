@@ -7,8 +7,7 @@ typedef unique_array_t map_t;
 typedef unique_array_elem_t map_elem_t;
 
 // Create the list
-bool map_init(map_t * map, unique_array_equality_t key_equality, array_list_cleanup_t cleanup);
-
+#define map_init(map, key_equality, cleanup) unique_array_init(map, key_equality, cleanup)
 #define map_free(map) unique_array_free(map)
 
 // Add / Remove items from list

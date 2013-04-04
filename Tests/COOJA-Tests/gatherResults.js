@@ -10,7 +10,7 @@ if (typeof String.prototype.startsWith != 'function')
 	};
 }
 
-outputDirectory = "/home/user/cs407-group-project/Results/TDMA/PELP/1HOP/15/4.0/"
+outputDirectory = "/home/user/cs407-group-project/Results/TDMA/PELE/1HOP/15/4.0/"
 
 // We need a way to generate a 99% sure its unique filename
 function guid() {

@@ -40,8 +40,8 @@ static void round_complete(void * ptr)
 
 		if (conn->round_count - stored->round_last_seen >= conn->missed_round_threshold)
 		{
-			printf("ND: rm %s (R=%u RLS=%u THRE=%u)\n",
-				addr2str(addr), conn->round_count, stored->round_last_seen, conn->missed_round_threshold);
+			//printf("ND: rm %s (R=%u RLS=%u THRE=%u)\n",
+			//	addr2str(addr), conn->round_count, stored->round_last_seen, conn->missed_round_threshold);
 
 			// We haven't seen this node for a while, so need to remove it
 			// from both the results and our local map
@@ -75,12 +75,7 @@ static void neighbor_discovery_recv(struct neighbor_discovery_conn * c, rimeaddr
 
 	neighbour_detect_conn_t * conn = conncvt_detectconn(c);
 
-	if (!unique_array_contains(&conn->results, from))
-	{
-		unique_array_append(&conn->results, rimeaddr_clone(from));
-
-		printf("ND: %s\n", addr2str(from));
-	}
+	unique_array_append_precheck(&conn->results, from, rimeaddr_clone);
 
 	// Update round map
 	round_map_elem_t * stored = (round_map_elem_t *)map_get(&conn->round_map, from);
@@ -133,15 +128,15 @@ bool start_neighbour_detect(neighbour_detect_conn_t * conn,
 		conn->callbacks = cb_fns;
 
 		neighbor_discovery_open(
-	        &conn->nd,
-	        channel, 
-	        initial_interval,
-	        min_interval,
-	        max_interval,
-	        &neighbor_discovery_callbacks
+			&conn->nd,
+			channel, 
+			initial_interval,
+			min_interval,
+			max_interval,
+			&neighbor_discovery_callbacks
 		);
 
-	    neighbor_discovery_start(&conn->nd, conn->round_count);
+		neighbor_discovery_start(&conn->nd, conn->round_count);
 
 		ctimer_set(&conn->round_timer, round_time, &round_complete, conn);
 

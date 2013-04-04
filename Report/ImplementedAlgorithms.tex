@@ -229,8 +229,6 @@ The N-Hop Flood protocol uses the Rime \verb|broadcast| primitive to send all it
   \label{fig:n-hop-flood-algorithm}
 \end{figure}
 
-\subsubsection{Neighbour Detection}
-
 \subsubsection{Tree Aggregation}
 
 As has been previously mentioned Tree Aggregation is a very useful technique employed in wireless sensor networks to aggregate a set of data to a single node in the network. It is very useful because of its ability to convey the same amount of data in potentially fewer messages. The algorithm works by first creating a tree structure such that nodes know of a parent node that they should unicast their messages to. Once this tree is set up the nodes (typically leaf nodes) unicast data to their parents, this can either happen when an event occurs or it can happen periodically. When a parent node receives a message it waits for a certain amount of time for more messages to arrive, every message it receives is stored and aggregated. After the time period is up the aggregated data is forwarded to its parent node. Once the data reaches the destination it is delivered to the user of the library.

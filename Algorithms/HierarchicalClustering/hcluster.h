@@ -7,6 +7,8 @@
 
 struct cluster_conn;
 
+typedef enum { START, SETUP, TDMA, COMPLETE} status_t;
+
 typedef struct
 {
 	/** The function called when a message is received at the sink.
@@ -24,7 +26,10 @@ typedef struct cluster_conn
 	struct mesh_conn mc;
 	struct runicast_conn rc;
 
-	bool has_seen_setup;
+	status_t status;
+	/*bool has_seen_setup;
+	bool schedule_sent;		// For CHs only
+	bool schedule_recvd;*/
 	bool is_CH;
 
 	rimeaddr_t our_cluster_head;
@@ -40,7 +45,9 @@ typedef struct cluster_conn
 	unsigned int collecting_best_level;
 
 	unsigned int cluster_depth;
-
+	unsigned int slot;
+	
+	map_t children;
 	cluster_callbacks_t callbacks;
 
 } cluster_conn_t;

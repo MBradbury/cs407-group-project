@@ -27,7 +27,6 @@
 #include "debug-helper.h"
 #include "containers/unique-array.h"
 
-
 #ifdef NEIGHBOUR_AGG_DEBUG
 #	define NADPRINTF(...) printf(__VA_ARGS__)
 #else
@@ -296,7 +295,7 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * tconn, void ** data,
 	}
 
 	// Free the data here
-	unique_array_clear(&data_array->list);
+	unique_array_free(&data_array->list);
 }
 
 
@@ -328,7 +327,7 @@ static void neighbour_agg_send_data(void * ptr)
 
 		list_to_array_single(&conn->one_hop_neighbours, msg);
 
-		printf("NAgg: send len:%d 1HN:%d\n", message_length, one_hop_n_size);
+		NADPRINTF("NAgg: send len:%d 1HN:%d\n", message_length, one_hop_n_size);
 
 		tree_agg_send(&conn->tc, msg, message_length);
 
@@ -341,7 +340,7 @@ static void neighbour_agg_send_data(void * ptr)
 	ctimer_set(&conn->ct_send_data, ROUND_LENGTH, &neighbour_agg_send_data, conn);
 }
 
-static neighbour_detect_callbacks_t neighbour_detect_callbacks = {&neighbour_agg_round_complete};
+static const neighbour_detect_callbacks_t neighbour_detect_callbacks = {&neighbour_agg_round_complete};
 
 bool neighbour_aggregate_open(neighbour_agg_conn_t * conn,
 	rimeaddr_t const * sink,
@@ -394,7 +393,8 @@ PROCESS(neighbour_agg_process, "Neighbour Agg process");
 
 AUTOSTART_PROCESSES(&neighbour_agg_process);
 
-static void handle_neighbour_data(rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
+static void handle_neighbour_data(neighbour_agg_conn_t * conn, rimeaddr_pair_t const * pairs,
+	unsigned int length, unsigned int round_count)
 {
 	printf("Got some data of length:%d in round %d\n", length, round_count);
 }

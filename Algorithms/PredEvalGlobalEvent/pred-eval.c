@@ -271,11 +271,17 @@ PROCESS_THREAD(send_data_process, ev, data)
 	static void * current_data;
 	static void * previous_data;
 	static pege_conn_t * pege;
+	static size_t data_length;
+	static collected_data_t * msg;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 	pege = (pege_conn_t *)data;
+
+	// Allocate once to reduce number of calls to malloc
+	data_length = sizeof(collected_data_t) + pege->data_size;
+	msg = (collected_data_t *)malloc(data_length);
 
 	current_data = malloc(pege->data_size);
 	previous_data = malloc(pege->data_size);
@@ -301,9 +307,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 			// We should be set up by now
 			// Start sending data up the tree
 
-			size_t data_length = sizeof(collected_data_t) + pege->data_size;
-			collected_data_t * msg = (collected_data_t *)malloc(data_length);
-
 			msg->round_count = round_count;
 			msg->length = 1;
 
@@ -315,8 +318,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 			memcpy(previous_data, current_data, pege->data_size);
 
 			tree_agg_send(&pege->aggconn, msg, data_length);
-
-			free(msg);
 		}
 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
@@ -325,6 +326,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 	}
 
 exit:
+	free(msg);
 	free(current_data);
 	free(previous_data);
 

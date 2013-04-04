@@ -269,11 +269,17 @@ PROCESS_THREAD(send_data_process, ev, data)
 	static struct etimer et;
 	static uint8_t round_count;
 	static pegp_conn_t * pegp;
+	static size_t data_length;
+	static collected_data_t * msg;
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
 	pegp = (pegp_conn_t *)data;
+
+	// Allocate once to reduce number of calls to malloc
+	data_length = sizeof(collected_data_t) + pegp->data_size;
+	msg = (collected_data_t *)malloc(data_length);
 	
 	round_count = 0;
 
@@ -287,9 +293,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 			// We should be set up by now
 			// Start sending data up the tree
 
-			size_t data_length = sizeof(collected_data_t) + pegp->data_size;
-			collected_data_t * msg = (collected_data_t *)malloc(data_length);
-
 			msg->round_count = round_count;
 			msg->length = 1;
 
@@ -298,8 +301,6 @@ PROCESS_THREAD(send_data_process, ev, data)
 			pegp->data_fn(msgdata);
 
 			tree_agg_send(&pegp->aggconn, msg, data_length);
-
-			free(msg);
 		}
 
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
@@ -308,7 +309,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 	}
 
 exit:
-	(void)0;
+	free(msg);
 	PROCESS_END();
 }
 
@@ -680,14 +681,12 @@ static bool send_example_predicate(pegp_conn_t * pegp, rimeaddr_t const * destin
 
 	static ubyte const program_bytecode[] = {0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0a,0xff,0x1c,0x13,0x31,0x30,0x02,0x01,0x00,0x00,0x01,0x00,0x00,0x06,0x02,0x0a,0xff,0x1c,0x13,0x2c,0x37,0x01,0xff,0x00,0x37,0x02,0xff,0x00,0x1b,0x2d,0x35,0x02,0x12,0x19,0x2c,0x35,0x01,0x12,0x0a,0x00};
 	
-	static var_elem_t var_details[2];
-	var_details[0].hops = 2;
-	var_details[0].var_id = 255;
-	var_details[1].hops = 1;
-	var_details[1].var_id = 254;
+	static var_elem_t const var_details[2] = {
+		{2, 255}, {1, 254}
+	};
 
-	uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
-	uint8_t var_details_length = 2;
+	static const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
+	static const uint8_t var_details_length = sizeof(var_details)/sizeof(var_details[0]);
 
 	return predicate_manager_create(&pegp->predconn,
 		id, destination,

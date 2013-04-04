@@ -7,9 +7,12 @@
 
 static void free_hops_data(void * voiddata)
 {
-	map_t * data = (map_t *)voiddata;
-	map_free(data);
-	free(data);
+	if (voiddata != NULL)
+	{
+		map_t * data = (map_t *)voiddata;
+		map_free(data);
+		free(data);
+	}
 }
 
 

@@ -229,8 +229,6 @@ The N-Hop Flood protocol uses the Rime \verb|broadcast| primitive to send all it
   \label{fig:n-hop-flood-algorithm}
 \end{figure}   
 
-\subsubsection{Neighbour Detection}
-
 \subsubsection{Tree Aggregation}
 
 As has been previously mentioned Tree Aggregation is a very useful technique employed in wireless sensor networks to aggregate a set of data to a single node in the network. It is very useful because of its ability to convey the same amount of data in potentially fewer messages. The algorithm works by first creating a tree structure such that nodes know of a parent node that they should unicast their messages to. Once this tree is set up the nodes (typically leaf nodes) unicast data to their parents, this can either happen when an event occurs or it can happen periodically. When a parent node receives a message it waits for a certain amount of time for more messages to arrive, every message it receives is stored and aggregated. After the time period is up the aggregated data is forwarded to its parent node. Once the data reaches the destination it is delivered to the user of the library.
@@ -364,8 +362,6 @@ The user of this library needs to implement four important functions:
   \caption{Tree Aggregation Algorithm - Sending data}
 \end{figure}
 
->>>>>>> 6e77db9c7fc057ba115b622414a7637f4a766bf2
-
 \begin{figure}[ht!]
 \centering
 \subfigure[Example Network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-network}}
@@ -386,7 +382,7 @@ The first was to add more features to Contiki's neighbour detect library. As tha
 \caption{Nodes asking for and receiving neighbour data}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}
   \centering
   \begin{boxedminipage}{\linewidth}
     % 
@@ -497,7 +493,7 @@ For this to be useful we needed a way to get this data back to the sink node. Th
     \null\qq\qq \res{fi}; \\
     \null\qq\qq \res{if} ($msg.hops < tmp\_hop\_count$ \&\& !$is\_CH$) \res{then} \\
     \null\qq\qq\qq $\var{tmp\_CH} \assign \var{msg.source}$;\\
-    \null\qq\qq\qq $\var{tmp\_best\_hop} \assign \var{msg.hops}$;\\
+    \null\qq\qq\qq $\var{tmp\_best\_hop} \assign \var{msg.hops}$;\\~\\
     %
     %
     \null\qq \% End detection period, finalise values\\
@@ -510,15 +506,15 @@ For this to be useful we needed a way to get this data back to the sink node. Th
     \null\qq\qq $\var{newmsg.hops} \assign \var{best\_hop}+1$;\\
     \null\qq\qq \res{stbroadcast\_send\_stubborn}($\var{newmsg}$);\\
     \null\qq\qq \% Inform calling application that setup is complete\\
-    \null\qq\qq \res{setup\_complete}();\\
+    \null\qq\qq \res{setup\_complete}();\\~\\
     %
     %
     \null\qq \% Send message placed in buffer by calling application\\
 	\null\qq \emph{cluster\_send}::~\res{recv}(\var{newmsg}) $\rightarrow$\\
     \null\qq\qq \res{if} ($is\_CH$) \res{then} \\
-    \null\qq\qq\qq \res{runicast\_send}($\var{sink}, \var{newmsg}$);
+    \null\qq\qq\qq \res{runicast\_send}($\var{sink}, \var{newmsg}$);\\
     \null\qq\qq \res{else}\\    
-    \null\qq\qq\qq \res{mesh\_send}($\var{our\_CH}, \var{newmsg}$);
+    \null\qq\qq\qq \res{mesh\_send}($\var{our\_CH}, \var{newmsg}$);\\
     \null\qq\qq \res{fi}; \\
   \end{boxedminipage}
   \caption{Clustering Algorithm}

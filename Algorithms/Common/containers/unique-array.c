@@ -56,7 +56,9 @@ bool unique_array_merge(unique_array_t * first, unique_array_t * second, unique_
 	bool result = true;
 
 	unique_array_elem_t elem;
-	for (elem = unique_array_first(second); unique_array_continue(second, elem); elem = unique_array_next(elem))
+	for (elem = unique_array_first(second);
+		 unique_array_continue(second, elem);
+		 elem = unique_array_next(elem))
 	{
 		// We cannot just add the item from the second array,
 		// as then that item would be owned by two containers.

@@ -74,9 +74,12 @@ bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, 
 
 void hop_manager_remove(hop_data_t * hop_data, uint8_t hops, rimeaddr_t const * from)
 {
-	map_t * map = hop_manager_get(hop_data, hops);
+	if (hop_data != NULL)
+	{
+		map_t * map = hop_manager_get(hop_data, hops);
 
-	map_remove(map, from);
+		map_remove(map, from);
+	}
 }
 
 void hop_manager_reset(hop_data_t * hop_data)

@@ -61,7 +61,7 @@
 static const struct packetbuf_attrlist attributes[] = {
 	{ PACKETBUF_ATTR_PACKET_TYPE, PACKETBUF_ATTR_BYTE * sizeof(uint8_t) },	// Type
 	BROADCAST_ATTRIBUTES
-    PACKETBUF_ATTR_LAST
+	PACKETBUF_ATTR_LAST
 };
 
 

@@ -128,15 +128,15 @@ bool start_neighbour_detect(neighbour_detect_conn_t * conn,
 		conn->callbacks = cb_fns;
 
 		neighbor_discovery_open(
-	        &conn->nd,
-	        channel, 
-	        initial_interval,
-	        min_interval,
-	        max_interval,
-	        &neighbor_discovery_callbacks
+			&conn->nd,
+			channel, 
+			initial_interval,
+			min_interval,
+			max_interval,
+			&neighbor_discovery_callbacks
 		);
 
-	    neighbor_discovery_start(&conn->nd, conn->round_count);
+		neighbor_discovery_start(&conn->nd, conn->round_count);
 
 		ctimer_set(&conn->round_timer, round_time, &round_complete, conn);
 

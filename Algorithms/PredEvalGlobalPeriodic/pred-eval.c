@@ -50,8 +50,8 @@ typedef struct
 
 typedef struct
 {
-    uint8_t length;
-    unsigned int round_count;
+	uint8_t length;
+	unsigned int round_count;
 } collected_data_t;
 
 
@@ -251,7 +251,7 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t cons
 {
 	pegp_conn_t * pegp = conncvt_predicate_manager(conn);
 
-	pegp->predicate_failed(pegp, from, hops);
+	pegp->predicate_failed(pegp, &pegp->pred_simulated_node, hops);
 }
 
 static const predicate_manager_callbacks_t pm_callbacks = { NULL, &pm_predicate_failed };
@@ -309,7 +309,9 @@ PROCESS_THREAD(send_data_process, ev, data)
 	}
 
 exit:
-	free(msg);
+	(void)0;
+	// Never called
+	//free(msg);
 	PROCESS_END();
 }
 
@@ -336,159 +338,195 @@ static void data_evaluation(pegp_conn_t * pegp)
 	{
 		predicate_detail_entry_t const * pred = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
 		
-		// Copy in the simulated node
-	    rimeaddr_copy(&pegp->pred_simulated_node, &pred->target);
+		unique_array_t evaluate_over;
+		unique_array_init(&evaluate_over, &rimeaddr_equality, &free);
 
-	    // Get the maximum number of hops needed for this predcate
-	    const uint8_t max_hops = predicate_manager_max_hop(pred);
-
-		hop_manager_init(&pegp->hop_data);
-
-		// Array of nodes that have been seen and checked so far
-	    unique_array_t seen_nodes;
-	    unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
-
-	    // Start with the destination node
-	    unique_array_append(&seen_nodes, rimeaddr_clone(&pred->target)); 
-
-		// Array of nodes that we need the neighbours for
-	    unique_array_t target_nodes;
-	    unique_array_init(&target_nodes, &rimeaddr_equality, &free);
-
-	    // Start with the destination node
-	    unique_array_append(&target_nodes, rimeaddr_clone(&pred->target));
-
-	    // Array of nodes, we gathered this round
-	    unique_array_t acquired_nodes;
-	    unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
-
-	    // Get the data for each hop level
-		uint8_t hops;
-		for (hops = 1; hops <= max_hops; ++hops)
+		// When null we are targeting every node
+		if (rimeaddr_cmp(&pred->target, &rimeaddr_null))
 		{
-		    // For each node in the target nodes, get the immediate neighbours,
-			unique_array_elem_t target;
-			for (target = unique_array_first(&target_nodes); 
-				unique_array_continue(&target_nodes, target); 
-				target = unique_array_next(target))
+			// Add all nodes that we know about
+			unique_array_elem_t nielem;
+			for (nielem = unique_array_first(&pege->neighbour_info);
+				unique_array_continue(&pege->neighbour_info, nielem);
+				nielem = unique_array_next(nielem))
 			{
-				rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-				PEDPRINTF("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
+				rimeaddr_pair_t * pair = (rimeaddr_pair_t *)
+					unique_array_data(&pege->neighbour_info, nielem);
 
-				// Go through the neighbours for the node
-				unique_array_elem_t neighbours_elem;
-				for (neighbours_elem = unique_array_first(&pegp->neighbour_info); 
-					unique_array_continue(&pegp->neighbour_info, neighbours_elem); 
-					neighbours_elem = unique_array_next(neighbours_elem))
+				unique_array_append_precheck(&evaluate_over, &pair->first, rimeaddr_clone);
+
+				unique_array_append_precheck(&evaluate_over, &pair->second, rimeaddr_clone);
+			}
+		}
+		else
+		{
+			unique_array_append(&evaluate_over, rimeaddr_clone(&pred->target));
+		}
+
+		unique_array_elem_t eoelem;
+		for (eoelem = unique_array_first(&evaluate_over); 
+			 unique_array_continue(&evaluate_over, eoelem); 
+			 eoelem = unique_array_next(eoelem))
+		{
+			rimeaddr_t * current = (rimeaddr_t *)
+				unique_array_data(&evaluate_over, eoelem);
+
+			// Copy in the simulated node
+			rimeaddr_copy(&pegp->pred_simulated_node, current);
+
+			// Get the maximum number of hops needed for this predcate
+			const uint8_t max_hops = predicate_manager_max_hop(pred);
+
+			hop_manager_init(&pegp->hop_data);
+
+			// Array of nodes that have been seen and checked so far
+			unique_array_t seen_nodes;
+			unique_array_init(&seen_nodes, &rimeaddr_equality, &free);
+
+			// Start with the destination node
+			unique_array_append(&seen_nodes, rimeaddr_clone(current)); 
+
+			// Array of nodes that we need the neighbours for
+			unique_array_t target_nodes;
+			unique_array_init(&target_nodes, &rimeaddr_equality, &free);
+
+			// Start with the destination node
+			unique_array_append(&target_nodes, rimeaddr_clone(current));
+
+			// Array of nodes, we gathered this round
+			unique_array_t acquired_nodes;
+			unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
+
+			// Get the data for each hop level
+			uint8_t hops;
+			for (hops = 1; hops <= max_hops; ++hops)
+			{
+				// For each node in the target nodes, get the immediate neighbours,
+				unique_array_elem_t target;
+				for (target = unique_array_first(&target_nodes); 
+					unique_array_continue(&target_nodes, target); 
+					target = unique_array_next(target))
 				{
-					// The neighbour found
-					rimeaddr_pair_t * neighbours = unique_array_data(&pegp->neighbour_info, neighbours_elem);
+					rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
+					PEDPRINTF("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
 
-					rimeaddr_t * neighbour = NULL;
-
-					if (rimeaddr_cmp(&neighbours->first, t))
+					// Go through the neighbours for the node
+					unique_array_elem_t neighbours_elem;
+					for (neighbours_elem = unique_array_first(&pegp->neighbour_info); 
+						unique_array_continue(&pegp->neighbour_info, neighbours_elem); 
+						neighbours_elem = unique_array_next(neighbours_elem))
 					{
-						neighbour = &neighbours->second;
-					}
+						// The neighbour found
+						rimeaddr_pair_t * neighbours = unique_array_data(&pegp->neighbour_info, neighbours_elem);
 
-					if (rimeaddr_cmp(&neighbours->second, t))
-					{
-						neighbour = &neighbours->first;
-					}
+						rimeaddr_t * neighbour = NULL;
 
-					if (neighbour != NULL)
-					{
-						PEDPRINTF("PEGP: Eval: Checking neighbour %s\n", addr2str(neighbour));
-
-						// If the neighbour hasn't been seen before
-						if (!unique_array_contains(&seen_nodes, neighbour)) 
+						if (rimeaddr_cmp(&neighbours->first, t))
 						{
-							void * nd = map_get(&pegp->received_data, neighbour);
+							neighbour = &neighbours->second;
+						}
 
-							if (nd == NULL)
-							{
-								PEDPRINTF("PEGP: ERROR no info on %s\n", addr2str(neighbour));
-							}
-							else
-							{
-								// Add the node to the target nodes for the next round
-								unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
+						if (rimeaddr_cmp(&neighbours->second, t))
+						{
+							neighbour = &neighbours->first;
+						}
 
-								hop_manager_record(&pegp->hop_data, hops, nd, pegp->data_size);
+						if (neighbour != NULL)
+						{
+							PEDPRINTF("PEGP: Eval: Checking neighbour %s\n", addr2str(neighbour));
+
+							// If the neighbour hasn't been seen before
+							if (!unique_array_contains(&seen_nodes, neighbour)) 
+							{
+								void * nd = map_get(&pegp->received_data, neighbour);
+
+								if (nd == NULL)
+								{
+									PEDPRINTF("PEGP: ERROR no info on %s\n", addr2str(neighbour));
+								}
+								else
+								{
+									// Add the node to the target nodes for the next round
+									unique_array_append(&acquired_nodes, rimeaddr_clone(neighbour));
+
+									hop_manager_record(&pegp->hop_data, hops, nd, pegp->data_size);
+								}
 							}
 						}
 					}
 				}
+
+				// Been through targets add them to the seen nodes
+				// This call will steal the memory from target_nodes and leave it empty
+				unique_array_merge(&seen_nodes, &target_nodes, NULL);
+
+				// Add in the acquired nodes
+				unique_array_merge(&target_nodes, &acquired_nodes, &rimeaddr_clone);
 			}
 
-			// Been through targets add them to the seen nodes
-			// This call will steal the memory from target_nodes and leave it empty
-			unique_array_merge(&seen_nodes, &target_nodes, NULL);
+			// Generate array of all the data
+			void * all_neighbour_data = NULL;
 
-			// Add in the acquired nodes
-			unique_array_merge(&target_nodes, &acquired_nodes, &rimeaddr_clone);
-		}
+			// Number of nodes we pass to the evaluation
+			const unsigned int max_size = hop_manager_max_size(&pegp->hop_data);
 
-		// Generate array of all the data
-		void * all_neighbour_data = NULL;
-
-		// Number of nodes we pass to the evaluation
-		const unsigned int max_size = hop_manager_max_size(&pegp->hop_data);
-
-		if (max_size > 0)
-		{
-			all_neighbour_data = malloc(pegp->data_size * max_size);
-
-			// Position in all_neighbour_data
-			unsigned int count = 0;
-
-			uint8_t i;
-			for (i = 1; i <= max_hops; ++i)
+			if (max_size > 0)
 			{
-				map_t * hop_map = hop_manager_get(&pegp->hop_data, i);
+				all_neighbour_data = malloc(pegp->data_size * max_size);
 
-				map_elem_t aelem;
-				for (aelem = map_first(hop_map); map_continue(hop_map, aelem); aelem = map_next(aelem))
+				// Position in all_neighbour_data
+				unsigned int count = 0;
+
+				uint8_t i;
+				for (i = 1; i <= max_hops; ++i)
 				{
-					void * mapdata = map_data(hop_map, aelem);
-					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pegp->data_size), mapdata, pegp->data_size);
-					++count;
+					map_t * hop_map = hop_manager_get(&pegp->hop_data, i);
+
+					map_elem_t aelem;
+					for (aelem = map_first(hop_map); map_continue(hop_map, aelem); aelem = map_next(aelem))
+					{
+						void * mapdata = map_data(hop_map, aelem);
+						memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pegp->data_size), mapdata, pegp->data_size);
+						++count;
+					}
+
+					PEDPRINTF("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
 				}
-
-				PEDPRINTF("PEGP: Eval: i=%u Count=%d/%d len=%d\n", i, count, max_size, map_length(hop_map));
 			}
+
+			// Need to set the global conn, so that pretend_node_data
+			// has access to it
+			global_pegp_conn = pegp;
+
+			bool evaluation_result = evaluate_predicate(&pegp->predconn,
+				pretend_node_data, pegp->data_size,
+				pegp->function_details, pegp->functions_count,
+				&pegp->hop_data,
+				all_neighbour_data, max_size, pred);
+
+	#if 0
+			if (evaluation_result)
+			{
+				PEDPRINTF("PEGP: TRUE\n");
+			}
+			else
+			{
+				PEDPRINTF("PEGP: FAILED (%s)\n", error_message());
+			}
+	#endif
+			
+			//predicate_manager_send_response(&predconn, &hop_data,
+			//	pe, all_neighbour_data, sizeof(node_data_t), max_size);
+
+			free(all_neighbour_data);
+
+			hop_manager_reset(&pegp->hop_data);
+			unique_array_free(&target_nodes);
+			unique_array_free(&seen_nodes);
+			unique_array_free(&acquired_nodes);
 		}
 
-		// Need to set the global conn, so that pretend_node_data
-		// has access to it
-		global_pegp_conn = pegp;
-
-		bool evaluation_result = evaluate_predicate(&pegp->predconn,
-			pretend_node_data, pegp->data_size,
-			pegp->function_details, pegp->functions_count,
-			&pegp->hop_data,
-			all_neighbour_data, max_size, pred);
-
-#if 0
-		if (evaluation_result)
-		{
-			PEDPRINTF("PEGP: TRUE\n");
-		}
-		else
-		{
-			PEDPRINTF("PEGP: FAILED (%s)\n", error_message());
-		}
-#endif
-		
-		//predicate_manager_send_response(&predconn, &hop_data,
-		//	pe, all_neighbour_data, sizeof(node_data_t), max_size);
-
-		free(all_neighbour_data);
-
-		hop_manager_reset(&pegp->hop_data);
-		unique_array_free(&target_nodes);
-		unique_array_free(&seen_nodes);
-		unique_array_free(&acquired_nodes);
+		unique_array_free(&evaluate_over);
 	}
 
 	// Empty details received and let the next round fill them up

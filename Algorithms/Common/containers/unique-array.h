@@ -85,6 +85,14 @@ bool unique_array_contains(unique_array_t const * list, void const * data);
 #	define unique_array_data(ulist, elem) \
 		array_list_data(&(ulist)->list, elem)
 
+#	define unique_array_append_precheck(ulist, data, clone) \
+		do { \
+			if (!unique_array_contains((ulist), (data))) \
+			{ \
+				array_list_append(&(ulist)->list, clone((data))); \
+			} \
+		} while (false)
+
 #endif
 
 // Iteration example:

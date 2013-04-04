@@ -144,7 +144,7 @@ class AnalyseFile:
 		self.responsesReachedSink = 0
 		self.totalPredicatesSent = 0
 
-		self.totalPredicates = len(self.data[u"predicate"])
+		self.totalPredicates = 0
 
 		self.predicatesFailed = 0
 		self.predicatesSucceeded = 0
@@ -177,6 +177,8 @@ class AnalyseFile:
 					self.predicatesCorrectlyEvaluated += 1
 				else:
 					self.predicatesIncorrectlyEvaluated += 1
+					
+				self.totalPredicates += 1
 
 
 		self.responsesReachedSinkPC = float(self.responsesReachedSink) / float(self.totalPredicatesSent)

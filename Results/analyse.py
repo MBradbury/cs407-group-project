@@ -152,36 +152,59 @@ class AnalyseFile:
 		self.predicatesCorrectlyEvaluated = 0
 		self.predicatesIncorrectlyEvaluated = 0
 		
+		isGlobal = self.data[u"peType"] in (u"pege", u"pegp")
+		
 		for pred in self.data[u"predicate"]:
+			on = int(pred[u"on"])
 			node = int(str(pred[u"node"]).split(".")[0])
+			result = int(pred[u"result"])
 			
-			# Reached the sink if they got to node 1
-			# which was the sink
-			if int(pred[u"on"]) == 1:
-				self.responsesReachedSink += 1
-			
-			# Count only the predicates that were printed out from
-			# the origin, not after they were preprinted at the sink
-			if int(pred[u"on"]) != 1 or node == 1:
-
-				if pred[u"result"] == 0:
+			if isGlobal:
+				if result == 0:
+					self.responsesReachedSink += 1
 					self.totalPredicatesSent += 1
 					self.predicatesFailed += 1
 				else:
 					self.predicatesSucceeded += 1
-
+			
 				# Lets now evaluate the predicate ourselves
 				r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
 
-				if (r == (pred[u"result"] == 1)):
+				if (r == (result == 1)):
 					self.predicatesCorrectlyEvaluated += 1
 				else:
 					self.predicatesIncorrectlyEvaluated += 1
 					
 				self.totalPredicates += 1
+			
+			else:
+				# Reached the sink if they got to node 1
+				# which was the sink
+				if on == 1:
+					self.responsesReachedSink += 1
+				
+				# Count only the predicates that were printed out from
+				# the origin, not after they were preprinted at the sink
+				if on != 1 or node == 1:
 
+					if result == 0:
+						self.totalPredicatesSent += 1
+						self.predicatesFailed += 1
+					else:
+						self.predicatesSucceeded += 1
 
+					# Lets now evaluate the predicate ourselves
+					r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
+
+					if (r == (result == 1)):
+						self.predicatesCorrectlyEvaluated += 1
+					else:
+						self.predicatesIncorrectlyEvaluated += 1
+						
+					self.totalPredicates += 1
+	
 		self.responsesReachedSinkPC = float(self.responsesReachedSink) / float(self.totalPredicatesSent)
+		
 		self.successRate = float(self.predicatesSucceeded) / float(self.totalPredicates)
 		self.failureRate = float(self.predicatesFailed) / float(self.totalPredicates)
 

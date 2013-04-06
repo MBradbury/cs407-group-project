@@ -481,7 +481,7 @@
       <viewport>1.7636363636363637 0.0 0.0 1.7636363636363637 17.636363636363637 31.909090909090914</viewport>
     </plugin_config>
     <width>400</width>
-    <z>2</z>
+    <z>3</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -490,9 +490,10 @@
     se.sics.cooja.plugins.LogListener
     <plugin_config>
       <filter />
+      <coloring />
     </plugin_config>
     <width>424</width>
-    <z>3</z>
+    <z>2</z>
     <height>240</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
@@ -537,22 +538,10 @@
       <zoomfactor>500.0</zoomfactor>
     </plugin_config>
     <width>824</width>
-    <z>5</z>
+    <z>4</z>
     <height>166</height>
     <location_x>0</location_x>
     <location_y>503</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.Notes
-    <plugin_config>
-      <notes>Enter notes here</notes>
-      <decorations>true</decorations>
-    </plugin_config>
-    <width>144</width>
-    <z>4</z>
-    <height>160</height>
-    <location_x>680</location_x>
-    <location_y>0</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.ScriptRunner
@@ -733,7 +722,7 @@ log.testOK();</script>
     <z>0</z>
     <height>669</height>
     <location_x>89</location_x>
-    <location_y>75</location_y>
+    <location_y>81</location_y>
   </plugin>
 </simconf>
 

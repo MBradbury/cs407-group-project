@@ -417,10 +417,10 @@ def graph(allvalues, title, labelX, labelY, keyName, accessorKey=None, rangeY=No
 			
 			pFile.write('\n')
 		
-graph(results, 'Predicates Correctly Evaluated', 'Network Size', 'Percentage Correctly Evaluated', 'pcCorrectlyEvaluated', rangeY=(0, 1))
+graph(results, 'Predicates Correctly Evaluated', 'Network Size', 'Percentage Correctly Evaluated', 'pcCorrectlyEvaluated', rangeY=(0, 1), keypos='right bottom')
 
 graph(results, 'Response Reached Sink', 'Network Size', 'Percentage Correctly Evaluated', 'pcResponsesReachedSink', rangeY=(0, 1))
 
-graph(results, 'PE Tx', 'Network Size', 'Messages Sent', 'messagesPE', accessorKey='tx', rangeY=(0, '*'))
-graph(results, 'PE Rx', 'Network Size', 'Messages Received', 'messagesPE', accessorKey='rx', rangeY=(0, '*'))
+graph(results, 'PE Tx', 'Network Size', 'Messages Sent', 'messagesPE', accessorKey='tx', rangeY=(0, '*'), keypos='right bottom')
+graph(results, 'PE Rx', 'Network Size', 'Messages Received', 'messagesPE', accessorKey='rx', rangeY=(0, '*'), keypos='right bottom')
 

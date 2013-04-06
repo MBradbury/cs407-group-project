@@ -43,29 +43,6 @@
       <moteinterface>se.sics.cooja.mspmote.interfaces.SkyTemperature</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.SkyHumidity</moteinterface>
     </motetype>
-    <motetype>
-      se.sics.cooja.mspmote.SkyMoteType
-      <identifier>sky2</identifier>
-      <description>PEGE</description>
-      <source EXPORT="discard">/home/user/cs407-group-project/Algorithms/PredEvalGlobalEvent/pred-eval.c</source>
-      <commands EXPORT="discard">make pred-eval.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">/home/user/cs407-group-project/Algorithms/PredEvalGlobalEvent/pred-eval.sky</firmware>
-      <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
-      <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
-      <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>
-      <moteinterface>se.sics.cooja.interfaces.Mote2MoteRelations</moteinterface>
-      <moteinterface>se.sics.cooja.interfaces.MoteAttributes</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.MspClock</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.MspMoteID</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyButton</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyFlash</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.Msp802154Radio</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.MspSerial</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyLED</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.MspDebugOutput</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyTemperature</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyHumidity</moteinterface>
-    </motetype>
     <mote>
       <breakpoints />
       <interface_config>
@@ -742,7 +719,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>280</width>
-    <z>2</z>
+    <z>4</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -751,13 +728,12 @@
     se.sics.cooja.plugins.Visualizer
     <plugin_config>
       <skin>se.sics.cooja.plugins.skins.IDVisualizerSkin</skin>
-      <skin>se.sics.cooja.plugins.skins.TrafficVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.LEDVisualizerSkin</skin>
-      <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
+      <skin>se.sics.cooja.plugins.skins.TrafficVisualizerSkin</skin>
       <viewport>1.0077922077922077 0.0 0.0 1.0077922077922077 17.63636363636366 47.02597402597405</viewport>
     </plugin_config>
     <width>400</width>
-    <z>4</z>
+    <z>2</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -770,7 +746,7 @@
     </plugin_config>
     <width>424</width>
     <z>1</z>
-    <height>341</height>
+    <height>240</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
   </plugin>
@@ -836,200 +812,6 @@
     <height>166</height>
     <location_x>0</location_x>
     <location_y>503</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.Notes
-    <plugin_config>
-      <notes>Enter notes here</notes>
-      <decorations>true</decorations>
-    </plugin_config>
-    <width>144</width>
-    <z>5</z>
-    <height>160</height>
-    <location_x>680</location_x>
-    <location_y>0</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.ScriptRunner
-    <plugin_config>
-      <script>//import Java Package to JavaScript&#xD;
-importPackage(java.io);&#xD;
-importPackage(java.util.zip);&#xD;
-&#xD;
-// Define a startsWith function for convenience&#xD;
-if (typeof String.prototype.startsWith != 'function')&#xD;
-{&#xD;
-	String.prototype.startsWith = function (str) {&#xD;
-		return this.slice(0, str.length) == str;&#xD;
-	};&#xD;
-}&#xD;
-&#xD;
-outputDirectory = "/home/user/cs407-group-project/Results/TDMA/PELE/1HOP/48/4.0/"&#xD;
-&#xD;
-// We need a way to generate a 99% sure its unique filename&#xD;
-function guid() {&#xD;
-	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {&#xD;
-	    var r = Math.random()*16|0, v = c == 'x' ? r : (r&amp;0x3|0x8);&#xD;
-	    return v.toString(16);&#xD;
-	});&#xD;
-}&#xD;
-&#xD;
-resultsFile = new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(outputDirectory + guid()))));&#xD;
-&#xD;
-&#xD;
-// We need to fix strings for some reason&#xD;
-// http://www.mirthcorp.com/community/forums/showthread.php?t=5128&#xD;
-// http://nelsonwells.net/2012/02/json-stringify-with-mapped-variables/&#xD;
-function sf(s) {&#xD;
-	return new String(s);&#xD;
-}&#xD;
-&#xD;
-// Use JavaScript object as an associative array&#xD;
-var results = new Object();&#xD;
-results["stats"] = new Object();&#xD;
-results["stats"]["rime"] = [];&#xD;
-results["stats"]["energy"] = [];&#xD;
-results["stats"]["TDMA"] = [];&#xD;
-results["predicate"] = [];&#xD;
-results["motes"] = [];&#xD;
-&#xD;
-var allmotes = sim.getMotes();&#xD;
-for (var i = 0; i &lt; allmotes.length; ++i)&#xD;
-{&#xD;
-	results["motes"].push(allmotes[i].getID());&#xD;
-}&#xD;
-&#xD;
-&#xD;
-// Set a timeout of 35 minutes 20 seconds&#xD;
-// the units this function takes is in milliseconds&#xD;
-TIMEOUT(2120000);&#xD;
-&#xD;
-GENERATE_MSG(2100000, "END"); //Wait for 35 minutes&#xD;
-&#xD;
-while (true)&#xD;
-{&#xD;
-	YIELD();&#xD;
-&#xD;
-	if (msg.equals("END"))&#xD;
-	{&#xD;
-		break;&#xD;
-	}&#xD;
-	else if (msg.startsWith("StartPE"))&#xD;
-	{&#xD;
-		var splitMsg = msg.split(" ");&#xD;
-&#xD;
-		results["peType"] = sf(splitMsg[1]);&#xD;
-		results["pePeriod"] = sf(splitMsg[2]);&#xD;
-	}&#xD;
-	else if (msg.startsWith("PF "))&#xD;
-	{&#xD;
-		var pf = new Object();&#xD;
-&#xD;
-		var splitMsg = msg.substring(msg.indexOf("*") + 1, msg.lastIndexOf("*")).split(":");&#xD;
-&#xD;
-		pf["on"] = sf(id);&#xD;
-		pf["node"] = sf(splitMsg[0]);&#xD;
-		pf["predicateId"] = parseInt(splitMsg[1]);&#xD;
-		pf["clock"] = parseInt(splitMsg[4]);&#xD;
-		pf["result"] = parseInt(splitMsg[5]);&#xD;
-&#xD;
-		pf["variableDetails"] = [];&#xD;
-&#xD;
-		var detailsSplit = splitMsg[2].split(",");&#xD;
-		for (var i = 0; i &lt; detailsSplit.length; ++i)&#xD;
-		{&#xD;
-			var detailSplit = detailsSplit[i].split("#");&#xD;
-&#xD;
-			var details = new Object();&#xD;
-			details["hops"] = parseInt(detailSplit[0]);&#xD;
-			details["variableId"] = parseInt(detailSplit[1]);&#xD;
-			details["length"] = parseInt(detailSplit[2]);&#xD;
-&#xD;
-			pf["variableDetails"].push(details);&#xD;
-		}&#xD;
-&#xD;
-&#xD;
-		pf["values"] = [];&#xD;
-&#xD;
-		var valuesSplit = splitMsg[3].split("\\|");&#xD;
-		for (var i = 0; i &lt; valuesSplit.length; ++i)&#xD;
-		{&#xD;
-			var nodeData = new Object();&#xD;
-&#xD;
-			var valueSplit = valuesSplit[i].split(",");&#xD;
-&#xD;
-			for (var j = 0; j &lt; valueSplit.length; ++j)&#xD;
-			{&#xD;
-				var keyVals = valueSplit[j].split("=");&#xD;
-&#xD;
-				nodeData[parseInt(keyVals[0])] =  sf(keyVals[1]);&#xD;
-			}&#xD;
-&#xD;
-			pf["values"].push(nodeData);&#xD;
-		}&#xD;
-&#xD;
-		results["predicate"].push(pf);&#xD;
-	}&#xD;
-	else if (msg.startsWith("STDMA "))&#xD;
-	{&#xD;
-		var splitMsg = msg.split(" ");&#xD;
-&#xD;
-		var data = new Object();&#xD;
-&#xD;
-		for (var i = 0; i &lt; splitMsg.length; i += 2)&#xD;
-		{&#xD;
-			data[splitMsg[i]] = parseInt(splitMsg[i + 1]);&#xD;
-		}&#xD;
-&#xD;
-		results["stats"]["TDMA"].push(data);&#xD;
-&#xD;
-	}&#xD;
-	else if (msg.startsWith("E "))&#xD;
-	{&#xD;
-		var splitMsg = msg.split(" ");&#xD;
-&#xD;
-		var data = new Object();&#xD;
-&#xD;
-		for (var i = 0; i &lt; splitMsg.length; i += 2)&#xD;
-		{&#xD;
-			data[splitMsg[i]] = parseInt(splitMsg[i + 1]);&#xD;
-		}&#xD;
-&#xD;
-		results["stats"]["energy"].push(data);&#xD;
-&#xD;
-	}&#xD;
-	else if (msg.startsWith("S "))&#xD;
-	{&#xD;
-		var splitMsg = msg.split(" ");&#xD;
-&#xD;
-		var data = new Object();&#xD;
-&#xD;
-		for (var i = 0; i &lt; splitMsg.length; i += 2)&#xD;
-		{&#xD;
-			data[splitMsg[i]] = parseInt(splitMsg[i + 1]);&#xD;
-		}&#xD;
-&#xD;
-		results["stats"]["rime"].push(data);&#xD;
-	}&#xD;
-	else if (msg.contains("END"))&#xD;
-	{&#xD;
-		log.log(JSON.stringify(results));&#xD;
-	}&#xD;
-}&#xD;
-&#xD;
-// Write out our results&#xD;
-resultsFile.write(JSON.stringify(results) + "\n");&#xD;
-resultsFile.close();&#xD;
-&#xD;
-log.testOK();</script>
-      <active>false</active>
-    </plugin_config>
-    <width>600</width>
-    <z>-1</z>
-    <height>502</height>
-    <location_x>120</location_x>
-    <location_y>87</location_y>
-    <minimized>true</minimized>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.ScriptRunner
@@ -1209,8 +991,8 @@ log.testOK();</script>
     <width>600</width>
     <z>0</z>
     <height>669</height>
-    <location_x>130</location_x>
-    <location_y>106</location_y>
+    <location_x>120</location_x>
+    <location_y>120</location_y>
   </plugin>
 </simconf>
 

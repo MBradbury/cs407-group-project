@@ -7,7 +7,7 @@
   <project EXPORT="discard">[APPS_DIR]/collect-view</project>
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
-    <title>My simulation</title>
+    <title>TDMA</title>
     <randomseed>generated</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -23,7 +23,7 @@
     <motetype>
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>sky1</identifier>
-      <description>Sky Mote Type #sky1</description>
+      <description>TDMA</description>
       <source EXPORT="discard">/home/user/cs407-group-project/Algorithms/TDMA/tdma.c</source>
       <commands EXPORT="discard">make tdma.sky TARGET=sky</commands>
       <firmware EXPORT="copy">/home/user/cs407-group-project/Algorithms/TDMA/tdma.sky</firmware>
@@ -36,12 +36,12 @@
       <moteinterface>se.sics.cooja.mspmote.interfaces.MspMoteID</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.SkyButton</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.SkyFlash</moteinterface>
-      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyCoffeeFilesystem</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.Msp802154Radio</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.MspSerial</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.SkyLED</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.MspDebugOutput</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.SkyTemperature</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyHumidity</moteinterface>
     </motetype>
     <mote>
       <breakpoints />
@@ -467,7 +467,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>280</width>
-    <z>5</z>
+    <z>1</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -476,11 +476,12 @@
     se.sics.cooja.plugins.Visualizer
     <plugin_config>
       <skin>se.sics.cooja.plugins.skins.IDVisualizerSkin</skin>
-      <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
+      <skin>se.sics.cooja.plugins.skins.LEDVisualizerSkin</skin>
+      <skin>se.sics.cooja.plugins.skins.TrafficVisualizerSkin</skin>
       <viewport>1.7636363636363637 0.0 0.0 1.7636363636363637 17.636363636363637 31.909090909090914</viewport>
     </plugin_config>
     <width>400</width>
-    <z>1</z>
+    <z>3</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -489,9 +490,10 @@
     se.sics.cooja.plugins.LogListener
     <plugin_config>
       <filter />
+      <coloring />
     </plugin_config>
-    <width>1080</width>
-    <z>4</z>
+    <width>424</width>
+    <z>2</z>
     <height>240</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
@@ -535,23 +537,11 @@
       <split>-1</split>
       <zoomfactor>500.0</zoomfactor>
     </plugin_config>
-    <width>1480</width>
-    <z>3</z>
+    <width>824</width>
+    <z>4</z>
     <height>166</height>
     <location_x>0</location_x>
-    <location_y>785</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.Notes
-    <plugin_config>
-      <notes>Enter notes here</notes>
-      <decorations>true</decorations>
-    </plugin_config>
-    <width>800</width>
-    <z>2</z>
-    <height>160</height>
-    <location_x>680</location_x>
-    <location_y>0</location_y>
+    <location_y>503</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.ScriptRunner
@@ -726,13 +716,13 @@ resultsFile.write(JSON.stringify(results) + "\n");&#xD;
 resultsFile.close();&#xD;
 &#xD;
 log.testOK();</script>
-      <active>false</active>
+      <active>true</active>
     </plugin_config>
     <width>600</width>
     <z>0</z>
-    <height>700</height>
-    <location_x>150</location_x>
-    <location_y>150</location_y>
+    <height>669</height>
+    <location_x>120</location_x>
+    <location_y>120</location_y>
   </plugin>
 </simconf>
 

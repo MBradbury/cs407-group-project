@@ -30,157 +30,73 @@ So far traditional predicate properties have been focused on. However, we need t
 
 Much of the previous work exists in ideal worlds were assumptions such as ``no messages are lost'' \cite{277788} are made. Unfortunately this is not the case in the real world, while the MAC layer and the application layer can do much to mitigate packet loss \cite{?} without energy expensive protocols such as 802.11 \cite{?} it is not possible to eliminate packet loss. Therefore it must be realised that every time a predicate is evaluated it will have a certain level of accuracy. This is because some data may have been lost on the way to its destination or outdated information was used. We believe the accuracy is a very important angle to predicate evaluation as an accurate predicate evaluation that is not received often will inform the systems user more than a predicate evaluation result that is received very frequently but is also very inaccurate.
 
-In summary we focus on evaluating predicates that are stable and use local information. These predicates also deal excursively with information about the application running on the mote and not the communication it is involved with. Also there should be a focus that predicates are evaluated as accurately as possible with a minimum amount of energy.
+In summary we focus on evaluating predicates that are stable and use local information. These predicates also deal excursively with information about the application running on the mote and not the communication it is involved with. Also there should be a focus that predicates are evaluated as accurately as possible with a minimum amount of energy. The next two sections will detail how predicates are evaluated in our implementation and then how the required information is disseminated to the correct motes.
 
 \subsection{Predicate Evaluation}
 
+When deciding how we would evaluate predicates once data was received there were two possible solutions that were considered. The first was to simply have the system developer hardcode the checking into the code and provide a library to handle responses, the second was to implement a virtual machine that would run a script that checks the predicate. Using hard checks written in C would provided a more efficient way of checking the predicate and would be similar to the approach used by HSend \cite{herbert2007adaptive} which parsed the C source code and generated C code for the predicates specified in a special comment block. A downfall of hardcoding the predicate evaluation is that it could lead to a large inflation of the firmware and if the system developers wanted to change, add or remove a predicate then they would need to update the entire firmware image across the network \cite{Dunkels:2006:RDL:1182807.1182810,1437066}.
 
-\subsubsection{Desired Features}
-
-\begin{enumerate}
-	\item Numerical support (Integer and Floating point) ($+$ $-$ $\times$ $/$ $=$ $\neq$ $<$ $\leq$ $>$ $\geq$)
-	\item Set support (Creation and operating on) ($\cup$ $\cap$ $\setminus$ $\{\}$ $\forall$ $\exists$)
-	\item Limited function support (eg. $Neighbourhood(N, H)$)
-	\item Limited structure support (eg. $N.Temperature$)
-	\item Ability to specify predicate target(s) (Single node, multiple nodes or entire network)
-	\item Ability to get the current node ($this$)
-	\item Ability to get sensor information on a node (temperature, humidity, \ldots)
-	\item Ability to get node information (Distance to Sink, \ldots)
-\end{enumerate}
-
-\subsubsection{Non-Required Features}
-
-There are lots of features that are usually provided by scripting languages that would cause undesirable effects such as inflating the binary size.
-
-\begin{enumerate}
-	\item Strings
-	\item Complicated data structures (Lists, Arrays, Dictionaries, \ldots)
-	\item Library features (Custom libraries or built-in libraries)
-	\item Interactive mode (terminals)
-	\item IO
-\end{enumerate}
+With a scripting language, instead of sending a large firmware binary across the network a small program of high level opcodes could be sent instead. The difference could be huge, for example the maximum firmware size of the CM5000 is 48KB \cite{CM5000}, and it is conceivable that a program script utilising high level instructions could instead fit into the size of a single packet (128 bytes\footnote{\url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}). Therefore to aid in the flexibility of our solution we implemented a simple virtual machine and language that was executed to evaluate the predicate.
 
 
-
-\subsection{Data Transmission}
-
+Initially we looked for an already developed scripting language that we could use on the motes. Having used high level scripting languages such as Python and Lua we first looked into using them. Unfortunately even though Lua offered an embedded alternative called eLua \cite{elua} the firmware size and the RAM usage would have been unacceptably high for the hardware at our disposal. We then started looking at a language called SCript  \cite{dunkels06lowoverhead} by  \citeauthor{dunkels06lowoverhead} who was also the author of Contiki, the wireless sensor network OS we were using. Unfortunately due to the name we were unable to find the implementation of it. Finally we looked at Antelope \cite{Tsiftes:2011:DS:2070942.2070974} which provided a way to query nodes using SQL like a database. Unfortunately we were unsure as to how much control we would have on being able to optimise energy usage via different ways of gathering data. So we concluded that we would need to create our own language, parser for it, assembler and virtual machine to execute the produced code.
 
 
+The predicate evaluation language that we designed needed to be fairly simple to make it (i) easy to implement and (ii) easy to execute. To do this we set out a number of desired features and then explicitly decided on features that would not be included because of their irrelevance as can be seen in \autoref{tab:language-requirements}. The most important feature was that we wanted to be able to test a sub-predicate over a set of neighbouring node's data, this meant that we would need a way to represent a set of data and iterate over it. As the program is always intended to return a boolean result, there was no need to implement comprehensive iteration of the form \verb|for (<INIT>; <CONTINUE>; <NEXT>)| we instead could just implement forall and exists operators. To simplify further the language was designed to be functional rather than imperative as we had no need for our predicate checker to directly cause state changes in the application running directly on the hardware.
 
-\subsubsection{Evaluation Methods}
+We managed to implement the majority of the features we desired, however there were some that were difficult to implement or had to be implemented differently. The first is feature 4 (set operations), which simply would have been too difficult to implement and would have greatly increased the code size. The next is feature 6 (targeting multiple nodes), this was not implemented because it would have required a variable amount of space in the message that disseminated the predicate throughout the network. There is also a simple work around, which is to create a new predicate using the same code for each of the nodes that wish to be targeted.
 
-\begin{enumerate}
-	\item Send scripting language to node, they interpret and evaluate it
-	\item Compile predicate on base station, compress and send to node(s) for evaluation
-\end{enumerate}
-
-\subsubsection{Scripting Languages Considered}
-
-\begin{enumerate}
-	\item eLua \url{http://www.eluaproject.net/} \cite{elua}
-	\item SCript \url{http://www.sics.se/~adam/dunkels06lowoverhead.pdf} \cite{dunkels06lowoverhead}
-	\item wren \url{https://github.com/darius/wren} \cite{wren}
-	\item Write the predicate in C, compile it to machine code and send it to the nodes to be evaluated
-	\item \url{http://dunkels.com/adam/tsiftes11database.pdf} Antelope
-\end{enumerate}
+For some of the features we desired we ended up implementing them differently than expected. Initially we expected to allow users to define functions and structures that could be operated on (like in C). However, what we ended up with was slightly different. We ended up with a primitive called \verb|Neighbours(n)| which allowed the predicate to ask for its $n$-hop neighbourhood, we also ended up with a single structure which the user defined themselves in C and provided functions to access data in that structure. These functions are then exposed to the predicate language. Finally information on a node is only exposed to the predicate if the user provides some way to store this data in the nodes data structure and provides functions to access it. These functions and the user data structure will be explained further on.
 
 
-\subsection{Where to Evaluate Predicates}
+\begin{table}[H]
+\centering
+\begin{tabular}{| l | l | l | l |}
+\hline
+\# & Feature & Desired & Implemented \\
+\hline
+1 & Integer ($+$ $-$ $\times$ $\div$ $=$ $\neq$ $<$ $\leq$ $>$ $\geq$ casts) & Yes & Yes \\
+2 & Floating Point ($+$ $-$ $\times$ $\div$ $=$ $\neq$ $<$ $\leq$ $>$ $\geq$ casts) & Yes & Yes \\
 
-Given the problem of assigning slots in a TDMA MAC protocol, one would wish to ensure that no node within two hops of any given node has the same slot. This raises a question of where this predicate should be evaluated to ensure minimum energy usage in its evaluation.
+3 & Set iteration support ($\forall$ $\exists$) & Yes & Yes \\
+4 & Set operation support ($\cup$ $\cap$ $\setminus$ $\{\}$) & Yes & No \\
 
-The first predicate we might consider is the one where for ever node, we get the 2-hop neighbourhood and check that none of those nodes have the same slot as the initial node. This means that we would need to send:
-\begin{enumerate}
-	\item A message from the base station to the node asking it to evaluate the predicate
-	\item A message from the node to each of its 2-hop neighbours
-	\item Each 2-hop neighbour needs to send a message back to the node
-	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
-	\item The node would need to report to the base station the result of the predicate
-\end{enumerate}
+5 & Ability to specify predicate target(s) (Single or Every node) & Yes & Yes \\
+6 & Ability to specify predicate target(s) (Multiple nodes) & Yes & No \\
 
-So we would need at best $2\Delta_{sink} + 2|Neighbours(n, 2)|$ messages to evaluate this predicate for one node.
+7 & Ability to get the current node information ($this$) & Yes & Yes \\
 
-\begin{align}
-\label{eq:2-hop-slot-pred}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		\forall n' \in Neighbours(n, 2) \cdot \\
-& \hspace{9em}			(n.slot \neq n'.slot)
-\end{align}
+8 & Limited function support (eg. $Neighbourhood(N, H)$) & Yes & Partial \\
+9 & Limited structure support (eg. $N.Temperature$) & Yes & Partial \\
 
-The second predicate we could consider is the one where every node checks their 1-hop neighbourhood for slot collisions. Here we model the 2-hop nature of the predicate differently, because instead of checking on the node that we want to check for slot collisions, we check on the node between two nodes that might have slot collisions.
+10 & Ability to get sensor information on a node & Yes & Partial \\
+11 & Ability to get node information (Distance to Sink, \ldots) & Yes & Partial \\
 
-\begin{enumerate}
-	\item A message from the base station to the node adjacent to that we asking to check slot collisions
-	\item A message from the node to each of its 1-hop neighbours
-	\item Each 1-hop neighbour needs to send a message back to the node
-	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
-	\item The node would need to report to the base station the result of the predicate
-\end{enumerate}
+12 & Strings & No & No \\
+13 & IO & No & No \\
 
-So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages to evaluate this predicate for one node.
-
-\begin{align}
-\label{eq:1-hop-slot-pred}
-&				\forall n \in Nodes \cdot \\
-& \hspace{3em}		\forall n' \in Neighbours(n, 1) \cup \{n\} \cdot \\
-& \hspace{6em}			\forall n'' \in Neighbours(n, 1) \cup \{n\} \cdot \\
-& \hspace{9em}				(n' \not= n'' \implies n'.slot \neq n''.slot)
-\end{align}
-
-Overall we can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer message. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
-
-However, if we were not asking the entire network to check for this property, then the first predicate would behave better. This is because the second predicate would have to be called for every 1-hop neighbour of the intended node. However, as it is assumed that the entire network would be asked if this predicate holds, then the second predicate is better.
+14 & Data structures (Lists, Arrays, Dictionaries, \ldots) & No & No \\
+15 & Library features (Custom libraries or built-in libraries) & No & No \\
+16 & Interactive mode (terminals) & No & No \\
+\hline
+\end{tabular}
+\label{tab:language-requirements}
+\caption{Predicate Language Features}
+\end{table}
 
 
-\subsubsection{Getting and Waiting for Neighbourhood Data}
-
-\begin{enumerate}
-	\item If all neighbours are known then 1-hop predicates can wait for each node to send data. This has extra memory and communication requirements
-	\item If we do not know who our n-hop neighbours are then we can just set a time out to wait for results
-	\begin{enumerate}
-		\item If we do not receive all items what should be done?
-		\item Should we report that the predicate is true, even though we didn't receive all the information?
-	\end{enumerate}
-	\item What data should be sent from surrounding nodes and how could we access it?
-\end{enumerate}
-
-
-When asking for information on the neighbourhood, it possible to consider optimisations due to the structure of the predicate. For example take conjunctive predicates where the structure of the predicate $P$ is $P = P_1 \land P_2 \land \ldots \land P_n$. If one of the $P_i$ is false then the result of the predicate $P$ is false ($False \land P \Leftrightarrow False$). This means that the statements could potentially be evaluated in an order such that the $P_i$ that requires the fewest resources is evaluated first and the $P_j$ that requires the most resources is evaluated last.
-
-The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use to us is when gathering data for in-network predicates that are checked periodically.
-
-Surprisingly, asking for and receiving all the required information actually requires fewer messages than incrementally asking for information. This is because of the communication that needs to be repeated when asking for more information. For example if you have a conjunctive predicate where the sub-predicates require 1 and 3 hops of information. If we ask for all information then we simply send messages out 3 hops and then receive replies from all the nodes in that neighbourhood. If we instead ask for one-hop information first and then three-hop, we first have to send a message to local neighbours and then will end up sending them another data request message when asking for three-hop information (as the 1-hop neighbourhood is contained within the 3-hop neighbourhood).
-
-For some predicates it may make obvious sense, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would end up degrading the performance of requesting the near-by information. Also adding this feature would increase the firmware size, which began to reach the limit when the predicate evaluation libraries that aggregate data to the sink were implemented.
-
-% Include equations if someone can be bothered to work them out
-\begin{comment}
-\begin{figure}[H]
-\begin{equation}
-\sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
-\end{equation}
-\caption{The number of messages required to respond x hops}
-\end{figure}
-
-The sigma function is defined as it is because for each of the nodes that are $x$ hops away they will require sending their data message $x$ hops to reach the requesting node.
+As can be seen by the complexities of the GCC and LLVM/Clang projects, compilation of abstract code to optimal executable code is a difficult problem. Therefore, our aim was to develop a compiler that produced good code that was capable of being hand optimised by developers before being deployed to the network.
 
 \begin{figure}[H]
-\begin{equation}
-\sum_{j \in H} j + \sigma(j)
-\end{equation}
-\caption{Maximum number of messages for an incremental data request}
+\centering
+\includegraphics{Diagrams/predicate-dev-process.eps}
+\caption{Workflow to create and deploy a user written predicate}
 \end{figure}
 
-\begin{figure}[H]
-\begin{equation}
-|N_F(\text{max}(H))| \times \text{max}(H) + \sigma(\text{max}(H))
-\end{equation}
-\caption{Number of messages for a complete data request}
-\end{figure}
-\end{comment}
 
 
-\subsection{Implementing Primitives}
+
+\subsubsection{Implementing Primitives}
 
 There are certain primitives that we are going to need to implement. One of these is the $Neighbours(n, h)$ primitive, that takes a parameter $n$ that is the node we wish to get neighbour information on and $d$ which is the distance in hops from the node $n$ that we will ask for information.
 
@@ -204,24 +120,17 @@ An alternative way that we might specify this predicate is to check that the dis
 However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for $2 \times D \times T_{send}$ time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter.
 
 
-\subsection{Response to Predicate Evaluation}
+\subsubsection{Domain Specific Language}
 
-Once a node has reached the point of having a result after evaluating a predicate it needs to do something meaningful with that information so that users looking for results at the base station also end up knowing this information. The first and most obvious solution would be to inform the base static of every result, be it success or failure. Unfortunately while this is the most comprehensive response it is would also require the most energy as every node would need to send a repose message for every predicate they were evaluating ($C = |P_{all}| \times |V| + |P_{single}|$).
+The following is the definition of how to parse our predicate language. We implemented it in Java using JavaCC, using several resources \footnote{JavaCC tutorial: \url{http://cs.lmu.edu/~ray/notes/javacc/}} to help in the development. One of the major issues encountered was that parsing infix operators (that is the operator is between to operands) was much harder to accomplish than prefix or postfix operators, \cite{ParsingRecursiveDescent} was used as a guide to implement infix parsing. It is also important to note that the language definition does not capture how the language is perfectly. For example several of the elements can be parsed correctly but would lead to compile errors.One of these is when parsing calling a function on a variable, any string may be parsed, but only functions as specified by the $\pn{function}$ production are valid. The same is also true for variable names as well.
 
-The alternatives are to either send a message when a predicate has failed or when a predicate succeeds. This allows only a fraction of $C$ messages to be sent. However, there are a number of differences that make deciding to send success or failure an important decision. First of all is how the result is represented. The comprehensive solution has the advantage that the result of a predicate can be put into an \emph{unknown} state. Once a result message is received the result of that predicate can be moved into a \emph{failed} or \emph{succeeded} state. For success or failure messages you would need to assume the opposite of the messages that you are waiting for (i.e. assume predicates failed before receiving the succeeded message and vice versa) and change the state once the message is received. If messages are lost then this will lead to false notifications of success when waiting for failure messages and false failures when waiting for success messages.
-
-The other issue to consider is what should be reported. If success messages are the chosen form of the response, then what useful information could they contain? One would expect the state that the predicate was evaluated with, but this information is not nearly as useful as the state that caused a predicate to fail. Another factor is that to create a useful description of why an error message failed is complex and would require more resources than simply evaluating the message. This means that practically it would be best for a failure message to report the state that caused the predicate to fail back to the base station and then expect further analysis on it there.
-
-As we expect a predicate failure to be an infrequent event, our libraries have been designed to report only predicate failures. This should save energy in the form of messages. However, we expect the system to be vulnerable to not showing the full extent failures (falsely appearing successful), when messages are lost.
-
-
-\subsection{Domain Specific Language}
-
-\subsubsection{Definition}
 \begin{eqnarray*}
-	\pn{eval} & \pp & [ \pn{target} ] \ww \pn{using} \\
+	\pn{eval} & \pp & [ \pn{target} ] \ww \pn{function} \\
 	\pn{target} & \pp & \sm{all} \\
 	~ & \oo & \pn{number}\sm{.}\pn{number} \\
+%
+	\pn{function} & \pp & \sm{function} \ww \pn{number} \ww \sm{as} \ww \pn{string} \ww \sm{returning} \ww \pn{type} \ww \sm{in} \ww \pn{function} \\
+	~ & \oo & \pn{using} \\
 %
 	\pn{using} & \pp & \sm{using} \ww \sm{Neighbours}\sm{(}\pn{number}\sm{)} \ww \sm{as} \ww \pn{variable} \ww \sm{in} \ww \pn{using} \\
 	~ & \oo & \pn{predicate} \\
@@ -233,7 +142,6 @@ As we expect a predicate failure to be an infrequent event, our libraries have b
 	~ & \oo &  \pn{var-expr} \ww \pn{math-logical-binary} \ww \pn{var-expr} \\
 %
 	\pn{var-expr} & \pp & \sm{(}\pn{var-expr}\sm{)} \\
-	~ & \oo & \pn{variable} \\
 	~ & \oo & \pn{number} \\
 	~ & \oo & \pn{string}\sm{(}\pn{this-variable}\sm{)} \\
 	~ & \oo & \pn{var-expr} \ww \pn{math-binary} \ww \pn{var-expr} \\
@@ -247,6 +155,8 @@ As we expect a predicate failure to be an infrequent event, our libraries have b
 	\pn{transform-fn} & \pp & \pn{string} \\
 	\pn{transform-set-fn} & \pp & \sm{sum} \oo  \sm{mean} \oo \sm{max} \oo \sm{min} \\
 	\pn{set-fn} & \pp & \sm{len} \\
+%
+	\pn{type} & \pp & \sm{float} \oo \sm{int} \\
 %
 	\pn{logical-binary} & \pp & \sm{\&}  \oo \sm{\textbar} \oo \sm{\textasciicircum} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
 	\pn{logical-unary} & \pp & \sm{!} \\
@@ -265,18 +175,16 @@ As we expect a predicate failure to be an infrequent event, our libraries have b
 	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
 \end{eqnarray*}
 
-\textbf{TODO: Add float expansions}
-
-used \url{http://cs.lmu.edu/~ray/notes/javacc/} and \url{http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm} to get infix operator parsing working
-
-\subsubsection{Examples}
+\subsubsection{Example Predicates}
 
 \begin{figure}[H]
 \begin{verbatim}
-using Neighbours(2) as twohopn in
-    @(x : twohopn ~
-        slot(x) != slot(this)
-    )
+[all]
+function 1 as slot returning int in
+    using Neighbours(2) as twohopn in
+        @(x : twohopn ~
+            slot(x) != slot(this)
+        )
 \end{verbatim}
 \caption{Check that no two neighbours have the same slot (2-hop information)}
 \label{fig:two-hop-slot-pred-lang}
@@ -284,51 +192,50 @@ using Neighbours(2) as twohopn in
 
 \begin{figure}[H]
 \begin{verbatim}
-using Neighbours(1) as onehopn in
-    @(x : onehopn ~
-        @(y : onehopn ~
-            addr(x) != addr(y) => slot(x) != slot(y)
-        ) & 
-        slot(x) != slot(this)
-    )
+[all]
+function 0 as addr returning int in
+function 1 as slot returning int in
+    using Neighbours(1) as onehopn in
+        @(a : onehopn ~
+            @(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
+             & slot(a) != slot(this)
+        )
 \end{verbatim}
 \caption{Check that no two neighbours have the same slot (1-hop information)}
 \label{fig:one-hop-slot-pred-lang}
 \end{figure}
 
-Predicates like those in \autoref{fig:two-hop-slot-pred-lang} and \autoref{fig:one-hop-slot-pred-lang} are found at \cite{DBLP:journals/corr/abs-0808-0920}.
+The predicates specified in \autoref{fig:two-hop-slot-pred-lang} and \autoref{fig:one-hop-slot-pred-lang} aim to check that slot allocation is correct and will not lead to collisions. As these are applications predicates they check that there are no clashes with the slots assigned. If we were also checking network related state, these predicates would also need to be monitoring the MAC layer to make sure that no collisions did in fact occur. Predicates similar to these appear in the problem statement of \cite{DBLP:journals/corr/abs-0808-0920}, which leads us to believe that an implementation of a TDMA algorithm may desire some checking of these predicates to test correctness of such an algorithm.
 
 \begin{figure}[H]
 \begin{verbatim}
-temperature(this) <= 40.0
+[1.0]
+function 3 as humidity returning float in
+    humidity(this) <= 40.0
 \end{verbatim}
-\caption{Check that our temperature is less than or equal to 40 degrees}
+\caption{Check that the relative humidity of node 1.0 is less than or equal to 40\%}
+\label{fig:app1-pred-lang}
 \end{figure}
 
 \begin{figure}[H]
 \begin{verbatim}
-using Neighbours(2) as twohopn in
-    abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
+[all]
+function 2 as temperature returning float in
+    using Neighbours(2) as twohopn in
+        abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
 \end{verbatim}
 \caption{Check that the average neighbour temperature is with 10 degrees of ours}
+\label{fig:app2-slot-pred-lang}
 \end{figure}
+
+The two predicates in \autoref{fig:app1-pred-lang} and \autoref{fig:app2-pred-lang} capture what system users may be trying to detect. \autoref{fig:app1-pred-lang} shows a predicate that fails when the humidity sensed by a predicate falls low and \autoref{fig:app2-pred-lang} detects when there is a large different in the temperature of one node and the average of its neighbours. Both of these predicates could be used when monitoring the environment in a forest to see how likely and where forest fires may be starting. 
 
 
 \begin{figure}[H]
 \begin{verbatim}
-using Neighbours(H(this)) as neighbours in
-    #(node : neighbours ~
-        ch(this) == addr(node)
-    )
-\end{verbatim}
-\caption{Check cluster head is in H-hop neighbourhood}
-\end{figure}
-
-
-
-\begin{figure}[H]
-\begin{verbatim}
-using Neighbours(1) as onehopn in
+[all]
+function 0 as addr returning int in
+    using Neighbours(1) as onehopn in
     using Neighbours(2) as twohopn in
         @(a : onehopn ~
             #(b : twohopn ~ addr(a) == addr(b))
@@ -337,14 +244,37 @@ using Neighbours(1) as onehopn in
 \caption{Check 1-hop neighbourhood is in 2-hop neighbourhood}
 \end{figure}
 
+This predicate is perhaps not as interesting as other predicates but it has a valid use in testing certain aspects of the information dissemination aspect of our predicate checking algorithm. It is important that we can test our mechanisms to evaluate predicates, because if we cannot rely on the correct evaluation of predicates, then we cannot rely on the results. Predicates like checking the 1-hop neighbourhood is in the 2-hop neighbourhood allows us to check that we are gathering data in the right way.
+
 
 \begin{figure}[H]
 \begin{verbatim}
-using Neighbours(1) as onehopn in
-    base-station-distance(this) == min(base-station-distance, onehopn) + 1
+[all]
+function 5 as sink-distance returning int in
+    using Neighbours(1) as onehopn in
+        sink-distance(this) == min(sink-distance, onehopn) + 1
 \end{verbatim}
-\caption{We are one hop further from the base station than the closest of our neighbours}
+\caption{We are one hop further from the base station than the closest of our neighbours. May be used to check parent in aggregation tree is actually closer to the sink.}
+\autoref{fig:tree-agg-parent-hops-pred-lang}
 \end{figure}
+
+\begin{figure}[H]
+\begin{verbatim}
+[all]
+function 0 as addr returning int in
+function 4 as ch returning int in
+    using Neighbours(H(this)) as neighbours in
+        #(node : neighbours ~
+            ch(this) == addr(node)
+        )
+\end{verbatim}
+\caption{Check cluster head is in H-hop neighbourhood}
+\label{fig:ch-in-H-hops-pred-lang}
+\end{figure}
+
+The predicate shown in \autoref{fig:tree-agg-parent-hops-pred-lang} and \autoref{fig:ch-in-H-hops-pred-lang} are examples of ways that we can use application predicates to check that the network communication aspect of wireless sensor network are working correctly. The first checks that a parent assigned in tree aggregation is closer to the sink than the evaluating node. \autoref{fig:ch-in-H-hops-pred-lang} is intended to check that there exists a cluster head within $H$ hops of the evaluating node. The aim would be to use this when hierarchical clustering is being used to perform routing. If either of these fail then the system administrators can simply rerun the configuration step to set up the communication paths or start looking for bugs in the code that performs this setup.
+
+Unfortunately the predicate that checks the cluster head location would not work due to the fact that the parameter to \verb|Neighbours| needs to be known at compile time. This is an implementation issue and could be corrected in the future.
 
 
 \subsection{Virtual Machine}
@@ -498,3 +428,128 @@ As can be seen in \autoref{fig:alignment-issues} if we were to align the words a
 As the virtual machine and its parsers can be fairly complex and difficult pieces of code to understand it was very important that we had test cases that validated that the functionality was correct. To do this three sets of tests are performed. Of them two are unit tests, one that tests that assembled bytecode can be correctly executed and the other that tests that the parser can correctly parse and generate code. After this is an integration test, that checks if the output of the parser/compiler converted into bytecode by the assembler can be correctly executed. To test the correct execution set data is given to the virtual machine, which can then be used in the predicates.
 
 Different things are tested for each of the integration tests. When testing the assembler and virtual machine, short programs of opcodes are provided to test simple activities such as pushing onto the stack, calling functions or arithmetic. This is simply to test the functionality of the virtual machine. As we can be sure that the functionality is correct, when testing the compiler more complex predicates that we have designed the system to use are tested. We expect that for some of these tests scripts the code would be the same for real world uses.
+
+
+
+\subsection{Data Transmission}
+
+
+
+\subsubsection{Evaluation Methods}
+
+\begin{enumerate}
+	\item Send scripting language to node, they interpret and evaluate it
+	\item Compile predicate on base station, compress and send to node(s) for evaluation
+\end{enumerate}
+
+
+
+
+
+\subsubsection{Where to Evaluate Predicates}
+
+Given the problem of assigning slots in a TDMA MAC protocol, one would wish to ensure that no node within two hops of any given node has the same slot. This raises a question of where this predicate should be evaluated to ensure minimum energy usage in its evaluation.
+
+The first predicate we might consider is the one where for ever node, we get the 2-hop neighbourhood and check that none of those nodes have the same slot as the initial node. This means that we would need to send:
+\begin{enumerate}
+	\item A message from the base station to the node asking it to evaluate the predicate
+	\item A message from the node to each of its 2-hop neighbours
+	\item Each 2-hop neighbour needs to send a message back to the node
+	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
+	\item The node would need to report to the base station the result of the predicate
+\end{enumerate}
+
+So we would need at best $2\Delta_{sink} + 2|Neighbours(n, 2)|$ messages to evaluate this predicate for one node.
+
+\begin{align}
+\label{eq:2-hop-slot-pred}
+& \hspace{3em}	\forall n \in Nodes \cdot \\
+& \hspace{6em}		\forall n' \in Neighbours(n, 2) \cdot \\
+& \hspace{9em}			(n.slot \neq n'.slot)
+\end{align}
+
+The second predicate we could consider is the one where every node checks their 1-hop neighbourhood for slot collisions. Here we model the 2-hop nature of the predicate differently, because instead of checking on the node that we want to check for slot collisions, we check on the node between two nodes that might have slot collisions.
+
+\begin{enumerate}
+	\item A message from the base station to the node adjacent to that we asking to check slot collisions
+	\item A message from the node to each of its 1-hop neighbours
+	\item Each 1-hop neighbour needs to send a message back to the node
+	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
+	\item The node would need to report to the base station the result of the predicate
+\end{enumerate}
+
+So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages to evaluate this predicate for one node.
+
+\begin{align}
+\label{eq:1-hop-slot-pred}
+&				\forall n \in Nodes \cdot \\
+& \hspace{3em}		\forall n' \in Neighbours(n, 1) \cup \{n\} \cdot \\
+& \hspace{6em}			\forall n'' \in Neighbours(n, 1) \cup \{n\} \cdot \\
+& \hspace{9em}				(n' \not= n'' \implies n'.slot \neq n''.slot)
+\end{align}
+
+Overall we can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer message. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
+
+However, if we were not asking the entire network to check for this property, then the first predicate would behave better. This is because the second predicate would have to be called for every 1-hop neighbour of the intended node. However, as it is assumed that the entire network would be asked if this predicate holds, then the second predicate is better.
+
+
+\subsubsection{Getting and Waiting for Neighbourhood Data}
+
+\begin{enumerate}
+	\item If all neighbours are known then 1-hop predicates can wait for each node to send data. This has extra memory and communication requirements
+	\item If we do not know who our n-hop neighbours are then we can just set a time out to wait for results
+	\begin{enumerate}
+		\item If we do not receive all items what should be done?
+		\item Should we report that the predicate is true, even though we didn't receive all the information?
+	\end{enumerate}
+	\item What data should be sent from surrounding nodes and how could we access it?
+\end{enumerate}
+
+
+When asking for information on the neighbourhood, it possible to consider optimisations due to the structure of the predicate. For example take conjunctive predicates where the structure of the predicate $P$ is $P = P_1 \land P_2 \land \ldots \land P_n$. If one of the $P_i$ is false then the result of the predicate $P$ is false ($False \land P \Leftrightarrow False$). This means that the statements could potentially be evaluated in an order such that the $P_i$ that requires the fewest resources is evaluated first and the $P_j$ that requires the most resources is evaluated last.
+
+The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use to us is when gathering data for in-network predicates that are checked periodically.
+
+Surprisingly, asking for and receiving all the required information actually requires fewer messages than incrementally asking for information. This is because of the communication that needs to be repeated when asking for more information. For example if you have a conjunctive predicate where the sub-predicates require 1 and 3 hops of information. If we ask for all information then we simply send messages out 3 hops and then receive replies from all the nodes in that neighbourhood. If we instead ask for one-hop information first and then three-hop, we first have to send a message to local neighbours and then will end up sending them another data request message when asking for three-hop information (as the 1-hop neighbourhood is contained within the 3-hop neighbourhood).
+
+For some predicates it may make obvious sense, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would end up degrading the performance of requesting the near-by information. Also adding this feature would increase the firmware size, which began to reach the limit when the predicate evaluation libraries that aggregate data to the sink were implemented.
+
+% Include equations if someone can be bothered to work them out
+\begin{comment}
+\begin{figure}[H]
+\begin{equation}
+\sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
+\end{equation}
+\caption{The number of messages required to respond x hops}
+\end{figure}
+
+The sigma function is defined as it is because for each of the nodes that are $x$ hops away they will require sending their data message $x$ hops to reach the requesting node.
+
+\begin{figure}[H]
+\begin{equation}
+\sum_{j \in H} j + \sigma(j)
+\end{equation}
+\caption{Maximum number of messages for an incremental data request}
+\end{figure}
+
+\begin{figure}[H]
+\begin{equation}
+|N_F(\text{max}(H))| \times \text{max}(H) + \sigma(\text{max}(H))
+\end{equation}
+\caption{Number of messages for a complete data request}
+\end{figure}
+\end{comment}
+
+
+
+
+\subsection{Response to Predicate Evaluation}
+
+Once a node has reached the point of having a result after evaluating a predicate it needs to do something meaningful with that information so that users looking for results at the base station also end up knowing this information. The first and most obvious solution would be to inform the base static of every result, be it success or failure. Unfortunately while this is the most comprehensive response it is would also require the most energy as every node would need to send a repose message for every predicate they were evaluating ($C = |P_{all}| \times |V| + |P_{single}|$).
+
+The alternatives are to either send a message when a predicate has failed or when a predicate succeeds. This allows only a fraction of $C$ messages to be sent. However, there are a number of differences that make deciding to send success or failure an important decision. First of all is how the result is represented. The comprehensive solution has the advantage that the result of a predicate can be put into an \emph{unknown} state. Once a result message is received the result of that predicate can be moved into a \emph{failed} or \emph{succeeded} state. For success or failure messages you would need to assume the opposite of the messages that you are waiting for (i.e. assume predicates failed before receiving the succeeded message and vice versa) and change the state once the message is received. If messages are lost then this will lead to false notifications of success when waiting for failure messages and false failures when waiting for success messages.
+
+The other issue to consider is what should be reported. If success messages are the chosen form of the response, then what useful information could they contain? One would expect the state that the predicate was evaluated with, but this information is not nearly as useful as the state that caused a predicate to fail. Another factor is that to create a useful description of why an error message failed is complex and would require more resources than simply evaluating the message. This means that practically it would be best for a failure message to report the state that caused the predicate to fail back to the base station and then expect further analysis on it there.
+
+As we expect a predicate failure to be an infrequent event, our libraries have been designed to report only predicate failures. This should save energy in the form of messages. However, we expect the system to be vulnerable to not showing the full extent failures (falsely appearing successful), when messages are lost.
+

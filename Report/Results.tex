@@ -10,4 +10,41 @@ To gather metrics on the energy usage of the motes, a Contiki library called rim
 To check that a predicate was successfully evaluated the TDMA algorithm printed any changes in the assigned slot as well as the time the slot was changed. When a predicate was evaluated on a node the time it was evaluated as well as the result was printed. Analysis scripts then evaluated the predicate using the most recent slot value from before or up to when the predicate was evaluated to evaluate the predicate itself. This result was then compared with the actual result of the predicate. The results were compared whether or not the predicate response message reached the sink.
 
 
+\subsection{Graphs}
+
+\begin{figure}[ht]
+\centering
+\subfigure[Rx]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/1HOP/messagesPE/rx/graph.pdf}
+}
+\subfigure[Tx]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/1HOP/messagesPE/tx/graph.pdf}
+}
+
+\subfigure[Percentage of  predicates correctly evaluated]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/1HOP/pcCorrectlyEvaluated/graph.pdf}
+}
+\subfigure[Percentage of responses received]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/1HOP/pcResponsesReachedSink/graph.pdf}
+}
+\caption{Results when predicate period is every 4.0 seconds}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\subfigure[Rx]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/messagesPE/rx/graph.pdf}
+}
+\subfigure[Tx]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/messagesPE/tx/graph.pdf}
+}
+
+\subfigure[Percentage of predicates correctly evaluated]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/pcCorrectlyEvaluated/graph.pdf}
+}
+\subfigure[Percentage of responses received]{%
+	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/pcResponsesReachedSink/graph.pdf}
+}
+\caption{Results when predicate period is every 2.0 seconds}
+\end{figure}
 

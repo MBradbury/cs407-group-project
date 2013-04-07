@@ -5,13 +5,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.io.IOException;
 
 class NodeCommsResponder implements NodeCommsCallback {
-    private final WSNMonitor monitor;
+    private final WSNInterface wsnInterface;
     
-    public NodeCommsResponder(WSNMonitor monitor) {
-        this.monitor = monitor;
+    public NodeCommsResponder(WSNInterface wsnInterface) {
+        this.wsnInterface = wsnInterface;
     }
 
     @Override
@@ -36,7 +36,7 @@ class NodeCommsResponder implements NodeCommsCallback {
                         ));
             }
             
-            monitor.update(round, pairs);
+            wsnInterface.update(round, pairs);
         }
         else if (line.startsWith("PF")) {
             String stripped = line
@@ -131,30 +131,42 @@ class NodeCommsResponder implements NodeCommsCallback {
  *
  * @author Tim
  */
-public class WSNMonitor {
+public class WSNInterface {
     private final List<NetworkUpdateListener> listeners;
     
     private final Map<Integer, NetworkState> states;
     
     private final NodeComms comms;
     
-    public WSNMonitor(String port) {
+    public WSNInterface(String port) {
         listeners = new ArrayList<NetworkUpdateListener>();
-        
         states = new HashMap<Integer, NetworkState>();
-        
         comms = new NodeComms(port);
-        
         comms.connect(new NodeCommsResponder(this));
     }
     
-    public void close()
-    {
+    public void close() {
         comms.close();
     }
     
     public Map<Integer, NetworkState> getStates() {
         return states;
+    }
+    
+    public void deployPredicate(Predicate p) {
+        try {
+            comms.writePredicate(p.getId(), p.getTarget(), p.getBytecode(), p.getVariableDetails());
+        } catch (IOException e) {
+            //TODO
+        }
+    }
+    
+    public void rescindPredicate(Predicate p) {
+        try {
+            comms.writeCancelPredicate(p.getId(), p.getTarget());
+        } catch (IOException e) {
+            //TODO
+        }
     }
     
     public void addListener(NetworkUpdateListener listener) {

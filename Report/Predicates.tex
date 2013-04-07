@@ -561,65 +561,46 @@ Different things are tested for each of the integration tests. When testing the 
 
 \subsection{Data Transmission}
 
+So far we have covered what we wish to evaluate and how that shall be evaluated, however, we have not talked about how data shall reach its destination to be evaluated. The how of evaluating data is split into two parts: `where' the predicate should be evaluated and `when' the data should be disseminated.
+
+Regarding where a predicate should be evaluated there seem to be two choices. Either there is collection of all the networks state at a single location designated as a sink (such as the base station), this is what traditional Global Predicate Evaluation algorithms would do. Or, the predicate could be evaluated in the network at some target node. We intend to investigate both of these.
+
+Considering when the data should be disseminated there are again several options available. The first and most obvious is to simply periodically send out the information. However, periodic data transmission could potentially inefficient, so we will also investigate event-based dissemination. Finally, nodes could also request information when it is desired. We investigate all three of these.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| l | m{5cm} | m{5cm} |}
+\hline
+~ & Local & Global \\
+\hline
+Periodic & Periodically asks neighbours for information & Periodically aggregates information to sink \\
+\hline
+Event & Periodically checks for changes, on change floods information locally &  Periodically checks for changes, on change aggregates data to sink \\
+\hline
+\end{tabular}
+\caption{Description of predicate evaluation behaviours}
+\end{table}
 
 
-\subsubsection{Evaluation Methods}
+\subsubsection{Local Event}
 
-\begin{enumerate}
-	\item Send scripting language to node, they interpret and evaluate it
-	\item Compile predicate on base station, compress and send to node(s) for evaluation
-\end{enumerate}
+When gathering data in-network using an event-based update mechanism and evaluating the predicate locally in-network there two things of importance. The first and simplest is knowing that data has changed. Because there are no ways to plug into the OS and receive notifications that a section of memory has changed it means that the local data needs to be checked periodically for a change. To do this the function that the library user has provided to return the node data will be called and then compared against some history. This history is simply the last piece of data that was sent into the network. A comparison function needed to be supplied by the user because doing a simple comparison of the memory may lead to change events being fired even though values have not changed. There are several examples where this is important. The first is that floating point calculations can produce different representations of the same results, bitwise the values may differ but logically the values are the same. Another case is that many sensors have a tolerance associated with them, by checking the values with a function this tolerance can be taken into account and events will not be fired if the data has not changed significantly. Finally, using a tolerance function allows the library user to specify the difference that is meaningful to them, even if it is different to the sensor tolerance.
+
+As we check periodically to detect a change and then fire events, it means that there is still the possibility that we will miss some changes. For example a sensor value may spike in between measurements and this may never be detected due to how the checking period aligns with the spikes.
+
+When an event is fired that indicates that the node's data has changed it means that the data will need to be sent to some of the nodes in the network. Our implementation simply floods the information the maximum number of hops a predicate is asking for data. For example if there are 3 predicates in the network using 1-hop, 2-hop and 4-hop data, every node will flood their data 4-hops when it changes. This solution works because every node keeps a record of all the predicates in the network even if they are not evaluated by every node.
+
+There is the potential for optimisations here by using knowledge of the node's neighbours to detect if a node actually needs the current nodes data and then only flooding the data if that is the case. For example if there is one predicate in the system that is targeted to a single node that needs 3-hop information, but the node whose data has just changed is 4 hops away, that node would not need to send its information. However, this would mean that every node would need an accurate picture of the network state. This may be energy intensive to calculate, so we leave this optimisation to be investigated in later work.
 
 
+\subsubsection{Local Periodic}
 
+The major difference between evaluating data periodically when evaluating a predicate in-network is that instead of data being sent to nodes when it changes, data is only sent to nodes when it is requested. The idea is that when a node is evaluating its predicates it finds the maximum distance it needs information for and floods a message that many hops asking for data and each of those nodes reply back along the path that the request message came from. After a node evaluates all its predicates for that period it then forgets all that information. The reason this is done is because in the event based dissemination there is no ability to detect changes in topology and remove invalid data. For example say a cluster head that has successfully delivered information in the past crashes. As that information has been delivered and is only updated when it changes all the nodes simply assume that the data remains the same and will continue evaluating the predicate as if the cluster head had not crashed. Neighbours of the failed cluster head could detect and send this information, but as that involves network information it is not an application predicate and is out of the scope of this work. So the solution was to simply consider the information available at the node evaluating a predicate at that instant.
 
+Instead of requesting information every node could simply periodically broadcast it. However, that has the disadvantage of causing nodes to broadcast information when they don't need to (a problem from event-based dissemination) and also could lead to problems when nodes clocks are perfectly aligned. For example nodes could consistently receive old information from nodes if they keep sending data that was meant for a previous round such that is it only received during the current round of predicate evaluation. By asking for data these issues are mitigated.
 
-\subsubsection{Where to Evaluate Predicates}
-
-Given the problem of assigning slots in a TDMA MAC protocol, one would wish to ensure that no node within two hops of any given node has the same slot. This raises a question of where this predicate should be evaluated to ensure minimum energy usage in its evaluation.
-
-The first predicate we might consider is the one where for ever node, we get the 2-hop neighbourhood and check that none of those nodes have the same slot as the initial node. This means that we would need to send:
-\begin{enumerate}
-	\item A message from the base station to the node asking it to evaluate the predicate
-	\item A message from the node to each of its 2-hop neighbours
-	\item Each 2-hop neighbour needs to send a message back to the node
-	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
-	\item The node would need to report to the base station the result of the predicate
-\end{enumerate}
-
-So we would need at best $2\Delta_{sink} + 2|Neighbours(n, 2)|$ messages to evaluate this predicate for one node.
-
-\begin{align}
-\label{eq:2-hop-slot-pred}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		\forall n' \in Neighbours(n, 2) \cdot \\
-& \hspace{9em}			(n.slot \neq n'.slot)
-\end{align}
-
-The second predicate we could consider is the one where every node checks their 1-hop neighbourhood for slot collisions. Here we model the 2-hop nature of the predicate differently, because instead of checking on the node that we want to check for slot collisions, we check on the node between two nodes that might have slot collisions.
-
-\begin{enumerate}
-	\item A message from the base station to the node adjacent to that we asking to check slot collisions
-	\item A message from the node to each of its 1-hop neighbours
-	\item Each 1-hop neighbour needs to send a message back to the node
-	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
-	\item The node would need to report to the base station the result of the predicate
-\end{enumerate}
-
-So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages to evaluate this predicate for one node.
-
-\begin{align}
-\label{eq:1-hop-slot-pred}
-&				\forall n \in Nodes \cdot \\
-& \hspace{3em}		\forall n' \in Neighbours(n, 1) \cup \{n\} \cdot \\
-& \hspace{6em}			\forall n'' \in Neighbours(n, 1) \cup \{n\} \cdot \\
-& \hspace{9em}				(n' \not= n'' \implies n'.slot \neq n''.slot)
-\end{align}
-
-Overall we can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer message. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
-
-However, if we were not asking the entire network to check for this property, then the first predicate would behave better. This is because the second predicate would have to be called for every 1-hop neighbour of the intended node. However, as it is assumed that the entire network would be asked if this predicate holds, then the second predicate is better.
-
+%TODO: include
+\begin{comment}
 \subsubsection{Implementing Primitives}
 
 There are certain primitives that we are going to need to implement. One of these is the $Neighbours(n, h)$ primitive, that takes a parameter $n$ that is the node we wish to get neighbour information on and $d$ which is the distance in hops from the node $n$ that we will ask for information.
@@ -666,7 +647,7 @@ Surprisingly, asking for and receiving all the required information actually req
 For some predicates it may make obvious sense, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would end up degrading the performance of requesting the near-by information. Also adding this feature would increase the firmware size, which began to reach the limit when the predicate evaluation libraries that aggregate data to the sink were implemented.
 
 % Include equations if someone can be bothered to work them out
-\begin{comment}
+%\begin{comment}
 \begin{figure}[H]
 \begin{equation}
 \sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
@@ -689,18 +670,79 @@ The sigma function is defined as it is because for each of the nodes that are $x
 \end{equation}
 \caption{Number of messages for a complete data request}
 \end{figure}
+%\end{comment}
 \end{comment}
 
 
+\subsubsection{Global}
+
+When considering evaluating predicates at a sink, the data can simply be aggregated to it along a tree. For both event-based and periodic data generation the way the data is generated can remain the same, the requesting of data is simply removed (for periodic) and instead of flooding the information to neighbours it is aggregated.
+
+The biggest problem with this style of predicate evaluation is the latency that is introduced between gathering the data from the nodes in the network and the evaluation of the predicate. One problem is that the data in the network may have changed since it was gathered a larger problem is that data will be compared at potentially very different times due to the aggregation delays. This was not an issue with local in-network evaluation because the data was quickly flooded back to the target node. However, with tree aggregation every hop towards the sink needs a long wait to gather as much data as possible to reduce number of messages sent. This could potentially lead to a number of predicates being incorrectly evaluated by using data from different times.
 
 
-\subsection{Response to Predicate Evaluation}
+\subsubsection{Reply}
 
-Once a node has reached the point of having a result after evaluating a predicate it needs to do something meaningful with that information so that users looking for results at the base station also end up knowing this information. The first and most obvious solution would be to inform the base static of every result, be it success or failure. Unfortunately while this is the most comprehensive response it is would also require the most energy as every node would need to send a repose message for every predicate they were evaluating ($C = |P_{all}| \times |V| + |P_{single}|$).
+Once a node has reached the point of having a result after evaluating a predicate it needs to do something meaningful with that information so that users looking for results at the base station also end up knowing this information. The first and most obvious solution would be to inform the base station of every result, be it success or failure. Unfortunately while this is the most comprehensive response it is would also require the most energy as every node would need to send a repose message for every predicate they were evaluating.
+
+\begin{equation}
+C = |P_{all}| \times |V| + |P_{single}|
+\end{equation}
 
 The alternatives are to either send a message when a predicate has failed or when a predicate succeeds. This allows only a fraction of $C$ messages to be sent. However, there are a number of differences that make deciding to send success or failure an important decision. First of all is how the result is represented. The comprehensive solution has the advantage that the result of a predicate can be put into an \emph{unknown} state. Once a result message is received the result of that predicate can be moved into a \emph{failed} or \emph{succeeded} state. For success or failure messages you would need to assume the opposite of the messages that you are waiting for (i.e. assume predicates failed before receiving the succeeded message and vice versa) and change the state once the message is received. If messages are lost then this will lead to false notifications of success when waiting for failure messages and false failures when waiting for success messages.
 
 The other issue to consider is what should be reported. If success messages are the chosen form of the response, then what useful information could they contain? One would expect the state that the predicate was evaluated with, but this information is not nearly as useful as the state that caused a predicate to fail. Another factor is that to create a useful description of why an error message failed is complex and would require more resources than simply evaluating the message. This means that practically it would be best for a failure message to report the state that caused the predicate to fail back to the base station and then expect further analysis on it there.
 
 As we expect a predicate failure to be an infrequent event, our libraries have been designed to report only predicate failures. This should save energy in the form of messages. However, we expect the system to be vulnerable to not showing the full extent failures (falsely appearing successful), when messages are lost.
+
+
+\subsection{A Consideration}
+
+One of the main examples provided was the problem of assigning slots in a TDMA MAC protocol, where one would wish to ensure that no node within two hops of any given node has the same slot. Interestingly there are multiple ways to structure the predicate to perform this evaluation.
+
+
+The first predicate we might consider is the one where for every node, we get the 2-hop neighbourhood and check that none of those nodes have the same slot as the initial node. This means that we would need to send:
+\begin{enumerate}
+	\item A message from the base station to the node asking it to evaluate the predicate
+	\item A message from the node to each of its 2-hop neighbours
+	\item Each 2-hop neighbour needs to send a message back to the node
+	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
+	\item The node would need to report to the base station the result of the predicate
+\end{enumerate}
+
+%TODO: CHECK THIS
+So we would need at best $2\Delta_{sink} + 2|Neighbours(n, 2)|$ messages to evaluate this predicate for one node.
+
+\begin{align}
+\label{eq:2-hop-slot-pred}
+& 				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\forall n' \in \text{Neighbours}(n, 2) \cdot \\
+& \hspace{4em}			\text{slot}(n) \neq \text{slot}(n')
+\end{align}
+
+The second predicate we could consider is the one where every node checks their 1-hop neighbourhood for slot collisions. Here we model the 2-hop nature of the predicate differently, because instead of checking on the node that we want to check for slot collisions, we check on the node between two nodes that might have slot collisions.
+
+\begin{enumerate}
+	\item A message from the base station to the node adjacent to that we asking to check slot collisions
+	\item A message from the node to each of its 1-hop neighbours
+	\item Each 1-hop neighbour needs to send a message back to the node
+	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
+	\item The node would need to report to the base station the result of the predicate
+\end{enumerate}
+
+%TODO: CHECK THIS
+So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages to evaluate this predicate for one node.
+
+\begin{align}
+\label{eq:1-hop-slot-pred}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\forall n' \in \text{Neighbours}(n, 1) \cup \{n\} \cdot \\
+& \hspace{4em}			\forall n'' \in \text{Neighbours}(n, 1) \cup \{n\} \cdot \\
+& \hspace{6em}				\text{addr}(n') \not= \text{addr}(n'') \implies \text{slot}(n') \neq \text{slot}(n'')
+\end{align}
+
+We can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer messages. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
+
+So while using 2-hop information will require more energy it is also the simpler predicate. It only has a single loop with a simpler check. This predicate requires 28 bytes instead of the 68 bytes that the predicate that required 1-hop information uses. When predicates get larger and more complicated it may be important that they can be expressed in a simpler way that may perhaps use more energy, but also are smaller and need less stack space to be evaluated. If the cost of performing a firmware update across the network is very high and would be needed to support larger predicates, then the energy cost of the simpler predicate may end up being worth it.
+
 

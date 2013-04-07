@@ -80,49 +80,69 @@ For some of the features we desired we ended up implementing them differently th
 16 & Interactive mode (terminals) & No & No \\
 \hline
 \end{tabular}
-\label{tab:language-requirements}
 \caption{Predicate Language Features}
+\label{tab:language-requirements}
 \end{table}
 
+The major problem with developing our own language was that we needed a way to convert that into a compact form that could be easily executed by a virtual machine. As can be seen by the complexities of the GCC and LLVM/Clang projects, compilation of abstract code to optimal executable code is a difficult problem. So instead of trying to develop a highly optimising compiler, our target was to develop a compiler that produced good code that was capable of being hand optimised by developers before being deployed to the network.
 
-As can be seen by the complexities of the GCC and LLVM/Clang projects, compilation of abstract code to optimal executable code is a difficult problem. Therefore, our aim was to develop a compiler that produced good code that was capable of being hand optimised by developers before being deployed to the network.
+To reach this goal, we followed good development principles and broke down the creation of this executable code into to separate phases: the compiler and the assembler. The compiler parsed the predicate language and compiled it down to a human readable intermediate representation (IR) that could be understood and modified by humans. The assembler then converted this into the raw bytecode that would be sent to the motes for evaluation. Having a human readable IR makes editing it as simple as opening up a text editor. This separation leads to the workflow of developing and deploying a predicate as shown in \autoref{fig:pred-workflow}.
 
 \begin{figure}[H]
 \centering
 \includegraphics{Diagrams/predicate-dev-process.eps}
 \caption{Workflow to create and deploy a user written predicate}
+\label{fig:pred-workflow}
 \end{figure}
-
-
-
-
-\subsubsection{Implementing Primitives}
-
-There are certain primitives that we are going to need to implement. One of these is the $Neighbours(n, h)$ primitive, that takes a parameter $n$ that is the node we wish to get neighbour information on and $d$ which is the distance in hops from the node $n$ that we will ask for information.
-
-\begin{align}
-\label{eq:hcluster-neighbours-predicate}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		\exists n' \in Neighbours(n, H) \cdot \\
-& \hspace{9em}			IsClusterHead(n)
-\end{align}
-
-An example of a predicate that uses $Neighbours(n, h)$ is shown above. This predicate is for Hierarchical Clustering where $H$ is a parameter that defines the distance between cluster heads. The predicate checks that for every node there is a neighbour in the $H$-hop neighbourhood that is a cluster head.
-
-An alternative way that we might specify this predicate is to check that the distance between a node and the cluster head (that it knows the address of) is within $H$ hops.
-
-\begin{align}
-\label{eq:hcluster-distance-predicate}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		IsSink(n) \lor Distance(n, ClusterHead(n)) \leq H
-\end{align}
-
-However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for $2 \times D \times T_{send}$ time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter.
 
 
 \subsubsection{Domain Specific Language}
 
-The following is the definition of how to parse our predicate language. We implemented it in Java using JavaCC, using several resources \footnote{JavaCC tutorial: \url{http://cs.lmu.edu/~ray/notes/javacc/}} to help in the development. One of the major issues encountered was that parsing infix operators (that is the operator is between to operands) was much harder to accomplish than prefix or postfix operators, \cite{ParsingRecursiveDescent} was used as a guide to implement infix parsing. It is also important to note that the language definition does not capture how the language is perfectly. For example several of the elements can be parsed correctly but would lead to compile errors.One of these is when parsing calling a function on a variable, any string may be parsed, but only functions as specified by the $\pn{function}$ production are valid. The same is also true for variable names as well.
+The following is the definition of how to parse our predicate language. We implemented it in Java using JavaCC, using several resources \footnote{JavaCC tutorial: \url{http://cs.lmu.edu/~ray/notes/javacc/}} to help in the development. Of the languages there are four main components. The first is the target of the predicate specified within square brackets, the target can be a node address (such as 1.0) or `all' to target all nodes in the network. The second is the function definitions. When users initialise our library on the motes, they need to provide a function that provides the current information on the node and a mapping of function ids to the functions used to access this data. The function definition statement in the predicate language allows a human understandable name to be assigned to a function id and it also tells the compiler what id function should be called and the type that that function returns. The third is the `using' statement that allows a set of neighbouring information to be assigned to a variable name. This is the only way to request node information not about the current node that is evaluating the predicate. The fourth and final part if the predicate itself, which includes expected logic operators that operate over sets, integers, floating point numbers and booleans. What is equivalent to what is described below.
+
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| l | l | l | l | l |}
+\hline
+Name & Logic Symbol & Our Symbol & Input Type(s) & Output Type\\
+\hline
+
+For All & $\forall$ & $\sm{@}$ & Sets of user defined data & Boolean\\
+Exists & $\exists$ & $\sm{\#}$ & Sets of user defined data & Boolean\\
+
+\hline
+
+And & $\land$ & $\sm{\&}$ & Booleans & Boolean\\
+Or & $\lor$ & $\sm{\textbar}$ & Booleans & Boolean\\
+Xor & $\oplus$ & $\sm{\textasciicircum}$ & Booleans & Boolean\\
+Implies & $\implies$ & $\sm{=\textgreater}$ & Booleans & Boolean\\
+Equivalence & $\iff$ & $\sm{\textless=\textgreater}$ & Booleans & Boolean\\
+
+\hline
+
+Not & $\lnot$ & $\sm{!}$ & Boolean & Boolean\\
+
+\hline
+
+Equality & $=$ & $\sm{==}$ & Integers or Floats & Boolean\\
+Inequality & $\not=$ & $\sm{!=}$ & Integers or Floats & Boolean\\
+Less Than & $<$ & $\sm{\textless}$ & Integers or Floats & Boolean\\
+Less Than or Equal To & $\leq$ & $\sm{\textless=}$ & Integers or Floats & Boolean\\
+Greater Than & $>$ & $\sm{\textgreater}$ & Integers or Floats & Boolean\\
+Greater Than or Equal To & $\geq$ & $\sm{\textgreater=}$ & Integers or Floats & Boolean\\
+
+\hline
+
+Addition & $+$ & $\sm{+}$ & Integers or Floats & Integer or Float\\
+Subtraction & $-$ & $\sm{-}$ & Integers or Floats & Integer or Float\\
+Multiplication & $\times$ & $\sm{*}$ & Integers or Floats & Integer or Float\\
+Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
+
+\hline
+\end{tabular}
+\end{table}
+
 
 \begin{eqnarray*}
 	\pn{eval} & \pp & [ \pn{target} ] \ww \pn{function} \\
@@ -161,7 +181,7 @@ The following is the definition of how to parse our predicate language. We imple
 	\pn{logical-binary} & \pp & \sm{\&}  \oo \sm{\textbar} \oo \sm{\textasciicircum} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
 	\pn{logical-unary} & \pp & \sm{!} \\
 	\pn{math-logical-binary} & \pp & \sm{==} \oo \sm{!=} \oo \sm{\textless} \oo \sm{\textless=} \oo \sm{\textgreater} \oo \sm{\textgreater=} \\
-	\pn{math-binary} & \pp & \sm{+} \oo \sm{-} \oo \sm{*} \oo \sm{/} \oo \sm{**} \oo \sm{\%} \\
+	\pn{math-binary} & \pp & \sm{+} \oo \sm{-} \oo \sm{*} \oo \sm{/} \\
 %
 %	\pn{string} & \pp & \pn{alpha}\pn{string-rest} \\
 %	\pn{string-rest} & \pp & \nn \oo \pn{alpha}\pn{string-rest} \oo \pn{digit}\pn{string-rest} \\
@@ -175,9 +195,14 @@ The following is the definition of how to parse our predicate language. We imple
 	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
 \end{eqnarray*}
 
+When we were implementing the parsing for the predicate language one of the major issues encountered was that parsing infix operators (that is the operator is between two operands) was much harder to accomplish than prefix or postfix operators, \cite{ParsingRecursiveDescent} was used as a guide to implement infix parsing.
+
+Another important factor to mention is one that is prevalent in other languages as well. The language definition specifies how the language is parsed, but it fails to capture some of the subtleties of compilation. One example is that even if a variable name or a function name are valid strings, unless they have been defined by a previous statement the compilation will fail because those symbols do not exist.
+
 \subsubsection{Example Predicates}
 
 \begin{figure}[H]
+\begin{minipage}{.5\linewidth}
 \begin{verbatim}
 [all]
 function 1 as slot returning int in
@@ -186,52 +211,93 @@ function 1 as slot returning int in
             slot(x) != slot(this)
         )
 \end{verbatim}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\forall n' \in \text{Neighbours}(n, 2) \cdot \\
+& \hspace{4em}				\text{slot}(n) \neq \text{slot}(n')
+\end{align*}
+\end{minipage}
+
 \caption{Check that no two neighbours have the same slot (2-hop information)}
 \label{fig:two-hop-slot-pred-lang}
 \end{figure}
 
 \begin{figure}[H]
+\begin{minipage}{.5\linewidth}
 \begin{verbatim}
 [all]
 function 0 as addr returning int in
 function 1 as slot returning int in
     using Neighbours(1) as onehopn in
         @(a : onehopn ~
-            @(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
+            @(b : onehopn ~ addr(a) != addr(b)
+                => slot(a) != slot(b))
              & slot(a) != slot(this)
         )
 \end{verbatim}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\forall n' \in \text{Neighbours}(n, 1) \cup \{n\} \cdot \\
+& \hspace{4em}			\forall n'' \in \text{Neighbours}(n, 1) \cup \{n\} \cdot \\
+& \hspace{6em}				\text{addr}(n') \not= \text{addr}(n'') \\
+& \hspace{8em}					\implies \text{slot}(n') \neq \text{slot}(n'')
+\end{align*}
+\end{minipage}
 \caption{Check that no two neighbours have the same slot (1-hop information)}
 \label{fig:one-hop-slot-pred-lang}
 \end{figure}
 
+
 The predicates specified in \autoref{fig:two-hop-slot-pred-lang} and \autoref{fig:one-hop-slot-pred-lang} aim to check that slot allocation is correct and will not lead to collisions. As these are applications predicates they check that there are no clashes with the slots assigned. If we were also checking network related state, these predicates would also need to be monitoring the MAC layer to make sure that no collisions did in fact occur. Predicates similar to these appear in the problem statement of \cite{DBLP:journals/corr/abs-0808-0920}, which leads us to believe that an implementation of a TDMA algorithm may desire some checking of these predicates to test correctness of such an algorithm.
 
 \begin{figure}[H]
+\begin{minipage}{.5\linewidth}
 \begin{verbatim}
 [1.0]
 function 3 as humidity returning float in
     humidity(this) <= 40.0
 \end{verbatim}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in Nodes \cdot \\
+& \hspace{2em}		\text{addr}(n) = 1.0 \implies \\
+& \hspace{4em}			\text{humidity}(n) \leq 40
+\end{align*}
+\end{minipage}
 \caption{Check that the relative humidity of node 1.0 is less than or equal to 40\%}
 \label{fig:app1-pred-lang}
 \end{figure}
 
 \begin{figure}[H]
+\begin{minipage}{.5\linewidth}
 \begin{verbatim}
 [all]
 function 2 as temperature returning float in
     using Neighbours(2) as twohopn in
         abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
 \end{verbatim}
+\end{minipage}
+
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\left|\text{temperature}(n) - \frac{\sum\limits_{n' \in \text{Neighbours}(n, 2)} \text{temperature}(n')}{|\text{Neighbours}(n, 2)|} \right| \leq 10
+\end{align*}
+\end{minipage}
 \caption{Check that the average neighbour temperature is with 10 degrees of ours}
-\label{fig:app2-slot-pred-lang}
+\label{fig:app2-pred-lang}
 \end{figure}
 
 The two predicates in \autoref{fig:app1-pred-lang} and \autoref{fig:app2-pred-lang} capture what system users may be trying to detect. \autoref{fig:app1-pred-lang} shows a predicate that fails when the humidity sensed by a predicate falls low and \autoref{fig:app2-pred-lang} detects when there is a large different in the temperature of one node and the average of its neighbours. Both of these predicates could be used when monitoring the environment in a forest to see how likely and where forest fires may be starting. 
 
 
 \begin{figure}[H]
+\begin{minipage}{.5\linewidth}
 \begin{verbatim}
 [all]
 function 0 as addr returning int in
@@ -241,6 +307,14 @@ function 0 as addr returning int in
             #(b : twohopn ~ addr(a) == addr(b))
         )
 \end{verbatim}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\{\text{addr}(n') | n' \in \text{Neighbours}(n, 1)\} \subseteq \\
+& \hspace{4em}			\{\text{addr}(n') | n' \in \text{Neighbours}(n, 2)\}
+\end{align*}
+\end{minipage}
 \caption{Check 1-hop neighbourhood is in 2-hop neighbourhood}
 \end{figure}
 
@@ -255,19 +329,29 @@ function 5 as sink-distance returning int in
         sink-distance(this) == min(sink-distance, onehopn) + 1
 \end{verbatim}
 \caption{We are one hop further from the base station than the closest of our neighbours. May be used to check parent in aggregation tree is actually closer to the sink.}
-\autoref{fig:tree-agg-parent-hops-pred-lang}
+\label{fig:tree-agg-parent-hops-pred-lang}
 \end{figure}
 
 \begin{figure}[H]
+\begin{minipage}{.5\linewidth}
 \begin{verbatim}
 [all]
 function 0 as addr returning int in
 function 4 as ch returning int in
+function 6 as H returning int in
     using Neighbours(H(this)) as neighbours in
         #(node : neighbours ~
             ch(this) == addr(node)
         )
 \end{verbatim}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\exists n' \in \text{Neighbours}(n, \text{H}(n)) \cdot \\
+& \hspace{4em}			\text{ch}(n) = \text{addr}(n')
+\end{align*}
+\end{minipage}
 \caption{Check cluster head is in H-hop neighbourhood}
 \label{fig:ch-in-H-hops-pred-lang}
 \end{figure}
@@ -279,7 +363,11 @@ Unfortunately the predicate that checks the cluster head location would not work
 
 \subsection{Virtual Machine}
 
+The virtual machine that was developed is very simple and takes inspiration from the wren \cite{wren} language's virtual machine. At heart our virtual machine uses a stack to evaluate a program, values can be pushed onto the stack and are then popped of the stack later for use in evaluation and the results of that evaluation are pushed back onto the stack. The last value on the stack is the results of the evaluation. In the virtual machine there are three types: 16-bit integers (I), 32-bit floats (F) and user-defined size user data (U). A boolean is represented as an integer with 0 standing for false and 1 standing for true, the virtual machine relies on the compiler to have generated correct code that will be correctly evaluated, it has limited error checking and reporting to keep the firmware size down.The virtual machine also has a limited and fix stack space that is configured to be 256 bytes. If this overflows then the predicate evaluation will be terminated with an error. Due to the limited space, predicates that require  more stack space than there is to evaluate themselves will fail. In testing these issues can be detected and the stack size can be increased as desired.
+
 \subsubsection{Opcodes}
+
+The program is stored as a block of memory that is a list of opcode followed by their arguments.
 
 \begin{verbatim}
 _ is either I for int or F for float
@@ -327,7 +415,7 @@ AMIN
 CALL (function id - ubyte)
     Calls the named function on the data on top of the stack.
     Pop's the data that was given to the function off the top of
-    the stack and pushes the result onto the top of the stack.
+    the stack (sizeof(U)) and pushes the result onto the top of the stack.
 
 ICASTF
     Pops an integer off the stack, casts it to a float
@@ -361,7 +449,8 @@ _DIV2       1 op 0
     the result in the same type back on the stack.
 
 IINC
-    Pops the top of the stack by sizeof(int) bytes, increments
+IDEC
+    Pops the top of the stack by sizeof(int) bytes, increments or decrements
     the value as an integer. Pushes the result back on the stack
 
 _EQ	        1 op 0
@@ -392,6 +481,41 @@ NOT
 _VAR (variable id - ubyte)
     Creates a variable of type _ with the id set to the given
     unsigned byte.
+
+_ABS
+    Pops the stack by sizeof(_) bytes performs the abs function
+    on the integer of float value and pushes sizeof(_) back onto
+    the stack.
+
+VIINC (x - variable id)
+    Equivalent to the following opcodes, this is opcode is included as
+    a program size optimisation.
+    IFETCH x
+    IINC
+    ISTORE x
+
+VIDEC (x - variable id)
+    Equivalent to the following opcodes, this is opcode is included as
+    a program size optimisation.
+    IFETCH x
+    IDEC
+    ISTORE x
+
+VIFAFC (x - variable id) (y - variable id) (z - function id)
+    Equivalent to the following opcodes, this is opcode is included as
+    a program size optimisation.
+    IFETCH x
+    AFETCH y
+    CALL z
+
+THISC (f - function id)
+    This opcode gets the sizeof(U) bytes about the nodes current state,
+    calls the function referred to by f on it and pushes that result onto the stack.
+    This is equivalent to:
+    IPUSH 0
+    AFETCH 0
+    CALL f
+    
 \end{verbatim}
 
 
@@ -399,8 +523,12 @@ _VAR (variable id - ubyte)
 
 One of the most important aims of the predicate language's bytecode was to be as small as possible. The reason for this was to support sending as much program information in the limited length of a network packet. To achieve this aim it meant that we needed to make the virtual machine handle more abstract representations of its components. For example, initially the bytecode for calling a function contained a byte for the opcode of \verb|CALL| and then a string of characters which contained the name of the function to call. At minimum this would cost 2 bytes - one for the character of the function's name and one for the NUL character. To improve this the string was replaced with a single byte, which means that the number of functions callable by the virtual machine ends up being limited to 256. The same was true for the variable ids as well and as the variable id is contained with an unsigned byte, they to are limited to 256.
 
+Size optimizations were also done for operations we believed would be common. This is why there exists the \verb|ASUM|, \verb|AMEAN|, \verb|AMIN| and \verb|AMAX| operations. If these were to be coded they would at least require a loop and a certain amount of setup code that loops require. By making them single operations we can eliminate the need to produce loops in the IR and can just produce these single instructions. Also as these instructions are much simpler they make adjusting the IR easier and harder to introduce bugs. The unfortunate downside is that this means that there is more implementation in the virtual machine which leads to increased firmware sizes.
 
-When developing the virtual machine what also became important was the fact that the bytecode was a string of unsigned bytes, where sequences of them could end up representing a 16 bit integer or a 32 bit float. This is important because it could mean that we would try to perform unaligned reads which the CPU of our motes could potentially get wrong\footnote{\url{http://permalink.gmane.org/gmane.os.contiki.devel/1462}}, this is due to the restrictions the CPU has on the alignment of words ``Bytes are located at even or odd addresses. Words are only located at even addresses \ldots. When using word instructions, only even addresses may be used. The low byte of a word is always an even address'' \cite[Section~1.4.5 (p.~28)]{msp430usersguide}.
+The firmware size restrictions did eventually lead to a number of features being removed. For example, during development we had support for calculating the power and modulus of variables. However, due to the size of the C libraries that were pulled in to use the \verb|pow| function, it needed to be disabled. The modulus function was also disabled as it has a rare use case and the firmware space was needed for actual implementation of the application.
+
+
+When developing the virtual machine what also became important was the fact that the bytecode was a string of unsigned bytes, where sequences of them could end up representing a 16 bit integer or a 32 bit float. This is important because it could mean that we would try to perform unaligned reads which the CPU of our motes could potentially get wrong\footnote{\url{http://permalink.gmane.org/gmane.os.contiki.devel/1462}}, this is due to the restrictions the CPU has on the alignment of words: ``Bytes are located at even or odd addresses. Words are only located at even addresses \ldots. When using word instructions, only even addresses may be used. The low byte of a word is always an even address'' \cite[Section~1.4.5 (p.~28)]{msp430usersguide}.
 
 \begin{figure}[ht!]
 \centering
@@ -421,11 +549,11 @@ When developing the virtual machine what also became important was the fact that
 \caption{Example of the error messages produced by MSPSim in Cooja that led to the discovery of this bug}
 \end{figure}
 
-As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead.
+As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead. As we copy out byte-by-byte and not by word we can access the memory correctly.
 
 \subsection{Testing}
 
-As the virtual machine and its parsers can be fairly complex and difficult pieces of code to understand it was very important that we had test cases that validated that the functionality was correct. To do this three sets of tests are performed. Of them two are unit tests, one that tests that assembled bytecode can be correctly executed and the other that tests that the parser can correctly parse and generate code. After this is an integration test, that checks if the output of the parser/compiler converted into bytecode by the assembler can be correctly executed. To test the correct execution set data is given to the virtual machine, which can then be used in the predicates.
+As the virtual machine and its parsers can be fairly complex and difficult pieces of code to understand it was very important that we had test cases that validated that the functionality was correct. To do this three sets of tests are performed. Of them two are unit tests, one that tests that assembled bytecode can be correctly executed and the other that tests that the parser/compiler can correctly parse and generate code. After this is an integration test, that checks if the output of the parser/compiler converted into bytecode by the assembler can be correctly executed. To test the correct execution set data is given to the virtual machine, which can then be used in the predicates.
 
 Different things are tested for each of the integration tests. When testing the assembler and virtual machine, short programs of opcodes are provided to test simple activities such as pushing onto the stack, calling functions or arithmetic. This is simply to test the functionality of the virtual machine. As we can be sure that the functionality is correct, when testing the compiler more complex predicates that we have designed the system to use are tested. We expect that for some of these tests scripts the code would be the same for real world uses.
 
@@ -491,6 +619,29 @@ So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages t
 Overall we can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer message. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
 
 However, if we were not asking the entire network to check for this property, then the first predicate would behave better. This is because the second predicate would have to be called for every 1-hop neighbour of the intended node. However, as it is assumed that the entire network would be asked if this predicate holds, then the second predicate is better.
+
+\subsubsection{Implementing Primitives}
+
+There are certain primitives that we are going to need to implement. One of these is the $Neighbours(n, h)$ primitive, that takes a parameter $n$ that is the node we wish to get neighbour information on and $d$ which is the distance in hops from the node $n$ that we will ask for information.
+
+\begin{align}
+\label{eq:hcluster-neighbours-predicate}
+& \hspace{3em}	\forall n \in Nodes \cdot \\
+& \hspace{6em}		\exists n' \in Neighbours(n, H) \cdot \\
+& \hspace{9em}			IsClusterHead(n)
+\end{align}
+
+An example of a predicate that uses $Neighbours(n, h)$ is shown above. This predicate is for Hierarchical Clustering where $H$ is a parameter that defines the distance between cluster heads. The predicate checks that for every node there is a neighbour in the $H$-hop neighbourhood that is a cluster head.
+
+An alternative way that we might specify this predicate is to check that the distance between a node and the cluster head (that it knows the address of) is within $H$ hops.
+
+\begin{align}
+\label{eq:hcluster-distance-predicate}
+& \hspace{3em}	\forall n \in Nodes \cdot \\
+& \hspace{6em}		IsSink(n) \lor Distance(n, ClusterHead(n)) \leq H
+\end{align}
+
+However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for $2 \times D \times T_{send}$ time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter.
 
 
 \subsubsection{Getting and Waiting for Neighbourhood Data}

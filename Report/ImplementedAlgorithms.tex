@@ -143,7 +143,7 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
     %
     %
     \null\qq \% Sending Data Request Message\\
-    \null\qq \emph{sendRequest}:~\res{function}$\langle \var{hops}\rangle\rightarrow$\\
+    \null\qq \emph{sendRequest}::~\res{function}$\langle \var{hops}\rangle\rightarrow$\\
     \null\qq\qq \res{bcast}$\langle \var{j}, \var{j}, \var{messageId}, \var{hops}, 0\rangle$;\\
     \null\qq\qq $\var{messageId} \assign \var{messageId} + 1$;\\~\\
     %
@@ -175,7 +175,7 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
     %
     %
     \null\qq \% Received Data Forward Message\\
-    \null\qq \emph{forwardData}:~\res{runicast.recv}$\langle target, sender, hops, data\rangle \rightarrow$\\
+    \null\qq \emph{forwardData}::~\res{runicast.recv}$\langle target, sender, hops, data\rangle \rightarrow$\\
     \null\qq\qq $(\var{recHops}, \var{recForwardTo}, \var{recId}) \assign \var{records}[\var{target}]$;\\
     \null\qq\qq \res{if} ($\var{j} = \var{target}$) \res{then}\\
     \null\qq\qq\qq \res{deliverToUser}(\var{sender}, \var{hops}, \var{data});\\
@@ -191,9 +191,11 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
 
 \subsubsection{N-Hop Flood}
 
-To improve upon the efficiency of our initial implementation of N-Hop Request we decide to implement a separate protocol for situations where every node in the network is evaluating the same predicate. Firstly we considered the problem, in this situation we know that every node requires the application and network information of every other node in it's N-Hop radius (determined by the predicate being evaluated). Since every node is evaluating the predicate and all nodes know that, we can forgo the request phase of the N-Hop Request implementation; Instead, we simply flood our N-Hop neighbours with our application and network data and the other nodes in the network do the same. 
+The previously mentioned algorithm was developed so that nodes could ask for information from its N-hop neighbourhood when it is needed. This was used for when predicates were asking for data periodically, however, if nodes are sending data when said data changes then N-hop request is not as applicable. Therefore, we developed N-hop flood, which floods information the required N hops.
 
-The N-Hop Flood protocol uses the Rime \verb|broadcast| primitive to send all it's messages to neighbouring nodes. It maintains a buffer of all the packets received and is provided with parameters on initialisation to determine how long each broadcasting round is and how often the protocol must re-broadcast messages within the round. Every node in the network continues to rebroadcast it's own message as well as any packets in the buffer if they have a hop count of $\> 1$, this occurs every time the rebroadcast interval completes. Once the round is finished the message buffer is cleared and all timers are reset.
+The N-Hop Flood protocol keeps a queue of the messages that it needs to send. Every $P_{send}$ period it will broadcast what is on the top of the queue and increment the number of times that message had been sent. Once a message reaches the maximum number of retransmits it is removed from the queue. New messages are appended to the end of the queue so they are sent after messages added to the queue earlier.
+
+When a node receives a flooded message it checks to see what the time-to-live (TTL) of the message is. If it is not 0 then that  the message is added to the queue to continue being forwarded. The node will also check the id included within the message. If the node had not received a message with that id from the sender before or it had received a message from that sender but from a route that was longer the message is delivered to the user of the library.
 
 \begin{figure}[H]
   \centering
@@ -203,39 +205,84 @@ The N-Hop Flood protocol uses the Rime \verb|broadcast| primitive to send all it
     %
     \null \textbf{parameters}\\
     %
-    \null\qq \% The number of hops left to send a message\\
-    \null\qq \var{hop\_limit}: int\\~\\
-    %
     \null\qq \% The send period for this predicate\\
-    \null\qq \var{send\_period}: time\\~\\
+    \null\qq \var{$P_{send}$}: time;\\~\\
     %
     \null\qq \% The max number of times to re-transmit\\
-    \null\qq \var{maxrx}: int\\~\\
+    \null\qq \var{maxretx}: int;\\~\\
     %
     %
     \null \textbf{variables}\\
     %
+    \null\qq \var{id}: int init 0;\\~\\
+    %
+    \null\qq \var{sendData}: timer init \var{$P_{send}$};\\~\\
+    %
     \null\qq \% The queue of packets that need to be broadcast\\
-    \null\qq \var{packet\_queue}: linked list\\~\\
+    \null\qq \% Tuple contains: (id, sender, ttl, hops, retx, data)\\
+    \null\qq \var{packetQueue}: list of (int, address, int, int, int, struct) init $\emptyset$;\\~\\
     %
     \null\qq \% The map of all messages received from the nodes N-Hop neighbours\\
-    \null\qq \var{latest\_message\_seen}: map\\~\\
+    \null\qq \% The entry contains a tuple of (packet id, hops)\\
+    \null\qq \var{seen}: map of address to (int, int) init $\emptyset$;\\~\\
+  \end{boxedminipage}
+  \caption{N-Hop Flood Algorithm}
+  \label{fig:n-hop-flood-algorithm}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
     %
     %
     \null \textbf{actions}\\
     %
     %
-    \null\qq \% Broadcast Data\\
-    TODO...
+    \null\qq \% Sending Message\\
+    \null\qq \emph{send}::~\res{function}$\langle \var{data}, \var{hops}\rangle\rightarrow$\\
+    \null\qq\qq \res{if} ($hops \not= 0$) \res{then}\\
+    \null\qq\qq\qq \res{append}(\var{packetQueue}, (\var{id}, j, \var{hops}, 0, 0, \var{data})); \\
+    \null\qq\qq\qq $\var{id} \assign \var{id} + 1$; \\
+    \null\qq\qq \res{fi;}\\~\\
     %
     %
-    \null\qq \% Recieved Data\\
-    \null\qq \emph{recv\_data}:~$\langle data, sender\rangle \rightarrow$\\
-    \null\qq\qq \res{if} ($latest\_message\_seen.getMessage(sender)$ == $NULL$) \res{then}\\
-    \null\qq\qq\qq \% \res{latest\_message\_seen.addMessage}($sender$, $data$);\\
-    \null\qq\qq \res{else}\\
-    \null\qq\qq\qq Ignore the Data\\
+    \null\qq \emph{check}::~\res{timeout}(\var{sendData}) $\rightarrow$\\
+    \null\qq\qq $\var{top} \assign \res{peek}(\var{packetQueue})$;\\
+    \null\qq\qq \res{if} ($\var{top} \not= \bot$) \res{then}\\
+    \null\qq\qq\qq $(id, sender, ttl, hops, retx, data) \assign \var{top}$;\\
+    \null\qq\qq\qq \res{if} ($\var{top} \not= \bot$) \res{then}\\
+    \null\qq\qq\qq\qq \res{bcast}$\langle sender, hops + 1, ttl - 1, id, data\rangle$;\\
+    \null\qq\qq\qq\qq $\var{retx} \assign \var{retx} + 1$;\\
+    \null\qq\qq\qq \res{fi};\\
+    \null\qq\qq\qq \res{pop}(\var{packetQueue});\\
+    \null\qq\qq\qq \res{if} ($\var{retx} < \var{maxretx} \land \var{ttl} > 0$) \res{then}\\
+    \null\qq\qq\qq\qq \res{prepend}(\var{packetQueue}, $(id, sender, ttl, hops, retx, data)$);\\
+    \null\qq\qq\qq \res{fi}; \\
     \null\qq\qq \res{fi;}\\
+    \null\qq\qq \res{set}(\var{sendData}, \var{$P_{send}$}); \\~\\
+    %
+    %
+    \null\qq \% Receive Message\\
+    \null\qq \emph{recvData}::~\res{recv}$\langle originator, hops, ttl, id, data\rangle \rightarrow$\\
+    \null\qq\qq $\var{seenBefore} \assign True$;\\
+    \null\qq\qq \res{if} ($\var{originator} \not\in \res{keys}(\var{seen}) $) \res{then}\\
+    \null\qq\qq\qq $\res{seen}[\var{originator}] \assign (id, hops)$;\\
+    \null\qq\qq\qq $\var{seenBefore} \assign False$;\\
+    \null\qq\qq \res{else} \\
+    \null\qq\qq\qq $(seenId, seenHops) \assign \res{seen}[\var{originator}]$;\\
+    \null\qq\qq\qq \res{if} ($\var{seenId} < \var{id}$) \res{then}\\
+    \null\qq\qq\qq\qq $\res{seen}[\var{originator}] \assign (id, hops)$;\\
+    \null\qq\qq\qq\qq $\var{seenBefore} \assign False$;\\
+    \null\qq\qq\qq \res{else if} ($\var{seenId} = \var{id} \land \var{seenHops} > \var{hops}$) \res{then}\\
+    \null\qq\qq\qq\qq \res{deliverToUser}(\var{originator}, \var{hops}, \var{seenHops}, \var{data});\\
+    \null\qq\qq\qq\qq $\res{seen}[\var{originator}] \assign (seenId, hops)$;\\
+    \null\qq\qq\qq \res{fi};\\
+    \null\qq\qq \res{fi;}\\
+    \null\qq\qq \res{if} ($\lnot\var{seenBefore}$) \res{then}\\
+    \null\qq\qq\qq \res{deliverToUser}($\var{originator}, \var{hops}, 0, \var{data}$);\\
+    \null\qq\qq\qq \res{if} ($\var{ttl} > 0$) \res{then}\\
+    \null\qq\qq\qq\qq \res{append}(\var{packetQueue}, (\var{id}, \var{originator}, \var{ttl}, \var{hops}, 0, \var{data})); \\
+    \null\qq\qq\qq \res{fi};\\
+    \null\qq\qq \res{fi;}\\~\\
     %
     %
   \end{boxedminipage}
@@ -458,6 +505,7 @@ For this to be useful we needed a way to get this data back to the sink node. Th
 
 \subsection{Clustering}
 
+\begin{comment}
 \begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
@@ -534,13 +582,15 @@ For this to be useful we needed a way to get this data back to the sink node. Th
   \end{boxedminipage}
   \caption{Clustering Algorithm}
 \end{figure}
+\end{comment}
 
-In a wireless network, message collisions are a significant factor in terms of decreasing performance; collisions are more likely in environments featuring a high density of messages. The intuitive solution to this is to reduce the number of messages sent, with minimal compromise in the richness of the data communicated. To this end, we implemented a clustering algorithm. The principle of operation of a clustering algorithm is to establishe a set of clusterheads on network intitialisation. Each of the other nodes in the network allocates itself exactly one clusterhead, through which all traffic to the sink is routed.
+In a wireless network, message collisions are a significant factor in terms of decreasing performance; collisions are more likely in environments featuring a high density of messages. The intuitive solution to this is to reduce the number of messages sent, with minimal compromise in the richness of the data communicated. To this end, we implemented a clustering algorithm. The principle of operation of a clustering algorithm is to establish a set of clusterheads on network initialisation. Each of the other nodes in the network allocates itself exactly one clusterhead, through which all traffic to the sink is routed.
 
-In our implementation, the network initialisation phase occurs when an application running on the nodes begins; this application calls the cluster setup routine. The clusterheads are selected to be the set of nodes in the one-hop neighbourhood of the sink. These nodes broadcast their status as a clusterhead to the rest of the network, and the nodes decide with which clusterhead to align themselves based on shortest distance (in hops). Throughout the resmainder of the network's operation, each node passes its messages to the sink through its chosen clusterhead. At this point control is passed back to the application, which can then call the relevant functions to send a message from a node to the sink through that node's clusterhead. As the nature of the setup guarantees that clusterheads will be within one hop of the sink, the messages they pass on from their respective nodes are sent using Contiki's runicast message type. There are no such guarantees for the other nodes, so Contiki's mesh routing is used to allow for arbitrary distance between a node and its clusterhead. This approach to clustering works well when used in small networks, as it achieves its main goal of reducing the number of messages being passed (specifically, the medium will be a lot less congested in the one-hop neighbourhood of the sink). However, this algorithm clearly does not scale well with either geographical distance or number of nodes. In the former case, the majority of nodes will be out of direct transmission range of their clusterhead and will thus have to route messages through several other intermediary nodes; thus increasing the number of messages in the network. Similarly, with large networks a large number of nodes will all need to send messages to clusterheads which form an increasingly small proportion of the network; this is liable to cause bottlenecks and collisions.
+In our implementation, the network initialisation phase occurs when an application running on the nodes begins; this application calls the cluster setup routine. The clusterheads are selected to be the set of nodes in the one-hop neighbourhood of the sink. These nodes broadcast their status as a clusterhead to the rest of the network, and the nodes decide with which clusterhead to align themselves based on shortest distance (in hops). Throughout the remainder of the network's operation, each node passes its messages to the sink through its chosen clusterhead. At this point control is passed back to the application, which can then call the relevant functions to send a message from a node to the sink through that node's clusterhead. As the nature of the setup guarantees that clusterheads will be within one hop of the sink, the messages they pass on from their respective nodes are sent using Contiki's runicast message type. There are no such guarantees for the other nodes, so Contiki's mesh routing is used to allow for arbitrary distance between a node and its clusterhead. This approach to clustering works well when used in small networks, as it achieves its main goal of reducing the number of messages being passed (specifically, the medium will be a lot less congested in the one-hop neighbourhood of the sink). However, this algorithm clearly does not scale well with either geographical distance or number of nodes. In the former case, the majority of nodes will be out of direct transmission range of their clusterhead and will thus have to route messages through several other intermediary nodes; thus increasing the number of messages in the network. Similarly, with large networks a large number of nodes will all need to send messages to clusterheads which form an increasingly small proportion of the network; this is liable to cause bottlenecks and collisions.
 
 \subsection{Hierarchical Clustering}
 
+\begin{comment}
 \begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
@@ -630,30 +680,9 @@ In our implementation, the network initialisation phase occurs when an applicati
   \end{boxedminipage}
   \caption{Hierarchical Clustering Algorithm}
 \end{figure}
+\end{comment}
 
 To counter the given disadvantages of our basic clustering implementation, we developed an additional algorithm which employs the concept of hierarchical clustering. That is, a cluster featuring multiple layers of clusters, each with  clusterhead that has a clusterhead of its own in the next layer. The setup phase of this algorithm also chooses the one-hop neighbourhood of the sink as clusterheads. However, when these clusterheads' setup messages are broadcast through the network, if a node detects that its nearest clusterhead is at least $d$ hops away –- where $d$ is defined as a constant in \verb|contiki.c| –- then that node elects itself as a clusterhead of a new layer, and generates its own setup message to be broadcast. We initially designed two versions of hierarchical clustering; one for arbitrary values of $d$, and one for $d=1$ (where every non-leaf node becomes a clusterhead). However, once the former version was finished we decided to consolidate both versions into one and simply treat $d=1$ as a specific case. To avoid the potential problem of mesh routing creating more messages than the hierarchical clustering saves, in cases of any node being within direct range of its clusterhead, it transmits using runicast. In all other cases, the node uses mesh as before. The hierarchical approach removes the major limitations of our initial clustering implementation, however it still suffers from selecting permanent clusterheads (whereas methods such as LEACH\cite{LEACH} randomise the clusterheads periodically) and thus causing increased power usage for these nodes. Unfortunately, given that we developed our clustering implementation as a library to be used by some arbitrary application running on the nodes, the process of reassigning clusterheads (in any manner of synchronisation) proved infeasible.
-
-\subsection{Predicate Evaluation}
-
-\begin{itemize}
-	\item[] Began with single hop predicates
-	\begin{itemize}
-		\item used Mesh to gather information from surrounding nodes, due to implementation, we could only send one message as a one time
-	\end{itemize}	
-	\item[] Started work on Multi-hop local based predicates
-	\begin{itemize}
-		\item used N-Hop Req to send initial message down the chain
-		\item We tried using trickle to return the results back to the originating node. However, due to trickles implementation, only one message could be flooded through the network at one time. 
-		\item due to collisions, we used ctimers to delay the responses to messages sent back to the originator node.
-		\item next step is to re-implement the algorithm, so that nodes send messages directly back along the chain of nodes they received the predicated check message from. This way the messages will be more reliably returned to the orignator node. This also allows for multiple messages to be sent this way.
-		\item can't really do it via waiting for nodes to respond - difficult to know how long to wait
-		\item[] If each node waits (e.g.) 10 seconds, then messages will be lost as they go backwards, as the originating node will have already sent its message back
-	\end{itemize}	
-\end{itemize}
-
-
-\subsection{LEACH}
-\cite{LEACH}
 
 \subsection{TDMA}
 

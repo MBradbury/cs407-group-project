@@ -54,8 +54,7 @@ class NodeCommsResponder implements NodeCommsCallback {
             
             HashMap<VariableDetails, Integer> vds = new HashMap<VariableDetails, Integer>();
             
-            for (String det : splitFirst[2].split(","))
-            {
+            for (String det : splitFirst[2].split(",")) {
                 String[] detSplit = det.split("#");
                 
                 int hops = Integer.parseInt(detSplit[0]);
@@ -76,14 +75,12 @@ class NodeCommsResponder implements NodeCommsCallback {
             HashMap<Integer, Object>[] nodeData = new HashMap[dataSplit.length]; 
 
             int i = 0;
-            for (String data : dataSplit)
-            {
+            for (String data : dataSplit) {
                 nodeData[i] = new HashMap<Integer, Object>();
                 
                 String[] commaSplit = data.split(",");
                 
-                for (String comma : commaSplit)
-                {
+                for (String comma : commaSplit) {
                     String[] kvSplit = comma.split("=");
                     
                     int key = Integer.parseInt(kvSplit[0]);

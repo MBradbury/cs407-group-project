@@ -54,6 +54,9 @@
 #define pe_start PPCAT(PREDICATE_NAME, _start)
 #define pe_stop PPCAT(PREDICATE_NAME, _stop)
 
+#define ONE_HOP_PREDICATE
+//#define TWO_HOP_PREDICATE
+
 //
 // See: arxiv.org/pdf/0808.0920v1.pdf
 //
@@ -360,6 +363,7 @@ static bool send_example_predicate(pe_conn_t * conn, rimeaddr_t const * destinat
 	if (conn == NULL || destination == NULL)
 		return false;
 
+#if defined(ONE_HOP_PREDICATE)
 	static ubyte const program_bytecode[] = {
 		0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0A,0xFF,
 		0x1C,0x13,0x43,0x37,0x01,0xFF,0x01,0x38,0x01,0x1C,0x30,0x02,
@@ -369,6 +373,17 @@ static bool send_example_predicate(pe_conn_t * conn, rimeaddr_t const * destinat
 		0x20,0x2C,0x2C,0x35,0x01,0x12,0x0A,0x00};
 
 	static const var_elem_t var_details[1] = { {1, 255} };
+
+#elif defined(TWO_HOP_PREDICATE)
+	static ubyte const program_bytecode[] = {
+		0x30,0x01,0x01,0x01,0x00,0x01,0x00,0x00,0x06,0x01,0x0A,0xFF,
+		0x1C,0x13,0x1B,0x37,0x01,0xFF,0x01,0x38,0x01,0x1C,0x2C,0x35,
+		0x01,0x12,0x0A,0x00};
+
+	static const var_elem_t var_details[1] = { {2, 255} };
+#else
+#	error "Unknown predicate type"
+#endif
 
 	static const uint8_t bytecode_length = sizeof(program_bytecode)/sizeof(program_bytecode[0]);
 	static const uint8_t var_details_length = sizeof(var_details)/sizeof(var_details[0]);

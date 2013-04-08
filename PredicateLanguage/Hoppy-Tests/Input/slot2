@@ -1,0 +1,6 @@
+[all]
+function 1 as slot returning int in
+	using Neighbours(2) as twohopn in
+    	@(a : twohopn ~
+    		slot(a) != slot(this)
+    	)

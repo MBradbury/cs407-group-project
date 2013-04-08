@@ -25,14 +25,11 @@
 
 #include "sensor-converter.h"
 #include "debug-helper.h"
-#include "containers/map.h"
-#include "net/rimeaddr-helpers.h"
 
 static message_log ml;
 
 typedef struct
 {
-	unsigned int type_id;	//Always set to 0
 	rimeaddr_t source;
 
 	rimeaddr_t head;
@@ -40,25 +37,6 @@ typedef struct
 	unsigned int hop_count;
 
 } setup_msg_t;
-
-// Reply sent to clusterhead to enable TDMA scheduling
-typedef struct
-{
-	rimeaddr_t source;
-	rimeaddr_t head;
-	unsigned int level;
-} join_msg_t;
-
-typedef struct { rimeaddr_t key; int slot; } schedule_entry_t;
-
-// CH broadcasts TDMA schedule
-typedef struct
-{
-	unsigned int type_id;	//Always set to 10
-	rimeaddr_t source;
-	
-	map_t schedule;
-} schedule_msg_t;
 
 
 static cluster_conn_t * conncvt_stbcast(struct stbroadcast_conn * conn)
@@ -98,9 +76,6 @@ static const int MAX_RUNICAST_RETX = 4;
 static const clock_time_t STUBBORN_INTERVAL = 5 * CLOCK_SECOND;
 static const clock_time_t STUBBORN_WAIT = 30 * CLOCK_SECOND;
 
-static const clock_time_t ROUND_LENGTH = 60 * CLOCK_SECOND;
-static const clock_time_t SLOT_LENGTH = 2 * CLOCK_SECOND;
-
 
 static void stbroadcast_cancel_void(void * ptr)
 {
@@ -119,20 +94,6 @@ static void stbroadcast_cancel_void(void * ptr)
 static void forward_setup(void * ptr)
 {
 	cluster_conn_t * conn = (cluster_conn_t *)ptr;
-	
-	//First, send a join message to this node's clusterhead
-	packetbuf_clear();
-	packetbuf_set_datalen(sizeof(join_msg_t));
-	join_msg_t * joinmsg = (join_msg_t *)packetbuf_dataptr();
-	memset(joinmsg,0,sizeof(join_msg_t));
-	
-	rimeaddr_copy(&joinmsg->source, &rimeaddr_node_addr);
-	rimeaddr_copy(&joinmsg->head, conn->our_cluster_head);
-	joinmsg->level = conn->our_level;
-	
-	mesh_send(&conn->mc, &conn->our_cluster_head);
-	conn->status = TDMA;
-	
 	static struct ctimer forward_stop;
 	
 	// Send a message that is to be received by the children
@@ -144,7 +105,6 @@ static void forward_setup(void * ptr)
 
 	// We set the head of this node to be the best
 	// clusterhead we heard, or itself if is_CH
-	nextmsg->type_id = 0;
 	rimeaddr_copy(&nextmsg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&nextmsg->head, conn->is_CH
 		? &rimeaddr_node_addr
@@ -156,7 +116,9 @@ static void forward_setup(void * ptr)
 	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
 	
 	ctimer_set(&forward_stop, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
-	
+static struct ctimer message_offset;
+	//Inform user that this node is set up
+	(*conn->callbacks.setup_complete)(conn);
 }
 
 static void CH_detect_finished(void * ptr)
@@ -200,35 +162,6 @@ static void CH_detect_finished(void * ptr)
 	ctimer_set(&message_offset, offset, &forward_setup, conn);
 }
 
-static void send_schedule(void * ptr)
-{
-	cluster_conn_t * conn = (cluster_conn_t *)ptr;
-	
-	static struct ctimer schedule_stop;
-	
-	// Send a message that is to be received by the children
-	// of this node.
-	packetbuf_clear();
-	packetbuf_set_datalen(sizeof(schedule_msg_t));
-	schedule_msg_t * msg = (schedule_msg_t *)packetbuf_dataptr();
-	memset(nextmsg, 0, sizeof(setup_msg_t));
-
-	msg->type_id = 10;
-	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
-	memcpy(&msg->schedule, &conn->children);
-	
-	printf("Sending schedule...\n");
-	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
-	
-	ctimer_set(&forward_stop, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
-	
-	if (conn->slot != UINT_MAX || is_sink(conn))
-	{
-		conn->status = COMPLETE;
-		//Inform user that this node is set up
-		(*conn->callbacks.setup_complete)(conn);
-	}
-}
 
 static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
@@ -300,66 +233,39 @@ static void recv_mesh(struct mesh_conn * ptr, rimeaddr_t const * originator, uin
 {
 	cluster_conn_t * conn = conncvt_mesh(ptr);
 	
-	// Should indicate receipt of a join message
-	if (!conn->status == COMPLETE || is_sink(conn))
-	{
-		if (conn->status < TDMA)
-		{
-			static struct ctimer gather_children;
-
-			map_init(&conn->children, &rimeaddr_equality, &free);
-			conn->status == TDMA;
-			
-			ctimer_set(&gather_children, STUBBORN_WAIT, &send_schedule, conn);
-		}
-		
-		schedule_entry_t * stored = (schedule_entry_t *)map_get(&conn->children, &rimeaddr_node_addr);
-
-		if (!stored)
-		{
-			schedule_entry_t * new_entry = malloc(sizeof(schedule_entry_t));
-			new_entry->key = rimeaddr_node_addr;
-			new_entry->slot = map_length(&conn->children);			
-			
-			map_put(&conn->children, new_entry);
-		}
-
-	}
-	else
-	{
 	// A cluster head has received a data message from
 	// a member of its cluster.
 	// We now need to forward it onto the sink.
-		if (conn->cluster_depth == 0)
-		{
-			leds_on(LEDS_BLUE);
-		}
+	
+	if (conn->cluster_depth == 0)
+	{
+		leds_on(LEDS_BLUE);
+	}
 
-		log_write(&ml, clock_time(), "data", "mesh", &originator, &conn->our_cluster_head);
-		
-		char originator_str[RIMEADDR_STRING_LENGTH];
-		char current_str[RIMEADDR_STRING_LENGTH];
-		char ch_str[RIMEADDR_STRING_LENGTH];
+	log_write(&ml, clock_time(), "data", "mesh", &originator, &conn->our_cluster_head);
+	
+	char originator_str[RIMEADDR_STRING_LENGTH];
+	char current_str[RIMEADDR_STRING_LENGTH];
+	char ch_str[RIMEADDR_STRING_LENGTH];
 
-		printf("Forwarding: from:%s via:%s to:%s\n",
-			addr2str_r(originator, originator_str, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&rimeaddr_node_addr, current_str, RIMEADDR_STRING_LENGTH),
-			addr2str_r(&conn->our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH)
-		);
+	printf("Forwarding: from:%s via:%s to:%s\n",
+		addr2str_r(originator, originator_str, RIMEADDR_STRING_LENGTH),
+		addr2str_r(&rimeaddr_node_addr, current_str, RIMEADDR_STRING_LENGTH),
+		addr2str_r(&conn->our_cluster_head, ch_str, RIMEADDR_STRING_LENGTH)
+	);
 
-		if (conn->best_hop == 0)
-		{
-			// Include the originator in the header
-			rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen());
-			packetbuf_set_datalen(packetbuf_datalen() + sizeof(rimeaddr_t));
-			rimeaddr_copy(source, originator);
+	if (conn->best_hop == 0)
+	{
+		// Include the originator in the header
+		rimeaddr_t * source = (rimeaddr_t *)(((char *)packetbuf_dataptr()) + packetbuf_datalen());
+		packetbuf_set_datalen(packetbuf_datalen() + sizeof(rimeaddr_t));
+		rimeaddr_copy(source, originator);
 
-			runicast_send(&conn->rc, &conn->our_cluster_head, MAX_RUNICAST_RETX);
-		}
-		else
-		{
-			mesh_send(&conn->mc, &conn->our_cluster_head);
-		}
+		runicast_send(&conn->rc, &conn->our_cluster_head, MAX_RUNICAST_RETX);
+	}
+	else
+	{
+		mesh_send(&conn->mc, &conn->our_cluster_head);
 	}
 }
 
@@ -368,109 +274,66 @@ static void mesh_timedout(struct mesh_conn * c) {}
 
 static const struct mesh_callbacks callbacks_data = { &recv_mesh, &mesh_sent, &mesh_timedout };
 
-static const struct mesh_callbacks callbacks_join = { &recv_join, &mesh_sent, &mesh_timedout };
-
-
-static void forward_schedule(void * ptr)
-{
-	cluster_conn_t * conn = (cluster_conn_t *)ptr;
-	static struct ctimer schedule_stop;
-	
-	stbroadcast_send_stubborn(&conn->bc, STUBBORN_INTERVAL);
-	ctimer_set(&forward_stop, STUBBORN_WAIT, &stbroadcast_cancel_void, conn);
-	//Inform user that this node is set up
-	(*conn->callbacks.setup_complete)(conn);
-}
 
 /** The function that will be executed when a message is received */
 static void recv_setup(struct stbroadcast_conn * ptr)
 {
 	cluster_conn_t * conn = conncvt_stbcast(ptr);
 
-	unsigned int const * id = (unsigned int const *)packetbuf_dataptr();
-	
-	if (id==0)
+	setup_msg_t const * msg = (setup_msg_t const *)packetbuf_dataptr();
+	printf("About to write...\n");
+	log_write(&ml, clock_time(), "setup", "stbcast", &msg->source, &rimeaddr_null);
+	printf("Written\n");
+	static struct ctimer detect_ct;
+
+	printf("Got setup message from %s, level %u\n",
+		addr2str(&msg->source), msg->head_level);
+
+	// If the sink received a setup message, then do nothing
+	// it doesn't need a parent as it is the root.
+	if (is_sink(conn))
 	{
-		setup_msg_t const * msg = (setup_msg_t const *)packetbuf_dataptr();
-		printf("About to write...\n");
-		log_write(&ml, clock_time(), "setup", "stbcast", &msg->source, &rimeaddr_null);
-		printf("Written\n");
-		static struct ctimer detect_ct;
-
-		printf("Got setup message from %s, level %u\n",
-			addr2str(&msg->source), msg->head_level);
-
-		// If the sink received a setup message, then do nothing
-		// it doesn't need a parent as it is the root.
-		if (is_sink(conn))
-		{
-			return;
-		}
-
-		// If this is the first setup message that we have seen
-		// Then we need to start the collect timeout
-		if (conn->status==START)
-		{
-			conn->status = SETUP;
-			
-			conn->collecting_best_level = msg->head_level;
-			conn->collecting_best_CH = msg->head;
-			conn->collecting_best_hop = msg->hop_count;
-
-			// Indicate that we are looking for best parent
-			leds_on(LEDS_RED);
-
-			// Start the timer that will call a function when we are
-			// done detecting clusterheads.
-			ctimer_set(&detect_ct, 20 * CLOCK_SECOND, &CH_detect_finished, conn);
-
-			printf("Not seen setup message before, so setting timer...\n");
-		}
-		
-		// Record the node the message came from, if it is closer to the sink.
-		// Non-CH nodes should look for the closest CH.
-		if (msg->hop_count < conn->collecting_best_hop && msg->head_level <= conn->collecting_best_level)
-		{
-			char head_str[RIMEADDR_STRING_LENGTH];
-			char ch_str[RIMEADDR_STRING_LENGTH];
-
-			printf("Updating to a better clusterhead (%s L:%d) was:(%s L:%d)\n",
-				addr2str_r(&msg->head, head_str, RIMEADDR_STRING_LENGTH), msg->hop_count,
-				addr2str_r(&conn->collecting_best_CH, ch_str, RIMEADDR_STRING_LENGTH), conn->collecting_best_hop
-			);
-
-			// Set the best parent, and the level of that node
-			rimeaddr_copy(&conn->collecting_best_CH, &msg->head);
-			conn->collecting_best_level = msg->head_level;
-			conn->collecting_best_hop = msg->hop_count;
-		}
-	}else
-	{
-		if (is_sink(conn) || conn->status == COMPLETE)
-			return;
-		static struct ctimer slot_wait;
-		schedule_msg_t const * msg = (schedule_msg_t const *)packetbuf_dataptr();
-		/*printf("About to write...\n");
-		log_write(&ml, clock_time(), "schedule", "stbcast", &msg->source, &rimeaddr_null);
-		printf("Written\n");*/
-		
-		if (rimeaddr_cmp(&msg->source, &conn->our_parent))
-		{
-			schedule_entry_t * record = (schedule_entry_t *)map_get(&msg->schedule, &rimeaddr_node_addr);
-			if (record)
-			{
-				conn->slot = *record->slot;
-				printf("Allocated to slot %d\n", conn->slot);
-				conn->status = COMPLETE;
-			}
-			//Forward schedule broadcast
-		ctimer_set(&slot_wait,
-			conn->slot!=UINT_MAX ?
-				conn->slot * SLOT_LENGTH :
-				CLOCK_SECOND,
-			&forward_schedule, conn);	
-		}
+		return;
 	}
+
+	// If this is the first setup message that we have seen
+	// Then we need to start the collect timeout
+	if (!conn->has_seen_setup)
+	{
+		conn->has_seen_setup = true;
+		
+		conn->collecting_best_level = msg->head_level;
+		conn->collecting_best_CH = msg->head;
+		conn->collecting_best_hop = msg->hop_count;
+
+		// Indicate that we are looking for best parent
+		leds_on(LEDS_RED);
+
+		// Start the timer that will call a function when we are
+		// done detecting clusterheads.
+		ctimer_set(&detect_ct, 20 * CLOCK_SECOND, &CH_detect_finished, conn);
+
+		printf("Not seen setup message before, so setting timer...\n");
+	}
+	
+	// Record the node the message came from, if it is closer to the sink.
+	// Non-CH nodes should look for the closest CH.
+	if (msg->hop_count < conn->collecting_best_hop && msg->head_level <= conn->collecting_best_level)
+	{
+		char head_str[RIMEADDR_STRING_LENGTH];
+		char ch_str[RIMEADDR_STRING_LENGTH];
+
+		printf("Updating to a better clusterhead (%s L:%d) was:(%s L:%d)\n",
+			addr2str_r(&msg->head, head_str, RIMEADDR_STRING_LENGTH), msg->hop_count,
+			addr2str_r(&conn->collecting_best_CH, ch_str, RIMEADDR_STRING_LENGTH), conn->collecting_best_hop
+		);
+
+		// Set the best parent, and the level of that node
+		rimeaddr_copy(&conn->collecting_best_CH, &msg->head);
+		conn->collecting_best_level = msg->head_level;
+		conn->collecting_best_hop = msg->hop_count;
+	}
+
 }
 
 static void sent_stbroadcast(struct stbroadcast_conn * c)
@@ -497,7 +360,6 @@ static void CH_setup_wait_finished(void * ptr)
 	setup_msg_t * msg = (setup_msg_t *)packetbuf_dataptr();
 	memset(msg, 0, sizeof(setup_msg_t));
 
-	msg->type_id = 0;
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->head, &rimeaddr_node_addr);
 	msg->head_level = conn->our_level;
@@ -529,10 +391,7 @@ bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
 
 		rimeaddr_copy(&conn->sink, sink);
 
-		conn->status = START;
-		/*conn->has_seen_setup = false;
-		conn->schedule_sent = false;
-		conn->schedule_recvd = false;*/
+		conn->has_seen_setup = false;
 
 		conn->best_hop = UINT_MAX;
 		conn->collecting_best_hop = UINT_MAX;
@@ -542,7 +401,6 @@ bool cluster_open(cluster_conn_t * conn, rimeaddr_t const * sink,
 
 		conn->cluster_depth = cluster_depth;
 
-		conn->slot = UINT_MAX;
 		memcpy(&conn->callbacks, callbacks, sizeof(cluster_callbacks_t));
 
 		if (is_sink(conn))

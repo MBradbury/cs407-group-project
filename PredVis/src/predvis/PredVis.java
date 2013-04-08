@@ -108,7 +108,7 @@ public class PredVis extends JFrame {
     private BasicVisualizationServer<NodeId, String> vv = null;
     
     //Monitoring data.
-    private WSNMonitor wsnMonitor = null;
+    private WSNInterface wsnInterface = null;
     
     //GUI widgets.
     private JMenuBar menuBar = null;
@@ -138,7 +138,7 @@ public class PredVis extends JFrame {
             @Override
             public void windowClosing(WindowEvent ev) {
                 dispose();
-                wsnMonitor.close();
+                wsnInterface.close();
             }
         });
         
@@ -431,7 +431,10 @@ public class PredVis extends JFrame {
         deployPredicateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //TODO deploy predicate.
+                //Deploy predicate.
+                deployPredicate(currentPredicate);
+                
+                //Update gui elements.
                 predicateScriptEditor.setEditable(false);
                 predicateAssemblyEditor.setEditable(false);
                 savePredicateScriptButton.setEnabled(false);
@@ -451,7 +454,10 @@ public class PredVis extends JFrame {
         rescindPredicateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //TODO rescind predicate.
+                //Rescind predicate.
+                rescindPredicate(currentPredicate);
+                
+                //Update gui elements.
                 predicateScriptEditor.setEditable(true);
                 predicateAssemblyEditor.setEditable(true);
                 savePredicateScriptButton.setEnabled(true);
@@ -499,7 +505,7 @@ public class PredVis extends JFrame {
             public void stateChanged(ChangeEvent ce) {
                 if (!historySlider.getValueIsAdjusting()) {
                     //currentRound = historySlider.getValue();
-                    handleNetworkUpdated(wsnMonitor.getStates());
+                    handleNetworkUpdated(wsnInterface.getStates());
                 }
             }
         });
@@ -513,8 +519,8 @@ public class PredVis extends JFrame {
     
     private void initMonitoring(String port) {        
         //Listen for updates to network state.
-        wsnMonitor = new WSNMonitor(port);
-        wsnMonitor.addListener(new NetworkUpdateListener() {
+        wsnInterface = new WSNInterface(port);
+        wsnInterface.addListener(new NetworkUpdateListener() {
             @Override
             public void networkUpdated(final Map<Integer, NetworkState> networkStates) {
                 handleNetworkUpdated(networkStates);
@@ -629,6 +635,14 @@ public class PredVis extends JFrame {
         //Update slider values and rerender visible round.
         roundSliderModel.setMaximum(roundSliderModel.getMaximum() + 1);
         showRound(visibleRound);
+    }
+    
+    private void deployPredicate(Predicate p) {
+        wsnInterface.deployPredicate(p);
+    }
+    
+    private void rescindPredicate(Predicate p) {
+        wsnInterface.rescindPredicate(p);
     }
     
     private void updateNetworkView(NetworkState ns) {

@@ -7,6 +7,7 @@ from pprint import pprint
 import xml.etree.ElementTree as ET
 import gzip
 from numpy import mean, std
+import traceback
 
 
 # The first thing we need to do is parse the simulation file
@@ -102,16 +103,36 @@ def totalSentRecv(moteResults):
 #			slot(a) != slot(this) &
 #			@(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
 #		)
-def predicate(this, onehopn, slots):
+def predicate1(this, neighbours, slots):
+
+	onehopn = neighbours[this]
+
 	result = True
 	for a in onehopn:
 		result &= slots[a] != slots[this]
 		for b in onehopn:
 			result &= (a == b or slots[a] != slots[b])
 	return result
+	
+#using Neighbours(3) as twohopn in
+#		@(a : twohopn ~
+#			slot(a) != slot(this)
+#		)
+def predicate2(this, neighbours, slots):
+
+	twohopn = set()
+	
+	for n in neighbours[this]:
+		twohopn.add(n)
+		twohopn.update(neighbours[n])
+
+	result = True
+	for a in twohopn:
+		result &= slots[a] != slots[this]
+	return result
 
 class AnalyseFile:
-	def __init__(self, path, neighbours):
+	def __init__(self, path, neighbours, predicate):
 		with gzip.open(path, 'rb') as f:
 			self.data = json.load(f)
 			
@@ -152,36 +173,59 @@ class AnalyseFile:
 		self.predicatesCorrectlyEvaluated = 0
 		self.predicatesIncorrectlyEvaluated = 0
 		
+		isGlobal = self.data[u"peType"] in (u"pege", u"pegp")
+		
 		for pred in self.data[u"predicate"]:
+			on = int(pred[u"on"])
 			node = int(str(pred[u"node"]).split(".")[0])
+			result = int(pred[u"result"])
 			
-			# Reached the sink if they got to node 1
-			# which was the sink
-			if int(pred[u"on"]) == 1:
-				self.responsesReachedSink += 1
-			
-			# Count only the predicates that were printed out from
-			# the origin, not after they were preprinted at the sink
-			if int(pred[u"on"]) != 1 or node == 1:
-
-				if pred[u"result"] == 0:
+			if isGlobal:
+				if result == 0:
+					self.responsesReachedSink += 1
 					self.totalPredicatesSent += 1
 					self.predicatesFailed += 1
 				else:
 					self.predicatesSucceeded += 1
-
+			
 				# Lets now evaluate the predicate ourselves
-				r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
+				r = predicate(node, neighbours, self.dataAt(pred[u"clock"]))
 
-				if (r == (pred[u"result"] == 1)):
+				if (r == (result == 1)):
 					self.predicatesCorrectlyEvaluated += 1
 				else:
 					self.predicatesIncorrectlyEvaluated += 1
 					
 				self.totalPredicates += 1
+			
+			else:
+				# Reached the sink if they got to node 1
+				# which was the sink
+				if on == 1:
+					self.responsesReachedSink += 1
+				
+				# Count only the predicates that were printed out from
+				# the origin, not after they were preprinted at the sink
+				if on != 1 or node == 1:
 
+					if result == 0:
+						self.totalPredicatesSent += 1
+						self.predicatesFailed += 1
+					else:
+						self.predicatesSucceeded += 1
 
+					# Lets now evaluate the predicate ourselves
+					r = predicate(node, neighbours, self.dataAt(pred[u"clock"]))
+
+					if (r == (result == 1)):
+						self.predicatesCorrectlyEvaluated += 1
+					else:
+						self.predicatesIncorrectlyEvaluated += 1
+						
+					self.totalPredicates += 1
+	
 		self.responsesReachedSinkPC = float(self.responsesReachedSink) / float(self.totalPredicatesSent)
+		
 		self.successRate = float(self.predicatesSucceeded) / float(self.totalPredicates)
 		self.failureRate = float(self.predicatesFailed) / float(self.totalPredicates)
 
@@ -214,12 +258,22 @@ for peType in os.listdir('TDMA'):
 
 	for predicateDist in os.listdir('TDMA/' + peType):
 		results[peType][predicateDist] = {}
+		
+		predicate = None
+		if predicateDist == '1HOP':
+			predicate = predicate1
+		elif predicateDist == '2HOP':
+			predicate = predicate2
+		else:
+			raise Exception('Unknown {0}'.format(predicateDist))
 
 		for size in os.listdir('TDMA/' + peType + "/" + predicateDist):
 			results[peType][predicateDist][size] = {}
 
 			neighbours = calculateNeighbours(
 				'TDMA/' + peType + "/" + predicateDist + "/" + size + "/TDMA.csc")
+				
+			pprint(neighbours)
 
 			for period in os.listdir('TDMA/' + peType + "/" + predicateDist + "/" + size):
 
@@ -238,12 +292,12 @@ for peType in os.listdir('TDMA'):
 
 					try:
 
-						a = AnalyseFile(path + "/" + resultsFile, neighbours)
+						a = AnalyseFile(path + "/" + resultsFile, neighbours, predicate)
 
 						localResults.append(a)
 
 					except Exception as e:
-						print(e)
+						traceback.print_exc()
 
 				# We need to find the average and standard deviation
 
@@ -394,10 +448,10 @@ def graph(allvalues, title, labelX, labelY, keyName, accessorKey=None, rangeY=No
 			
 			pFile.write('\n')
 		
-graph(results, 'Predicates Correctly Evaluated', 'Network Size', 'Percentage Correctly Evaluated', 'pcCorrectlyEvaluated', rangeY=(0, 1))
+graph(results, 'Predicates Correctly Evaluated', 'Network Size', 'Percentage Correctly Evaluated', 'pcCorrectlyEvaluated', rangeY=(0, 1), keypos='right bottom')
 
 graph(results, 'Response Reached Sink', 'Network Size', 'Percentage Correctly Evaluated', 'pcResponsesReachedSink', rangeY=(0, 1))
 
-graph(results, 'PE Tx', 'Network Size', 'Messages Sent', 'messagesPE', accessorKey='tx', rangeY=(0, '*'))
-graph(results, 'PE Rx', 'Network Size', 'Messages Received', 'messagesPE', accessorKey='rx', rangeY=(0, '*'))
+graph(results, 'PE Tx', 'Network Size', 'Messages Sent', 'messagesPE', accessorKey='tx', rangeY=(0, '*'), keypos='right bottom')
+graph(results, 'PE Rx', 'Network Size', 'Messages Received', 'messagesPE', accessorKey='rx', rangeY=(0, '*'), keypos='right bottom')
 

@@ -7,6 +7,7 @@ from pprint import pprint
 import xml.etree.ElementTree as ET
 import gzip
 from numpy import mean, std
+import traceback
 
 
 # The first thing we need to do is parse the simulation file
@@ -102,16 +103,36 @@ def totalSentRecv(moteResults):
 #			slot(a) != slot(this) &
 #			@(b : onehopn ~ addr(a) != addr(b) => slot(a) != slot(b))
 #		)
-def predicate(this, onehopn, slots):
+def predicate1(this, neighbours, slots):
+
+	onehopn = neighbours[this]
+
 	result = True
 	for a in onehopn:
 		result &= slots[a] != slots[this]
 		for b in onehopn:
 			result &= (a == b or slots[a] != slots[b])
 	return result
+	
+#using Neighbours(3) as twohopn in
+#		@(a : twohopn ~
+#			slot(a) != slot(this)
+#		)
+def predicate2(this, neighbours, slots):
+
+	twohopn = set()
+	
+	for n in neighbours[this]:
+		twohopn.add(n)
+		twohopn.update(neighbours[n])
+
+	result = True
+	for a in twohopn:
+		result &= slots[a] != slots[this]
+	return result
 
 class AnalyseFile:
-	def __init__(self, path, neighbours):
+	def __init__(self, path, neighbours, predicate):
 		with gzip.open(path, 'rb') as f:
 			self.data = json.load(f)
 			
@@ -168,7 +189,7 @@ class AnalyseFile:
 					self.predicatesSucceeded += 1
 			
 				# Lets now evaluate the predicate ourselves
-				r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
+				r = predicate(node, neighbours, self.dataAt(pred[u"clock"]))
 
 				if (r == (result == 1)):
 					self.predicatesCorrectlyEvaluated += 1
@@ -194,7 +215,7 @@ class AnalyseFile:
 						self.predicatesSucceeded += 1
 
 					# Lets now evaluate the predicate ourselves
-					r = predicate(node, neighbours[node], self.dataAt(pred[u"clock"]))
+					r = predicate(node, neighbours, self.dataAt(pred[u"clock"]))
 
 					if (r == (result == 1)):
 						self.predicatesCorrectlyEvaluated += 1
@@ -237,12 +258,22 @@ for peType in os.listdir('TDMA'):
 
 	for predicateDist in os.listdir('TDMA/' + peType):
 		results[peType][predicateDist] = {}
+		
+		predicate = None
+		if predicateDist == '1HOP':
+			predicate = predicate1
+		elif predicateDist == '2HOP':
+			predicate = predicate2
+		else:
+			raise Exception('Unknown {0}'.format(predicateDist))
 
 		for size in os.listdir('TDMA/' + peType + "/" + predicateDist):
 			results[peType][predicateDist][size] = {}
 
 			neighbours = calculateNeighbours(
 				'TDMA/' + peType + "/" + predicateDist + "/" + size + "/TDMA.csc")
+				
+			pprint(neighbours)
 
 			for period in os.listdir('TDMA/' + peType + "/" + predicateDist + "/" + size):
 
@@ -261,12 +292,12 @@ for peType in os.listdir('TDMA'):
 
 					try:
 
-						a = AnalyseFile(path + "/" + resultsFile, neighbours)
+						a = AnalyseFile(path + "/" + resultsFile, neighbours, predicate)
 
 						localResults.append(a)
 
 					except Exception as e:
-						print(e)
+						traceback.print_exc()
 
 				# We need to find the average and standard deviation
 

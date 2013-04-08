@@ -25,7 +25,7 @@ As the execution may be different each time in a distributed system it is not su
 
 \subsection{Related Work - New Lit Review???}
 
-\subsubsection*{Fault-Error-Failure Cycle}
+\subsubsection*{Fault-Error-Failure Cycle - NEEDS WORK}
 
 It should be clear that the types of predicates are important to consider when developing a predicate checking mechanism. Also important are the types of errors that these predicate checking algorithms can detect. To understand this it is first important to understand how errors can arise, which can be done by examining the fault-error-failure cycle. This cycle says that a \emph{fault} once caused by either some external influence (e.g. radiation leading to bit-flips in memory \cite{1017791}) or internal influence (e.g. code bugs) will lead to an \emph{error}, this is the \emph{activation} step. An error is the manifestation of the fault (e.g. memory holding the incorrect value). An error then leads to a \emph{failure} in the step called \emph{propagation}, the failure of the system is an observable deviation from the system's specification (e.g. allowing doors to be opened that should remain closed). It is not always the case the faults lead to errors, or errors lead to failures, sometimes multiple faults or errors are respectively required to cause a single error or failure. \cite{1335465}
 
@@ -33,7 +33,7 @@ There is a choice of what should be measured and checked in predicates; should f
 
 Much of what has been discussed has involved transient faults such as those caused by environmental conditions, however, there is a class of faults that are a lot more common and much easier to resolve - faults caused by software bugs. These faults can lead to programs ending up in the wrong state and performing incorrectly. There has been a certain amount of work that looks into detecting traditional distributed system bugs (such as deadlock \cite{5587352,5284172}) in wireless sensor networks. However, there has been little work in looking into providing tools to aid in system debugging.
 
-\subsubsection*{Classes of Distributed Predicates}
+\subsubsection*{Classes of Distributed Predicates - NEEDS WORK}
 
 To begin with it is important to understand what predicates are relevant to distributed systems. First off we have a distinction between global and local predicates, global predicates involve taking a consistent global snapshot of the system and checking whether the snapshot satisfies the global predicate \cite{277788} and local predicates instead work with a subset of the network \cite{553309}. These predicates have also have a notion of stability, a stable predicate will remain true once it has turned true (e.g. termination), whereas unstable predicates can alternate between true and false. Finally there is a distinction between weak and strong, where a weak predicate holds if there exists an observation where the predicate is true and a strong predicate holds if it is true for all observers of the distributed computation\cite{553309,Cooper:1991:CDG:127695.122774}. Knowing what classes of predicates there are is important because when checking certain properties of a system a certain class of predicate will be required and thus a certain implementation will be needed to ensure the predicate is correctly checked. An example of this is when running an algorithm using global snapshots to detect stable predicates, that same application may not be suitable to detect unstable predicates because the predicate could switch to false and then back to true before the next snapshot.
 

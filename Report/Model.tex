@@ -1,21 +1,26 @@
 % !TeX root = Report.tex
 \section{Model}
 
-\begin{comment}
-For our project we focus on a subset of the problem. Instead of handling many low level faults (that has been approached before \cite{NodeMD}), we are instead going to focus on bugs that occur in the applications that users develop for WSNs. It is important that good debugging tools are available for the platform being developed on because they will help improve the quality of the software developed for those platforms \cite{?}.
+As stated in the introduction we are investigating developing tools to aid in debugging the distributed programs running on wireless sensor networks. We aim to do this by implementing libraries that use different technique to check predicates, with a focus on correctly evaluating these predicates. In order to do this we first need to model the situation that our libraries will be used in to aid in the explanation of our findings.
+
+To begin with we model a wireless sensor network as a graph $G = (V, E)$ where $V$ is a set of nodes. If we have two nodes $u$ and $v$ that can communicate $\{u, v\} \in E$, we assume that this communication is bi-directional. Every node in the network has a unique identifier 
 
 \begin{mydef}
-\emph{Stateless Predicate}: Without state. A stateless predicate will only be able to evaluate some truth from some data based on what it knows at that instance. It does not have any history of the data it has used to evaluate the predicate in the past, so cannot evaluate a relationship between current data and past data.
+\emph{$m$-Hop Neighbourhood}: Given a node $n$ the $m$-hop neighbourhood of that node is the set of nodes that are within $m$ hops of node $n$. When we refer to this neighbourhood it will not contain the node $n$.
 \end{mydef}
+
+As we are dealing with simulators and physical hardware, there is no assumption of reliable links between nodes. Techniques will be described later on that increase the probability of a message reaching its target, but do not ensure it.
+
+Every node in the network is assumed to have the same hardware and thus the same capabilities. As every node has the same capabilities, every node has similar properties such as: transmission range and initial power levels. We assume that the network is working in isolation to other networks and is not receiving other electromagnetic interference.
+
+When checking predicates we much deal with the notion of the \emph{correctness of evaluation} of a predicate. As can be seen from the definition this involved the notion of time because the values used to evaluate the predicate can change over time.
 
 \begin{mydef}
-\emph{Application Predicate}: A predicate that evaluates some data on a running application.
+\emph{Correctly Evaluated Predicate}: A predicate $P$ is correctly evaluated at time $\tau$ if the results of evaluating that predicate with global knowledge at time $\tau$ is the same as the result of predicate $P$.
 \end{mydef}
 
+To evaluate a predicate there is some function $PE$ that takes a mapping from node identifiers to a user-defined structure of valued about that node and returns a boolean. By executing this function the result of a predicate is obtained. The input can be obtain through various means. The next chapter will discuss how this function is evaluated and how the required information can be disseminated to the node that requires it to perform the evaluation.
 
-We intend to deal with \emph{stateless} \emph{application} predicates. An few examples of these are: (1) checking that there is one and only one cluster head, (2) that in an aggregations tree your parent is closer than your children, and (3) checking that the average temperature of the nodes surrounding yourself is within some tolerance of your temperature. The idea here being that developers can check their application is in a state that is correct and also can be told that their application is in an incorrect state. This last point is useful because, for example, in the case of clustering if a node reports it has no cluster head, then the manager of the network can simply run a reconfiguration phase.
+\subsection{Algorithm Descriptions}
 
-Another important issue that we intend to address is where should a predicate be evaluated in the network. Should it be evaluated in the network (by gathering data from surrounding motes) or should the predicate be evaluated at the base station after the network's data has been aggregated to it? Investigating these means of evaluation is important as there may be a trade-off between energy and accuracy of predicate evaluation. As these two points are important metrics to us we will also investigate if there is a benefit to using periodic or event-driven communication of data. WSNs typically use event driven communication \cite{?} as that tends to save energy \cite{6202334}, however, it may be the case that periodic communication of data produces better results. Overall we expect some predicates will produce better results in some situations, so we will vary the applications predicates that we will test.
 
-Finally, as part of this project we looked into running our applications on physical hardware (instead of just simulating our software). In doing so we gained practical experience that we believe will be useful for people starting to develop for WSN platforms in the future. We decided not to investigate our algorithms extensively on the hardware due to logistical constraints (where we could do it) and time constraints.
-\end{comment}

@@ -120,53 +120,67 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
     % 
     \null Process $j$ - \verb|n-hop-req|\\
     %
-    \null \textbf{parameters}\\
-    %
-    \null\qq \% The number of hops left to send a message\\
-    \null\qq \var{hop\_limit}: int\\~\\
-    %
     %
     \null \textbf{variables}\\
     %
-    \null\qq \%The nodes a given message was seen from\\
-    \null\qq \var{mote\_records}: map\\~\\
+    \null\qq \%The key is the node this entry is about.\\
+    \null\qq \%The entry contains how many hops away the node is,\\
+    \null\qq \%what node a reply should be forwarded to and the message id the entry is relevant to.\\
+    \null\qq \var{records}: map of address to (\var{hops}: int, \var{forwardTo}: address, \var{id}: int) init $\emptyset$;\\~\\
+    %
+    \null\qq \var{messageId}: int init 1;\\~\\
+    %
+    \null\qq \var{sendData}: timer init $\bot$;\\~\\
     %
     %
     \null \textbf{constants}\\
     %
     \null\qq \% Send Data Period, the time between receiving a request for data, and sending it\\
-    \null\qq \var{$P_{send\_data}$}: time;\\~\\
+    \null\qq \var{$P_{sendData}$}: time;\\~\\
     %
     %
     \null \textbf{actions}\\
     %
     %
-    \null\qq \% Receiving Message\\
-    \null\qq \emph{receive}::~\res{recv}$\langle source, data, hop\_count, id\rangle \rightarrow$\\
-    \null\qq\qq \res{if} ($mote\_records.contains(id)$) \res{then}\\
-    \null\qq\qq\qq \res{if} ($mote\_records.hop\_count(id) < hop\_count$) \res{then} \\
-    \null\qq\qq\qq\qq \res{stbroadcast.send($message$,$hop\_count -1$)};\\
-    \null\qq\qq\qq\qq \res{$mote\_records$.replace($id$,$hop\_count$)};\\
-    \null\qq\qq\qq\qq \res{\var{$P_{send\_data}$}.restart()}\\
+    \null\qq \% Sending Data Request Message\\
+    \null\qq \emph{sendRequest}:~\res{function}$\langle \var{hops}\rangle\rightarrow$\\
+    \null\qq\qq \res{bcast}$\langle \var{j}, \var{j}, \var{messageId}, \var{hops}, 0\rangle$;\\
+    \null\qq\qq $\var{messageId} \assign \var{messageId} + 1$;\\~\\
+    %
+    %
+    \null\qq \% Receiving Data Request Message\\
+    \null\qq \emph{receiveRequest}::~\res{recv}$\langle originator, sender, id, ttl, hops\rangle \rightarrow$\\
+    \null\qq\qq \res{if} ($\var{originator} \not= \var{j}$) \res{then}\\
+    \null\qq\qq\qq $\var{respond} \assign False$;\\
+    \null\qq\qq\qq \res{if} ($\var{originator} \in \res{keys}(\var{records})$) \res{then}\\
+    \null\qq\qq\qq\qq $(\var{recHops}, \var{recForwardTo}, \var{recId}) \assign \var{records}[\var{originator}]$;\\
+    \null\qq\qq\qq\qq \res{if} ($\var{hops} < \var{recHops}$) \res{then}\\
+    \null\qq\qq\qq\qq\qq $\var{records}[\var{originator}] \assign (\var{hops}, \var{sender}, \var{recId})$;\\
+    \null\qq\qq\qq\qq \res{fi}; \\
+    \null\qq\qq\qq\qq $(\var{recHops}, \var{recForwardTo}, \var{recId}) \assign \var{records}[\var{originator}]$;\\
+    \null\qq\qq\qq\qq \res{if} ($\var{id} > \var{recId}$) \res{then}\\
+    \null\qq\qq\qq\qq\qq $\var{records}[\var{originator}] \assign (\var{recHops}, \var{recForwardTo}, \var{id})$;\\
+    \null\qq\qq\qq\qq\qq $\var{respond} \assign True$;\\
+    \null\qq\qq\qq\qq \res{fi}; \\
+    \null\qq\qq\qq \res{else}\\
+    \null\qq\qq\qq\qq $\var{records}[\var{originator}] \assign (\var{hops}, \var{sender}, \var{id})$;\\
+    \null\qq\qq\qq\qq $\var{respond} \assign True$;\\
     \null\qq\qq\qq \res{fi;}\\
-    \null\qq\qq \res{else}\\
-    \null\qq\qq\qq \res{stbroadcast.send($message$,$hop\_count -1$)};\\
-    \null\qq\qq\qq \res{$mote\_records$.add($id$,$data$,$source$,$hop\_count$)};\\
-    \null\qq\qq\qq \res{\var{$P_{send\_data}$}.start()}\\
+    \null\qq\qq\qq \res{if} ($respond$)\\
+    \null\qq\qq\qq\qq $(\var{recHops}, \var{recForwardTo}, \var{recId}) \assign \var{records}[\var{originator}]$;\\
+    \null\qq\qq\qq\qq \res{unicast.send}$\langle originator, j, 0, \res{nodeData}() \rangle$ \res{to} \var{recForwardTo};\\
+    \null\qq\qq\qq\qq \res{bcast}$\langle \var{originator}, \var{j}, \var{id}, \var{hops} - 1, \var{hops} + 1\rangle$;\\
+    \null\qq\qq\qq \res{fi;}\\
     \null\qq\qq \res{fi;}\\~\\
     %
     %
-    \null\qq \% Sending Data\\
-    \null\qq \emph{send\_data}:~\res{timeout}(\var{$P_{send\_data}$})$\rightarrow$\\
-    \null\qq\qq \res{runicast.send}($j$,$mote\_records.getMote(id)$, $data$);\\~\\
-    %
-    %
-    \null\qq \% Recieved Data\\
-    \null\qq \emph{recv\_data}:~\res{runicast.recv}$\langle source, data, id\rangle \rightarrow$\\
-    \null\qq\qq \res{if} ($mote\_records.getMote(id)$ == $self$) \res{then}\\
-    \null\qq\qq\qq \% Process Data\\
+    \null\qq \% Received Data Forward Message\\
+    \null\qq \emph{forwardData}:~\res{runicast.recv}$\langle target, sender, hops, data\rangle \rightarrow$\\
+    \null\qq\qq $(\var{recHops}, \var{recForwardTo}, \var{recId}) \assign \var{records}[\var{target}]$;\\
+    \null\qq\qq \res{if} ($\var{j} = \var{target}$) \res{then}\\
+    \null\qq\qq\qq \res{deliverToUser}(\var{sender}, \var{hops}, \var{data});\\
     \null\qq\qq \res{else}\\
-    \null\qq\qq\qq \res{runicast.send}($mote\_records.getMote(id)$, $data$);\\
+    \null\qq\qq\qq \res{unicast.send}$\langle target, sender, hops + 1, data \rangle$ \res{to} \var{recForwardTo};\\
     \null\qq\qq \res{fi;}\\
     %
     %
@@ -332,7 +346,7 @@ The user of this library needs to implement four important functions:
     %
     \null\qq \% Send data function\\
     \null\qq \emph{send}::~\res{function}$\langle data\rangle \rightarrow$\\
-    \null\qq\qq \res{multipacket.unicast}$\langle \var{bestparent}, data\rangle$;\\~\\
+    \null\qq\qq \res{multipacket.send}$\langle j, data\rangle$ \res{to} \var{bestparent};\\~\\
     %
     %
     \null\qq \% Set up tree: receive message\\
@@ -347,14 +361,14 @@ The user of this library needs to implement four important functions:
     \null\qq\qq\qq \res{else} \\
     \null\qq\qq\qq\qq $\var{stored} \assign \otimes_{read}(data)$; \\
     \null\qq\qq\qq\qq $\var{collecting} \assign True$; \\
-    \null\qq\qq\qq\qq \res{set}($\mathit{aggregation}$, $P_{aggregation}$); \\
+    \null\qq\qq\qq\qq \res{set}($\var{aggregation}$, $P_{aggregation}$); \\
     \null\qq\qq\qq \res{fi}; \\
     \null\qq\qq \res{fi}; \\~\\
     %
     %
     \null\qq \% Set up tree: finish detecting parents\\
     \null\qq \emph{finishagg}::~\res{timeout}(\var{aggregation}) $\rightarrow$\\
-    \null\qq\qq \res{multipacket.unicast}$\langle \var{bestparent}, \otimes_{write}(\var{stored})\rangle$;\\
+    \null\qq\qq \res{multipacket.send}$\langle j, \otimes_{write}(\var{stored})\rangle$ \res{to} \var{bestparent};\\
     \null\qq\qq $\var{collecting} \assign False$; \\
     \null\qq\qq $\var{stored} \assign \bot$; \\
     %

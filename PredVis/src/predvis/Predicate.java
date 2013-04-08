@@ -35,15 +35,19 @@ public class Predicate {
     private int[] bytecode;
     
     public Predicate() {
-        id = getId();
+        id = nextId();
     }
     
     public Predicate(String name, File scriptFile) {
-        id = getId();
+        id = nextId();
         this.name = name;
         this.scriptFile = scriptFile;
         compileScript();
         assembleScript();
+    }
+    
+    public int getId() {
+        return id;
     }
     
     public String getName() {
@@ -118,7 +122,7 @@ public class Predicate {
     }
     
     private boolean compileScript() {
-        String target;
+        String tgt;
         HashMap<Integer, Integer> vdMap = new HashMap<Integer, Integer>();
         
         InputStream in;
@@ -136,13 +140,13 @@ public class Predicate {
             }
             
             //Run Hoppy.
-            target = HOPPY.compile(out, vdMap);
+            tgt = HOPPY.compile(out, vdMap);
         } catch (Exception e) {
             return false;
         }
         
         //Store predicate target.
-        this.target = target;
+        this.target = tgt;
         
         //Store generated predicate assembly code.
         assembly = out.toString();
@@ -215,7 +219,7 @@ public class Predicate {
     	return false;
     }
     
-    private int getId() {
+    private static int nextId() {
         return NEXT_ID++;
     }
 }

@@ -78,7 +78,7 @@ Finally, all of these custom containers are tested by a test suite that checks f
     \null\qq\qq $\var{changed} \assign \var{previous} = \bot \lor \var{differs}(\var{data}(), \var{previous})$;\\
     \null\qq\qq \res{if} ($\var{force} \lor \var{changed}$) \res{then}\\
     \null\qq\qq\qq $\var{previous} \assign \var{data}()$;\\
-    \null\qq\qq\qq \res{nhopflood}$\langle j, \var{previous}, \var{distance}\rangle$;\\
+    \null\qq\qq\qq \res{nhopflood.send}$\langle j, \var{previous}, \var{distance}\rangle$;\\
     \null\qq\qq \res{fi}; \\
     \null\qq\qq \res{set}($\mathit{period}$, $P_{generate}$); \\~\\
     %
@@ -88,7 +88,7 @@ Finally, all of these custom containers are tested by a test suite that checks f
     \null\qq\qq \% Prevent delivery if being told that the current node's data has changed\\
     \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
     \null\qq\qq\qq \% Inform library caller of data change\\
-    \null\qq\qq\qq \res{data-changed-callback}(\var{data}, \var{hops}); \\
+    \null\qq\qq\qq \res{event-update.callback}(\var{data}, \var{hops}); \\
     \null\qq\qq \res{fi}; \\
     %
     %
@@ -118,7 +118,7 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
   \centering
   \begin{boxedminipage}{\linewidth}
     % 
-    \null Process $j$ - \verb|n-hop-req|\\
+    \null Process $j$ - \res{n-hop-req}\\
     %
     %
     \null \textbf{variables}\\
@@ -143,7 +143,7 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
     %
     %
     \null\qq \% Sending Data Request Message\\
-    \null\qq \emph{sendRequest}::~\res{function}$\langle \var{hops}\rangle\rightarrow$\\
+    \null\qq \emph{nhopreq.send}::~\res{function}$\langle \var{hops}\rangle\rightarrow$\\
     \null\qq\qq \res{bcast}$\langle \var{j}, \var{j}, \var{messageId}, \var{hops}, 0\rangle$;\\
     \null\qq\qq $\var{messageId} \assign \var{messageId} + 1$;\\~\\
     %
@@ -175,10 +175,10 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
     %
     %
     \null\qq \% Received Data Forward Message\\
-    \null\qq \emph{forwardData}::~\res{runicast.recv}$\langle target, sender, hops, data\rangle \rightarrow$\\
+    \null\qq \emph{forwardData}::~\res{unicast.recv}$\langle target, sender, hops, data\rangle \rightarrow$\\
     \null\qq\qq $(\var{recHops}, \var{recForwardTo}, \var{recId}) \assign \var{records}[\var{target}]$;\\
     \null\qq\qq \res{if} ($\var{j} = \var{target}$) \res{then}\\
-    \null\qq\qq\qq \res{deliverToUser}(\var{sender}, \var{hops}, \var{data});\\
+    \null\qq\qq\qq \res{nhopreq.deliver}(\var{sender}, \var{hops}, \var{data});\\
     \null\qq\qq \res{else}\\
     \null\qq\qq\qq \res{unicast.send}$\langle target, sender, hops + 1, data \rangle$ \res{to} \var{recForwardTo};\\
     \null\qq\qq \res{fi;}\\
@@ -201,7 +201,7 @@ When a node receives a flooded message it checks to see what the time-to-live (T
   \centering
   \begin{boxedminipage}{\linewidth}
     % 
-    \null Process $j$ - \verb|n-hop-flood|\\
+    \null Process $j$ - \res{n-hop-flood}\\
     %
     \null \textbf{parameters}\\
     %
@@ -220,11 +220,11 @@ When a node receives a flooded message it checks to see what the time-to-live (T
     %
     \null\qq \% The queue of packets that need to be broadcast\\
     \null\qq \% Tuple contains: (id, sender, ttl, hops, retx, data)\\
-    \null\qq \var{packetQueue}: list of (int, address, int, int, int, struct) init $\emptyset$;\\~\\
+    \null\qq \var{packetQueue}: queue of (int, address, int, int, int, struct) init $\emptyset$;\\~\\
     %
     \null\qq \% The map of all messages received from the nodes N-Hop neighbours\\
     \null\qq \% The entry contains a tuple of (packet id, hops)\\
-    \null\qq \var{seen}: map of address to (int, int) init $\emptyset$;\\~\\
+    \null\qq \var{seen}: map of address to (int, int) init $\emptyset$;\\
   \end{boxedminipage}
   \caption{N-Hop Flood Algorithm}
   \label{fig:n-hop-flood-algorithm}
@@ -238,7 +238,7 @@ When a node receives a flooded message it checks to see what the time-to-live (T
     %
     %
     \null\qq \% Sending Message\\
-    \null\qq \emph{send}::~\res{function}$\langle \var{data}, \var{hops}\rangle\rightarrow$\\
+    \null\qq \emph{nhopflood.send}::~\res{function}$\langle \var{data}, \var{hops}\rangle\rightarrow$\\
     \null\qq\qq \res{if} ($hops \not= 0$) \res{then}\\
     \null\qq\qq\qq \res{append}(\var{packetQueue}, (\var{id}, j, \var{hops}, 0, 0, \var{data})); \\
     \null\qq\qq\qq $\var{id} \assign \var{id} + 1$; \\
@@ -273,16 +273,16 @@ When a node receives a flooded message it checks to see what the time-to-live (T
     \null\qq\qq\qq\qq $\res{seen}[\var{originator}] \assign (id, hops)$;\\
     \null\qq\qq\qq\qq $\var{seenBefore} \assign False$;\\
     \null\qq\qq\qq \res{else if} ($\var{seenId} = \var{id} \land \var{seenHops} > \var{hops}$) \res{then}\\
-    \null\qq\qq\qq\qq \res{deliverToUser}(\var{originator}, \var{hops}, \var{seenHops}, \var{data});\\
+    \null\qq\qq\qq\qq \res{nhopflood.deliver}(\var{originator}, \var{hops}, \var{seenHops}, \var{data});\\
     \null\qq\qq\qq\qq $\res{seen}[\var{originator}] \assign (seenId, hops)$;\\
     \null\qq\qq\qq \res{fi};\\
     \null\qq\qq \res{fi;}\\
     \null\qq\qq \res{if} ($\lnot\var{seenBefore}$) \res{then}\\
-    \null\qq\qq\qq \res{deliverToUser}($\var{originator}, \var{hops}, 0, \var{data}$);\\
+    \null\qq\qq\qq \res{nhopflood.deliver}($\var{originator}, \var{hops}, 0, \var{data}$);\\
     \null\qq\qq\qq \res{if} ($\var{ttl} > 0$) \res{then}\\
     \null\qq\qq\qq\qq \res{append}(\var{packetQueue}, (\var{id}, \var{originator}, \var{ttl}, \var{hops}, 0, \var{data})); \\
     \null\qq\qq\qq \res{fi};\\
-    \null\qq\qq \res{fi;}\\~\\
+    \null\qq\qq \res{fi;}\\
     %
     %
   \end{boxedminipage}
@@ -392,7 +392,7 @@ The user of this library needs to implement four important functions:
     %
     %
     \null\qq \% Send data function\\
-    \null\qq \emph{send}::~\res{function}$\langle data\rangle \rightarrow$\\
+    \null\qq \emph{treeagg.send}::~\res{function}$\langle data\rangle \rightarrow$\\
     \null\qq\qq \res{multipacket.send}$\langle j, data\rangle$ \res{to} \var{bestparent};\\~\\
     %
     %
@@ -401,7 +401,7 @@ The user of this library needs to implement four important functions:
     \null\qq\qq \res{if} ($j = sink$) \res{then} \\
     \null\qq\qq\qq $\var{stored} \assign \otimes_{read}(data)$; \\
     \null\qq\qq\qq $\var{stored} \assign \otimes_{own}(\var{stored})$; \\
-    \null\qq\qq\qq $\res{deliver}(\otimes_{write}(\var{stored}))$; \\
+    \null\qq\qq\qq $\res{treeagg.deliver}(\otimes_{write}(\var{stored}))$; \\
     \null\qq\qq \res{else} \\
     \null\qq\qq\qq \res{if} ($\var{collecting}$) \res{then} \\
     \null\qq\qq\qq\qq $\var{stored} \assign \otimes_{agg}(\var{stored}, \var{data})$; \\
@@ -437,18 +437,18 @@ To aid in debugging a vital piece of information that will be required about the
 
 The first was to add more features to Contiki's neighbour detect library. As that library was very simple and supported only saying that a neighbour had been detected (with the option of providing a integer value as well). As we were aiming for this code to support changes in the network, such as nodes leaving or joining neighbourhoods, we added the concept of a round. Instead of just knowing about neighbours at that instant in time, it allowed the library to maintain some kind of history about what nodes were neighbours of other nodes in the past. Whenever new nodes are detected they are recorded, however, if a node has not been detected for a certain number of rounds then that node is removed from the record.
 
-\begin{figure}[ht!]
+\begin{figure}[H]
 \centering
 \subfigure[Node A requesting neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-request}}
 \subfigure[Node A receiving neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-report}}
 \caption{Nodes asking for and receiving neighbour data}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
     % 
-    \null Process $j$ - \res{neighbourdetect}\\
+    \null Process $j$ - \res{neighbour-detect}\\
     %
     \null \textbf{variables}\\
     %
@@ -475,13 +475,13 @@ The first was to add more features to Contiki's neighbour detect library. As tha
     \null\qq \emph{round}::~\res{timeout}(\var{period}) $\rightarrow$\\
     \null\qq\qq $\var{previous} \assign \{ (addr, round) \in \var{previous} | count - round \geq missed \}$;\\
     \null\qq\qq \% Tell library caller that a round is finished\\
-    \null\qq\qq \res{round-complete}(\res{values}(previous), \var{count});\\
+    \null\qq\qq \res{neighbour-detect.callback}(\res{values}(previous), \var{count});\\
     \null\qq\qq $\var{count} \assign \var{count} + 1$; \\
     \null\qq\qq \res{set}($\mathit{period}$, $P_{round}$); \\~\\
     %
     %
     \null\qq \% Receiving Neighbour Discovery message\\
-    \null\qq \emph{neighbour}::~\res{neighbour\_discovery.recv}$\langle source, round\rangle \rightarrow$\\
+    \null\qq \emph{neighbour}::~\res{neighbour-discovery.recv}$\langle source, round\rangle \rightarrow$\\
     \null\qq\qq \% Update the round we last saw this node\\
     \null\qq\qq \res{if} ($source \in \res{keys}(\var{previous})$) \res{then} \\
     \null\qq\qq\qq \res{if} ($round > \var{previous}[\var{source}]$) \res{then} \\
@@ -515,23 +515,18 @@ For this to be useful we needed a way to get this data back to the sink node. Th
     \null \textbf{variables}\\
     %
     \null\qq \% Boolean set to true when a node is elected to be a clusterhead\\
-    %
     \null\qq \var{is\_CH}: bool init $False$;\\~\\
     %
     \null\qq \% Bool set to true on receipt of first setup message\\
-    %
     \null\qq \var{seen\_setup}: bool init $False$;\\~\\
     %
     \null\qq \% Hop distance to best clusterhead\\
-    %
     \null\qq \var{best\_hop}: int;\\~\\
     %
     \null\qq \% Address of best clusterhead\\
-    %
     \null\qq \var{our\_CH}: address;\\~\\
     %
     \null\qq \% Newest setup message received\\
-    %
     \null\qq \var{msg}: struct;\\~\\
     %
     \null \textbf{constants}\\
@@ -600,27 +595,21 @@ In our implementation, the network initialisation phase occurs when an applicati
     \null \textbf{variables}\\
     %
     \null\qq \% Boolean set to true when a node is elected to be a clusterhead\\
-    %
     \null\qq \var{is\_CH}: bool init $False$;\\~\\
     %
     \null\qq \% Bool set to true on receipt of first setup message\\
-    %
     \null\qq \var{seen\_setup}: bool init $False$;\\~\\
     %
     \null\qq \% Hop distance to best clusterhead\\
-    %
     \null\qq \var{best\_hop}: int;\\~\\
     %
     \null\qq \% Address of best clusterhead\\
-    %
     \null\qq \var{our\_CH}: address;\\~\\
     %
     \null\qq \% The number of clusterheads above the node in the hierarchy\\
-    %
     \null\qq \var{our\_level}: int;\\~\\
     %
     \null\qq \% Newest setup message received\\
-    %
     \null\qq \var{msg}: struct;\\~\\
     %
     \null \textbf{constants}\\

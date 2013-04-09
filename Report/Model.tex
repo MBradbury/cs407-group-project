@@ -1,6 +1,8 @@
 % !TeX root = Report.tex
 \section{Model}
 
+\subsection{Description}
+
 As stated in the introduction we are investigating developing tools to aid in debugging the distributed programs running on wireless sensor networks. We aim to do this by implementing libraries that use different technique to check predicates, with a focus on correctly evaluating these predicates. In order to do this we first need to model the situation that our libraries will be used in to aid in the explanation of our findings.
 
 To begin with we model a wireless sensor network as a graph $G = (V, E)$ where $V$ is a set of nodes. If we have two nodes $u$ and $v$ that can communicate $\{u, v\} \in E$, we assume that this communication is bi-directional. Every node in the network has a unique identifier 
@@ -23,4 +25,198 @@ To evaluate a predicate there is some function $PE$ that takes a mapping from no
 
 \subsection{Algorithm Descriptions}
 
+To define the algorithms developed, a custom pseudo-language is used which for the majority is the same as that used in \cite{MSCS310}. Each box contains an application running on a mote or a library an application could be using (although it is possible for one of these boxes to be split up to represent the algorithm better). Within this box there are four sections \textbf{parameters}, \textbf{variables}, \textbf{constants} and \textbf{actions}. The \textbf{variables} section details modifiable variables that exist within the program. The \textbf{constants} section details network knowledge or network parameters that cannot be changed by the program, these constants will be the same for all nodes that have them. The \textbf{parameters} section contains variables that are passed to a library when it is initialised.
+
+The \textbf{actions} section contains the methods which depending on the type will be called when a library or program starts up, when a function defined is called when a message is received or after a timer has timed out. The first type of action (receiving a message) is demonstrated in \autoref{RcvAlgoEg}, where `$MessageContents...$' is the list of variables contained within the message.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Receiving Message\\
+    \null\qq \emph{RcvFunction}::~\res{rcv}$\langle MessageContents...\rangle \rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Receive Message Algorithm}
+  \label{RcvAlgoEg}
+\end{figure}
+
+The second type of action (timer timeout) is demonstrated in \autoref{SendAlgoEg}. The function $\res{set}$ is used to restart the timer, so it is called again once the timer times out again. If $\res{set}$ is not called then this function will not be called again.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{period}: timer init $\alpha$;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% How often the message is broadcasted\\
+    \null\qq $\alpha$: time;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    \null\qq \emph{SendFunction}::~\res{timeout}(\var{period}) $\rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    \null\qq\qq \res{set}($\mathit{rate}$, $\alpha$); \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Send Message Algorithm}
+  \label{SendAlgoEg}
+\end{figure}
+
+The third type of action (initialisation) shown in \autoref{InitAlgoEg} is called when a library or process is started up. It is typically used to set up some initial state or fire some setup events. Once it has been run once it is never run again.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \emph{starup}::~\res{init} $\rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Initialisation Function}
+  \label{InitAlgoEg}
+\end{figure}
+
+The fourth and final type of action is a function shown in \autoref{FuncAlgoEg}. These are only every defined in processes intended to be libraries providing some kind of network abstraction and are typically used to expose a method that is used to send some data. Where `$Parameters...$' is a list of arguments that can be passed to the function.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Function definition\\
+    \null\qq \emph{func}::~\res{function}$\langle Parameters...\rangle \rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Function definition in an Algorithm}
+  \label{FuncAlgoEg}
+\end{figure}
+
+
+Variables and constants are given types and can optionally be initialised to a given constant. They can be initialised with $\bot$ to indicate that their value has not been set. Also anything after a `$\%$' is considered a comment.
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    %
+    \null\qq \% Normal broadcast \\
+    \null\qq \res{bcast}$\langle Message\rangle$;\\~\\
+    %
+    \null\qq \emph{receive}::~\res{recv}$\langle Message\rangle \rightarrow$\\
+    \null\qq\qq \% Body goes here\\~\\~\\
+    %
+    %
+    \null\qq \% Unicast, i.e. broadcast a message to a single target node,\\
+    \null\qq \% only that node will receive the message \\
+    \null\qq \res{unicast.send}$\langle Message\rangle$ \res{to} \var{target};\\~\\
+    %
+    \null\qq \emph{receive}::~\res{unicast.recv}$\langle Message\rangle \rightarrow$\\
+    \null\qq\qq \% Body goes here\\~\\~\\
+    %
+    %
+    \null\qq \% User defined library send and receive \\
+    \null\qq \res{user.send}$\langle Message\rangle$;\\~\\
+    %
+    \null\qq \emph{receive}::~\res{user.recv}$\langle Message\rangle \rightarrow$\\
+    \null\qq\qq \% Body goes here\\~\\
+    %
+    \null\qq \res{user.deliver}$\langle Message\rangle$;\\~\\
+  \end{boxedminipage}
+  \caption{Types of basic message sending and receiving}
+  \label{BCASTEg}
+\end{figure}
+
+To send messages we use $\res{bcast}$ or \res{send} and to receive a message we use $\res{recv}$, of which there are several varieties required as shown in \autoref{BCASTEg}. When using the user defined syntax the \res{user} part will be replaced with the name of the library. The user defined network functions also have a \res{user.deliver} function, when this is called it will simply pass the message to the \res{user.receive} function of the user of the library. 
+
+To help implement our algorithms we also use common programming libraries such as a map and queue. The following shows how the syntax is defined and used.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{m}: map init $\emptyset$;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    \null\qq \% Function definition\\
+    \null\qq \emph{func}::~\res{function}$\langle Parameters...\rangle \rightarrow$\\
+    \null\qq\qq \% Assign a value to some key\\
+    \null\qq\qq $\var{m}[1] \assign 2$;\\~\\
+    %
+    \null\qq\qq \% Update a value assigned to some key\\
+    \null\qq\qq $\var{m}[1] \assign 4$;\\~\\
+    %
+    \null\qq\qq \% Get the set of keys in the map\\
+    \null\qq\qq $\res{keys}(\var{m})$;\\~\\
+    %
+    \null\qq\qq \% Get the set of value in the map\\
+    \null\qq\qq $\res{values}(\var{m})$;\\~\\
+    %
+    \null\qq\qq \% Remove a key and its associated value from the map\\
+    \null\qq\qq $\res{remove}(\var{m}, 2)$;\\~\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Map functions}
+\end{figure}
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{q}: queue init $\emptyset$;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    \null\qq \% Function definition\\
+    \null\qq \emph{func}::~\res{function}$\langle Parameters...\rangle \rightarrow$\\
+    \null\qq\qq \% Append an item (add an item to the end of the queue)\\
+    \null\qq\qq $\res{append}(\var{q}, 1)$;\\~\\
+    %
+    \null\qq\qq \% Prepend an item (add an item to the front of the queue)\\
+    \null\qq\qq $\res{prepend}(\var{q}, 2)$;\\~\\
+    %
+    \null\qq\qq \% Look at the first item of the queue\\
+    \null\qq\qq $\res{peek}(\var{q})$;\\~\\
+    %
+    \null\qq\qq \% Remove the first item of the queue\\
+    \null\qq\qq $\res{pop}(\var{q})$;\\~\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Queue functions}
+\end{figure}
 

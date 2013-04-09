@@ -10,4 +10,5 @@ set ytics auto
 set terminal pdf enhanced
 set output "graph.pdf" 
 plot "graph.dat" u 1:2:3 w errorlines ti "PELE",\
-"graph.dat" u 1:4:5 w errorlines ti "PELP"
+"graph.dat" u 1:4:5 w errorlines ti "PEGP",\
+"graph.dat" u 1:6:7 w errorlines ti "PELP"

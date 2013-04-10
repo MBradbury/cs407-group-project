@@ -144,7 +144,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		last->hops = hops;
 	}
 	// Seen before but this is from a shorter route
-	else if (last->id == packet_id && last->hops < hops)
+	else if (last->id == packet_id && last->hops > hops)
 	{
 		// Have seen before, but re-deliver
 		conn->receive_fn(
@@ -160,7 +160,8 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 			linked_list_continue(&conn->packet_queue, elem);
 			elem = linked_list_next(elem))
 		{
-			packet_details_t * data = (packet_details_t *) linked_list_data(&conn->packet_queue, elem);
+			packet_details_t * data = (packet_details_t *)
+				linked_list_data(&conn->packet_queue, elem);
 
 			if (rimeaddr_cmp(&data->sender, originator) && data->id == last->id)
 			{

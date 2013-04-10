@@ -1,21 +1,222 @@
 % !TeX root = Report.tex
 \section{Model}
 
-\begin{comment}
-For our project we focus on a subset of the problem. Instead of handling many low level faults (that has been approached before \cite{NodeMD}), we are instead going to focus on bugs that occur in the applications that users develop for WSNs. It is important that good debugging tools are available for the platform being developed on because they will help improve the quality of the software developed for those platforms \cite{?}.
+\subsection{Description}
+
+As stated in the introduction we are investigating developing tools to aid in debugging the distributed programs running on wireless sensor networks. We aim to do this by implementing libraries that use different technique to check predicates, with a focus on correctly evaluating these predicates. In order to do this we first need to model the situation that our libraries will be used in to aid in the explanation of our findings.
+
+To begin with we model a wireless sensor network as a graph $G = (V, E)$ where $V$ is a set of nodes. If we have two nodes $u$ and $v$ that can communicate $\{u, v\} \in E$, we assume that this communication is bi-directional. Every node in the network has a unique identifier 
 
 \begin{mydef}
-\emph{Stateless Predicate}: Without state. A stateless predicate will only be able to evaluate some truth from some data based on what it knows at that instance. It does not have any history of the data it has used to evaluate the predicate in the past, so cannot evaluate a relationship between current data and past data.
+\emph{$m$-Hop Neighbourhood}: Given a node $n$ the $m$-hop neighbourhood of that node is the set of nodes that are within $m$ hops of node $n$. When we refer to this neighbourhood it will not contain the node $n$.
 \end{mydef}
+
+As we are dealing with simulators and physical hardware, there is no assumption of reliable links between nodes. Techniques will be described later on that increase the probability of a message reaching its target, but do not ensure it.
+
+Every node in the network is assumed to have the same hardware and thus the same capabilities. As every node has the same capabilities, every node has similar properties such as: transmission range and initial power levels. We assume that the network is working in isolation to other networks and is not receiving other electromagnetic interference.
+
+When checking predicates we much deal with the notion of the \emph{correctness of evaluation} of a predicate. As can be seen from the definition this involved the notion of time because the values used to evaluate the predicate can change over time.
 
 \begin{mydef}
-\emph{Application Predicate}: A predicate that evaluates some data on a running application.
+\emph{Correctly Evaluated Predicate}: A predicate $P$ is correctly evaluated at time $\tau$ if the results of evaluating that predicate with global knowledge at time $\tau$ is the same as the result of predicate $P$.
 \end{mydef}
 
+To evaluate a predicate there is some function $PE$ that takes a mapping from node identifiers to a user-defined structure of valued about that node and returns a boolean. By executing this function the result of a predicate is obtained. The input can be obtain through various means. The next chapter will discuss how this function is evaluated and how the required information can be disseminated to the node that requires it to perform the evaluation.
 
-We intend to deal with \emph{stateless} \emph{application} predicates. An few examples of these are: (1) checking that there is one and only one cluster head, (2) that in an aggregations tree your parent is closer than your children, and (3) checking that the average temperature of the nodes surrounding yourself is within some tolerance of your temperature. The idea here being that developers can check their application is in a state that is correct and also can be told that their application is in an incorrect state. This last point is useful because, for example, in the case of clustering if a node reports it has no cluster head, then the manager of the network can simply run a reconfiguration phase.
+\subsection{Algorithm Descriptions}
 
-Another important issue that we intend to address is where should a predicate be evaluated in the network. Should it be evaluated in the network (by gathering data from surrounding motes) or should the predicate be evaluated at the base station after the network's data has been aggregated to it? Investigating these means of evaluation is important as there may be a trade-off between energy and accuracy of predicate evaluation. As these two points are important metrics to us we will also investigate if there is a benefit to using periodic or event-driven communication of data. WSNs typically use event driven communication \cite{?} as that tends to save energy \cite{6202334}, however, it may be the case that periodic communication of data produces better results. Overall we expect some predicates will produce better results in some situations, so we will vary the applications predicates that we will test.
+To define the algorithms developed, a custom pseudo-language is used which for the majority is the same as that used in \cite{MSCS310}. Each box contains an application running on a mote or a library an application could be using (although it is possible for one of these boxes to be split up to represent the algorithm better). Within this box there are four sections \textbf{parameters}, \textbf{variables}, \textbf{constants} and \textbf{actions}. The \textbf{variables} section details modifiable variables that exist within the program. The \textbf{constants} section details network knowledge or network parameters that cannot be changed by the program, these constants will be the same for all nodes that have them. The \textbf{parameters} section contains variables that are passed to a library when it is initialised.
 
-Finally, as part of this project we looked into running our applications on physical hardware (instead of just simulating our software). In doing so we gained practical experience that we believe will be useful for people starting to develop for WSN platforms in the future. We decided not to investigate our algorithms extensively on the hardware due to logistical constraints (where we could do it) and time constraints.
-\end{comment}
+The \textbf{actions} section contains the methods which depending on the type will be called when a library or program starts up, when a function defined is called when a message is received or after a timer has timed out. The first type of action (receiving a message) is demonstrated in \autoref{RcvAlgoEg}, where `$MessageContents...$' is the list of variables contained within the message.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Receiving Message\\
+    \null\qq \emph{RcvFunction}::~\res{rcv}$\langle MessageContents...\rangle \rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Receive Message Algorithm}
+  \label{RcvAlgoEg}
+\end{figure}
+
+The second type of action (timer timeout) is demonstrated in \autoref{SendAlgoEg}. The function $\res{set}$ is used to restart the timer, so it is called again once the timer times out again. If $\res{set}$ is not called then this function will not be called again.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{period}: timer init $\alpha$;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% How often the message is broadcasted\\
+    \null\qq $\alpha$: time;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    \null\qq \emph{SendFunction}::~\res{timeout}(\var{period}) $\rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    \null\qq\qq \res{set}($\mathit{rate}$, $\alpha$); \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Send Message Algorithm}
+  \label{SendAlgoEg}
+\end{figure}
+
+The third type of action (initialisation) shown in \autoref{InitAlgoEg} is called when a library or process is started up. It is typically used to set up some initial state or fire some setup events. Once it has been run once it is never run again.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \emph{starup}::~\res{init} $\rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Initialisation Function}
+  \label{InitAlgoEg}
+\end{figure}
+
+The fourth and final type of action is a function shown in \autoref{FuncAlgoEg}. These are only every defined in processes intended to be libraries providing some kind of network abstraction and are typically used to expose a method that is used to send some data. Where `$Parameters...$' is a list of arguments that can be passed to the function.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Function definition\\
+    \null\qq \emph{func}::~\res{function}$\langle Parameters...\rangle \rightarrow$\\
+    \null\qq\qq \% Function Contents\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Example Function definition in an Algorithm}
+  \label{FuncAlgoEg}
+\end{figure}
+
+
+Variables and constants are given types and can optionally be initialised to a given constant. They can be initialised with $\bot$ to indicate that their value has not been set. Also anything after a `$\%$' is considered a comment.
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    %
+    \null\qq \% Normal broadcast \\
+    \null\qq \res{bcast}$\langle Message\rangle$;\\~\\
+    %
+    \null\qq \emph{receive}::~\res{recv}$\langle Message\rangle \rightarrow$\\
+    \null\qq\qq \% Body goes here\\~\\~\\
+    %
+    %
+    \null\qq \% Unicast, i.e. broadcast a message to a single target node,\\
+    \null\qq \% only that node will receive the message \\
+    \null\qq \res{unicast.send}$\langle Message\rangle$ \res{to} \var{target};\\~\\
+    %
+    \null\qq \emph{receive}::~\res{unicast.recv}$\langle Message\rangle \rightarrow$\\
+    \null\qq\qq \% Body goes here\\~\\~\\
+    %
+    %
+    \null\qq \% User defined library send and receive \\
+    \null\qq \res{user.send}$\langle Message\rangle$;\\~\\
+    %
+    \null\qq \emph{receive}::~\res{user.recv}$\langle Message\rangle \rightarrow$\\
+    \null\qq\qq \% Body goes here\\~\\
+    %
+    \null\qq \res{user.deliver}$\langle Message\rangle$;\\~\\
+  \end{boxedminipage}
+  \caption{Types of basic message sending and receiving}
+  \label{BCASTEg}
+\end{figure}
+
+To send messages we use $\res{bcast}$ or \res{send} and to receive a message we use $\res{recv}$, of which there are several varieties required as shown in \autoref{BCASTEg}. When using the user defined syntax the \res{user} part will be replaced with the name of the library. The user defined network functions also have a \res{user.deliver} function, when this is called it will simply pass the message to the \res{user.receive} function of the user of the library. 
+
+To help implement our algorithms we also use common programming libraries such as a map and queue. The following shows how the syntax is defined and used.
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{m}: map init $\emptyset$;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    \null\qq \% Function definition\\
+    \null\qq \emph{func}::~\res{function}$\langle Parameters...\rangle \rightarrow$\\
+    \null\qq\qq \% Assign a value to some key\\
+    \null\qq\qq $\var{m}[1] \assign 2$;\\~\\
+    %
+    \null\qq\qq \% Update a value assigned to some key\\
+    \null\qq\qq $\var{m}[1] \assign 4$;\\~\\
+    %
+    \null\qq\qq \% Get the set of keys in the map\\
+    \null\qq\qq $\res{keys}(\var{m})$;\\~\\
+    %
+    \null\qq\qq \% Get the set of value in the map\\
+    \null\qq\qq $\res{values}(\var{m})$;\\~\\
+    %
+    \null\qq\qq \% Remove a key and its associated value from the map\\
+    \null\qq\qq $\res{remove}(\var{m}, 2)$;\\~\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Map functions}
+\end{figure}
+
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null process $j$\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{q}: queue init $\emptyset$;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    \null\qq \% Function definition\\
+    \null\qq \emph{func}::~\res{function}$\langle Parameters...\rangle \rightarrow$\\
+    \null\qq\qq \% Append an item (add an item to the end of the queue)\\
+    \null\qq\qq $\res{append}(\var{q}, 1)$;\\~\\
+    %
+    \null\qq\qq \% Prepend an item (add an item to the front of the queue)\\
+    \null\qq\qq $\res{prepend}(\var{q}, 2)$;\\~\\
+    %
+    \null\qq\qq \% Look at the first item of the queue\\
+    \null\qq\qq $\res{peek}(\var{q})$;\\~\\
+    %
+    \null\qq\qq \% Remove the first item of the queue\\
+    \null\qq\qq $\res{pop}(\var{q})$;\\~\\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Queue functions}
+\end{figure}
+

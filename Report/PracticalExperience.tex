@@ -1,7 +1,17 @@
 % !TeX root = Report.tex
 \section{Practical Experience}
 
+As part of this project we learnt a number of things that we feel would be useful to impart on anyone else that undertakes development of wireless sensor networks with Contiki and physical hardware. Many of the issues we encountered were simply down to poor documentation or it being located in difficult to find places. We hope that the information included in this section is helpful.
+
+\subsection{Contiki Logical Channels}
+
+One of the first confusing aspects of Contiki is that when creating connections you need to provide a channel number. Initially we believed that this channel caused the messages being sent by that connection to be broadcasted on a different frequency to. However, after some research we found that the channels are in fact virtual \cite{Dunkels:2007:ACA:1322263.1322295,tel-aviv-contiki-exercises}. By virtual we mean that the same radio frequency is used to broadcast and receive all messages, but when when a packet is received it is funnelled to the correct receiver by way of the channel included in the packet. If one wishes to change the frequency of the radio, the function \verb|cc2420_set_channel| should be used. There are many other functions capable of changing settings in the cc2420 radio header \footnote{core/dev/cc2420.h \url{http://contiki.sourceforge.net/docs/2.6/a00158_source.html}}. Another example API is \verb|cc2420_set_txpower| which allows the transmission power of the radio to be set.
+
+
 \subsection{Sensor Data Conversion}
+
+
+
 Sensors didn't provide data in human understandable formats. Instead they were provided in a raw format that were dependant on several hardware properties of the sensors (such as voltage levels and the number of bits of data a sensor can report). So we  had to convert from raw sensor data to expected results using equations found in \cite{sensiriondatasheet}.
 
 \subsection{Uploading to the motes}
@@ -126,6 +136,9 @@ Reducing firmware size is a very important issue for WSN applications. As there 
 \end{enumerate}
 
 The most important thing is to make small changes at a time and then test every change that is made. This way the impact of the change on the program's size can be observed and if it made the size larger, then the change can be reverted. Doing multiple changes at once, may be faster to code, but may not lead to the desired result quicker.
+
+
+Its is a shame that the developers of Contiki seem unwilling to support LTO (Link-Time Optimisations) that could greatly decrease the size of the binary and optimise the code \url{http://comments.gmane.org/gmane.comp.hardware.texas-instruments.msp430.gcc.user/11006}.
 
 \subsection{Memory Management}
 

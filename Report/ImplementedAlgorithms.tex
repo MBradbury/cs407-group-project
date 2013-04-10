@@ -704,7 +704,14 @@ To make sure that the channel allocation was suitable for TDMA, instead of nodes
 
 \subsection{Testing}
 
-When testing our implementations there were a number of difficulties due to the differences in what was being tested, how that library needed to tested and under what circumstances.
+When testing our implementations there were a number of difficulties due to the differences in what was being tested, how that library needed to tested and under what circumstances. For the containers library we wrote a number of tests that simply created the relevant container and then performed an action on it. The test succeeded if the state of the container was as expected after the execution of the test. These tests were run under various conditions, including under valgrind to ensure that there were no memory leaks in these critical pieces of code.
+
+The remaining libraries were difficult to test because they were communication libraries, so we developed applications that used them and made sure that in our tests these application performed as expected. To test Tree Aggregation without large packet support we developed a simple temperature and humidity averaging application. To test Tree Aggregation with large packet support (from our multi-packet library) we developed an application to aggregate neighbours back to the base station. This is the same application that we integrated as the neighbour detection library because it became vital for performing predicate evaluation at the base station.
+
+N-Hop Flood, N-Hop Request and Event Update were all tested as part of the behaviour of the relevant predicate evaluation library they were used in (PELE, PELP and PELE respectively). The libraries were developed to ensure that we had correctly encapsulated the required functionality which meant that if we discovered an issue in one component we knew where we would need to look for the error.
+
+When testing for memory leaks we couldn't use the same approach as used to test the container libraries. This is because sensor network application never truly terminate, meaning there is no good point to check that all the memory allocated has been freed. What we instead did was run the applications we had developed in the simulators for a long period of time until the application crashed. We then used the stack trace to work out where the error was and fix that component. For memory leaks we also had to manually inspect all the allocation and freeing routines to ensure that the memory that was allocated is freed.
+
 
 \subsection{Conclusion}
 

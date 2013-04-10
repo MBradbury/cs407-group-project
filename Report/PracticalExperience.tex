@@ -1,19 +1,35 @@
 % !TeX root = Report.tex
 \section{Practical Experience}
 
+As part of this project we learnt a number of things that we feel would be useful to impart on anyone else that undertakes development of wireless sensor networks with Contiki and physical hardware. Many of the issues we encountered were simply down to poor documentation or it being located in difficult to find places. We hope that the information included in this section is helpful.
+
+\subsection{Contiki Logical Channels}
+
+One of the first confusing aspects of Contiki is that when creating connections you need to provide a channel number. Initially we believed that this channel caused the messages being sent by that connection to be broadcasted on a different frequency to. However, after some research we found that the channels are in fact virtual \cite{Dunkels:2007:ACA:1322263.1322295,tel-aviv-contiki-exercises}. By virtual we mean that the same radio frequency is used to broadcast and receive all messages, but when when a packet is received it is funnelled to the correct receiver by way of the channel included in the packet. If one wishes to change the frequency of the radio, the function \verb|cc2420_set_channel| should be used. There are many other functions capable of changing settings in the cc2420 radio header \footnote{core/dev/cc2420.h \url{http://contiki.sourceforge.net/docs/2.6/a00158_source.html}}. Another example API is \verb|cc2420_set_txpower| which allows the transmission power of the radio to be set.
+
+\subsection{Power Levels}
+
+As mentioned in the previous section there exists an API that can be used to set the transmission power of the radio (\verb|cc2420_set_txpower|). We experimented using the hardware in the Computer Science building at the University of Warwick at different power levels. This was done because ideally we wished to experiment deploying the applications to the hardware and then testing them in a real world environment. The reason that we needed to investigate power levels was so that we could control the neighbourhood of motes to be a small space, otherwise we would have been very spread out through the building making it difficult to update motes as necessary. Unfortunately at the low transmission power that would allow nodes to communicate when within 15cm of one another but not when further away, we found that very few messages were received by nodes. We believe that this was caused by the environment that we were testing in (DCS building), as we expect the traffic on the 2.4GHz frequency to be very busy due to the number of phones and wireless devices in the department. Therefore, we recommend to do as many other who investigate sensor networks do, and test in remote areas away from interference from commonly used devices \cite{?}.
+
+
 \subsection{Sensor Data Conversion}
-Sensors didn't provide data in human understandable formats. Instead they were provided in a raw format that were dependant on several hardware properties of the sensors (such as voltage levels and the number of bits of data a sensor can report). So we  had to convert from raw sensor data to expected results using equations found in \cite{sensiriondatasheet}.
+
+The sensors attached to our hardware did not provide results in a binary format such as an integer or a float. This meant that we had to convert from their custom binary representation to the binary representation desired. Equations were provided by the manufacturer to perform these conversions \cite{sensiriondatasheet}, however, constants in those equations are heavily dependant on the specifications of the sensor (such as the voltage levels and the number of bits of data the sensor reports). So we recommend making sure that the correct constants are used by comparing the results of the sensor to a known accurate measuring device - such as a thermometer.
 
 \subsection{Uploading to the motes}
-Command used
+
+When uploading the code to the motes there is a good amount of documentation on how to do so. However, there are a certain number of other steps that need to be taken. Below is the line of code that needs to be entered into the terminal. This will make the code and it is important that a \verb|make clean| has been run on the command line before hand. The \verb|.upload| at the end of the project name informs the name script to upload to the motes and the \verb|MOTES| variable is used to locate the USB port the mote is connected to.
+
 \begin{listing}
 \begin{minted}[fontsize=\small]{bash}
-sudo make example-unicast.upload DEFINES=HELLOWORLD,NODE_ID=1 MOTES=/dev/ttyUSB0
+sudo make example-unicast.upload DEFINES=DUMMY,NODE_ID=1 MOTES=/dev/ttyUSB0
 \end{minted}
+\caption{Command to upload firmware to a mote connected to a USB port}
 \end{listing}
-Adding .upload to the end of the project name, will start the upload to the motes. The MOTES variable is used to locate the USB port for the mote.
 
-The NODE\_ID is used to set the rime address on the nodes. Provided the following macro is inserted into the code. This is important to do because otherwise the MAC address of the node will not be set. Even if the rime address of the node is set, the lack of a MAC address will cause message sent with unicast primitives to fail to arrive, as the address is not correctly set.
+What was missing from the Contiki documentation is the importance and difference between the nodes MAC address and its Rime address. Without the following addition to the make script the MAC address of the node would not be set and the Rime address would be set to some random value. We found this difficult to debug because when loading the code into the simulator Cooja a different MAC layer is used that correctly sets up the MAC addresses. However, when running on physical hardware it is necessary for the uploader to specify the MAC address every time the firmware is uploaded. The MAC address specified will then cause the Rime address to be set to their sane counterparts of the MAC address, instead of random values.
+
+We set the MAC address by passing some defines to the C program. We have to pass the \verb|DUMMY| define because otherwise make would have trouble understanding the command. The define \verb|NODE_ID| should contain the MAC address of the node that is being uploaded to. This macro will then be handled in the source could of the application by the code given below. Without the code the MAC address will not be set. Also note that the header \verb|sys/node-id.h| will need to be included to provide the \verb|node_id_burn| function.
 
 \begin{listing} 
 \begin{minted}[fontsize=\small]{c}
@@ -21,36 +37,22 @@ The NODE\_ID is used to set the rime address on the nodes. Provided the followin
 node_id_burn(NODE_ID);
 #endif
 \end{minted}
+\caption{Code that needs to be inserted into the startup process of an application}
 \end{listing}
 
+We noticed this problem because regular broadcasts would work between the motes, however, unicasts would all fail. We believe that the message was reaching the nodes correctly, but because the MAC address was default initialised to 0 it meant that the MAC address was never equal to the target address, thus the messages were never delivered.
 
-\subsection{Power Levels}
-Using the low power levels (3 or lower) resulted in very unreliable transmission rates/distances. We believe that this was caused by the environment that we were testing in (DCS building), which we expect the traffic on the 2.4GHz frequency to be very busy due to the number of phones and wireless devices in the department.
-
-\subsection{Transmission Ranges}
-When developing our mote applications in the simulator there is a very useful feature that allows one to see what the transmission radius of a selected node is. This help developers to work out what the expected behaviour of a piece of software should be. When developing in real-world scenarios, we found that we were never quite sure if our software was simply not working in a real-world environment or if the motes were placed too close to each other or too far.
 
 \subsection{Communication Between Mote and Computer}
-To be able to send and receive information between an application running on a mote and an application running on the computer the mote is connected to we needed to use several applications to assist in the data transfer. The easiest flow of data was from the mote to the computer as Contiki supports writing to \verb|stdout| which can then be read using a tool called \verb|serialdump|. Unfortunately Contiki doesn't support writing to \verb|stdout| so we had to develop and alternative method to read data sent from a computer. Also when sending data from the computer application to the mote application we couldn't simply open a filestream in Java and write to that (and expected Contiki to receive it), so we also had to come up with a custom way to do this.
 
-\subsubsection{Receiving Data from Nodes}
+A very important feature that we required was the interface between an application running on the mote and an application on a desktop computer that said mote was connected to via some form of serial collection (i.e. USB). Getting data to flow from the mote to the desktop application was trivial as Contiki provided the C function \verb|printf| which wrote to the serial output and a script called \verb|serialdump-linux| which was wrapped in Java \footnote{\url{http://ai.vub.ac.be/Robotics/wiki/index.php/Compiling,\_uploading\_and\_interacting\_with\_Contiki:\_Hello_World}} to access that output on the desktop.
 
-\url{http://ai.vub.ac.be/Robotics/wiki/index.php/Compiling,_uploading_and_interacting_with_Contiki:_Hello_World}
-
-\subsubsection{Sending Data to Nodes}
-
-\url{https://github.com/contiki-os/contiki/wiki/Input-and-output#wiki-Serial_Communication}
+Unfortunately Contiki does not implement many of the C APIs to read from \verb|stdin|. Contiki instead has an alternative mechanism in which it buffers lines and when a newline is detected an event is sent to all processes informing them that a line has been delivered\footnote{\url{https://github.com/contiki-os/contiki/wiki/Input-and-output\#wiki-Serial\_Communication}}. This line length limitation makes designing the communication protocol from the desktop application to the mote application tricky as no more than 127 bytes can ever be sent in a single line. This means that on the mote application parsing the input can become quite intricate and difficult. Regarding the desktop application it can send lines of data to the mote using \verb|serialdump-linux| if a line is sent to that tool's \verb|stdin| it will be forwarded to the mote.
 
 
-\subsubsection{Simulating with Cooja}
+\subsubsection{Setting up serial2pty Cooja Plugin}
 
-Use the \verb|serial_socket| plugin to create a serial server or client for a given node. Connect to these via sockets and communicate that way.
-
-\subsection{Developing with Small Message IDs}
-
-When using small message identifiers, after sending enough messages the variable used to hold the identifier will overflow. This make testing if a message has come after another message slightly difficult.
-
-\subsection{Setting up serial2pty Cooja Plugin}
+When testing applications that involve serial communication between a desktop application and a real mote, it is not always possible or convenient to have the mote to hand. Therefore, we needed a way to expose one of the simulated motes in Cooja like we have done for real motes. To do this we used a plugin called serial2pty, which simply connects the mote in Cooja to a pseudo-terminal which can have data written to it and read from it.
 
 \begin{listing}[H]
 \begin{minted}[fontsize=\small]{bash}
@@ -59,24 +61,26 @@ git clone git://i4git.informatik.uni-erlangen.de/contiki_projects.git -b serial2
 cd serial2pty
 ant jar
 \end{minted}
+\caption{Setting up and compiling the serial2pty Cooja plugin}
+\label{lst:setup-serial2pty}
 \end{listing}
 
-Now you can load this plugin in Cooja by going to \verb|Settings| \verb|->| \verb|Cooja Extensions| and selecting serial2pty. Once it has been selected click \verb|Apply for session| and \verb|Save| and the plugin will now be enabled. To run it simply \verb|Tools| \verb|->| \verb| Serial 2 Pty| \verb|->| and select the node you want to connect. You will be told what device you can connect to, to receive the serial output from.
+Once you have followed the instructions in \autoref{lst:setup-serial2pty} you can load this plugin in Cooja by going to \verb|Settings| \verb|->| \verb|Cooja Extensions| and selecting serial2pty. Once it has been selected click \verb|Apply for session| and \verb|Save| and the plugin will now be enabled. To run it simply click \verb|Tools| \verb|->| \verb| Serial 2 Pty| \verb|->| and select the node you want to connect. You will be told what device you can connect to, to receive the serial output from.
 
-Initially we found that this tool would not build, so a patch was created to fix those issues, sent to the developer and it was integrated into the repository.
+Initially we found that this tool would not build, so a patch was created to fix those issues, sent to the developer and it was integrated into their repository.\footnote{\url{http://i4git.cs.fau.de/contiki\_projects.git/commit/243511980de6b2338db2cddb506fad0fb464b881}}
 
 \subsection{Cooja Memory Usage  and Options}
 
-We found that Cooja's default settings when run using \verb|ant run| were suitable for smaller networks. However when running more memory intensive applications on the simulator of the hardware in Cooja or when running larger networks, Cooja itself can run out of memory. The simple solution is to simply run Cooja using \verb|ant run_bigmem| which supplies a flag limiting the maximum about of memory to 1536MB instead of 512MB when running normally \cite{?}.
+We found that Cooja's default settings when run using \verb|ant run| were suitable for smaller networks. However, when running more memory intensive applications on the simulator of the hardware in Cooja or when running larger networks, Cooja itself can run out of memory. The simple solution is to simply run Cooja using \verb|ant run_bigmem| which supplies a flag limiting the maximum about of memory to 1536MB instead of 512MB when running normally \cite{?}.
 
 As Cooja is written in Java \cite{?} it means that all of Java's configuration flags are also up for modification. This however, means that the \verb|ant| build script at \verb|~/contiki/tools/cooja/build.xml| will need to be modified to include the flags that need to be passed to Java. We modified the build script to add the following arguments (\verb|-XX:+OptimizeStringConcat| \verb|-XX:UseSSE=3| \verb|-XX:+UseFastAccessorMethods| \verb|-XX:+UseLargePages|) but did not see much improvement of performance.
 
-Finally, there is one other useful mode, and that is the ability to run Cooja without a GUI. This is done by changing the run command to \verb|ant run_nogui|. Running in this mode is very useful when running many simulations to obtain results from them as fast as possible.
+Finally, there is one other useful mode, and that is the ability to run Cooja without a GUI. This is done by changing the run command to \verb|ant run_nogui|. Running in this mode is very useful when running many simulations to obtain results from them as fast as possible without the overhead of running the GUI.
 
 
 \subsection{Static variables}
 
-When developing libraries make sure you use static variables vary carefully. For example we found that commonly we would make callback timers static and then use that object. When the code using that timer will only be called from one place it is okay. However, when you have multiple calls to that timer (imagine broadcasting on different channels) this can cause race conditions as the memory for that timer is being shared. What should be done is the timer object should be placed in a struct and that struct should be passed to the relevant functions that need to access the timer. For each time you wish to use the library a pointer to a different struct should be passed to those functions.
+When developing libraries make sure static variables are used vary carefully. For example, we found that commonly we would make callback timers static and then use that object. When the code using that timer will only be called from one place it is okay. However, when you have multiple calls to that timer (imagine broadcasting on different channels) this can cause race conditions as the memory for that timer is being shared. What should be done is the timer object should be placed in a struct and that struct should be passed to the relevant functions that need to access the timer. For each time you wish to use the library a pointer to a different struct should be passed to those functions.
 
 However, there are times that declaring a variable as static is very important. One of these cases is when you have a process that it waiting on some event, if you want a variable to maintain the same value after the event has been waited on, then that variable needs to be static. In \autoref{lst:contiki-process-static-variables} the \verb|printf| statmenet prints out a static and non-static variable. The static counter will increase and be reliably printed out. However, when the variable \verb|x| is printed, the value it contains at that point could be anything. This is due to the way that Contiki's process are actually proto-threads, so share a stack with other proto-threads, if another process were to be scheduled at this point it could potentially modify the stack. This would lead to stack variables such as \verb|x| potentially being changed. On the other hand, if there are no points in the program where the process may yield to other threads, then variables can be non-static. For example \verb|y|'s value would be printed correctly every time.
 
@@ -120,20 +124,27 @@ Reducing firmware size is a very important issue for WSN applications. As there 
 \begin{itemize}
 \item \verb|printf| - This is linked to removing static strings
 \item \verb|memset| - If you memset memory to a set value after allocating it then remove the memset call and just fill in the data structure as is appropriate
-\item \verb|memcpy| - If possible copy the data by hand. GCC tends to inline \verb|memcpy| for small sizes \cite{?}, but as will all optimisations it is best to test than rely on this \cite{?}.
+\item \verb|memcpy| - If possible copy the data by hand (e.g. by a simple assignment for primitives) to save on a function call
 \item Avoid string functions and other C library functions. If you do not use them it is possible that the object they are contained within will not be linked and thus space will be saved. \cite{?}
 \end{itemize}
 \end{enumerate}
 
 The most important thing is to make small changes at a time and then test every change that is made. This way the impact of the change on the program's size can be observed and if it made the size larger, then the change can be reverted. Doing multiple changes at once, may be faster to code, but may not lead to the desired result quicker.
 
+On a similar note, GCC has recently released a new type of optimisation that runs over the entire program instead of individual compilation units called LTO (Link-Time Optimisation) \cite{WHOPR}. With this is should be possible for more dead code to be removed or for more size optimisations to be applied across compilations units. Unfortunately the developers of the compiler being used (MSP430) seem unwilling to support this feature \footnote{\url{http://comments.gmane.org/gmane.comp.hardware.texas-instruments.msp430.gcc.user/11006}}.
+
 \subsection{Memory Management}
 
-When developing applications in C it is almost a given that memory management problems would be encountered. This is an inherent issue when developing with C, due to the low level control the developers are given it is very easy to ``shoot yourself in the foot'' (Bjarne Stroustrup). Which leads us back to our initial point as mentioned in the introduction that without good tools the quality of the system being developed will be poor. What is now clear to us is that C is not a good language for developing these kinds of applications. So it would appear that developing a new language should be a priority for wireless sensor network developers, such as C++ was to C. \cite{1281625} proposes a high level language that allows the developers to specify what they want to happen rather than how they would like it to happen, and there has been work on developing virtual machines not just for limited purposes (as was ours), but to run the entire application \cite{Levis:2002:MTV:635508.605407,Muller:2007:VMS:1272998.1273013}. With these virtual machines there are several advantages, the first is that experimenting with higher level languages becomes easier as they will all compile down to the same bytecode and the second is that memory management can be taken out of the hand of the programmer and put in control of the compiler. The problem here is that the main reason why that C is a popular language for developing sensor network applications is the control over memory that is provided. Due to the low resources of the motes, developers must be very careful as to how they allocate memory. So perhaps developments in low powered memory to allow more of it or improvements to how virtual machines can allocate memory efficiently will be required before these solutions become feasible.
+When developing applications in C it is almost a given that memory management problems would be encountered. This is an inherent issue when developing with C, due to the low level control the developers are given it is very easy to ``shoot yourself in the foot'' (Bjarne Stroustrup). Which leads us back to our initial point as mentioned in the introduction that without good tools the quality of the system being developed will be poor. What is now clear to us is that C is not a good language for developing these kinds of applications. So it would appear that developing a new language should be a priority for wireless sensor network developers. An example of this could be the design of C++ with respect to C, which added many good safety features and higher level constructs. \cite{1281625} proposes a high level language that allows the developers to specify what they want to happen rather than how they would like it to happen.
+
+There has been work on developing virtual machines not just for limited purposes (as was ours), but to run the entire application \cite{Levis:2002:MTV:635508.605407,Muller:2007:VMS:1272998.1273013}. With these virtual machines there are several advantages, the first is that experimenting with higher level languages becomes easier as they will all compile down to the same bytecode and the second is that memory management can be taken out of the hand of the programmer and put in control of the compiler. The problem here is that the main reason why that C is a popular language for developing sensor network applications is the control over memory that is provided. Due to the low resources of the motes, developers must be very careful as to how they allocate memory. So perhaps developments in low powered memory to allow more of it or improvements to how virtual machines can allocate memory efficiently will be required before these solutions become feasible.
 
 % TODO: mention development of tools such as leak detectors
 % Problem that WSN apps never really terminate, so the problem is harder in that sense
 
+\subsection{Conclusion}
+
+Overall we found that developing sensor network applications using simulators and tools that meant the application could be deployed in the real world was much harder than we anticipated. We often got sidetracked from out intended task because there was a new issue facing us. It is also unfortunate that the documentation for some of these issues is very poor. We hope that this section provides a useful guide for anyone else that undertakes wireless sensor network development with little or no previous experience.
 
 
 

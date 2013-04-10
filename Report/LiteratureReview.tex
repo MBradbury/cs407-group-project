@@ -22,10 +22,6 @@ Tree aggregation is another hierarchical routing protocol, this algorithm differ
 
 \subsection{Simulating Sensor Networks}
 
-\subsubsection*{TinyOS}
-
-TOSSIM \cite{levis2003tossim}
-
 \subsubsection*{Contiki}
 % Cite basically all the papers at: http://www.contiki-os.org/support.html
 
@@ -74,10 +70,41 @@ The RIME communication stack presents a solution to the cross-layer information-
 
 \subsubsection*{NS2}
 
+NS2 is a ``discrete event simulator targeted at networking research'' \cite{NS2} that ``provides substantial support for simulation of TCP, routing, and multicast protocols over wired and wireless'' networks. Due to its initial focus on wired networks the support for wireless networks can be below expectations. NS2 is written in C++ and uses OTcl to manage the simulation of networks. NS2 has a very large number of features, for example many of the routing protocols are built in and it comes with support for mobility models such as random waypoint. Due to the number of features NS2 can be very useful to people who wish to utilise it to its full potential, but it can be difficult to newcomers who may be overwhelmed.
+
 \subsubsection*{JProwler}
+
+JProwler \cite{JProwler} is a Java implementation of Prowler which is implemented in MATLAB. JProwler is designed to simulate MICA motes and provides two radio models: Gaussian and Rayleigh, one is for use with stationary nodes and the other is for use with mobile nodes. The main use case of JProwler is to simulate large networks very quickly. The implementation of algorithms is written in Java, using the simulator as a base, so to transplant the algorithms to run on actual hardware means rewriting the program. The benefits of it are: that it is very fast and it is implemented using Java this enables quick prototyping of algorithms, easy testing and fast analysis.
+
+\subsubsection*{TinyOS}
+
+TinyOS is an event driven wireless sensor network operating system \cite{?}. Programs are written for in nesC a dialect of C \cite{Gay:2003:NLH:780822.781133}. While TinyOS is often described as an operating system it is better described as a framework for developing programs for embedded systems (specifically sensor networks). Developing for TinyOS can be easier than other implementations because the nesC language models that tasks that a developer would be programming a sensor node to be doing better than developing programs directly in C. To simulate applications developed for TinyOS TOSSIM \cite{levis2003tossim} can be used to compile the same nesC code that would be used to run on the hardware to an intermediate format that is understood by the simulator. TOSSIM supports radio models where the bit error rate is configurable and emulates the hardware to provide an accurate simulation of what may occur in a real life situation. Finally the simulator supports visualising the network, so developers can get a good understanding of what is happening.
+
 
 \subsubsection*{Simulating Energy Consumption}
 \cite{Shnayder04}
+
+
+\begin{comment}
+\section{Required Tools}
+
+A simulator and operating system needs to be chosen that will allow us to test our code locally, then provide functionality to deploy that code to the network easily. We will now provide a comparison between the two primary operating systems, Contiki \cite{23839452} and TinyOS \cite{levis2003tossim}, and their respective simulators with a view to deciding which system best suits this projects goals and motivations.
+
+TinyOS and it's simulator TOSSIM were originally created at UC Berkeley as part of the DARPA NEST Program. TinyOS is a static system where designers must allocate resources during design-time. TinyOS is also a monolithic system, in this system programs are compiled with the OS code and distributed to network nodes together as one image.
+
+Contiki was developed by Adam Dunkels and is an open source operating system designed for the Internet of Things. Contiki is a dynamic system that allows resources to be allocated and deallocated at run-time. Contiki is a modular system where programs are compiled into an individual module that can be distributed to the network nodes which run the code dynamically.
+
+Both systems are event driven, however Contiki also offers native multi-threading support through proto-threads where as TinyOS does not and requires a library to gain access to threading through TinyThreads \cite{?}. TinyOS programs are implemented in nesC, a variation of C designed for the TinyOS platform. The simulator COOJA can run both C and Java code but the Contiki OS can only run C code. Both systems use custom wireless networking stacks that are optimised for low power consumption. In a comparison of energy and time efficiency between Contiki and TinyOS \cite{5560028} it is shown that the differences between the two operating systems is negligible. The study found that Contiki is quicker at sensing, TinyOS is faster at communication between nodes and they are both equally efficient at processing tasks such as executing security algorithms.
+
+We have chosen to use Contiki and COOJA for this project because it provides the most flexible system for developing applications that can quickly and easily be distributed to the network. Contiki also offers an easy to use fully functioning development environment and simulator tool all in one package. Finally, Contiki is almost as efficient as TinyOS in nearly every respect but provides all the additional features of a modular dynamic operating system and for these reasons this is why we have chosen it as the system we will develop for. 
+
+\subsection{Risks with Hardware}
+
+With the sensor nodes, we as a group have been given responsibility over them. This means we need to be very careful when transferring then between home and university. We must make sure that they are carried safely, packed away properly and protected from the environment when transferring (for example from rain).
+
+\clearpage
+\end{comment}
+
 
 
 \subsection{Sensor Network Platforms}

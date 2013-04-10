@@ -21,4 +21,10 @@ This becomes difficult due to the limitations of the mote hardware. As the motes
 
 When considering mobility of the sensor network the problem becomes very different. We have developed our solution on the assumption that it will be used to test certain properties that have been set up in advance to ensure that energy is saved later on, or to check certain application properties and the way that they relate to their neighbours. If the neighbours are continuously changing (as they would be in a deployment such as ZebraNet \cite{Juang:2002:ECW:635508.605408}), then checking certain neighbour properties would be meaningless because for some of those properties there would be no reason to set them up.
 
+\subsection{Improve Failure Response}
+
+When a predicate fails it sends a failure message to the base station, this message contains the state that was used to evaluate the predicate. Currently there are two deficiencies to our implemented approach. The first as was shown by our results was that for predicates evaluated locally in-network the number of response messages reaching the sink was very poor. By switching from Contiki's \verb|mesh| communication to a more reliable networking protocol we believe that the delivery rate could improve.
+
+The second issue is that once the failure message reaches the sink and the result is shown in the GUI, but nothing else happens. What would be useful to the users of the system would be to run that data that was used to evaluate the predicate through a virtual machine that doesn't focus on fast evaluating with a small firmware size, but instead focuses on producing a detailed error message. This error message would contain useful messages such as the values the variable names had and why their state causes the predicate to be false.
+
 \textbf{TODO: finish off}

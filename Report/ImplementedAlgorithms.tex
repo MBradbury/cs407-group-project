@@ -37,7 +37,7 @@ Finally, all of these custom containers are tested by a test suite that checks f
 
 In order to facilitate the development of our predicate checking algorithms, numerous separate libraries that encapsulated specific functionality needed to be implemented. The reason that these algorithms and protocols were implemented as libraries was so that our code remained well encapsulated, leading to easier testing and development.
 
-\subsubsection{Multi-Packet}
+\subsubsection{Multi-Packet Unicast}
 
 In Contiki sending a single packet has its limits, there is only so much data you can get in a single packet. There are two C macros that are relevant to this \verb|PACKETBUF_HDR_SIZE| which is set to 48 bytes and \verb|PACKETBUF_SIZE| which is set to 128 bytes\footnote{packetbuf.h \url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}. This means that in general we will only be able to send a packet containing 128 bytes of information. But if a protocol called for sending a data structure that spans more than 128 bytes bytes, then a way to send multiple packets and a receiver that can put the packets back together in the correct way to deliver the data is required.
 
@@ -247,6 +247,11 @@ When a node receives a flooded message it checks to see what the time-to-live (T
 The event update library was developed for use with predicates being evaluated locally in-network where information needed to be disseminated a given number of hops once the mote's data changed. This library periodically generates the current state of the mote and then checks it against the previously sent state. If there is no previously sent state or the state has changed as specified by a $\var{differs}$ function, then the recently generated state is flooded the required distance. For our usage this distance will be the maximum number of hops that a predicate needs information from.
 
 \begin{figure}[H]
+\includegraphics[width=\linewidth]{Diagrams/event-update-flowchart.eps}
+\caption{Process of event update sending changed data}
+\end{figure}
+
+\begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
     % 
@@ -392,7 +397,7 @@ The user of this library needs to implement four important functions:
     \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, INTMAX\rangle$;\\
     \null\qq\qq \res{else} \\
     \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, \var{besthop} + 1\rangle$;\\
-    \null\qq\qq \res{fi}; \\
+    \null\qq\qq \res{fi};
     %
     %
   \end{boxedminipage}
@@ -432,18 +437,17 @@ The user of this library needs to implement four important functions:
     \null\qq \emph{finishagg}::~\res{timeout}(\var{aggregation}) $\rightarrow$\\
     \null\qq\qq \res{multipacket.send}$\langle j, \otimes_{write}(\var{stored})\rangle$ \res{to} \var{bestparent};\\
     \null\qq\qq $\var{collecting} \assign False$; \\
-    \null\qq\qq $\var{stored} \assign \bot$; \\
+    \null\qq\qq $\var{stored} \assign \bot$;
     %
     %
   \end{boxedminipage}
   \caption{Tree Aggregation Algorithm - Sending data}
 \end{figure}
 
-\begin{figure}[ht!]
+\begin{figure}[H]
 \centering
-\subfigure[Example Network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-network}}
-
-\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-tree-structure}}
+\subfigure[Example Network]{\includegraphics[width=0.45\textwidth]{Diagrams/neighbour-network}}
+\subfigure[Logical Tree imposed on network when aggregating neighbours]{\includegraphics[width=0.45\textwidth]{Diagrams/neighbour-tree-structure}}
 \end{figure}
 
 \subsubsection{Neighbour Detect}
@@ -452,12 +456,11 @@ To aid in debugging a vital piece of information that will be required about the
 
 The first was to add more features to Contiki's neighbour detect library. As that library was very simple and supported only saying that a neighbour had been detected (with the option of providing a integer value as well). As we were aiming for this code to support changes in the network, such as nodes leaving or joining neighbourhoods, we added the concept of a round. Instead of just knowing about neighbours at that instant in time, it allowed the library to maintain some kind of history about what nodes were neighbours of other nodes in the past. Whenever new nodes are detected they are recorded, however, if a node has not been detected for a certain number of rounds then that node is removed from the record.
 
-\begin{figure}[H]
-\centering
-\subfigure[Node A requesting neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-request}}
-\subfigure[Node A receiving neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-report}}
-\caption{Nodes asking for and receiving neighbour data}
-\end{figure}
+For this to be useful we needed a way to get this data back to the sink node. There are many ways to do this, but one of the best is aggregating along a tree because it can combine many messages into a single one and forward that aggregated message instead of lots of smaller messages \cite{1628365}. The Neighbour Aggregation part uses the Tree Aggregation library that we have developed, the function that is used to aggregate data together is $\cup$ (union), this allows data to be aggregated with other data and allows that data to be updated. The nodes own data is set to be $\res{node-data}$, where $\var{j}$ is the current node's address and $\res{round-data}$ is the set of node addresses provided by the $\res{neighbour-detect.callback}$ callback in \autoref{algo:neighbour-detect}.
+
+\begin{equation}
+\res{node-data} = \{\{\var{other}, \var{j}\} | \var{other} \in \res{round-data} \}
+\end{equation}
 
 \begin{figure}[H]
   \centering
@@ -504,7 +507,7 @@ The first was to add more features to Contiki's neighbour detect library. As tha
     \null\qq\qq\qq \res{fi}; \\
     \null\qq\qq \res{else} \\
     \null\qq\qq\qq $\var{previous}[\var{source}] \assign \var{round}$; \\
-    \null\qq\qq \res{fi}; \\~\\
+    \null\qq\qq \res{fi}; \\
     %
     %
   \end{boxedminipage}
@@ -512,15 +515,10 @@ The first was to add more features to Contiki's neighbour detect library. As tha
   \label{algo:neighbour-detect}
 \end{figure}
 
-For this to be useful we needed a way to get this data back to the sink node. There are many ways to do this, but one of the best is aggregating along a tree because it can combine many messages into a single one and forward that aggregated message instead of lots of smaller messages \cite{1628365}. The Neighbour Aggregation part uses the Tree Aggregation library that we have developed, the function that is used to aggregate data together is $\cup$ (union), this allows data to be aggregated with other data and allows that data to be updated. The nodes own data is set to be $\res{node-data}$, where $\var{j}$ is the current node's address and $\res{round-data}$ is the set of node addresses provided by the $\res{round-complete}$ callback in \autoref{algo:neighbour-detect}.
-
-\begin{equation}
-\res{node-data} = \{\{\var{other}, \var{j}\} | \var{other} \in \res{round-data} \}
-\end{equation}
-
+% We can't include this because we never use or refer to these algorithms
+\begin{comment}
 \subsection{Clustering}
 
-\begin{comment}
 \begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
@@ -592,7 +590,6 @@ For this to be useful we needed a way to get this data back to the sink node. Th
   \end{boxedminipage}
   \caption{Clustering Algorithm}
 \end{figure}
-\end{comment}
 
 In a wireless network, message collisions are a significant factor in terms of decreasing performance; collisions are more likely in environments featuring a high density of messages. The intuitive solution to this is to reduce the number of messages sent, with minimal compromise in the richness of the data communicated. To this end, we implemented a clustering algorithm. The principle of operation of a clustering algorithm is to establish a set of clusterheads on network initialisation. Each of the other nodes in the network allocates itself exactly one clusterhead, through which all traffic to the sink is routed.
 
@@ -600,7 +597,7 @@ In our implementation, the network initialisation phase occurs when an applicati
 
 \subsection{Hierarchical Clustering}
 
-\begin{comment}
+
 \begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
@@ -684,9 +681,10 @@ In our implementation, the network initialisation phase occurs when an applicati
   \end{boxedminipage}
   \caption{Hierarchical Clustering Algorithm}
 \end{figure}
-\end{comment}
 
 To counter the given disadvantages of our basic clustering implementation, we developed an additional algorithm which employs the concept of hierarchical clustering. That is, a cluster featuring multiple layers of clusters, each with  clusterhead that has a clusterhead of its own in the next layer. The setup phase of this algorithm also chooses the one-hop neighbourhood of the sink as clusterheads. However, when these clusterheads' setup messages are broadcast through the network, if a node detects that its nearest clusterhead is at least $d$ hops away –- where $d$ is defined as a constant in \verb|contiki.c| –- then that node elects itself as a clusterhead of a new layer, and generates its own setup message to be broadcast. We initially designed two versions of hierarchical clustering; one for arbitrary values of $d$, and one for $d=1$ (where every non-leaf node becomes a clusterhead). However, once the former version was finished we decided to consolidate both versions into one and simply treat $d=1$ as a specific case. To avoid the potential problem of mesh routing creating more messages than the hierarchical clustering saves, in cases of any node being within direct range of its clusterhead, it transmits using runicast. In all other cases, the node uses mesh as before. The hierarchical approach removes the major limitations of our initial clustering implementation, however it still suffers from selecting permanent clusterheads (whereas methods such as LEACH\cite{LEACH} randomise the clusterheads periodically) and thus causing increased power usage for these nodes. Unfortunately, given that we developed our clustering implementation as a library to be used by some arbitrary application running on the nodes, the process of reassigning clusterheads (in any manner of synchronisation) proved infeasible.
+\end{comment}
+% End of what we can't include
 
 \subsection{TDMA}
 
@@ -705,6 +703,8 @@ Interestingly enough when this was first implemented the algorithm only made sur
 To make sure that the channel allocation was suitable for TDMA, instead of nodes just sending their own channel assignment to its neighbours. It also included the assignment of the one hop neighbours it knows about in that message. This then allowed nodes to receive information on their two hop neighbourhoods, which they then based their decision on what channel to allocate to themselves from.
 
 \subsection{Testing}
+
+When testing our implementations there were a number of difficulties due to the differences in what was being tested, how that library needed to tested and under what circumstances.
 
 \subsection{Conclusion}
 

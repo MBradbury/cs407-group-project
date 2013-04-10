@@ -1,0 +1,581 @@
+%!PS-Adobe-3.0 EPSF-3.0
+%%Title: 
+%%Creator: PScript5.dll Version 5.2.2
+%%CreationDate: 4/10/2013 15:33:38
+%%For: Matt
+%%BoundingBox: 0 0 219 405
+%%Pages: 1
+%%Orientation: Portrait
+%%PageOrder: Ascend
+%%DocumentNeededResources: (atend)
+%%DocumentSuppliedResources: (atend)
+%%DocumentData: Clean7Bit
+%%TargetDevice: () (52.3) 320
+%%LanguageLevel: 1
+%%EndComments
+
+%%BeginDefaults
+%%PageBoundingBox: 0 0 219 405
+%%ViewingOrientation: 1 0 0 1
+%%EndDefaults
+
+%%BeginProlog
+%%BeginResource: file Pscript_WinNT_VMErrorHandler 5.0 0
+/currentpacking where{pop/oldpack currentpacking def/setpacking where{pop false
+setpacking}if}if/$brkpage 64 dict def $brkpage begin/prnt{dup type/stringtype
+ne{=string cvs}if dup length 6 mul/tx exch def/ty 10 def currentpoint/toy exch
+def/tox exch def 1 setgray newpath tox toy 2 sub moveto 0 ty rlineto tx 0
+rlineto 0 ty neg rlineto closepath fill tox toy moveto 0 setgray show}bind def
+/nl{currentpoint exch pop lmargin exch moveto 0 -10 rmoveto}def/=={/cp 0 def
+typeprint nl}def/typeprint{dup type exec}readonly def/lmargin 72 def/rmargin 72
+def/tprint{dup length cp add rmargin gt{nl/cp 0 def}if dup length cp add/cp
+exch def prnt}readonly def/cvsprint{=string cvs tprint( )tprint}readonly def
+/integertype{cvsprint}readonly def/realtype{cvsprint}readonly def/booleantype
+{cvsprint}readonly def/operatortype{(--)tprint =string cvs tprint(-- )tprint}
+readonly def/marktype{pop(-mark- )tprint}readonly def/dicttype{pop
+(-dictionary- )tprint}readonly def/nulltype{pop(-null- )tprint}readonly def
+/filetype{pop(-filestream- )tprint}readonly def/savetype{pop(-savelevel- )
+tprint}readonly def/fonttype{pop(-fontid- )tprint}readonly def/nametype{dup
+xcheck not{(/)tprint}if cvsprint}readonly def/stringtype{dup rcheck{(\()tprint
+tprint(\))tprint}{pop(-string- )tprint}ifelse}readonly def/arraytype{dup rcheck
+{dup xcheck{({)tprint{typeprint}forall(})tprint}{([)tprint{typeprint}forall(])
+tprint}ifelse}{pop(-array- )tprint}ifelse}readonly def/packedarraytype{dup
+rcheck{dup xcheck{({)tprint{typeprint}forall(})tprint}{([)tprint{typeprint}
+forall(])tprint}ifelse}{pop(-packedarray- )tprint}ifelse}readonly def/courier
+/Courier findfont 10 scalefont def end errordict/handleerror{systemdict begin
+$error begin $brkpage begin newerror{/newerror false store vmstatus pop pop 0
+ne{grestoreall}if initgraphics courier setfont lmargin 720 moveto errorname
+(VMerror)eq{version cvi 2016 ge{userdict/ehsave known{clear userdict/ehsave get
+restore 2 vmreclaim}if vmstatus exch pop exch pop PrtVMMsg}if}if systemdict
+/showpage get exec(%%[ Error: )print errorname =print(; OffendingCommand: )
+print/command load =print( ]%%)= flush}if end end end}dup 0 systemdict put dup
+4 $brkpage put bind readonly put/currentpacking where{pop/setpacking where{pop
+oldpack setpacking}if}if
+%%EndResource
+%%BeginProcSet: Pscript_Res_Emul 5.0 0
+/defineresource where{pop}{userdict begin/defineresource{userdict/Resources 2
+copy known{get begin}{15 dict dup begin put}ifelse exch readonly exch
+currentdict 1 index known not{dup 30 dict def}if load 3 -1 roll 2 index put
+end}bind readonly def/findresource{userdict/Resources get exch get exch get}
+bind readonly def/resourceforall{pop pop pop pop}bind readonly def
+/resourcestatus{userdict/Resources 2 copy known{get exch 2 copy known{get exch
+known{0 -1 true}{false}ifelse}{pop pop pop false}ifelse}{pop pop pop pop false}
+ifelse}bind readonly def end}ifelse
+%%EndProcSet
+userdict /Pscript_WinNT_Incr 230 dict dup begin put
+%%BeginResource: file Pscript_FatalError 5.0 0
+userdict begin/FatalErrorIf{{initgraphics findfont 1 index 0 eq{exch pop}{dup
+length dict begin{1 index/FID ne{def}{pop pop}ifelse}forall/Encoding
+{ISOLatin1Encoding}stopped{StandardEncoding}if def currentdict end
+/ErrFont-Latin1 exch definefont}ifelse exch scalefont setfont counttomark 3 div
+cvi{moveto show}repeat showpage quit}{cleartomark}ifelse}bind def end
+%%EndResource
+userdict begin/PrtVMMsg{vmstatus exch sub exch pop gt{[
+(This job requires more memory than is available in this printer.)100 500
+(Try one or more of the following, and then print again:)100 485
+(For the output format, choose Optimize For Portability.)115 470
+(In the Device Settings page, make sure the Available PostScript Memory is accurate.)
+115 455(Reduce the number of fonts in the document.)115 440
+(Print the document in parts.)115 425 12/Times-Roman showpage
+(%%[ PrinterError: Low Printer VM ]%%)= true FatalErrorIf}if}bind def end
+version cvi 2016 ge{/VM?{pop}bind def}{/VM? userdict/PrtVMMsg get def}ifelse
+%%BeginResource: file Pscript_Win_Basic 5.0 0
+/d/def load def/,/load load d/~/exch , d/?/ifelse , d/!/pop , d/`/begin , d/^
+/index , d/@/dup , d/+/translate , d/$/roll , d/U/userdict , d/M/moveto , d/-
+/rlineto , d/&/currentdict , d/:/gsave , d/;/grestore , d/F/false , d/T/true ,
+d/N/newpath , d/E/end , d/Ac/arc , d/An/arcn , d/A/ashow , d/D/awidthshow , d/C
+/closepath , d/V/div , d/O/eofill , d/L/fill , d/I/lineto , d/-c/curveto , d/-M
+/rmoveto , d/+S/scale , d/Ji/setfont , d/Lc/setlinecap , d/Lj/setlinejoin , d
+/Lw/setlinewidth , d/Lm/setmiterlimit , d/sd/setdash , d/S/show , d/LH/showpage
+, d/K/stroke , d/W/widthshow , d/R/rotate , d/L2? false/languagelevel where{pop
+languagelevel 2 ge{pop true}if}if d L2?{/xS/xshow , d/yS/yshow , d/zS/xyshow ,
+d}if/b{bind d}bind d/bd{bind d}bind d/xd{~ d}bd/ld{, d}bd/bn/bind ld/lw/Lw ld
+/lc/Lc ld/lj/Lj ld/sg/setgray ld/ADO_mxRot null d/self & d/OrgMx matrix
+currentmatrix d/reinitialize{: OrgMx setmatrix[/TextInit/GraphInit/UtilsInit
+counttomark{@ where{self eq}{F}?{cvx exec}{!}?}repeat cleartomark ;}b
+/initialize{`{/Pscript_Win_Data where{!}{U/Pscript_Win_Data & put}?/ADO_mxRot ~
+d/TextInitialised? F d reinitialize E}{U/Pscript_Win_Data 230 dict @ ` put
+/ADO_mxRot ~ d/TextInitialised? F d reinitialize}?}b/terminate{!{& self eq
+{exit}{E}?}loop E}b/suspend/terminate , d/resume{` Pscript_Win_Data `}b U `
+/lucas 21690 d/featurebegin{countdictstack lucas[}b/featurecleanup{stopped
+{cleartomark @ lucas eq{! exit}if}loop countdictstack ~ sub @ 0 gt{{E}repeat}
+{!}?}b E/snap{transform 0.25 sub round 0.25 add ~ 0.25 sub round 0.25 add ~
+itransform}b/dsnap{dtransform round ~ round ~ idtransform}b/nonzero_round{@ 0.5
+ge{round}{@ -0.5 lt{round}{0 ge{1}{-1}?}?}?}b/nonzero_dsnap{dtransform
+nonzero_round ~ nonzero_round ~ idtransform}b U<04>cvn{}put/rr{1 ^ 0 - 0 ~ -
+neg 0 - C}b/irp{4 -2 $ + +S fx 4 2 $ M 1 ^ 0 - 0 ~ - neg 0 -}b/rp{4 2 $ M 1 ^ 0
+- 0 ~ - neg 0 -}b/solid{[]0 sd}b/g{@ not{U/DefIf_save save put}if U/DefIf_bool
+2 ^ put}b/DefIf_El{if U/DefIf_bool get not @{U/DefIf_save get restore}if}b/e
+{DefIf_El !}b/UDF{L2?{undefinefont}{!}?}b/UDR{L2?{undefineresource}{! !}?}b
+/freeVM{/Courier findfont[40 0 0 -40 0 0]makefont Ji 2 vmreclaim}b/hfRedefFont
+{findfont @ length dict `{1 ^/FID ne{d}{! !}?}forall & E @ ` ~{/CharStrings 1
+dict `/.notdef 0 d & E d}if/Encoding 256 array 0 1 255{1 ^ ~/.notdef put}for d
+E definefont !}bind d/hfMkCIDFont{/CIDFont findresource @ length 2 add dict `{1
+^ @/FID eq ~ @/XUID eq ~/UIDBase eq or or{! !}{d}?}forall/CDevProc ~ d/Metrics2
+16 dict d/CIDFontName 1 ^ d & E 1 ^ ~/CIDFont defineresource ![~]composefont !}
+bind d
+%%EndResource
+%%BeginResource: file Pscript_Win_Utils_L1 5.0 0
+/rf{N rp L}b/fx{1 1 dtransform @ 0 ge{1 sub 1}{1 add -0.25}? 3 -1 $ @ 0 ge{1
+sub 1}{1 add -0.25}? 3 1 $ 4 1 $ idtransform 4 -2 $ idtransform}b/BZ{4 -2 $
+snap + +S fx rf}b/rs{N rp C K}b/rc{N rp clip N}b/UtilsInit{}b/setcolorspace{!}b
+/scol{[/setgray/setrgbcolor/setcolor/setcmykcolor/setcolor/setgray]~ get cvx
+exec}b/colspRefresh{}b/AddFontInfoBegin{/FontInfo 8 dict @ `}bind d/AddFontInfo
+{/GlyphNames2Unicode 16 dict d/GlyphNames2HostCode 16 dict d}bind d
+/AddFontInfoEnd{E d}bind d
+%%EndResource
+end
+%%EndProlog
+
+%%BeginSetup
+[ 1 0 0 1 0 0 ] false Pscript_WinNT_Incr dup /initialize get exec
+1 setlinecap 1 setlinejoin
+/mysetup [ 72 600 V 0 0 -72 600 V 0 405.35433 ] def 
+%%EndSetup
+
+%%Page: 1 1
+%%PageBoundingBox: 0 0 219 405
+%%EndPageComments
+%%BeginPageSetup
+/DeviceRGB dup setcolorspace /colspABC exch def
+mysetup concat colspRefresh
+%%EndPageSetup
+
+Pscript_WinNT_Incr begin
+%%BeginResource: file Pscript_Win_GdiObject 5.0 0
+/SavedCTM null d/CTMsave{/SavedCTM SavedCTM currentmatrix d}b/CTMrestore
+{SavedCTM setmatrix}b/mp null d/ADO_mxRot null d/GDIHMatrix null d
+/GDIHPatternDict 22 dict d GDIHPatternDict `/PatternType 1 d/PaintType 2 d/Reps
+L2?{1}{5}? d/XStep 8 Reps mul d/YStep XStep d/BBox[0 0 XStep YStep]d/TilingType
+1 d/PaintProc{` 1 Lw[]0 sd PaintData , exec E}b/FGnd null d/BGnd null d
+/HS_Horizontal{horiz}b/HS_Vertical{vert}b/HS_FDiagonal{fdiag}b/HS_BDiagonal
+{biag}b/HS_Cross{horiz vert}b/HS_DiagCross{fdiag biag}b/MaxXYStep XStep YStep
+gt{XStep}{YStep}? d/horiz{Reps{0 4 M XStep 0 - 0 8 +}repeat 0 -8 Reps mul + K}b
+/vert{Reps{4 0 M 0 YStep - 8 0 +}repeat 0 -8 Reps mul + K}b/biag{Reps{0 0 M
+MaxXYStep @ - 0 YStep neg M MaxXYStep @ - 0 8 +}repeat 0 -8 Reps mul + 0 YStep
+M 8 8 - K}b/fdiag{Reps{0 0 M MaxXYStep @ neg - 0 YStep M MaxXYStep @ neg - 0 8
++}repeat 0 -8 Reps mul + MaxXYStep @ M 8 -8 - K}b E/makehatch{4 -2 $/yOrg ~ d
+/xOrg ~ d GDIHPatternDict/PaintData 3 -1 $ put CTMsave GDIHMatrix setmatrix
+GDIHPatternDict matrix xOrg yOrg + mp CTMrestore ~ U ~ 2 ^ put}b/h0{/h0
+/HS_Horizontal makehatch}b/h1{/h1/HS_Vertical makehatch}b/h2{/h2/HS_FDiagonal
+makehatch}b/h3{/h3/HS_BDiagonal makehatch}b/h4{/h4/HS_Cross makehatch}b/h5{/h5
+/HS_DiagCross makehatch}b/GDIBWPatternMx null d/pfprep{save 8 1 $
+/PatternOfTheDay 8 1 $ GDIBWPatternDict `/yOrg ~ d/xOrg ~ d/PaintData ~ d/yExt
+~ d/Width ~ d/BGnd ~ d/FGnd ~ d/Height yExt RepsV mul d/mx[Width 0 0 Height 0
+0]d E build_pattern ~ !}b/pfbf{/fEOFill ~ d pfprep hbf fEOFill{O}{L}? restore}b
+/GraphInit{GDIHMatrix null eq{/SavedCTM matrix d : ADO_mxRot concat 0 0 snap +
+: 0.48 @ GDIHPatternDict ` YStep mul ~ XStep mul ~ nonzero_dsnap YStep V ~
+XStep V ~ E +S/GDIHMatrix matrix currentmatrix readonly d ; : 0.24 -0.24 +S
+GDIBWPatternDict ` Width Height E nonzero_dsnap +S/GDIBWPatternMx matrix
+currentmatrix readonly d ; ;}if}b
+%%EndResource
+%%BeginResource: file Pscript_Win_GdiObject_L1 5.0 0
+/GDIBWPatternDict 25 dict @ `/PatternType 1 d/PaintType 2 d/RepsV 6 d/RepsH 5 d
+/BBox[0 0 RepsH 1]d/TilingType 1 d/XStep 1 d/YStep 1 d/Height 8 RepsV mul d
+/Width 8 d/mx[Width 0 0 Height neg 0 Height]d/FGnd null d/BGnd null d
+/SetBGndFGnd{}b/PaintProc{` SetBGndFGnd RepsH{Width Height F mx PaintData
+imagemask Width 0 +}repeat E}b E d/GDIpattfill{@ ` BGnd null ne PaintType 2 eq
+and{: BGnd aload ! scol fEOFill{O}{L}? ; FGnd aload ! U/iCol 2 ^ put @ 0 eq{!
+2}{@ 1 eq ~ 2 eq or{4}{5}?}? -1 $}if E @ patterncalc : 4 ^/PaintType get 2 eq
+{iCol 0 eq{6 -1 $}if iCol 1 eq iCol 2 eq or{8 -3 $}if iCol 3 eq iCol 4 eq or{9
+-4 $}if iCol scol}if fEOFill{eoclip}{clip}? N patternfill ; N}b/hbf
+{GDIpattfill}b/hfMain{/fEOFill ~ d ~/iCol ~ d GDIpattfill}b/hf{: hfMain ;}b
+/mpstr 1 string d/mp{~ @ length 12 add dict copy `/PatternCTM matrix
+currentmatrix d/PatternMatrix ~ d/PatWidth XStep mpstr length mul d/PatHeight
+YStep d/FontType 3 d/Encoding 256 array d 3 string 0 1 255{Encoding ~ @ 3 ^ cvs
+cvn put}for !/FontMatrix matrix d/FontBBox BBox d/BuildChar{! @ ` XStep 0
+FontBBox aload ! setcachedevice/PaintProc , E : exec ;}b & E ~ @ 3 -1 $
+definefont}b/build_pattern{: GDIBWPatternDict ` Width Height E dsnap +S
+/GDIBWPatternMx matrix currentmatrix d ; CTMsave GDIBWPatternMx setmatrix
+GDIBWPatternDict @ ` xOrg yOrg E matrix + mp CTMrestore}b/patterncalc{` :
+PatternCTM setmatrix PatternMatrix concat BBox aload ! ! ! + pathbbox ;
+PatHeight V ceiling 4 1 $ PatWidth V ceiling 4 1 $ PatHeight V floor 4 1 $
+PatWidth V floor 4 1 $ 2 ^ sub cvi abs ~ 3 ^ sub cvi abs ~ 4 2 $ PatHeight mul
+~ PatWidth mul ~ E}b/patternfill{5 -1 $ @ ` Ji PatternCTM setmatrix
+PatternMatrix concat 0 2 ^ 2 ^ M 0 1 mpstr length 1 sub{1 ^ mpstr 3 1 $ put}for
+! 2 ^{currentpoint 5 ^{mpstr S}repeat YStep add M}repeat ! ! ! ! E}b/pbf{: 14
+dict `/fGray ~ d/fEOFill ~ d/yOrg ~ d/xOrg ~ d/PaintData ~ d/OutputBPP ~ d
+/Height ~ d/Width ~ d/mx xOrg yOrg matrix + d fGray{/PaintProc{` Width Height
+OutputBPP mx PaintData image E}b}{/PaintProc{` Width Height 8 mx PaintData F
+OutputBPP 8 idiv colorimage E}b}? pathbbox fEOFill{eoclip}{clip}?/Top ~ d/Right
+~ d/Bottom ~ d/Left ~ d Top Height neg Bottom 1 sub{Left Width Right 1 sub{1 ^
+2 copy + & PaintProc neg ~ neg ~ +}bind for !}bind for E ;}b
+%%EndResource
+end reinitialize
+N 237 212 M 237 125 307 55 394 55 -c 481 55 551 125 551 212 -c 551 212 551 212 551 212 -c 551 299 481 370 394 370 -c 307 370 237 299 237 212 -c C 
+0.574 0.816 0.313 1 scol  O 0.25 0.25 0.25 1 scol 1 Lj 1 Lc 5 Lw solid N 237 212 M 237 125 307 55 394 55 -c 481 55 551 125 551 212 -c 551 212 551 212 551 212 -c 551 299 481 370 394 370 -c 307 370 237 299 237 212 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 1653 55 M 1740 55 1810 125 1810 212 -c 1810 299 1740 370 1653 370 -c 1653 370 1653 370 1653 370 -c 1566 370 1495 299 1495 212 -c 1495 125 1566 55 1653 55 -c C 
+0.652 0.766 0.867 1 scol  O 0.25 0.25 0.25 1 scol N 1653 55 M 1740 55 1810 125 1810 212 -c 1810 299 1740 370 1653 370 -c 1653 370 1653 370 1653 370 -c 1566 370 1495 299 1495 212 -c 1495 125 1566 55 1653 55 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 866 212 M 866 125 936 55 1023 55 -c 1110 55 1181 125 1181 212 -c 1181 212 1181 212 1181 212 -c 1181 299 1110 370 1023 370 -c 936 370 866 299 866 212 -c C 
+0.242 0.457 0.652 1 scol  O 0.25 0.25 0.25 1 scol N 866 212 M 866 125 936 55 1023 55 -c 1110 55 1181 125 1181 212 -c 1181 212 1181 212 1181 212 -c 1181 299 1110 370 1023 370 -c 936 370 866 299 866 212 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; 1 0 0 1 scol 64 Lw N 551 212 M 774 212 I : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 866 212 M 744 273 I 763 235 763 190 744 151 -c 744 151 I 866 212 I C 
+ O N 237 842 M 237 755 307 685 394 685 -c 481 685 551 755 551 842 -c 551 842 551 842 551 842 -c 551 929 481 999 394 999 -c 307 999 237 929 237 842 -c C 
+0.574 0.816 0.313 1 scol  O 0.25 0.25 0.25 1 scol 5 Lw N 237 842 M 237 755 307 685 394 685 -c 481 685 551 755 551 842 -c 551 842 551 842 551 842 -c 551 929 481 999 394 999 -c 307 999 237 929 237 842 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 1653 685 M 1740 685 1810 755 1810 842 -c 1810 929 1740 999 1653 999 -c 1653 999 1653 999 1653 999 -c 1566 999 1495 929 1495 842 -c 1495 755 1566 685 1653 685 -c C 
+0.652 0.766 0.867 1 scol  O 0.25 0.25 0.25 1 scol N 1653 685 M 1740 685 1810 755 1810 842 -c 1810 929 1740 999 1653 999 -c 1653 999 1653 999 1653 999 -c 1566 999 1495 929 1495 842 -c 1495 755 1566 685 1653 685 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 866 842 M 866 755 936 685 1023 685 -c 1110 685 1181 755 1181 842 -c 1181 842 1181 842 1181 842 -c 1181 929 1110 999 1023 999 -c 936 999 866 929 866 842 -c C 
+0.242 0.457 0.652 1 scol  O 0.25 0.25 0.25 1 scol N 866 842 M 866 755 936 685 1023 685 -c 1110 685 1181 755 1181 842 -c 1181 842 1181 842 1181 842 -c 1181 929 1110 999 1023 999 -c 936 999 866 929 866 842 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; 0 0 0 1 scol 11 dict begin
+/FontName /TT2Do00 def
+/FontMatrix [1 2048 div 0 0 1 2048 div 0 0 ] def
+/Encoding  256 array 0 1 255 {1 index exch /.notdef put} for  def
+/PaintType 0 def
+/FontType 1 def
+/FontBBox { 0 0 0 0 } def
+AddFontInfoBegin
+AddFontInfo
+AddFontInfoEnd
+currentdict
+end
+
+currentfile eexec
+9e67edc6f3ddb54d987dfb0ad4392351758f10eff40ef287a1387512b853
+046f6e589e2c97d48fdb38d54b68757f1dc48a239a5da408c2bfd473eac0
+3ab6b0025b87770e5f3b06904c282a51ee189ce871258447b47d83c5fad2
+326aa26e4c7f0ff21a841a463c859f102729802bbfa6ac0c2766f6b09317
+a247f37b339b99b7588bee2e861ed9de7a8990c512001ce21da50f4516f7
+553cc5df31ac42402c2b4e2b106773ccdac45a8dee89d3d35ce4f9afb022
+79592359efd5293f35df57216c84236a1347e922a61c45691be2c137b65f
+08f4b3113b88e58dce4bd559387db7a00fe16460e5ab8fc835ea6ed9b938
+610bff26bc7ddabb1ad5fea52ffb8a00d422baa4303c086dfa67d7fa85d5
+017c0b52f508233712d1d0f2d0f2ab27c30e0e71a29d2538f359cc380f98
+479f30ac658916dbb8f6aa91aa97848debb21a56474e833ca8da49cb253a
+040c261ad0243c253c97291f9f76bfd5dcb1f4d8d03f27db584291766967
+8abb572a5931f22f05441946faa6efb14525b61b791627dfcf93d5e65ef1
+761d453fd19617cd93784738b3fb6b1a62d00315e142e5754cabf7f10864
+e2da084f8557af7d1bc432b7d6f86fd87b441543d91a43b70b5dc0be5987
+1e6c1905b4c588471c73282cf6e2be9fe41ef9e6703b7f92db5204fe9b5e
+4bcf5a008f51bf0a3cdf45cfeeaab46bcd81cea2615662fb27123d6653e0
+b638585aa34733c9baf01402d9b309297f24cadf3f2beb12dbe52a29197a
+2efb8be93306e48251f39e7c41a93ea858cdc789ac632af043c57b44103c
+1e1b14488dae8b4b5357eb957416ed056cb57f47484cff24a2ee92065d52
+26cb5f6cd2d455641518cb954f9cec9ad779a8a7d40000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+cleartomark
+/TT2Do00 findfont /Encoding get
+dup 1 /g1005 put
+pop
+Pscript_WinNT_Incr begin
+%%BeginResource: file Pscript_Text 5.0 0
+/TextInit{TextInitialised? not{/Pscript_Windows_Font & d/TextInitialised? T d
+/fM[1 0 0 1 0 0]d/mFM matrix d/iMat[1 0 0.212557 1 0 0]d}if}b/copyfont{1 ^
+length add dict `{1 ^/FID ne{d}{! !}?}forall & E}b/EncodeDict 11 dict d/bullets
+{{/bullet}repeat}b/rF{3 copyfont @ ` ~ EncodeDict ~ get/Encoding ~ 3 ^/0 eq{&
+/CharStrings known{CharStrings/Eth known not{! EncodeDict/ANSIEncodingOld get}
+if}if}if d E}b/mF{@ 7 1 $ findfont ~{@/Encoding get @ StandardEncoding eq{! T}{
+{ISOLatin1Encoding}stopped{! F}{eq}?{T}{@ ` T 32 1 127{Encoding 1 ^ get
+StandardEncoding 3 -1 $ get eq and}for E}?}?}{F}?{1 ^ ~ rF}{0 copyfont}? 6 -2 $
+! ! ~ !/pd_charset @ where{~ get 128 eq{@ FDV 2 copy get @ length array copy
+put pd_CoverFCRange}if}{!}? 2 ^ ~ definefont fM 5 4 -1 $ put fM 4 0 put fM
+makefont Pscript_Windows_Font 3 1 $ put}b/sLT{: Lw -M currentpoint snap M 0 - 0
+Lc K ;}b/xUP null d/yUP null d/uW null d/xSP null d/ySP null d/sW null d/sSU{N
+/uW ~ d/yUP ~ d/xUP ~ d}b/sU{xUP yUP uW sLT}b/sST{N/sW ~ d/ySP ~ d/xSP ~ d}b/sT
+{xSP ySP sW sLT}b/sR{: + R 0 0 M}b/sRxy{: matrix astore concat 0 0 M}b/eR/; , d
+/AddOrigFP{{&/FontInfo known{&/FontInfo get length 6 add}{6}? dict `
+/WinPitchAndFamily ~ d/WinCharSet ~ d/OrigFontType ~ d/OrigFontStyle ~ d
+/OrigFontName ~ d & E/FontInfo ~ d}{! ! ! ! !}?}b/mFS{makefont
+Pscript_Windows_Font 3 1 $ put}b/mF42D{0 copyfont `/FontName ~ d 2 copy ~ sub 1
+add dict `/.notdef 0 d 2 copy 1 ~{@ 3 ^ sub Encoding ~ get ~ d}for & E
+/CharStrings ~ d ! ! & @ E/FontName get ~ definefont}b/mF42{15 dict ` @ 4 1 $
+FontName ~ d/FontType 0 d/FMapType 2 d/FontMatrix[1 0 0 1 0 0]d 1 ^ 254 add 255
+idiv @ array/Encoding ~ d 0 1 3 -1 $ 1 sub{@ Encoding 3 1 $ put}for/FDepVector
+Encoding length array d/CharStrings 2 dict `/.notdef 0 d & E d 0 1 Encoding
+length 1 sub{@ @ 10 lt{! FontName length 1 add string}{100 lt{FontName length 2
+add string}{FontName length 3 add string}?}? @ 0 FontName @ length string cvs
+putinterval @ 3 -1 $ @ 4 1 $ 3 string cvs FontName length ~ putinterval cvn 1 ^
+256 mul @ 255 add 3 -1 $ 4 ^ findfont mF42D FDepVector 3 1 $ put}for & @ E
+/FontName get ~ definefont ! ! ! mF}b/mF_OTF_V{~ ! ~ ! 4 -1 $ ! findfont 2 ^ ~
+definefont fM @ @ 4 6 -1 $ neg put 5 0 put 90 matrix R matrix concatmatrix
+makefont Pscript_Windows_Font 3 1 $ put}b/mF_TTF_V{3{~ !}repeat 3 -1 $ !
+findfont 1 ^ ~ definefont Pscript_Windows_Font 3 1 $ put}b/UmF{L2?
+{Pscript_Windows_Font ~ undef}{!}?}b/UmF42{@ findfont/FDepVector get{/FontName
+get undefinefont}forall undefinefont}b
+%%EndResource
+end reinitialize
+F /F0 0 /0 F /TT2Do00 mF 
+/F0S10AYFFFFFEF5 F0 [266.477 0 0 -266.586 0 0 ] mFS
+F0S10AYFFFFFEF5 Ji 
+17 292 M <01>S 
+
+currentfile eexec
+9e67edc6b841302aba32c53778232d92f282d9adcfecb27f94998a30d9bd
+96a17810cc429528e0e73616bcade264caa458cb5d6ada069085d4aea9a0
+8bd83cd83c2d8ccf09624d8806d99e00ddb63735e3c22303ad7e509b4f25
+22e0d3e5b8a3f9ec53d74b9d23a6bb30ecfb96807fb989369340ca5f87c5
+abdfc3d493cc7d9757ab03500db2a5f5d30fcc54b58b35286b8299a2f2c3
+cf108e2895bb6434acdac9810dc2145187cd35874777543dba3c8159d48d
+639b9026ece84e06b613f9724fb301f8df018c10e82287739b4ebbff6d39
+d8a32ccfaf361f56a455b7d5afd7b100951123ca2d7d151412efcfa1ad0a
+3de561041ad8c4ba3c2e979fab893b2f1cbb7f01f9259d0ad9d225ecd1bd
+95bd6235a99770bd244f7b6f91dd9eff7fd977b04543dd668562045974b4
+a66dd340eaeee40acc4acf97cd3b064951d7fbd505fbb38ad3410fe9a502
+d7dfd8bd1b48439d522335fc2b2d7a5e58774b2cbd5d4d4f7cf327c6d61d
+a12bdac6386ef5eee8a2247d472006c51fd95a563f67d21becfca370bb7a
+689ec4f0da0b49b73c9cdb67ca7512e8cdcbb205e12ca08f313f5c180dcf
+18a55dac1fe694d407a438a30f90104aada2a5805e9a7f052c3df39e6c4c
+aa44b1ea0eb63501bf3c0d5ad79e6fcba98f6ab81618a603d8937c6b6147
+41838834225d47d00000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+cleartomark
+/TT2Do00 findfont /Encoding get
+dup 2 /g1006 put
+pop
+17 925 M <02>S 
+1 0 0 1 scol 64 Lw N 80 2731 M 302 2731 I : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 394 2731 M 272 2792 I 291 2754 291 2709 272 2670 -c 272 2670 I 394 2731 I C 
+ O 0 0 0 1 scol 
+currentfile eexec
+9e67edc6b841302aba32c53778232d92f282d9adcfecb27f94998a30d9bd
+96a17810cc429528e0e73616bcade264caa458cb5d6ada069085d4aea9a0
+8bd83cd83c2d8cc7f5ec069b7f580610901fd9dd24e03dd1ad8a355847ea
+84512430a8d5ed0d5e4fc574e1d956941e20d94501e353d1315c8517980a
+c76b35a6f3ba365cb601445e4cb05b7b76c56ace0d5c1204c4bad13fefc9
+9efa134fb4248393602901e4adfef11212d6cf8532d3b9933bdb43ec37cc
+e0a82b51251e849b6c0f31a37ce011b76c89a26a0aa75717cb0d81373f61
+24c798304e14402e6b719a60893a80adb7b3a40a5b7af88eb1f9852be88d
+b8aa885c140d2e39adc5698a00cbbdebde277eb5791f7abaa50647ccb704
+80d70f28c8d742f0002913386efe53bdf026367dea9765cbbf01a8cc242d
+0e7059e898cd17e795f8ba68b67a181761cc57cfdf24055cc1c2721593aa
+4c140cd814eae291ca8439ccdacf8bfab2300f881150f4fb298608c23f5c
+c7904366ceb7f60b0acf17ee1b9a6bfd78474c81df0669b2a84a7b1b361a
+f7e556e2305658f5805b15cd21f9688f42cd7bf304e5a8baffbe02026b69
+b84f8911cb717fd33eb82fe741cf0f8489f06b734c8c73d79d36cacecb55
+2bbecb00bc3e5bafdb7a50e0215c7b9c1179651f5e62a860805839764712
+f8c3e91a1add1de6a251d277a29623c5848faab6e7b41d75e268df19f880
+525f854bd89ea1b169d375ea8d45160aa8aa8602ebeb3dca9abff354145a
+370be99923de2887100e4a1efbe238e2b6d9e9b1ed57619b43e8fa20dcf1
+9e3893fbf249841918e4d48fd1b3d314b4177b5999c6cf8e0711a9bfee94
+2bd8875a4745e0d971c2f3eb7026bca801a3105a85ce863f20a131a536a5
+b039460e34a63aaeebeca08d85dcb16d5d6cf8758cae6aa533af1caab9fc
+191c0e02c1304015ee39fd0d9a94b0a10a728f1bf3e0b4636cd031e012ba
+96c43365ee639a1b71546f5c71e846de498983cc4d2d8ce5afce73610566
+2f653f672545f7f59e8ecdb9a1fcc136605fb1f057eb19d79a5fbfd305d4
+622c91baa05012daaf1cce8fc5b924404fddf14307ed54a858f93d86b60c
+81b4cd0aeea11b53d7e46267ff47e415f4603f1ca451a1dfb78cbcf4ab1b
+e4dc51c57cdaa36971ae55830aaeb580a09b89ce7c97066e1ad2f636561e
+9e8a6651439c56b9a00ec5b70e15b9f8082d74883c51ae591d176ae73d79
+afd55654891a876d507a5c693ad01f858adf0937a84e9e99b573b1e5b2c3
+a0f0ef1aaf10713060262f9d114c5000f0a4d3807edca6d3e859562e1b48
+643cf7bd1af31a6dfddbdf3acb41a223b8818eae5410c9d4af291f34e2d7
+c88a72fc498d730f4d039d99aa2c970aa4b9735a4da6f0c735e2c4e0d773
+419266e73ca20815b104b1e6c05cffbce4db61344739216835dd82a850b1
+3623d5d1d77ea038e0fe4e8144c2f789efaef70dd45452794152a15e05d1
+dc9af5e7ec39dd08e5cb436c40bab86655b5a52a3a7d3d06616b7998312a
+74288cb9807afe6490e517133e0d63507a5cb6755495b44d25a5944a48d5
+10a5b4f0559f3795a9792da9c85cb7ec92c146f003a734d5dd95e72777ea
+c4b99deefe0511ed48424a7d3675e6f6d1704eb12e391758814eb45c8b79
+f8677649fd67b619604ca2a79531ec0226d4801b0c109da3b929a1c10376
+52a051f0e18d598dd7d489563789a284344a4650e3612605b2255f685ae6
+93c763d4156e8c267a9e9f99b6f1b36ace5fdbc5cc83a706b4a91d573453
+88bcbb8b73f47dcdac8308ff87fcaff49d23473469621614eb2fcc217bed
+7c0c7265ec40004225ad8d4ef72aa923e5b293894e764fe6f8ca2c33ac44
+4e1af961c6f040e83279339f26b80d17b3163cd8f14b21e465bbfdb8aea4
+60594ce8d3f29892a0ff376e031097237b6f538defd9354a07f5f6d9b5e3
+f22dece20c66d5ad899e0be22b987ff0cca38fbb02bf98c7e95b1af8b364
+a81d17ac583cdece5c2bf0aa399389ca6bbaa76841c35b2117096fecdbd8
+7fb0ecbd2495ae516309ec2b482b424a07718aefa1fbdf8e97bb2372e22c
+6019a7f5d9c4dbcabe52449f5c0a784e870a930fdb3da9180bf0337d0964
+7aea2f08749a7a9764a1de8625b62a2c2515a57180d99a788f9c1d5cf9a2
+afa5c0bdc0c3a98e52ff0880bdbd2b4d5038d595f26596a185cf12c766b4
+b13eb48e98bd103c2dedd64a03770420b03ca090c0fc9f98593775756f5d
+575d1ad30e1a9b495c2800183eaaed347ffcda8b94738541b1c53520bb8b
+e5ea82ddd5eb7aaebb9f33b1d2106e62a56bb06438427e09666f501e9378
+13c55f27dec6ad6bdaf1f43279dee2da3784e7a8cd4e06d98c2dcfc5049e
+adaef51dcba0c48d3981f569f46a4b8bd4e9153973f7e2399613f957a520
+d635cd686fba400d67c2c5f3e38b440fa58069a083e026b9be5ebc00264e
+9ef730650f68ebdf0ddd1fa53c2e489188336d51cf509c25fca02266c528
+4bc84b99b9815882fb32835546ef128f6b262f833e35a73a4ac98bc7fcaa
+959a3a6ef656c5486cca6cce6789cc5eb3cf7ad82bd09e04e84bca5df846
+987478505d1b079fc0ec6babed6feb7ce5a7e9a82a433def99a92075d150
+ff04a71a7e4aeaac3acfd4a26dc997afe4556968feead536f2c3788adfe0
+5b4bd176c84525c5b055a2961712eaa7aabee41f579cdf6979da1142ff74
+a70dfe770b3f63bf73e58ac91e83858a251e38cb4f9a416edd3e60640d93
+52eb72ccb134dc6883506b5b9a5cfdf1ec49e4f7697e84c81c8251a3e848
+b48c65c2acb8d2e663873aa680bed19827e5d72dc9cc4b42dde849770ea5
+895757ae771b31993b3ee0b62d875cc91c044b2ce97fa66edbc575048068
+a2df65bbbe07628ca530a74629533f12d8c8828fd39b3c02dc435ea4cda4
+2337227ed4c9137504195071b59cb77a2c3cadc1d06d16cebb2363177759
+b2260b83dd0c8d428e31e8b5bbebbd1450488419d686920a8e22087c36ef
+93c295fef3abbf7032e4c297d1f0dd1069f77158396ec59cc81283b41b5a
+6d763c79c49aacdd33db14ff7e2464431f5057ad27e4dbf9b929438ee08b
+051a9e8153b72f60e26d2491706d62989fdf88c10d947936b64c578975d9
+a3e97e43a59ff247e1ac2a19feeacfbfbb4a7dc9a05d47d14ed7d5a90a69
+894d3b2d9f99fe71854a331041633aa1a758327151babeabfc8be9ffcfbf
+a9f2a73ec20e743ee2db29e4bba50ba6ef13f70000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+cleartomark
+/TT2Do00 findfont /Encoding get
+dup 3 /g90 put
+dup 4 /g286 put
+dup 5 /g395 put
+dup 6 /g437 put
+dup 7 /g400 put
+dup 8 /g410 put
+pop
+458 2808 M <03>S 
+599 2808 M <04>S  733 2808 M <05>S  874 2808 M <06>S  1016 2808 M <04>S  1149 2808 M <07>S  1257 2808 M <08>S  
+1 0.754 0 1 scol N 80 3203 M 302 3203 I : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 394 3203 M 272 3265 I 291 3226 291 3181 272 3142 -c 394 3203 I C 
+ O 0 0 0 1 scol 
+currentfile eexec
+9e67edc6b841302aba32c53778232d92f282d9adcfecb27f94998a30d9bd
+96a17810cc429528e0e73616bcade264caa458cb5d6ada069085d4aea9a0
+8bd83cd83c2d8ccda5db8b915a00faee66533e7808ee6f7a47fa2c49198b
+e535f728757a2fd1b4ce54f82fca406cc6d4c106e94c943e54cb0df42b6d
+bb1b2478ff3ed47082d8aa507958eb5552e113015e60ea68535f0d2ff328
+9e720dc3bd74ae19407b999a6eefdac8dedb3dc2b7c6a972984f357a3ea7
+6319d17cd5a9d69cb40a92f9594c5b81b2c08869369546bbc538e77c5a47
+533cab13c12d3eeff6d5a46d32896d2e60c4cfe6004113c408b9150c4f04
+cd64f42bcd0af235afd2df2907bf0735d576f3c216e3c8f39807aff8536f
+7ac7c4e221206583184a8b315f4c24d43c94cec99b2bdaad3f45cae476fa
+6611314903d9c0be2c56135f4ba1abdfea53070e8982b3b1b09baca4fe05
+44875e107e5021c9408c32604fe2014ae8ef190fe796f1283ebb39e11abe
+72e29153f0de3b376b2df573ba0d1f10293e96ba90e879db8de579ea8c83
+a8ac18cb717ac3af6fe584e455a423a58f4b823f1b8c293f2fc056243ea4
+1e29e69571806d425dd83ab102ad2e525fa2ab3052b8f6de429c7eaa841f
+82a0c23adf10d18b41b5e18516d53eeebca1920a647a4f9de1e1725c5ef7
+664f5408abc9c21502ffad5193f4003f4588f1b23f0e99fbb8309fd836cb
+1481d3705e444787b3a7713e89a23552a446c61eb691130f58979c22388d
+9683e95275b8c6f742b365babc99654be8d87935e54394ab990d291000c1
+2f950054e9702f61317d9843a42171f7f4a67e9eb347f483cbdf85dcde12
+03078c9f361ef5e92735e8e82598275509c3a44c33e0fc3fba0a3eacf46c
+1ecf16e35d1cda4d4ad11fe22e4f57745fd3af1929f1f4472a11eb80b046
+19084d6e4267039fc20f92cedb1b4f4f84aa378e13c238b067ac2ddf0321
+1b66cf0818e27ca29cbe0f6968037f37d2eca36f6a1b0dbfbf077f02bda2
+a8e90ed9990b63f45ee4710c88e49d68a99c1894015a5c54322bf7e17132
+dc7f800c6ec09628e4192880445c0e1a6f2b765407df82ec0be863109d89
+11a8b9c7e030f80ad3db6c640bd770b31158f4590602b0214780315812c6
+b90556e7d9ee35c12c27bde1484590cdc3c5cae51fac163e1320591b09fe
+7e6b65d1d92a9c50051662361b840a7b67d20000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+cleartomark
+/TT2Do00 findfont /Encoding get
+dup 9 /g393 put
+dup 10 /g367 put
+dup 11 /g455 put
+pop
+458 3282 M <03>S 
+599 3282 M <04>S  733 3282 M <09>S  874 3282 M <0A>S  932 3282 M <0B>S  
+1 0 0 1 scol N 1181 842 M 1403 842 I : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 1495 842 M 1373 903 I 1392 865 1392 819 1373 781 -c 1495 842 I C 
+ O 1 0.754 0 1 scol N 866 842 M 645 842 I : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 551 842 M 674 781 I 655 819 655 865 674 903 -c 551 842 I C 
+ O N 237 1471 M 237 1385 307 1314 394 1314 -c 481 1314 551 1385 551 1471 -c 551 1471 551 1471 551 1471 -c 551 1558 481 1629 394 1629 -c 307 1629 237 1558 237 1471 -c C 
+0.574 0.816 0.313 1 scol  O 0.25 0.25 0.25 1 scol 5 Lw N 237 1471 M 237 1385 307 1314 394 1314 -c 481 1314 551 1385 551 1471 -c 551 1471 551 1471 551 1471 -c 551 1558 481 1629 394 1629 -c 307 1629 237 1558 237 1471 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 1653 1314 M 1740 1314 1810 1385 1810 1471 -c 1810 1558 1740 1629 1653 1629 -c 1653 1629 1653 1629 1653 1629 -c 1566 1629 1495 1558 1495 1471 -c 1495 1385 1566 1314 1653 1314 -c C 
+0.652 0.766 0.867 1 scol  O 0.25 0.25 0.25 1 scol N 1653 1314 M 1740 1314 1810 1385 1810 1471 -c 1810 1558 1740 1629 1653 1629 -c 1653 1629 1653 1629 1653 1629 -c 1566 1629 1495 1558 1495 1471 -c 1495 1385 1566 1314 1653 1314 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 866 1471 M 866 1385 936 1314 1023 1314 -c 1110 1314 1181 1385 1181 1471 -c 1181 1471 1181 1471 1181 1471 -c 1181 1558 1110 1629 1023 1629 -c 936 1629 866 1558 866 1471 -c C 
+0.242 0.457 0.652 1 scol  O 0.25 0.25 0.25 1 scol N 866 1471 M 866 1385 936 1314 1023 1314 -c 1110 1314 1181 1385 1181 1471 -c 1181 1471 1181 1471 1181 1471 -c 1181 1558 1110 1629 1023 1629 -c 936 1629 866 1558 866 1471 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; 0 0 0 1 scol 
+currentfile eexec
+9e67edc6b841302aba32c53778232d92f282d9adcfecb27f94998a30d9bd
+96a17810cc429528e0e73616bcade264caa458cb5d6ada069085d4aea9a0
+8bd83cd83c2d8ccf09624cf98cd9f2d11c5bc182cf2b2f50a31d26858113
+120f64f574844f135516269d7e397e671b9c3cce58a7d67b8082d9e15359
+dc800268f2c05e735b3f76f0f075058ee2410cba9ad0c13ce69bbb090361
+1f069aeb044a04ef371ee50ec255350cc5ad64def424609bd1e66e76035f
+8064b5b1148d09bbeede6a4b4eaa822711882a87d371d07314c00ee173ed
+fc5f9afc10faa3c0255976c09e1bcb9e7f0fc234dcfc76854dfd02374aaf
+bcb538e1457c2c4eb296c1ce254b7d7a6272a94175f0ca0742825feb1920
+953da7ea4f18cdd1dc767d7306eec3b65c5c63be534de290e0d552c09b28
+032b5522d1f7c0ab8d917f72df7bd2253fcc197b6f6894cf918f870689f4
+890c007fac91a7efa527905282f3939e224a6992fdd2439a30cf80a297df
+5eed389e8826dc64fb76ddddf20a495d479cc67ed08ec1c50028431d0657
+cc9a5a0a64eb21bde1fcdb347d4914993fd4531d4b99f557e3f66e687ea7
+a9c909a7ee3ddb3b85ed470b75f9da3c5c78e57e6a9619bb862b0f5cf224
+c89bd56c05e2099c8200ec172d2941c21adf0e3ab817a45f367c9709ddea
+92b07c117a759993038a2bea70c787284a22cc762a3c9b23a1b55cfcac17
+c34fa5804372010e96b3bc3ed66dd48f3811e92189d93d3a3b5a86e099be
+870ae954d8f0127b0652fff2ce0751caf32232e2beae637c61a0b494af96
+508287be418d04530004359d7294410a3c2fb99d482857a66ae4aa81c6a7
+9114d092041e8e9b46f24974f3794d4ef282183968e29340a5d5d6592e4a
+27d7a0f70000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+cleartomark
+/TT2Do00 findfont /Encoding get
+dup 12 /g1007 put
+pop
+17 1550 M <0C>S 
+1 0.754 0 1 scol 64 Lw N 1495 1471 M 1274 1471 I : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 1181 1471 M 1303 1411 I 1284 1449 1284 1494 1303 1533 -c 1303 1533 I 1181 1471 I C 
+ O N 237 2102 M 237 2015 307 1944 394 1944 -c 481 1944 551 2015 551 2102 -c 551 2102 551 2102 551 2102 -c 551 2188 481 2259 394 2259 -c 307 2259 237 2188 237 2102 -c C 
+0.574 0.816 0.313 1 scol  O 0.25 0.25 0.25 1 scol 5 Lw N 237 2102 M 237 2015 307 1944 394 1944 -c 481 1944 551 2015 551 2102 -c 551 2102 551 2102 551 2102 -c 551 2188 481 2259 394 2259 -c 307 2259 237 2188 237 2102 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 1653 1944 M 1740 1944 1810 2015 1810 2102 -c 1810 2188 1740 2259 1653 2259 -c 1653 2259 1653 2259 1653 2259 -c 1566 2259 1495 2188 1495 2102 -c 1495 2015 1566 1944 1653 1944 -c C 
+0.652 0.766 0.867 1 scol  O 0.25 0.25 0.25 1 scol N 1653 1944 M 1740 1944 1810 2015 1810 2102 -c 1810 2188 1740 2259 1653 2259 -c 1653 2259 1653 2259 1653 2259 -c 1566 2259 1495 2188 1495 2102 -c 1495 2015 1566 1944 1653 1944 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 866 2102 M 866 2015 936 1944 1023 1944 -c 1110 1944 1181 2015 1181 2102 -c 1181 2102 1181 2102 1181 2102 -c 1181 2188 1110 2259 1023 2259 -c 936 2259 866 2188 866 2102 -c C 
+0.242 0.457 0.652 1 scol  O 0.25 0.25 0.25 1 scol N 866 2102 M 866 2015 936 1944 1023 1944 -c 1110 1944 1181 2015 1181 2102 -c 1181 2102 1181 2102 1181 2102 -c 1181 2188 1110 2259 1023 2259 -c 936 2259 866 2188 866 2102 -c : [ 0.52 0 0 0.52 0 0 ] concat K 
+; 0 0 0 1 scol 
+currentfile eexec
+9e67edc6b841302aba32c53778232d92f282d9adcfecb27f94998a30d9bd
+96a17810cc429528e0e73616bcade264caa458cb5d6ada069085d4aea9a0
+8bd83cd83c2d8ccf096243b8d3e4a349ba44e097adecbb2598953bb5e9e3
+5432629d670cdd3f29afdcedc91805292aef0cab86b5b83a0adf4026315b
+080520d2c0f0f0541ddd33f19b684c100913093af495c88349f72d7f58a7
+61e9fb9e773dfd94c84e58aa7d841753386fbb18a6bb343f77ff8e92e4ae
+124a38baeb1f2dfeac3c03126cc0a6defc70e04d25660ca1065f453e8c3a
+63412228ed049d37573d82c2ab1662e4457f6f3d02661c7f66ef276a7602
+b59584c7674a9b6704ecbbefa839a557a437a6486885aba4f5f0d8865fcb
+c2812c21794e37385eb1725e226b40bccee357bf3cf311813d2704aa8a0b
+5874cec91205e239a9741cd10b16c8bb72be9f392966146cb3838b245463
+446eb84e6f16fda1634f6d85e877a084083157a9210d066fbf9960b8c868
+3ad5bda4982f71033b3c483c150000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000
+cleartomark
+/TT2Do00 findfont /Encoding get
+dup 13 /g1008 put
+pop
+17 2183 M <0D>S 
+1 0.754 0 1 scol 64 Lw N 866 2102 M 645 2102 I : [ 0.52 0 0 0.52 0 0 ] concat K 
+; N 551 2102 M 674 2040 I 655 2079 655 2124 674 2163 -c 674 2163 I 551 2102 I C 
+ O LH
+%%PageTrailer
+
+%%Trailer
+%%DocumentNeededResources: 
+%%DocumentSuppliedResources: 
+%%+ procset Pscript_WinNT_VMErrorHandler 5.0 0
+%%+ procset Pscript_FatalError 5.0 0
+%%+ procset Pscript_Win_Basic 5.0 0
+%%+ procset Pscript_Win_Utils_L1 5.0 0
+%%+ procset Pscript_Win_GdiObject 5.0 0
+%%+ procset Pscript_Win_GdiObject_L1 5.0 0
+%%+ procset Pscript_Text 5.0 0
+Pscript_WinNT_Incr dup /terminate get exec
+%%EOF

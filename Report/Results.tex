@@ -9,10 +9,61 @@ To gather metrics on the energy usage of the motes, a Contiki library called rim
 
 To check that a predicate was successfully evaluated the TDMA algorithm printed any changes in the assigned slot as well as the time the slot was changed. When a predicate was evaluated on a node the time it was evaluated as well as the result was printed. Analysis scripts then evaluated the predicate using the most recent slot value from before or up to when the predicate was evaluated to evaluate the predicate itself. This result was then compared with the actual result of the predicate. The results were compared whether or not the predicate response message reached the sink.
 
+We ran these experiments using two different predicates, one that required 1-hop information and one that required 2-hop information. Both were checking to see if there were slot collisions and were the same two predicate that were mentioned as examples in \autoref{sec:example-predicates}. Below the code and logic for the two predicates is reproduced.
+
+\begin{figure}[H]
+\begin{minipage}{.5\linewidth}
+\begin{verbatim}
+[all]
+function 1 as slot returning int in
+    using Neighbours(2) as twohopn in
+        @(x : twohopn ~
+            slot(x) != slot(this)
+        )
+\end{verbatim}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\forall n' \in \text{Neighbours}(n, 2) \cdot \\
+& \hspace{4em}				\text{slot}(n) \neq \text{slot}(n')
+\end{align*}
+\end{minipage}
+
+\caption{Check that no two neighbours have the same slot (2-hop information)}
+\label{fig:two-hop-slot-pred-lang-results}
+\end{figure}
+
+\begin{figure}[H]
+\begin{minipage}{.5\linewidth}
+\begin{verbatim}
+[all]
+function 0 as addr returning int in
+function 1 as slot returning int in
+    using Neighbours(1) as onehopn in
+        @(a : onehopn ~
+            @(b : onehopn ~ addr(a) != addr(b)
+                => slot(a) != slot(b))
+             & slot(a) != slot(this)
+        )
+\end{verbatim}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+\begin{align*}
+&				\forall n \in \text{Nodes} \cdot \\
+& \hspace{2em}		\forall n' \in \text{Neighbours}(n, 1) \cup \{n\} \cdot \\
+& \hspace{4em}			\forall n'' \in \text{Neighbours}(n, 1) \cup \{n\} \cdot \\
+& \hspace{6em}				\text{addr}(n') \not= \text{addr}(n'') \\
+& \hspace{8em}					\implies \text{slot}(n') \neq \text{slot}(n'')
+\end{align*}
+\end{minipage}
+\caption{Check that no two neighbours have the same slot (1-hop information)}
+\label{fig:one-hop-slot-pred-lang-results}
+\end{figure}
 
 \subsection{Analysis}
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
 \subfigure[Rx]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/1HOP/messagesPE/rx/graph.pdf}
@@ -41,7 +92,7 @@ Graph \subref{fig:predeval4.0-correct}, showing the rate of correct predicate ev
 
 As messages sent and received use the most energy in a WSN system \cite{?} we will use message transmit and receive statistics to evaluate the energy usage of the algorithms. In graphs \subref{fig:predeval4.0-rx} and  \subref{fig:predeval4.0-tx}), local periodic predicate evaluation is the most conservative, however it also shows the lowest accuracy for its evaluations so these results show little in the way of benefits to using this algorithm. By contrast, the most accurate algorithm, PELE, has a higher (yet still moderate) level of energy consumption. An important observation is that the energy demands of global predicate evaluation -- both of which showed middling accuracy -- increase faster than those of local evaluation as network size increases. This is because global evaluation requires data from the entire network, and the operating of the mesh routing protocol means that nodes lying further from the sink will have to have their messages forwarded by a greater number of intermediate nodes, giving exponential growth in the number of messages sent. The local evaluation algorithms show a more scalar trend as the size of a node's 1- or 2-hop neighbourhood may not increase due to the presence of more nodes in the network -- all that is guaranteed is that there will be more such neighbourhoods in which to evaluate predicates.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
 \subfigure[Rx]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/messagesPE/rx/graph.pdf}
@@ -59,7 +110,7 @@ As messages sent and received use the most energy in a WSN system \cite{?} we wi
 \caption{Results when predicate period is every 2.0 seconds using a 1-hop predicate}
 \end{figure}
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
 \subfigure[Rx]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/2HOP/messagesPE/rx/graph.pdf}

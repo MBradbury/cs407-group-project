@@ -22,10 +22,6 @@ The nature of clustering means that a clusterhead has a significantly higher wor
 
 \subsection{Simulating Sensor Networks}
 
-\subsubsection*{TinyOS}
-
-TOSSIM \cite{levis2003tossim}
-
 \subsubsection*{Contiki}
 % Cite basically all the papers at: http://www.contiki-os.org/support.html
 
@@ -74,7 +70,16 @@ The RIME communication stack presents a solution to the cross-layer information-
 
 \subsubsection*{NS2}
 
+NS2 is a ``discrete event simulator targeted at networking research'' \cite{NS2} that ``provides substantial support for simulation of TCP, routing, and multicast protocols over wired and wireless'' networks. Due to its initial focus on wired networks the support for wireless networks can be below expectations. NS2 is written in C++ and uses OTcl to manage the simulation of networks. NS2 has a very large number of features, for example many of the routing protocols are built in and it comes with support for mobility models such as random waypoint. Due to the number of features NS2 can be very useful to people who wish to utilise it to its full potential, but it can be difficult to newcomers who may be overwhelmed.
+
 \subsubsection*{JProwler}
+
+JProwler \cite{JProwler} is a Java implementation of Prowler which is implemented in MATLAB. JProwler is designed to simulate MICA motes and provides two radio models: Gaussian and Rayleigh, one is for use with stationary nodes and the other is for use with mobile nodes. The main use case of JProwler is to simulate large networks very quickly. The implementation of algorithms is written in Java, using the simulator as a base, so to transplant the algorithms to run on actual hardware means rewriting the program. The benefits of it are: that it is very fast and it is implemented using Java this enables quick prototyping of algorithms, easy testing and fast analysis.
+
+\subsubsection*{TinyOS}
+
+TinyOS is an event driven wireless sensor network operating system \cite{?}. Programs are written for in nesC a dialect of C \cite{Gay:2003:NLH:780822.781133}. While TinyOS is often described as an operating system it is better described as a framework for developing programs for embedded systems (specifically sensor networks). Developing for TinyOS can be easier than other implementations because the nesC language models that tasks that a developer would be programming a sensor node to be doing better than developing programs directly in C. To simulate applications developed for TinyOS TOSSIM \cite{levis2003tossim} can be used to compile the same nesC code that would be used to run on the hardware to an intermediate format that is understood by the simulator. TOSSIM supports radio models where the bit error rate is configurable and emulates the hardware to provide an accurate simulation of what may occur in a real life situation. Finally the simulator supports visualising the network, so developers can get a good understanding of what is happening.
+
 
 \subsubsection*{Simulating Energy Consumption}
 \cite{Shnayder04}

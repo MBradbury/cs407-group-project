@@ -433,8 +433,8 @@ static void data_evaluation(pege_conn_t * pege)
 					unique_array_continue(&target_nodes, targetelem); 
 					targetelem = unique_array_next(targetelem))
 				{
-					rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, targetelem); 
-					PEDPRINTF("PEGE: Eval: Checking=%s %d hops\n", addr2str(t), hops);
+					rimeaddr_t * t =
+						(rimeaddr_t *)unique_array_data(&target_nodes, targetelem); 
 
 					// Go through the neighbours for the node
 					unique_array_elem_t neighbours_elem;
@@ -530,22 +530,11 @@ static void data_evaluation(pege_conn_t * pege)
 			// We need to set the global data needed for pretend_node_data
 			global_pege_conn = pege;
 
-			bool evaluation_result = evaluate_predicate(&pege->predconn,
+			evaluate_predicate(&pege->predconn,
 				pretend_node_data, pege->data_size,
 				pege->function_details, pege->functions_count,
 				&hop_data,
 				all_neighbour_data, max_size, pred);
-
-	#if 0
-			if (evaluation_result)
-			{
-				PEDPRINTF("PEGE: TRUE\n");
-			}
-			else
-			{
-				PEDPRINTF("PEGE: FAILED (%s)\n", error_message());
-			}
-	#endif
 
 			free(all_neighbour_data);
 
@@ -596,12 +585,12 @@ exit:
 	PROCESS_END();
 }
 
-
 void pege_start_delayed2(pege_conn_t * conn)
 {
 	PEDPRINTF("PEGE: Starting Data Aggregation\n");
 
-	tree_agg_open(&conn->aggconn, conn->sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
+	tree_agg_open(&conn->aggconn,
+		conn->sink, 140, 170, sizeof(aggregation_data_t), &callbacks);
 
 	// If sink start the evaluation process to run in the background
 	if (rimeaddr_cmp(&rimeaddr_node_addr, conn->sink))
@@ -612,13 +601,11 @@ void pege_start_delayed2(pege_conn_t * conn)
 
 void pege_start_delayed1(pege_conn_t * conn)
 {
-	//printf("PEGE: Starting Neighbour Aggregation\n");
-
-	neighbour_aggregate_open(&conn->nconn, conn->sink, 121, 110, 150, &neighbour_callbacks);
+	neighbour_aggregate_open(&conn->nconn,
+		conn->sink, 121, 110, 150, &neighbour_callbacks);
 
 	ctimer_set(&conn->ct_startup, 80 * CLOCK_SECOND, &pege_start_delayed2, conn);
 }
-
 
 bool pege_start(pege_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,

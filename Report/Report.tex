@@ -9,6 +9,8 @@
 % This needs to occur before hyperref and minted
 \usepackage{float}
 
+\usepackage[usenames,dvipsnames]{xcolor}
+
 \usepackage{multirow}
 
 \usepackage[hyphens]{url}
@@ -57,14 +59,24 @@
 
 % Predicate language syntax highlighting
 \usepackage{listings}
-\definecolor{keywordblue}{rgb}{0.24,0.59,0.7}
+\definecolor{keywordblue}{RGB}{20,105,176}
 \lstdefinelanguage{Hoppy}{
-    morekeywords={all,function,as,returning,in,using,Neighbours},
+    morekeywords={all,function,as,returning,in,using},
     sensitive=true,
 }
 \lstset{
     language=Hoppy,
     keywordstyle=\color{keywordblue},
+%
+    keywords=[2]{this},
+    keywordstyle=[2]\color{OliveGreen},
+%
+    keywords=[3]{int,float},
+    keywordstyle=[3]\color{YellowOrange},
+%
+    keywords=[4]{Neighbours,abs,mean,max,min,sum,len},
+    keywordstyle=[4]\color{Purple},
+%
     basicstyle=\ttfamily,
     columns=fullflexible,
 }

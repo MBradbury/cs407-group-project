@@ -13,14 +13,14 @@ We ran these experiments using two different predicates, one that required 1-hop
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 1 as slot returning int in
     using Neighbours(2) as twohopn in
         @(x : twohopn ~
             slot(x) != slot(this)
         )
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}%
 \begin{minipage}{.5\linewidth}
 \begin{align*}
@@ -36,7 +36,7 @@ function 1 as slot returning int in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 0 as addr returning int in
 function 1 as slot returning int in
@@ -46,7 +46,7 @@ function 1 as slot returning int in
                 => slot(a) != slot(b))
              & slot(a) != slot(this)
         )
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}%
 \begin{minipage}{.5\linewidth}
 \begin{align*}

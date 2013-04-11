@@ -21,8 +21,10 @@ typedef struct hop_data
 bool hop_manager_init(hop_data_t * hop_data);
 void hop_manager_free(hop_data_t * hop_data);
 
-bool hop_manager_record(hop_data_t * hop_data, uint8_t hops, void const * data, size_t data_length);
-void hop_manager_remove(hop_data_t * hop_data, uint8_t hops, rimeaddr_t const * from);
+bool hop_manager_record(hop_data_t * hop_data,
+	uint8_t hops, void const * data, size_t data_length);
+void hop_manager_remove(hop_data_t * hop_data,
+	uint8_t hops, rimeaddr_t const * from);
 
 void hop_manager_reset(hop_data_t * hop_data);
 
@@ -31,16 +33,11 @@ map_t * hop_manager_get(hop_data_t * hop_data, uint8_t hops);
 unsigned int hop_manager_length(hop_data_t * hop_data, var_elem_t const * variable);
 
 #ifdef CONTAINERS_CHECKED
-
 #	define hop_manager_max_size(hop_data) \
 		(hop_data != NULL ? hop_data->max_size : 0)
-
 #else
-
 #	define hop_manager_max_size(hop_data) \
 		((hop_data)->max_size)
-
 #endif
-
 
 #endif /*CS407_HOP_DATA_MANAGER_H*/

@@ -35,84 +35,36 @@ Finally, all of these custom containers are tested by a test suite that checks f
 
 \subsection{Network Library}
 
-\subsubsection{Event Update}
+In order to facilitate the development of our predicate checking algorithms, numerous separate libraries that encapsulated specific functionality needed to be implemented. The reason that these algorithms and protocols were implemented as libraries was so that our code remained well encapsulated, leading to easier testing and development.
 
-\begin{figure}[H]
-  \centering
-  \begin{boxedminipage}{\linewidth}
-    % 
-    \null Process $j$ - \res{event-update}\\
-    %
-    \null \textbf{variables}\\
-    %
-    \null\qq \var{period}: timer init $P_{generate}$;\\~\\
-    %
-    \null\qq \% The previous node data sent to the network\\
-    \null\qq \var{previous}: struct init $\bot$;\\~\\
-    %
-    \null \textbf{constants}\\
-    %
-    \null\qq \% Generate Period, how often we should check for a change in the data\\
-    \null\qq \var{$P_{generate}$}: time;\\~\\
-    %
-    \null\qq \% Checks if the data differs\\
-    \null\qq \var{differs}: function takes (struct, struct) returns boolean;\\~\\
-    %
-    \null\qq \% Gets the data of the current node\\
-    \null\qq \var{data}: function takes () returns struct;\\~\\
-    %
-    \null\qq \% The probability of sending our data, even if no change occurred\\
-    \null\qq \var{chance}: real;\\~\\
-    %
-    \null \textbf{parameters}\\
-    %
-    \null\qq \% The distance we need to send information\\
-    \null\qq \var{distance}: int;\\~\\
-    %
-    \null \textbf{actions}\\
-    %
-    %
-    \null\qq \% Check for changes\\
-    \null\qq \emph{check}::~\res{timeout}(\var{period}) $\rightarrow$\\
-    \null\qq\qq $\var{force} \assign \res{RandReal}(0, 1) \leq \var{chance}$;\\
-    \null\qq\qq $\var{changed} \assign \var{previous} = \bot \lor \var{differs}(\var{data}(), \var{previous})$;\\
-    \null\qq\qq \res{if} ($\var{force} \lor \var{changed}$) \res{then}\\
-    \null\qq\qq\qq $\var{previous} \assign \var{data}()$;\\
-    \null\qq\qq\qq \res{nhopflood.send}$\langle j, \var{previous}, \var{distance}\rangle$;\\
-    \null\qq\qq \res{fi}; \\
-    \null\qq\qq \res{set}($\mathit{period}$, $P_{generate}$); \\~\\
-    %
-    %
-    \null\qq \% Receiving Change message\\
-    \null\qq \emph{receive}::~\res{nhopflood.recv}$\langle source, data, hops\rangle \rightarrow$\\
-    \null\qq\qq \% Prevent delivery if being told that the current node's data has changed\\
-    \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
-    \null\qq\qq\qq \% Inform library caller of data change\\
-    \null\qq\qq\qq \res{event-update.callback}(\var{data}, \var{hops}); \\
-    \null\qq\qq \res{fi}; \\
-    %
-    %
-  \end{boxedminipage}
-  \caption{Event Update Broadcast Algorithm}
-\end{figure}
+\subsubsection{Multi-Packet Unicast}
 
+In Contiki sending a single packet has its limits, there is only so much data you can get in a single packet. There are two C macros that are relevant to this \verb|PACKETBUF_HDR_SIZE| which is set to 48 bytes and \verb|PACKETBUF_SIZE| which is set to 128 bytes\footnote{packetbuf.h \url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}. This means that in general we will only be able to send a packet containing 128 bytes of information. But if a protocol called for sending a data structure that spans more than 128 bytes bytes, then a way to send multiple packets and a receiver that can put the packets back together in the correct way to deliver the data is required.
 
-\subsubsection{Multi-Packet}
-
-In Contiki sending a single packet has its limits, there is only so much data you can get in a single packet. There are two C macros that are relevant to this \verb|PACKETBUF_HDR_SIZE| which is set to 48 bytes and \verb|PACKETBUF_SIZE| which is set to 128 bytes\footnote{packetbuf.h \url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}. This means that in general we will only be able to send a packet containing 128 bytes of information, but what if we have a data structure that spans 300 bytes? Then we will need to have a way to send multiple packets and a receiver that can put the packets back together in the correct way to deliver the data.
-
-Contiki's data transfer primitives for their RIME protocols are fairly hidden because of their focus on uIPv6. We found \verb|ruldolph0| first \footnote{ruldolph0 \url{http://contiki.sourceforge.net/docs/2.6/a01735.html}} and then \verb|rucb| (Reliable Unicast Bulk Transfer) much later \footnote{rucb \url{http://contiki.sourceforge.net/docs/2.6/a00365.html}}. However, both of them have problems, the API is very convoluted and seems more geared towards sending very large files across the network. This is very different to our aim, which is to send relatively small packets of data to a specific neighbour. So we wrote our own API that would split data of any given size and reassemble it once received, our API was not focused on processing data chunks like \verb|ruldolph0| or \verb|rucb|, but simply operated on a block of memory given to it. This is a case where a simpler API made development much easier for us. Admittedly because our implementation uses dynamic memory allocation it could potentially perform worse, but because the energy of sending and receiving messages dwarfs the energy usage of the CPU, we feel that easier development tradeoff made it worth it. Also, now that code has been written to use this API, the \verb|multipacket| library itself could always be rewritten to use \verb|rucb| as a base to run more efficiently.
+Contiki's data transfer primitives for their Rime protocols are fairly hidden because of their focus on uIPv6. We found \verb|ruldolph0| first \footnote{ruldolph0 \url{http://contiki.sourceforge.net/docs/2.6/a01735.html}} and then \verb|rucb| (Reliable Unicast Bulk Transfer) much later \footnote{rucb \url{http://contiki.sourceforge.net/docs/2.6/a00365.html}}. However, both of them have problems, both APIs are very convoluted and seem more geared towards sending very large files across the network. This is very different to our aim, which is to send relatively small packets of data to a specific neighbour. So we wrote our own API that would split data of any given size and reassemble it once received, our API was not focused on processing data chunks like \verb|ruldolph0| or \verb|rucb|, but simply operated on a block of memory given to it. This is a case where a simpler API made development much easier for us. Admittedly because our implementation uses dynamic memory allocation it could potentially perform worse, but because the energy of sending and receiving messages dwarfs the energy usage of the CPU, we feel that easier development tradeoff made it worth it. Also, now that code has been written to use this API, the \verb|multipacket| library itself could always be rewritten to use \verb|rucb| as a base to run more efficiently.
 
 \subsubsection{N-Hop Request} 
 
-We developed the N-Hop Request communication layer very early in the project. Our application needed a way to pass predicate messages between nodes, these messages sometimes needed to travel multiple hops in the network and also contain routing information for the receiving node, so that it could respond to the originator. Firstly, we consulted the Contiki libraries to see if any of the existing network primitives could be used for this purpose. We initially considered \verb|Mesh| which sends a packet to any node on the network, this seemed like it would be a prefect fit for sending data back to the originator node; However, issues arose when we discovered that it could only send one unique packet across the network at a time. This was due to the way that \verb|Mesh| was implemented, it only maintains a record of the most recently received packet on the network. This assumption is fine if you assume that you only have 1 sender like a base station but when you have multiple senders sending different packets it fails. Next we considered \verb|Trickle| \footnote{trickle.h \url{http://contiki.sourceforge.net/docs/2.6/a00381.html}}. Unfortunately, like \verb|Mesh|, \verb|Trickle| had similar short comings which made unsuitable for our task. In some cases \verb|reliable unicast| could be used to target the specific nodes for which the message is intended. This, however, is not suitable when the identifies of the nodes is not known, or in situations when storing routing tables is not appropriate. 
+We developed the N-Hop Request communication layer very early in the project. Our application needed a way to ask neighbouring nodes for information, and these messages sometimes needed to travel multiple hops in the network to do so. Initially we consulted the Contiki libraries to see if any of the existing network primitives could be used for this purpose.
 
-Having explored several options from the Contiki source library we realised that N-Hop Request had a very specific set of requirements. We found that no one library offered all the functionality we needed; Therefore, We opted for developing our own communication layer and API to handle the routing of these messages. The layer would need to flood the network, a fixed number of hops from the source, whilst allowing multiple nodes to use the same layer, with different messages. For this we used existing Contiki Rime Protocol implementations and initially the primitive was heavily influenced by the H-Send\cite{HSEND} algorithm, we started by implementing a variation of H-Send which we then went onto generalise for predicates that could be defined at run-time by our GUI running on the base station.
+We first considered \verb|Mesh| which sends a packet to any node on the network, this seemed like it would be a prefect fit for sending data back to the originator node. However, issues arose when we discovered that it could only send one unique packet across the network at a time. This was due to the way that \verb|Mesh| was implemented, it only maintains a record of the most recently received packet on the network. This assumption is fine if you assume that you only have 1 sender like a base station but when you have multiple senders sending different packets it fails. This could only have been scaled by having a \verb|Mesh| connection per node, which is not scalable at all. Next we considered \verb|Trickle| \footnote{trickle.h \url{http://contiki.sourceforge.net/docs/2.6/a00381.html}}. Unfortunately, like \verb|Mesh|, \verb|Trickle| had similar shortcomings which made unsuitable for our task.
 
-The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \verb|runicast| (Reliable Unicast). Stubborn Broadcast is used by the originator to send the request for application and network information n-hops in the network. Every node that receives the request checks the hop count in the message; if it's $\> 1$ then, it decrements the hop count and forwards the packet on to it's neighbours using Stubborn Broadcast. Every node that receives this request then waits a random amount of time with it's rime address as a seed and then uses Reliable Unicast to send it's application and Network Information back to the node it received the request from. If a node receives this packet and isn't the intended target (the originator) they forward packet on to the node that they received their request message from, eventually the packet will arrive back at the originator who can then deliver the message. In order to minimise message sends, each node maintains the most efficient node to get back to the originator. This is based on the number of hops it takes for a request message to reach the node, a message from a node with 3 hops left is a more efficient route than a message from a node with only 2 hops left. Finally, once a pre-determined wait period has expired the gathered data is passed to the predicate evaluator and any further data received is not delivered.
+Having explored several options from the Contiki source library we realised that N-Hop Request had a very specific set of requirements. We found that no one library offered all the functionality we needed; Therefore, We opted for developing our own communication layer and API to handle the routing of these messages. The layer would need to flood the network, a fixed number of hops from the source, whilst allowing multiple nodes to use the same layer, with different messages. For this we built upon Contiki Rime communication libraries.
+
+The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \verb|runicast| (Reliable Unicast). Stubborn Broadcast is used to send the request data messages n-hops into the network. Every node that receives the request checks the time-to-live (ttl) of the message; if it is greater than 1 then, it decrements the ttl and forwards the packet on to it's neighbours. Stubborn Broadcast was used as it broadcasts a message at a given rate, allowing this to send a few copies of the message at random intervals increases the chance that the message will be received by the neighbours. To keep energy costs down the number of message repeats is kept low.
+
+When a node receives a request message it keeps a record of from what node it came from and which node is requesting the information, this is so that when replies are being sent they can simply follow this path instead of being broadcasted. After this information has been stored the node then waits a fixed amount of time before sending a reply. This is done so that request messages have time to propagate away to avoid collisions. Once the timer times-out Reliable Unicast is then used to send the reply to the neighbour recorded as being on the path to the node that requested this information. Reliable Unicast is used in attempt to provide reliable transmission and reduce energy usage, as in the best case it will simply involve the overhead of a single ack message.
+
+If a node receives the reply packet and isn't the intended target (the originator) they forward the packet onto the node that they received their request message from, eventually the packet will arrive back at the originator who can then deliver the message. In order to minimise message sends, each node maintains the most efficient node to get back to the originator. This is based on the number of hops it takes for a request message to reach the node, a message from a node with 3 hops left is a more efficient route than a message from a node with only 2 hops left. Finally, once a pre-determined wait period has expired the gathered data is passed to the predicate evaluator and any further data received is not delivered.
+
+\begin{figure}[H]
+\centering
+\subfigure[Flooding request message two hops]{\includegraphics[scale=0.5]{Diagrams/2-hop-flooding.eps}}\hspace{5em}
+\subfigure[Single path of a request and replies]{\includegraphics[scale=0.5]{Diagrams/n-hop-flood-req-reply.eps}}
+\caption{Example of N-Hop Flood when N=2}
+\end{figure}
 
 %TODO: Note about performance maybe?
-%Could also put a graphic of the chain here too
 
 \begin{figure}[H]
   \centering
@@ -168,7 +120,7 @@ The libraries that we used were \verb|stbroadcast| (Stubborn Broadcast) and \ver
     \null\qq\qq\qq \res{fi;}\\
     \null\qq\qq\qq \res{if} ($respond$)\\
     \null\qq\qq\qq\qq $(\var{recHops}, \var{recForwardTo}, \var{recId}) \assign \var{records}[\var{originator}]$;\\
-    \null\qq\qq\qq\qq \res{unicast.send}$\langle originator, j, 0, \res{nodeData}() \rangle$ \res{to} \var{recForwardTo};\\
+    \null\qq\qq\qq\qq \res{unicast.send}$\langle originator, j, 0, \res{NodeData}() \rangle$ \res{to} \var{recForwardTo};\\
     \null\qq\qq\qq\qq \res{bcast}$\langle \var{originator}, \var{j}, \var{id}, \var{hops} - 1, \var{hops} + 1\rangle$;\\
     \null\qq\qq\qq \res{fi;}\\
     \null\qq\qq \res{fi;}\\~\\
@@ -290,6 +242,74 @@ When a node receives a flooded message it checks to see what the time-to-live (T
   \label{fig:n-hop-flood-algorithm}
 \end{figure}
 
+\subsubsection{Event Update}
+
+The event update library was developed for use with predicates being evaluated locally in-network where information needed to be disseminated a given number of hops once the mote's data changed. This library periodically generates the current state of the mote and then checks it against the previously sent state. If there is no previously sent state or the state has changed as specified by a $\var{differs}$ function, then the recently generated state is flooded the required distance. For our usage this distance will be the maximum number of hops that a predicate needs information from.
+
+\begin{figure}[H]
+\includegraphics[width=\linewidth]{Diagrams/event-update-flowchart.eps}
+\caption{Process of event update sending changed data}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{boxedminipage}{\linewidth}
+    % 
+    \null Process $j$ - \res{event-update}\\
+    %
+    \null \textbf{variables}\\
+    %
+    \null\qq \var{period}: timer init $P_{generate}$;\\~\\
+    %
+    \null\qq \% The previous node data sent to the network\\
+    \null\qq \var{previous}: struct init $\bot$;\\~\\
+    %
+    \null \textbf{constants}\\
+    %
+    \null\qq \% Generate Period, how often we should check for a change in the data\\
+    \null\qq \var{$P_{generate}$}: time;\\~\\
+    %
+    \null\qq \% Checks if the data differs\\
+    \null\qq \var{differs}: function takes (struct, struct) returns boolean;\\~\\
+    %
+    \null\qq \% Gets the data of the current node\\
+    \null\qq \var{data}: function takes () returns struct;\\~\\
+    %
+    \null\qq \% The probability of sending our data, even if no change occurred\\
+    \null\qq \var{chance}: real;\\~\\
+    %
+    \null \textbf{parameters}\\
+    %
+    \null\qq \% The distance we need to send information\\
+    \null\qq \var{distance}: int;\\~\\
+    %
+    \null \textbf{actions}\\
+    %
+    %
+    \null\qq \% Check for changes\\
+    \null\qq \emph{check}::~\res{timeout}(\var{period}) $\rightarrow$\\
+    \null\qq\qq $\var{force} \assign \res{RandReal}(0, 1) \leq \var{chance}$;\\
+    \null\qq\qq $\var{changed} \assign \var{previous} = \bot \lor \var{differs}(\var{data}(), \var{previous})$;\\
+    \null\qq\qq \res{if} ($\var{force} \lor \var{changed}$) \res{then}\\
+    \null\qq\qq\qq $\var{previous} \assign \var{data}()$;\\
+    \null\qq\qq\qq \res{nhopflood.send}$\langle j, \var{previous}, \var{distance}\rangle$;\\
+    \null\qq\qq \res{fi}; \\
+    \null\qq\qq \res{set}($\mathit{period}$, $P_{generate}$); \\~\\
+    %
+    %
+    \null\qq \% Receiving Change message\\
+    \null\qq \emph{receive}::~\res{nhopflood.recv}$\langle source, data, hops\rangle \rightarrow$\\
+    \null\qq\qq \% Prevent delivery if being told that the current node's data has changed\\
+    \null\qq\qq \res{if} ($j \not= source$) \res{then} \\
+    \null\qq\qq\qq \% Inform library caller of data change\\
+    \null\qq\qq\qq \res{event-update.callback}(\var{data}, \var{hops}); \\
+    \null\qq\qq \res{fi}; \\
+    %
+    %
+  \end{boxedminipage}
+  \caption{Event Update Broadcast Algorithm}
+\end{figure}
+
 
 \subsubsection{Tree Aggregation}
 
@@ -377,7 +397,7 @@ The user of this library needs to implement four important functions:
     \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, INTMAX\rangle$;\\
     \null\qq\qq \res{else} \\
     \null\qq\qq\qq \res{bcast}$\langle j, \var{bestparent}, \var{besthop} + 1\rangle$;\\
-    \null\qq\qq \res{fi}; \\
+    \null\qq\qq \res{fi};
     %
     %
   \end{boxedminipage}
@@ -417,18 +437,17 @@ The user of this library needs to implement four important functions:
     \null\qq \emph{finishagg}::~\res{timeout}(\var{aggregation}) $\rightarrow$\\
     \null\qq\qq \res{multipacket.send}$\langle j, \otimes_{write}(\var{stored})\rangle$ \res{to} \var{bestparent};\\
     \null\qq\qq $\var{collecting} \assign False$; \\
-    \null\qq\qq $\var{stored} \assign \bot$; \\
+    \null\qq\qq $\var{stored} \assign \bot$;
     %
     %
   \end{boxedminipage}
   \caption{Tree Aggregation Algorithm - Sending data}
 \end{figure}
 
-\begin{figure}[ht!]
+\begin{figure}[H]
 \centering
-\subfigure[Example Network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-network}}
-
-\subfigure[Logical Tree imposed on network]{\includegraphics[width=0.5\textwidth]{Diagrams/neighbour-tree-structure}}
+\subfigure[Example Network]{\includegraphics[width=0.45\textwidth]{Diagrams/neighbour-network}}
+\subfigure[Logical Tree imposed on network when aggregating neighbours]{\includegraphics[width=0.45\textwidth]{Diagrams/neighbour-tree-structure}}
 \end{figure}
 
 \subsubsection{Neighbour Detect}
@@ -437,12 +456,11 @@ To aid in debugging a vital piece of information that will be required about the
 
 The first was to add more features to Contiki's neighbour detect library. As that library was very simple and supported only saying that a neighbour had been detected (with the option of providing a integer value as well). As we were aiming for this code to support changes in the network, such as nodes leaving or joining neighbourhoods, we added the concept of a round. Instead of just knowing about neighbours at that instant in time, it allowed the library to maintain some kind of history about what nodes were neighbours of other nodes in the past. Whenever new nodes are detected they are recorded, however, if a node has not been detected for a certain number of rounds then that node is removed from the record.
 
-\begin{figure}[H]
-\centering
-\subfigure[Node A requesting neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-request}}
-\subfigure[Node A receiving neighbour data]{\includegraphics[width=0.25\textwidth]{Diagrams/neighbour-report}}
-\caption{Nodes asking for and receiving neighbour data}
-\end{figure}
+For this to be useful we needed a way to get this data back to the sink node. There are many ways to do this, but one of the best is aggregating along a tree because it can combine many messages into a single one and forward that aggregated message instead of lots of smaller messages \cite{1628365}. The Neighbour Aggregation part uses the Tree Aggregation library that we have developed, the function that is used to aggregate data together is $\cup$ (union), this allows data to be aggregated with other data and allows that data to be updated. The nodes own data is set to be $\res{node-data}$, where $\var{j}$ is the current node's address and $\res{round-data}$ is the set of node addresses provided by the $\res{neighbour-detect.callback}$ callback in \autoref{algo:neighbour-detect}.
+
+\begin{equation}
+\res{node-data} = \{\{\var{other}, \var{j}\} | \var{other} \in \res{round-data} \}
+\end{equation}
 
 \begin{figure}[H]
   \centering
@@ -489,7 +507,7 @@ The first was to add more features to Contiki's neighbour detect library. As tha
     \null\qq\qq\qq \res{fi}; \\
     \null\qq\qq \res{else} \\
     \null\qq\qq\qq $\var{previous}[\var{source}] \assign \var{round}$; \\
-    \null\qq\qq \res{fi}; \\~\\
+    \null\qq\qq \res{fi}; \\
     %
     %
   \end{boxedminipage}
@@ -497,15 +515,10 @@ The first was to add more features to Contiki's neighbour detect library. As tha
   \label{algo:neighbour-detect}
 \end{figure}
 
-For this to be useful we needed a way to get this data back to the sink node. There are many ways to do this, but one of the best is aggregating along a tree because it can combine many messages into a single one and forward that aggregated message instead of lots of smaller messages \cite{1628365}. The Neighbour Aggregation part uses the Tree Aggregation library that we have developed, the function that is used to aggregate data together is $\cup$ (union), this allows data to be aggregated with other data and allows that data to be updated. The nodes own data is set to be $\res{node-data}$, where $\var{j}$ is the current node's address and $\res{round-data}$ is the set of node addresses provided by the $\res{round-complete}$ callback in \autoref{algo:neighbour-detect}.
-
-\begin{equation}
-\res{node-data} = \{\{\var{other}, \var{j}\} | \var{other} \in \res{round-data} \}
-\end{equation}
-
+% We can't include this because we never use or refer to these algorithms
+\begin{comment}
 \subsection{Clustering}
 
-\begin{comment}
 \begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
@@ -577,7 +590,6 @@ For this to be useful we needed a way to get this data back to the sink node. Th
   \end{boxedminipage}
   \caption{Clustering Algorithm}
 \end{figure}
-\end{comment}
 
 In a wireless network, message collisions are a significant factor in terms of decreasing performance; collisions are more likely in environments featuring a high density of messages. The intuitive solution to this is to reduce the number of messages sent, with minimal compromise in the richness of the data communicated. To this end, we implemented a clustering algorithm. The principle of operation of a clustering algorithm is to establish a set of clusterheads on network initialisation. Each of the other nodes in the network allocates itself exactly one clusterhead, through which all traffic to the sink is routed.
 
@@ -585,7 +597,7 @@ In our implementation, the network initialisation phase occurs when an applicati
 
 \subsection{Hierarchical Clustering}
 
-\begin{comment}
+
 \begin{figure}[H]
   \centering
   \begin{boxedminipage}{\linewidth}
@@ -669,9 +681,10 @@ In our implementation, the network initialisation phase occurs when an applicati
   \end{boxedminipage}
   \caption{Hierarchical Clustering Algorithm}
 \end{figure}
-\end{comment}
 
 To counter the given disadvantages of our basic clustering implementation, we developed an additional algorithm which employs the concept of hierarchical clustering. That is, a cluster featuring multiple layers of clusters, each with  clusterhead that has a clusterhead of its own in the next layer. The setup phase of this algorithm also chooses the one-hop neighbourhood of the sink as clusterheads. However, when these clusterheads' setup messages are broadcast through the network, if a node detects that its nearest clusterhead is at least $d$ hops away –- where $d$ is defined as a constant in \verb|contiki.c| –- then that node elects itself as a clusterhead of a new layer, and generates its own setup message to be broadcast. We initially designed two versions of hierarchical clustering; one for arbitrary values of $d$, and one for $d=1$ (where every non-leaf node becomes a clusterhead). However, once the former version was finished we decided to consolidate both versions into one and simply treat $d=1$ as a specific case. To avoid the potential problem of mesh routing creating more messages than the hierarchical clustering saves, in cases of any node being within direct range of its clusterhead, it transmits using runicast. In all other cases, the node uses mesh as before. The hierarchical approach removes the major limitations of our initial clustering implementation, however it still suffers from selecting permanent clusterheads (whereas methods such as LEACH\cite{LEACH} randomise the clusterheads periodically) and thus causing increased power usage for these nodes. Unfortunately, given that we developed our clustering implementation as a library to be used by some arbitrary application running on the nodes, the process of reassigning clusterheads (in any manner of synchronisation) proved infeasible.
+\end{comment}
+% End of what we can't include
 
 \subsection{TDMA}
 
@@ -691,7 +704,16 @@ To make sure that the channel allocation was suitable for TDMA, instead of nodes
 
 \subsection{Testing}
 
-\subsection{Conclusion}
+When testing our implementations there were a number of difficulties due to the differences in what was being tested, how that library needed to tested and under what circumstances. For the containers library we wrote a number of tests that simply created the relevant container and then performed an action on it. The test succeeded if the state of the container was as expected after the execution of the test. These tests were run under various conditions, including under valgrind to ensure that there were no memory leaks in these critical pieces of code.
+
+The remaining libraries were difficult to test because they were communication libraries, so we developed applications that used them and made sure that in our tests these application performed as expected. To test Tree Aggregation without large packet support we developed a simple temperature and humidity averaging application. To test Tree Aggregation with large packet support (from our multi-packet library) we developed an application to aggregate neighbours back to the base station. This is the same application that we integrated as the neighbour detection library because it became vital for performing predicate evaluation at the base station.
+
+N-Hop Flood, N-Hop Request and Event Update were all tested as part of the behaviour of the relevant predicate evaluation library they were used in (PELE, PELP and PELE respectively). The libraries were developed to ensure that we had correctly encapsulated the required functionality which meant that if we discovered an issue in one component we knew where we would need to look for the error.
+
+When testing for memory leaks we couldn't use the same approach as used to test the container libraries. This is because sensor network application never truly terminate, meaning there is no good point to check that all the memory allocated has been freed. What we instead did was run the applications we had developed in the simulators for a long period of time until the application crashed. We then used the stack trace to work out where the error was and fix that component. For memory leaks we also had to manually inspect all the allocation and freeing routines to ensure that the memory that was allocated is freed.
+
+
+\subsection{Summary}
 
 Either we were unable to find implementations of what we needed or it simply hadn't been implemented, this unfortunately added a lot of development time to this project. We were very shocked that libraries such as tree aggregation and hop-limited flooding seemed unavailable in Contiki as we thought that these would be fundamental libraries for wireless sensor network development. Drawing parallels from recent developments in C++ standardisation, the committees involved are actively seeking new libraries to include in the next standard due to the benefit it brings the language \cite{c++call-for-proposals}. We believe that if Contiki supported a number of additional containers other than a linked list and circular buffer as well as other higher-level networking libraries in RIME, then Contiki could be much more useful. We will be looking to see if we can contribute back anything we have developed.
 

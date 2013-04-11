@@ -9,6 +9,8 @@
 % This needs to occur before hyperref and minted
 \usepackage{float}
 
+\usepackage[usenames,dvipsnames]{xcolor}
+
 \usepackage{multirow}
 
 \usepackage[hyphens]{url}
@@ -55,6 +57,29 @@
 % For use in the title page
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 
+% Predicate language syntax highlighting
+\usepackage{listings}
+\definecolor{keywordblue}{RGB}{20,105,176}
+\lstdefinelanguage{Hoppy}{
+    morekeywords={all,function,as,returning,in,using},
+    sensitive=true,
+}
+\lstset{
+    language=Hoppy,
+    keywordstyle=\color{keywordblue},
+%
+    keywords=[2]{this},
+    keywordstyle=[2]\color{OliveGreen},
+%
+    keywords=[3]{int,float},
+    keywordstyle=[3]\color{YellowOrange},
+%
+    keywords=[4]{Neighbours,abs,mean,max,min,sum,len},
+    keywordstyle=[4]\color{Purple},
+%
+    basicstyle=\ttfamily,
+    columns=fullflexible,
+}
 
 % For \begin{acknowledgements}
 % From: http://www.latex-community.org/forum/viewtopic.php?f=47&t=5464
@@ -164,10 +189,12 @@ Debugging tools are vital for developers to produce reliable software, however t
 
 \newpage
 
-\begin{acknowledgements}
-Acknowledgements
-\end{acknowledgements}
-\newpage
+%\begin{acknowledgements}
+%Acknowledgements
+%\end{acknowledgements}
+\thispagestyle{empty}
+\mbox{}
+\clearpage
 
 
 \pagestyle{plain}
@@ -214,72 +241,11 @@ Acknowledgements
 \addappheadtotoc
 \appendix
 
-\section{Open Source Contributions}
-
-\begin{table}[H]
-\begin{tabular}{| l | l | p{10.0cm} |}
-\hline
-Name & Description & Link \\
-\hline
-
-serial2pty & Fix build & \url{http://i4git.cs.fau.de/contiki\_projects.git/commit/243511980de6b2338db2cddb506fad0fb464b881} \\
-
-\hline
-\end{tabular}
-\end{table}
-
-\newpage
-
 \input{DeviceSpecifications}
 
 \newpage
 
-\section{2420 Power-Distance Results}
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{ | l | l | }
-		\hline
-		Power level & Ave. Maximum Distance \\
-		\hline
-		1 & 10cm \\
-		2 & 21cm \\
-		3 & 85cm \\
-		4 & ~ \\
-		5 & ~ \\
-		6 & ~ \\
-		7 & ~ \\
-		8 & ~ \\
-		9 & ~ \\
-		10 & ~ \\
-		11 & ~ \\
-		12 & ~ \\
-		13 & ~ \\
-		14 & ~ \\
-		15 & ~ \\
-		16 & ~ \\
-		17 & ~ \\
-		18 & ~ \\
-		19 & ~ \\
-		20 & ~ \\
-		21 & ~ \\
-		22 & ~ \\
-		23 & ~ \\
-		25 & ~ \\
-		26 & ~ \\
-		27 & ~ \\
-		28 & ~ \\
-		29 & ~ \\
-		30 & ~ \\
-		31 & ~ \\
-		\hline
-	\end{tabular}
-	\caption{The distance nodes could communicate at different power levels set by $cc2420\_set\_txpower$}
-\end{table}
-
-\newpage
-
-\section{Algorithm Implementation}
+\section{Algorithm Implementations}
 
 \subsection{Tree Aggregation}
 

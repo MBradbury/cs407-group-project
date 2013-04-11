@@ -749,8 +749,7 @@ The first predicate we might consider is the one where for every node, we get th
 	\item The node would need to report to the base station the result of the predicate
 \end{enumerate}
 
-%TODO: CHECK THIS
-So we would need at best $2\Delta_{sink} + 2|Neighbours(n, 2)|$ messages to evaluate this predicate for one node.
+So we would need at best $|V| + \Delta_{sink}(n) + M(P)$ messages to evaluate this predicate for the single node $n \in V$. We need $|V|$ message to flood the predicate to every node, $\Delta_{sink}(n)$ is needed to send a failure reply back to the sink and the last component $M(P_{2})$ is the message cost of evaluating the predicate on that node. For example $M(P_{2}) = 2|Neighbours(n, 1)|$ for PELP as a message has to be flooded out two hops to ask for the information and then those nodes need to respond.
 
 \begin{align}
 \label{eq:2-hop-slot-pred}
@@ -762,15 +761,17 @@ So we would need at best $2\Delta_{sink} + 2|Neighbours(n, 2)|$ messages to eval
 The second predicate we could consider is the one where every node checks their 1-hop neighbourhood for slot collisions. Here we model the 2-hop nature of the predicate differently, because instead of checking on the node that we want to check for slot collisions, we check on the node between two nodes that might have slot collisions.
 
 \begin{enumerate}
-	\item A message from the base station to the node adjacent to that we asking to check slot collisions
+	\item A message from the base station to the nodes adjacent to that we asking to check slot collisions
 	\item A message from the node to each of its 1-hop neighbours
 	\item Each 1-hop neighbour needs to send a message back to the node
 	\item The node would need to wait for its neighbours to send the messages, then evaluate the predicate. This would imply that the node would need to know who is in its two hop neighbourhood
 	\item The node would need to report to the base station the result of the predicate
 \end{enumerate}
 
-%TODO: CHECK THIS
-So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages to evaluate this predicate for one node.
+Initially one may consider that this 1-hop predicate can simply be evaluated on a node $n' \in V$ where $\{n, n'\} \in E$. However, this means that this predicate is no longer equivalent to that 2-hop predicate. For example if $n$ has another neighbour $n''$ whose 1-hop neighbourhood is not contained within $n'$'s 1-hop neighbourhood ($Neighbours(n'', 1) \setminus Neighbours(n', 1) \not= \emptyset$) then $n''$ would also need to be checked.
+
+So the number of message that would be required to evaluate this 1-hop predicate on the required node is  $|V| + \sum_{n' \in Neighbours(n, 1)}{\Delta_{sink}(n')} + M(P_{1})$. Where $|V|$ is required for the same reasons as the 2-hop predicate and every neighbour $n'$ of $n$ needs to send a failure message. $M(P_{1}) = \sum_{n' \in Neighbours(n, 1)}{2|Neighbours(n', 1)|}$ for PELP because every neighbour $n'$ of $n$ needs to ask $n'$'s 1-hop neighbourhood for information.
+
 
 \begin{align}
 \label{eq:1-hop-slot-pred}
@@ -780,8 +781,18 @@ So we would need at best $2(\Delta_{sink} + 1) + 2|Neighbours(n, 1)|$ messages t
 & \hspace{6em}				\text{addr}(n') \not= \text{addr}(n'') \implies \text{slot}(n') \neq \text{slot}(n'')
 \end{align}
 
-We can assume that $|Neighbours(1, n)| \leq |Neighbours(2, n)|$, so checking 1-hop neighbours would in general require fewer messages. Also we can assume that when checking these predicates, we would make sure that every node is checked (as the predicates are defined). This means that the first predicate would duplicate the checks: checking node $n$ for a collision with $n'$ and when $n'$ is asked to check the predicate it will query $n$.
+So this introduction of the 1-hop predicate has led to a spreading out of the evaluation, but with roughly the same amount of energy usage. The energy usage is roughly the same as the number of nodes from which data is requested is the same in $M(P_{1})$ as $M(P_{2})$. However, the 1-hop implementation has a good advantage, which is that by asking nodes neighbouring the 1-hop neighbours of $n$ to also evaluate the predicate they can take advantage that some of the predicate is already being evaluated. As shown in \autoref{fig:1-hop-new-eval} a new node can be set to evaluate a predicate and that node will take advantage of the already evaluated neighbouring information that is not necessary to repeat. Whereas the 2-hop predicate would need to repeat a lot of data request and evaluation if it were to be evaluated on multiple nodes. So Adding more and more nodes that evaluate the 1-hop predicate will scale much better than the 2-hop predicate simply because the of way that the evaluation is distributed and the way that distribution can prevent duplicate requesting of information. So checking an entire network for slot collisions should be much more energy efficient when using the 1-hop predicate.
 
-So while using 2-hop information will require more energy it is also the simpler predicate. It only has a single loop with a simpler check. This predicate requires 28 bytes instead of the 68 bytes that the predicate that required 1-hop information uses. When predicates get larger and more complicated it may be important that they can be expressed in a simpler way that may perhaps use more energy, but also are smaller and need less stack space to be evaluated. If the cost of performing a firmware update across the network is very high and would be needed to support larger predicates, then the energy cost of the simpler predicate may end up being worth it.
+
+\begin{figure}[H]
+\centering
+\subfigure[Checking green node has no slot collisions]{\includegraphics[width=0.4\linewidth]{Diagrams/1-hop-checking-a.eps}}\hspace{3em}
+\subfigure[Adding new evaluators to check new node has no slot collisions]{\includegraphics[width=0.4\linewidth]{Diagrams/1-hop-checking-b.eps}}
+\caption{Utilising the 1-hop predicate structure to add new evaluators}
+\label{fig:1-hop-new-eval}
+\end{figure}
+
+
+However, there is one final factor to take into account that even though using 2-hop information will require more energy it is the simpler predicate - it only has a single loop with a simpler check. This predicate requires 28 bytes instead of the 68 bytes that the predicate that required 1-hop information uses. When predicates get larger and more complicated it may be important that they can be expressed in a simpler way that may perhaps use more energy, but also are smaller and need less stack space to be evaluated. If the cost of performing a firmware update across the network is very high and would be needed to support larger predicates, then the energy cost of the simpler predicate may end up being worth it.
 
 

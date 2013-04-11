@@ -1,11 +1,15 @@
 % !TeX root = Report.tex
-\section{Model}
+\section{Problem Statement and Formalisation}
 
-\subsection{Description}
+\subsection{Plan}
 
-As stated in the introduction we are investigating developing tools to aid in debugging the distributed programs running on wireless sensor networks. We aim to do this by implementing libraries that use different technique to check predicates, with a focus on correctly evaluating these predicates. In order to do this we first need to model the situation that our libraries will be used in to aid in the explanation of our findings.
+As stated in the introduction we are investigating developing tools to aid in debugging the distributed programs running on wireless sensor networks. We aim to do this by implementing libraries that use different technique to check predicates, with a focus on correctly evaluating these predicates. We also intend to visualise some of the state of the network.
 
-To begin with we model a wireless sensor network as a graph $G = (V, E)$ where $V$ is a set of nodes. If we have two nodes $u$ and $v$ that can communicate $\{u, v\} \in E$, we assume that this communication is bi-directional. Every node in the network has a unique identifier 
+Due to the research-led nature of this project we were unsure of how we were going to implement the desired applications as some approaches may have been infeasible. Therefore we undertook a long research period as has been reflected by our research into related work. The remainder of our project management can be found towards the end of this report.
+
+\subsection{Model}
+
+To assist with the development of our project is is first necessary to state how we will be modelling the problem. To begin with we model a wireless sensor network as a graph $G = (V, E)$ where $V$ is a set of nodes. If we have two nodes $u$ and $v$ that can communicate $\{u, v\} \in E$, we assume that this communication is bi-directional. Every node in the network has a unique identifier that is typically referred to by $j$.
 
 \begin{mydef}
 \emph{$m$-Hop Neighbourhood}: Given a node $n$ the $m$-hop neighbourhood of that node is the set of nodes that are within $m$ hops of node $n$. When we refer to this neighbourhood it will not contain the node $n$.
@@ -15,17 +19,27 @@ As we are dealing with simulators and physical hardware, there is no assumption 
 
 Every node in the network is assumed to have the same hardware and thus the same capabilities. As every node has the same capabilities, every node has similar properties such as: transmission range and initial power levels. We assume that the network is working in isolation to other networks and is not receiving other electromagnetic interference.
 
+\begin{mydef}
+\emph{$P_{all}$}: A the set of predicates that are evaluated by all nodes in the network.
+\end{mydef}
+
+\begin{mydef}
+\emph{$P_{single}$}: A the set of predicates that are evaluated by a single node in the network.
+\end{mydef}
+
+We also distinguish between different types of predicates based on what parts of the network evaluate them. For our cases it is enough to simply consider predicates that are evaluated on a single node ($P_{single}$), or predicates that are evaluated on every node in the network ($P_{all}$).
+
 When checking predicates we much deal with the notion of the \emph{correctness of evaluation} of a predicate. As can be seen from the definition this involved the notion of time because the values used to evaluate the predicate can change over time.
 
 \begin{mydef}
 \emph{Correctly Evaluated Predicate}: A predicate $P$ is correctly evaluated at time $\tau$ if the results of evaluating that predicate with global knowledge at time $\tau$ is the same as the result of predicate $P$.
 \end{mydef}
 
-To evaluate a predicate there is some function $PE$ that takes a mapping from node identifiers to a user-defined structure of valued about that node and returns a boolean. By executing this function the result of a predicate is obtained. The input can be obtain through various means. The next chapter will discuss how this function is evaluated and how the required information can be disseminated to the node that requires it to perform the evaluation.
+To evaluate a predicate there is some predicate-evaluating function $E$ that takes a mapping from node identifiers to a user-defined structure of valued about that node and returns a boolean. By executing this function the result of a predicate is obtained. The input can be obtain through various means.The next chapter will discuss how this function is evaluated and how the required information can be disseminated to the node that requires it to perform the evaluation.
 
 \subsection{Algorithm Descriptions}
 
-To define the algorithms developed, a custom pseudo-language is used which for the majority is the same as that used in \cite{MSCS310}. Each box contains an application running on a mote or a library an application could be using (although it is possible for one of these boxes to be split up to represent the algorithm better). Within this box there are four sections \textbf{parameters}, \textbf{variables}, \textbf{constants} and \textbf{actions}. The \textbf{variables} section details modifiable variables that exist within the program. The \textbf{constants} section details network knowledge or network parameters that cannot be changed by the program, these constants will be the same for all nodes that have them. The \textbf{parameters} section contains variables that are passed to a library when it is initialised.
+To define the algorithms developed, a custom pseudo-language is used which for the majority is the same as that used in \cite{MBCS310}. Each box contains an application running on a mote or a library an application could be using (although it is possible for one of these boxes to be split up to represent the algorithm better). Within this box there are four sections \textbf{parameters}, \textbf{variables}, \textbf{constants} and \textbf{actions}. The \textbf{variables} section details modifiable variables that exist within the program. The \textbf{constants} section details network knowledge or network parameters that cannot be changed by the program, these constants will be the same for all nodes that have them. The \textbf{parameters} section contains variables that are passed to a library when it is initialised.
 
 The \textbf{actions} section contains the methods which depending on the type will be called when a library or program starts up, when a function defined is called when a message is received or after a timer has timed out. The first type of action (receiving a message) is demonstrated in \autoref{RcvAlgoEg}, where `$MessageContents...$' is the list of variables contained within the message.
 

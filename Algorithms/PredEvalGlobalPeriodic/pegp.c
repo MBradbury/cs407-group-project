@@ -12,17 +12,12 @@
 #include "dev/sht11-sensor.h"
 
 #include "lib/random.h"
-
-#include "node-id.h"
-
-#include "dev/leds.h"
+#include "sys/node-id.h"
 #include "dev/cc2420.h"
 
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-#include "containers/array-list.h"
-
 
 #ifdef PE_DEBUG
 #	define PEDPRINTF(...) printf(__VA_ARGS__)
@@ -39,7 +34,6 @@
 #define CNODE_DATA_INDEX(array, index, size) \
 	(((char const *)array) + ((index) * (size)))
 
-
 typedef struct
 {
 	unsigned int round_count;
@@ -53,7 +47,6 @@ typedef struct
 	uint8_t length;
 	unsigned int round_count;
 } collected_data_t;
-
 
 static inline pegp_conn_t * conncvt_tree_agg(tree_agg_conn_t * conn)
 {
@@ -187,11 +180,10 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 
 // Store an inbound packet to the datastructure
 // Arguments are: Connection, Packet, packet length
-static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
+static void tree_agg_store_packet(tree_agg_conn_t * conn,
+	void const * packet, unsigned int length)
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
-
-	PEDPRINTF("PEGP: Store len=%u\n", length);
 
 	collected_data_t const * msg = (collected_data_t const *)packet;
 
@@ -211,8 +203,6 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn,
 {
 	pegp_conn_t * pegp = conncvt_tree_agg(conn);
 
-	PEDPRINTF("PEGP: Writing data to packet\n");
-
 	// Take all data, write a struct to the buffer at the start, 
 	// containing the length of the packet (as the number of node_data_t)
 	// write the each one to memory
@@ -227,8 +217,6 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn,
 	collected_data_t * msg = (collected_data_t *)*data;
 	msg->length = length;
 	msg->round_count = conn_data->round_count;
-
-	PEDPRINTF("PEGP: Write len=%d dlen=%d\n", msg->length, *packet_length);
 
 	// Get the pointer after the message
 	void * msgdata = (msg + 1);
@@ -250,7 +238,8 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn,
 }
 
 
-static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+static void pm_predicate_failed(predicate_manager_conn_t * conn,
+	rimeaddr_t const * from, uint8_t hops)
 {
 	pegp_conn_t * pegp = conncvt_predicate_manager(conn);
 
@@ -340,10 +329,13 @@ static void data_evaluation(pegp_conn_t * pegp)
 	map_t const * predicate_map = predicate_manager_get_map(&pegp->predconn);
 
 	map_elem_t elem;
-	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+	for (elem = map_first(predicate_map);
+		 map_continue(predicate_map, elem);
+		 elem = map_next(elem))
 	{
 		predicate_detail_entry_t const * pred =
-			(predicate_detail_entry_t const *)map_data(predicate_map, elem);
+			(predicate_detail_entry_t const *)
+				map_data(predicate_map, elem);
 		
 		unique_array_t evaluate_over;
 		unique_array_init(&evaluate_over, &rimeaddr_equality, &free);
@@ -413,8 +405,8 @@ static void data_evaluation(pegp_conn_t * pegp)
 					unique_array_continue(&target_nodes, target); 
 					target = unique_array_next(target))
 				{
-					rimeaddr_t * t = (rimeaddr_t *)unique_array_data(&target_nodes, target); 
-					PEDPRINTF("PEGP: Checking:%s %d hops\n", addr2str(t), hops);
+					rimeaddr_t * t =
+						(rimeaddr_t *)unique_array_data(&target_nodes, target); 
 
 					// Go through the neighbours for the node
 					unique_array_elem_t neighbours_elem;
@@ -439,7 +431,8 @@ static void data_evaluation(pegp_conn_t * pegp)
 
 						if (neighbour != NULL)
 						{
-							PEDPRINTF("PEGP: Eval: Checking neighbour %s\n", addr2str(neighbour));
+							PEDPRINTF("PEGP: Eval: Checking neighbour %s\n",
+								addr2str(neighbour));
 
 							// If the neighbour hasn't been seen before
 							if (!unique_array_contains(&seen_nodes, neighbour)) 
@@ -448,7 +441,8 @@ static void data_evaluation(pegp_conn_t * pegp)
 
 								if (nd == NULL)
 								{
-									PEDPRINTF("PEGP: ERROR no info on %s\n", addr2str(neighbour));
+									PEDPRINTF("PEGP: ERROR no info on %s\n",
+										addr2str(neighbour));
 								}
 								else
 								{
@@ -512,25 +506,11 @@ static void data_evaluation(pegp_conn_t * pegp)
 			// has access to it
 			global_pegp_conn = pegp;
 
-			bool evaluation_result = evaluate_predicate(&pegp->predconn,
+			evaluate_predicate(&pegp->predconn,
 				pretend_node_data, pegp->data_size,
 				pegp->function_details, pegp->functions_count,
 				&pegp->hop_data,
 				all_neighbour_data, max_size, pred);
-
-	#if 0
-			if (evaluation_result)
-			{
-				PEDPRINTF("PEGP: TRUE\n");
-			}
-			else
-			{
-				PEDPRINTF("PEGP: FAILED (%s)\n", error_message());
-			}
-	#endif
-			
-			//predicate_manager_send_response(&predconn, &hop_data,
-			//	pe, all_neighbour_data, sizeof(node_data_t), max_size);
 
 			free(all_neighbour_data);
 
@@ -594,8 +574,6 @@ void pegp_start_delayed2(pegp_conn_t * conn)
 
 void pegp_start_delayed1(pegp_conn_t * conn)
 {
-	//printf("PEGP: Starting Neighbour Aggregation\n");
-
 	neighbour_aggregate_open(&conn->nconn, conn->sink, 121, 110, 150, &neighbour_callbacks);
 
 	ctimer_set(&conn->ct_startup, 80 * CLOCK_SECOND, &pegp_start_delayed2, conn);
@@ -625,13 +603,10 @@ bool pegp_start(pegp_conn_t * conn,
 
 	conn->predicate_period = predicate_period;
 
-
 	predicate_manager_open(&conn->predconn, 135, 129, sink, TRICKLE_INTERVAL, &pm_callbacks);
 
 	if (rimeaddr_cmp(&rimeaddr_node_addr, sink))
 	{
-		PEDPRINTF("PEGP: We are sink node.\n");
-
 		predicate_manager_start_serial_input(&conn->predconn);
 	}
 

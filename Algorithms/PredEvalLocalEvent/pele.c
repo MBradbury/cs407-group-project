@@ -5,9 +5,7 @@
 #include <stdlib.h>
 
 #include "contiki.h"
-
 #include "lib/random.h"
-
 #include "sys/node-id.h"
 
 #include "dev/leds.h"
@@ -51,7 +49,8 @@ static inline pele_conn_t * conncvt_hop_data(hop_data_t * conn)
 }
 
 
-static void receieved_data(event_update_conn_t * c, rimeaddr_t const * from, uint8_t hops, uint8_t previous_hops)
+static void receieved_data(event_update_conn_t * c,
+	rimeaddr_t const * from, uint8_t hops, uint8_t previous_hops)
 {
 	pele_conn_t * pele = conncvt_event_update(c);
 
@@ -81,9 +80,13 @@ static void pm_update_callback(struct predicate_manager_conn * conn)
 
 	// We need to find and set the maximum distance of all predicates
 	map_elem_t elem;
-	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+	for (elem = map_first(predicate_map);
+		 map_continue(predicate_map, elem);
+		 elem = map_next(elem))
 	{
-		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+		predicate_detail_entry_t const * pe =
+			(predicate_detail_entry_t const *)
+				map_data(predicate_map, elem);
 
 		uint8_t local_max_hops = predicate_manager_max_hop(pe);
 
@@ -96,14 +99,16 @@ static void pm_update_callback(struct predicate_manager_conn * conn)
 	event_update_set_distance(&pele->euc, pele->max_comm_hops);
 }
 
-static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+static void pm_predicate_failed(predicate_manager_conn_t * conn,
+	rimeaddr_t const * from, uint8_t hops)
 {
 	pele_conn_t * pele = conncvt_predicate_manager(conn);
 
 	pele->predicate_failed(pele, from, hops);
 }
 
-static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback, &pm_predicate_failed };
+static const predicate_manager_callbacks_t pm_callbacks =
+	{ &pm_update_callback, &pm_predicate_failed };
 
 PROCESS(pele_process, "PELE Process");
 PROCESS_THREAD(pele_process, ev, data)
@@ -149,42 +154,40 @@ PROCESS_THREAD(pele_process, ev, data)
 				map_t * hop_map = hop_manager_get(&pele->hop_data, i);
 
 				map_elem_t elem;
-				for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
+				for (elem = map_first(hop_map);
+					 map_continue(hop_map, elem);
+					 elem = map_next(elem))
 				{
 					void * mapdata = map_data(hop_map, elem);
-					memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pele->data_size), mapdata, pele->data_size);
+					
+					memcpy(
+						NODE_DATA_INDEX(all_neighbour_data, count, pele->data_size),
+						mapdata, pele->data_size);
+					
 					++count;
 				}
-
-				PEDPRINTF("PELE: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
 			}
 		}
 
 		map_t const * predicate_map = predicate_manager_get_map(&pele->predconn);
 
 		map_elem_t elem;
-		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+		for (elem = map_first(predicate_map);
+			 map_continue(predicate_map, elem);
+			 elem = map_next(elem))
 		{
-			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+			predicate_detail_entry_t const * pe =
+				(predicate_detail_entry_t const *)
+					map_data(predicate_map, elem);
 
-			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) ||
+				rimeaddr_cmp(&pe->target, &rimeaddr_null))
 			{
-				PEDPRINTF("PELE: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
-	
-				bool evaluation_result = evaluate_predicate(&pele->predconn,
+				evaluate_predicate(&pele->predconn,
 					pele->data_fn, pele->data_size,
 					pele->function_details, pele->functions_count,
 					&pele->hop_data,
 					all_neighbour_data, max_size, pe);
-
-				if (evaluation_result)
-				{
-					PEDPRINTF("PELE: Pred: TRUE\n");
-				}
-				else
-				{
-					PEDPRINTF("PELE: Pred: FAILED (%s)\n", error_message());
-				}
 			}
 		}
 
@@ -197,8 +200,6 @@ exit:
 	(void)0;
 	PROCESS_END();
 }
-
-
 
 bool pele_start(pele_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,

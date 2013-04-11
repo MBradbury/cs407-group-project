@@ -1,11 +1,7 @@
 #include "pege.h"
 
 #include "contiki.h"
-
-#include "net/netstack.h"
 #include "net/rime.h"
-#include "net/rime/stbroadcast.h"
-#include "contiki-net.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -16,16 +12,12 @@
 #include "dev/sht11-sensor.h"
 
 #include "lib/random.h"
-
-#include "node-id.h"
-
-#include "dev/leds.h"
+#include "sys/node-id.h"
 #include "dev/cc2420.h"
 
 #include "led-helper.h"
 #include "sensor-converter.h"
 #include "debug-helper.h"
-
 
 #ifdef PE_DEBUG
 #	define PEDPRINTF(...) printf(__VA_ARGS__)
@@ -71,13 +63,11 @@ static inline pege_conn_t * conncvt_predicate_manager(predicate_manager_conn_t *
 		(((char *)conn) - sizeof(tree_agg_conn_t) - sizeof(neighbour_agg_conn_t));
 }
 
-
 PROCESS(data_evaluation_process, "Data eval");
 PROCESS(send_data_process, "Send data process");
 
-
-static void handle_neighbour_data(neighbour_agg_conn_t * conn, rimeaddr_pair_t const * pairs,
-	unsigned int length, unsigned int round_count)
+static void handle_neighbour_data(neighbour_agg_conn_t * conn,
+	rimeaddr_pair_t const * pairs, unsigned int length, unsigned int round_count)
 {
 	pege_conn_t * pege = conncvt_neighbour_agg(conn);
 
@@ -86,7 +76,10 @@ static void handle_neighbour_data(neighbour_agg_conn_t * conn, rimeaddr_pair_t c
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		unique_array_append_precheck(&pege->neighbour_info, &pairs[i], rimeaddr_pair_clone);
+		unique_array_append_precheck(
+			&pege->neighbour_info,
+			&pairs[i],
+			rimeaddr_pair_clone);
 	}
 }
 
@@ -186,7 +179,8 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 
 // Store an inbound packet to the datastructure
 // Arguments are: Connection, Packet, packet length
-static void tree_agg_store_packet(tree_agg_conn_t * conn, void const * packet, unsigned int length)
+static void tree_agg_store_packet(tree_agg_conn_t * conn,
+	void const * packet, unsigned int length)
 {
 	pege_conn_t * pege = conncvt_tree_agg(conn);
 
@@ -247,7 +241,8 @@ static void tree_agg_write_data_to_packet(tree_agg_conn_t * conn,
 }
 
 
-static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+static void pm_predicate_failed(predicate_manager_conn_t * conn,
+	rimeaddr_t const * from, uint8_t hops)
 {
 	pege_conn_t * pege = conncvt_predicate_manager(conn);
 
@@ -329,9 +324,11 @@ PROCESS_THREAD(send_data_process, ev, data)
 exit:
 	(void)0;
 	// Don't ever expect to reach this point
-	//free(msg);
-	//free(current_data);
-	//free(previous_data);
+#if 0
+	free(msg);
+	free(current_data);
+	free(previous_data);
+#endif
 
 	PROCESS_END();
 }
@@ -360,7 +357,9 @@ static void data_evaluation(pege_conn_t * pege)
 	map_t const * predicate_map = predicate_manager_get_map(&pege->predconn);
 
 	map_elem_t elem;
-	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+	for (elem = map_first(predicate_map);
+		 map_continue(predicate_map, elem);
+		 elem = map_next(elem))
 	{
 		predicate_detail_entry_t const * pred =
 			(predicate_detail_entry_t const *)map_data(predicate_map, elem);

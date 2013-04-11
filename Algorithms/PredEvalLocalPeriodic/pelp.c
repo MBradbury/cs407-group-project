@@ -5,11 +5,8 @@
 #include <stdlib.h>
 
 #include "contiki.h"
-
-#include "lib/random.h"
-
 #include "net/rime.h"
-
+#include "lib/random.h"
 #include "sys/node-id.h"
 
 #include "dev/leds.h"
@@ -53,7 +50,6 @@ static inline pelp_conn_t * conncvt_hop_data(hop_data_t * conn)
 		(((char *)conn) - sizeof(nhopreq_conn_t) - sizeof(predicate_manager_conn_t));
 }
 
-
 static void nhopreq_data_fn(nhopreq_conn_t * conn, void * data)
 {
 	pelp_conn_t * pelp = conncvt_nhopreq(conn);
@@ -61,15 +57,13 @@ static void nhopreq_data_fn(nhopreq_conn_t * conn, void * data)
 	pelp->data_fn(data);
 }
 
-static void receieved_data(nhopreq_conn_t * conn, rimeaddr_t const * from, uint8_t hops, void const * data)
+static void receieved_data(nhopreq_conn_t * conn,
+	rimeaddr_t const * from, uint8_t hops, void const * data)
 {
 	pelp_conn_t * pelp = conncvt_nhopreq(conn);
 
-	PEDPRINTF("PELP: Obtained information from %s hops:%u\n", addr2str(from), hops);
-
 	hop_manager_record(&pelp->hop_data, hops, data, pelp->data_size);
 }
-
 
 static void pm_update_callback(predicate_manager_conn_t * conn)
 {
@@ -80,11 +74,16 @@ static void pm_update_callback(predicate_manager_conn_t * conn)
 	pelp->max_comm_hops = 0;
 
 	map_elem_t elem;
-	for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+	for (elem = map_first(predicate_map);
+		 map_continue(predicate_map, elem);
+		 elem = map_next(elem))
 	{
-		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+		predicate_detail_entry_t const * pe = 
+			predicate_detail_entry_t const *)
+				map_data(predicate_map, elem);
 
-		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) ||
+			rimeaddr_cmp(&pe->target, &rimeaddr_null))
 		{
 			uint8_t local_max_hops = predicate_manager_max_hop(pe);
 
@@ -96,16 +95,19 @@ static void pm_update_callback(predicate_manager_conn_t * conn)
 	}
 }
 
-static void pm_predicate_failed(predicate_manager_conn_t * conn, rimeaddr_t const * from, uint8_t hops)
+static void pm_predicate_failed(predicate_manager_conn_t * conn,
+	rimeaddr_t const * from, uint8_t hops)
 {
 	pelp_conn_t * pelp = conncvt_predicate_manager(conn);
 
 	pelp->predicate_failed(pelp, from, hops);
 }
 
-static const predicate_manager_callbacks_t pm_callbacks = { &pm_update_callback, &pm_predicate_failed };
+static const predicate_manager_callbacks_t pm_callbacks =
+	{ &pm_update_callback, &pm_predicate_failed };
 
-static const nhopreq_callbacks_t nhopreq_callbacks = { &nhopreq_data_fn, &receieved_data };
+static const nhopreq_callbacks_t nhopreq_callbacks =
+	{ &nhopreq_data_fn, &receieved_data };
 
 PROCESS(pelp_process, "PELP Process");
 PROCESS_THREAD(pelp_process, ev, data)
@@ -119,20 +121,14 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 	pelp = (pelp_conn_t *)data;
 	
-	PEDPRINTF("PELP: Process Started.\n");
-	
 	// Wait for other nodes to initialize.
 	etimer_set(&et, 20 * CLOCK_SECOND);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
 	while (true)
 	{
-		PEDPRINTF("PELP: Starting long wait...\n");
-
 		etimer_set(&et, pelp->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
-		PEDPRINTF("PELP: Wait finished! About to ask for data!\n");
 
 		// Only ask for data if the predicate needs it
 		if (pelp->max_comm_hops != 0)
@@ -163,14 +159,21 @@ PROCESS_THREAD(pelp_process, ev, data)
 					map_t * hop_map = hop_manager_get(&pelp->hop_data, i);
 
 					map_elem_t elem;
-					for (elem = map_first(hop_map); map_continue(hop_map, elem); elem = map_next(elem))
+					for (elem = map_first(hop_map);
+						 map_continue(hop_map, elem);
+						 elem = map_next(elem))
 					{
 						void * mapdata = map_data(hop_map, elem);
-						memcpy(NODE_DATA_INDEX(all_neighbour_data, count, pelp->data_size), mapdata, pelp->data_size);
+						
+						memcpy(
+							NODE_DATA_INDEX(all_neighbour_data, count, pelp->data_size),
+							mapdata, pelp->data_size);
+							
 						++count;
 					}
 
-					PEDPRINTF("PELP: i=%d Count=%d/%d length=%d\n", i, count, max_size, map_length(hop_map));
+					PEDPRINTF("PELP: i=%d Count=%d/%d length=%d\n",
+						i, count, max_size, map_length(hop_map));
 				}
 			}
 		}
@@ -180,28 +183,22 @@ PROCESS_THREAD(pelp_process, ev, data)
 		map_t const * predicate_map = predicate_manager_get_map(&pelp->predconn);
 
 		map_elem_t elem;
-		for (elem = map_first(predicate_map); map_continue(predicate_map, elem); elem = map_next(elem))
+		for (elem = map_first(predicate_map);
+			 map_continue(predicate_map, elem);
+			 elem = map_next(elem))
 		{
-			predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(predicate_map, elem);
+			predicate_detail_entry_t const * pe =
+				(predicate_detail_entry_t const *)
+					map_data(predicate_map, elem);
 
-			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) || rimeaddr_cmp(&pe->target, &rimeaddr_null))
+			if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) ||
+				rimeaddr_cmp(&pe->target, &rimeaddr_null))
 			{
-				PEDPRINTF("PELP: Starting predicate evaluation of %d with code length: %d.\n", pe->id, pe->bytecode_length);
-		
-				bool evaluation_result = evaluate_predicate(&pelp->predconn,
+				evaluate_predicate(&pelp->predconn,
 					pelp->data_fn, pelp->data_size,
 					pelp->function_details, pelp->functions_count,
 					&pelp->hop_data,
 					all_neighbour_data, max_size, pe);
-
-				if (evaluation_result)
-				{
-					PEDPRINTF("PELP: Pred: TRUE\n");
-				}
-				else
-				{
-					PEDPRINTF("PELP: Pred: FAILED (%s)\n", error_message());
-				}
 			}
 		}
 
@@ -220,7 +217,6 @@ exit:
 	(void)0;
 	PROCESS_END();
 }
-
 
 bool pelp_start(pelp_conn_t * conn,
 	rimeaddr_t const * sink, node_data_fn data_fn, size_t data_size,

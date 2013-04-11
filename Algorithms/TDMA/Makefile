@@ -6,15 +6,19 @@ PRED_TYPE = PELE
 
 ifeq ($(PRED_TYPE),PELP)
 	PREDICATE_TYPE_DIR = PredEvalLocalPeriodic
+	PREDICATE_TYPE_FILE = pelp.c
 endif
 ifeq ($(PRED_TYPE),PELE)
 	PREDICATE_TYPE_DIR = PredEvalLocalEvent
+	PREDICATE_TYPE_FILE = pele.c
 endif
 ifeq ($(PRED_TYPE),PEGP)
 	PREDICATE_TYPE_DIR = PredEvalGlobalPeriodic
+	PREDICATE_TYPE_FILE = pegp.c
 endif
 ifeq ($(PRED_TYPE),PEGE)
 	PREDICATE_TYPE_DIR = PredEvalGlobalEvent
+	PREDICATE_TYPE_FILE = pege.c
 endif
 
 
@@ -28,7 +32,7 @@ CONTIKIDIRS :=
 CONTIKI_SOURCEFILES := debug-helper.c sensor-converter.c predlang.c array-list.c map.c \
 unique-array.c random-range.c tree-aggregator.c led-helper.c neighbour-detect.c \
 neighbour-aggregate.c rimeaddr-helpers.c multipacket.c linked-list.c predicate-manager.c hop-data-manager.c \
-eventupdate.c nhopflood.c pred-eval.c nhopreq.c
+eventupdate.c nhopflood.c $(PREDICATE_TYPE_FILE) nhopreq.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \

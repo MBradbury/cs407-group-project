@@ -543,10 +543,10 @@ When developing the virtual machine what also became important was the fact that
 \begin{verbatim}
 [java] **** Illegal read - misaligned word from $2c01 at $80de
 [java] Stack Trace: number of calls: 4 PC: $80de
-[java] evaluate (errno.c) called from PC: $7166 (elapsed: 164446)
-[java] process_thread_mainProcess (local in pred-eval.c) called from PC: $bf12 (elapsed: 536355)
-[java] call_process (local in process.c) called from PC: $c0b2 (elapsed: 536391)
-[java] process_run (errno.c) called from PC: $4250 (elapsed: 536996)
+[java] evaluate (errno.c) called from PC: $7166
+[java] process_thread_mainProcess (local in pred-eval.c) called from PC: $bf12
+[java] call_process (local in process.c) called from PC: $c0b2
+[java] process_run (errno.c) called from PC: $4250
 \end{verbatim}
 \caption{Example of the error messages produced by MSPSim in Cooja that led to the discovery of this bug}
 \end{figure}
@@ -594,12 +594,23 @@ When an event is fired that indicates that the node's data has changed it means 
 
 There is the potential for optimisations here by using knowledge of the node's neighbours to detect if a node actually needs the current nodes data and then only flooding the data if that is the case. For example if there is one predicate in the system that is targeted to a single node that needs 3-hop information, but the node whose data has just changed is 4 hops away, that node would not need to send its information. However, this would mean that every node would need an accurate picture of the network state. This may be energy intensive to calculate, so we leave this optimisation to be investigated in later work.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Diagrams/pele.eps}
+\caption{Predicate Evaluation Local Event (PELE)}
+\end{figure}
 
 \subsubsection{Local Periodic}
 
 The major difference between evaluating data periodically when evaluating a predicate in-network is that instead of data being sent to nodes when it changes, data is only sent to nodes when it is requested. The idea is that when a node is evaluating its predicates it finds the maximum distance it needs information for and floods a message that many hops asking for data and each of those nodes reply back along the path that the request message came from. After a node evaluates all its predicates for that period it then forgets all that information. The reason this is done is because in the event based dissemination there is no ability to detect changes in topology and remove invalid data. For example say a cluster head that has successfully delivered information in the past crashes. As that information has been delivered and is only updated when it changes all the nodes simply assume that the data remains the same and will continue evaluating the predicate as if the cluster head had not crashed. Neighbours of the failed cluster head could detect and send this information, but as that involves network information it is not an application predicate and is out of the scope of this work. So the solution was to simply consider the information available at the node evaluating a predicate at that instant.
 
 Instead of requesting information every node could simply periodically broadcast it. However, that has the disadvantage of causing nodes to broadcast information when they don't need to (a problem from event-based dissemination) and also could lead to problems when nodes clocks are perfectly aligned. For example nodes could consistently receive old information from nodes if they keep sending data that was meant for a previous round such that is it only received during the current round of predicate evaluation. By asking for data these issues are mitigated.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Diagrams/pelp.eps}
+\caption{Predicate Evaluation Local Periodic (PELP)}
+\end{figure}
 
 %TODO: include
 \begin{comment}
@@ -680,7 +691,27 @@ The sigma function is defined as it is because for each of the nodes that are $x
 
 When considering evaluating predicates at a sink, the data can simply be aggregated to it along a tree. For both event-based and periodic data generation the way the data is generated can remain the same, the requesting of data is simply removed (for periodic) and instead of flooding the information to neighbours it is aggregated.
 
-The biggest problem with this style of predicate evaluation is the latency that is introduced between gathering the data from the nodes in the network and the evaluation of the predicate. One problem is that the data in the network may have changed since it was gathered a larger problem is that data will be compared at potentially very different times due to the aggregation delays. This was not an issue with local in-network evaluation because the data was quickly flooded back to the target node. However, with tree aggregation every hop towards the sink needs a long wait to gather as much data as possible to reduce number of messages sent. This could potentially lead to a number of predicates being incorrectly evaluated by using data from different times.
+However, this change causes a few knock-on effects. For the aggregation of neighbours and data in PEGP the behaviour is as expected, data is generated at the leaves and aggregated onwards towards the tree's root node where it is used. When aggregating data that is generated in PEGE, it is not the leaves that periodically generate data. Instead every node could potentially cause a message to being being forwarded through the tree. The big change is that every time a packet is forwarded the current node's data is aggregated to with it. This means that nodes closer to the root node of the tree have more opportunities to aggregate their data. Overall we do not believe this will affect the evaluation behaviour, as in the worst case more recent information may be available when it might not otherwise have been so.
+
+The biggest issue with the global style of predicate evaluation is the latency that is introduced between gathering the data from the nodes in the network and the evaluation of the predicate. One problem is that the data in the network may have changed since it was gathered, a larger problem is that data will be compared at potentially very different times due to the aggregation delays. This was not as much of an issue with local in-network evaluation because the data was quickly flooded back to the target node. However, with tree aggregation every hop towards the sink needs a long wait to gather as much data as possible to reduce number of messages sent. This could potentially lead to a number of predicates being incorrectly evaluated by using data from different times.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Diagrams/pegx-neighbour-agg.eps}
+\caption{Neighbour Aggregation used for global predicate evaluation}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Diagrams/pege.eps}
+\caption{Predicate Evaluation Global Event (PEGE)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Diagrams/pegp.eps}
+\caption{Predicate Evaluation Global Periodic (PEGP)}
+\end{figure}
 
 
 \subsubsection{Reply}

@@ -689,7 +689,7 @@ The sigma function is defined as it is because for each of the nodes that are $x
 
 \subsubsection{Global}
 
-When considering evaluating predicates at a sink, the data can simply be aggregated to it along a tree. For both event-based and periodic data generation the way the data is generated can remain the same, the requesting of data is simply removed (for periodic) and instead of flooding the information to neighbours it is aggregated.
+When considering evaluating predicates at a sink, the data can simply be aggregated to it along a tree. For both event-based and periodic data generation the way the data is generated can remain the same, the requesting of data is simply removed (for periodic) and instead of flooding the information to neighbours it is aggregated instead.
 
 However, this change causes a few knock-on effects. For the aggregation of neighbours and data in PEGP the behaviour is as expected, data is generated at the leaves and aggregated onwards towards the tree's root node where it is used. When aggregating data that is generated in PEGE, it is not the leaves that periodically generate data. Instead every node could potentially cause a message to being being forwarded through the tree. The big change is that every time a packet is forwarded the current node's data is aggregated to with it. This means that nodes closer to the root node of the tree have more opportunities to aggregate their data. Overall we do not believe this will affect the evaluation behaviour, as in the worst case more recent information may be available when it might not otherwise have been so.
 
@@ -701,11 +701,17 @@ The biggest issue with the global style of predicate evaluation is the latency t
 \caption{Neighbour Aggregation used for global predicate evaluation}
 \end{figure}
 
+Both the event-based and period versions of global predicate evaluation require the two processes of neighbour detection and aggregation running. Initially we planned to use this data to visualise the state the network is in. However, it turns out that it is a vital component of global predicate evaluation. Without this information we would be unable to work out how many hops  the data is from the node that is currently being evaluated.
+
+As every predicate is evaluated is evaluated at the root of the aggregation tree, it becomes necessary for that root node to be able to pretend that they are the node where the predicate would usually have been evaluated. This is so the relevant neighbours can be used, and also so the virtual machine will use the correct data for the $this$ variable.
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth]{Diagrams/pege.eps}
 \caption{Predicate Evaluation Global Event (PEGE)}
 \end{figure}
+
+Between the two versions of global predicate evaluation there are only minor differences in how the algorithm is implemented. The first is that when sending data PEGE checks to see if the data has changed before sending it, PEGP instead checks if the node is a leaf in the tree and relies on the aggregation of intermediate nodes to gather all the network's data. The second is a consequence of the first difference, PEGE will keep and update the information it receives. PEGP instead only used the last round of information that has been received. So after every predicate has been evaluated at the end of a predicate evaluation round the node information is cleared. This feature was added to enable support for (untested) handling failures in the network such as crashes or for handling the case when the nodes are mobile.
 
 \begin{figure}[H]
 \centering

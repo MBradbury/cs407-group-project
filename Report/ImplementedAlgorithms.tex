@@ -713,7 +713,7 @@ N-Hop Flood, N-Hop Request and Event Update were all tested as part of the behav
 When testing for memory leaks we couldn't use the same approach as used to test the container libraries. This is because sensor network application never truly terminate, meaning there is no good point to check that all the memory allocated has been freed. What we instead did was run the applications we had developed in the simulators for a long period of time until the application crashed. We then used the stack trace to work out where the error was and fix that component. For memory leaks we also had to manually inspect all the allocation and freeing routines to ensure that the memory that was allocated is freed.
 
 
-\subsection{Conclusion}
+\subsection{Summary}
 
 Either we were unable to find implementations of what we needed or it simply hadn't been implemented, this unfortunately added a lot of development time to this project. We were very shocked that libraries such as tree aggregation and hop-limited flooding seemed unavailable in Contiki as we thought that these would be fundamental libraries for wireless sensor network development. Drawing parallels from recent developments in C++ standardisation, the committees involved are actively seeking new libraries to include in the next standard due to the benefit it brings the language \cite{c++call-for-proposals}. We believe that if Contiki supported a number of additional containers other than a linked list and circular buffer as well as other higher-level networking libraries in RIME, then Contiki could be much more useful. We will be looking to see if we can contribute back anything we have developed.
 

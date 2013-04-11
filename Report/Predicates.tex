@@ -1,4 +1,5 @@
 % !TeX root = Report.tex
+
 \section{Predicates}
 
 When considering how to evaluate predicates there are many points that need to be considered. Depending on what the intention is certain implementations of predicate evaluation are going to be better than other implementations. Also, when developing with considerations of the predicate evaluation such as accuracy, the considerations of sensor networks will need to be taken into account (such as the minimisation of energy usage). This section will first detail the types of predicates that we identify that we wish to be able to detect, then it will cover how we can evaluate such predicates and finally will discuss several implementations of transmitting the information to the required part of the network.
@@ -34,12 +35,12 @@ In summary we focus on evaluating predicates that are stable and use local infor
 
 \subsection{Predicate Evaluation}
 
-When deciding how we would evaluate predicates once data was received there were two possible solutions that were considered. The first was to simply have the system developer hardcode the checking into the code and provide a library to handle responses, the second was to implement a virtual machine that would run a script that checks the predicate. Using hard checks written in C would provided a more efficient way of checking the predicate and would be similar to the approach used by HSend \cite{herbert2007adaptive} which parsed the C source code and generated C code for the predicates specified in a special comment block. A downfall of hardcoding the predicate evaluation is that it could lead to a large inflation of the firmware and if the system developers wanted to change, add or remove a predicate then they would need to update the entire firmware image across the network \cite{Dunkels:2006:RDL:1182807.1182810,1437066}.
+When deciding how we would evaluate predicates once data was received there were two possible solutions that were considered. The first was to simply have the system developer hardcode the checking into the code and provide a library to handle responses, the second was to implement a virtual machine that would run a script that checks the predicate. Using hard checks written in C would have provided a more efficient way of checking the predicate and would be similar to the approach used by HSend \cite{herbert2007adaptive} which parsed the C source code and generated C code for the predicates specified in a special comment block. A downfall of hardcoding the predicate evaluation is that it could lead to a large inflation of the firmware and if the system developers wanted to change, add or remove a predicate then they would need to update the entire firmware image across the network \cite{Dunkels:2006:RDL:1182807.1182810,1437066}.
 
 With a scripting language, instead of sending a large firmware binary across the network a small program of high level opcodes could be sent instead. The difference could be huge, for example the maximum firmware size of the CM5000 is 48KB \cite{CM5000}, and it is conceivable that a program script utilising high level instructions could instead fit into the size of a single packet (128 bytes\footnote{\url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}). Therefore to aid in the flexibility of our solution we implemented a simple virtual machine and language that was executed to evaluate the predicate.
 
 
-Initially we looked for an already developed scripting language that we could use on the motes. Having used high level scripting languages such as Python and Lua we first looked into using them. Unfortunately even though Lua offered an embedded alternative called eLua \cite{elua} the firmware size and the RAM usage would have been unacceptably high for the hardware at our disposal. We then started looking at a language called SCript  \cite{dunkels06lowoverhead} by  \citeauthor{dunkels06lowoverhead} who was also the author of Contiki, the wireless sensor network OS we were using. Unfortunately due to the name we were unable to find the implementation of it. Finally we looked at Antelope \cite{Tsiftes:2011:DS:2070942.2070974} which provided a way to query nodes using SQL like a database. Unfortunately we were unsure as to how much control we would have on being able to optimise energy usage via different ways of gathering data. So we concluded that we would need to create our own language, parser for it, assembler and virtual machine to execute the produced code.
+Initially we looked for an already developed scripting language that we could use on the motes. Having used high level scripting languages such as Python and Lua we first looked into using them. Unfortunately even though Lua offered an embedded alternative called eLua \cite{elua} the firmware size and the RAM usage would have been unacceptably high for the hardware at our disposal. We then started looking at a language called SCript  \cite{dunkels06lowoverhead} by  \citeauthor{dunkels06lowoverhead} who was also the author of Contiki, the wireless sensor network OS we were using. Unfortunately (in part due to the name) we were unable to find the implementation of it. Finally we looked at Antelope \cite{Tsiftes:2011:DS:2070942.2070974} which provided a way to query nodes using SQL like a database. Unfortunately we were unsure as to how much control we would have on being able to optimise energy usage via different ways of gathering data. So we concluded that we would need to create our own language, parser for it, assembler and virtual machine to execute the produced code.
 
 
 The predicate evaluation language that we designed needed to be fairly simple to make it (i) easy to implement and (ii) easy to execute. To do this we set out a number of desired features and then explicitly decided on features that would not be included because of their irrelevance as can be seen in \autoref{tab:language-requirements}. The most important feature was that we wanted to be able to test a sub-predicate over a set of neighbouring node's data, this meant that we would need a way to represent a set of data and iterate over it. As the program is always intended to return a boolean result, there was no need to implement comprehensive iteration of the form \verb|for (<INIT>; <CONTINUE>; <NEXT>)| we instead could just implement forall and exists operators. To simplify further the language was designed to be functional rather than imperative as we had no need for our predicate checker to directly cause state changes in the application running directly on the hardware.
@@ -86,7 +87,7 @@ For some of the features we desired we ended up implementing them differently th
 
 The major problem with developing our own language was that we needed a way to convert that into a compact form that could be easily executed by a virtual machine. As can be seen by the complexities of the GCC and LLVM/Clang projects, compilation of abstract code to optimal executable code is a difficult problem. So instead of trying to develop a highly optimising compiler, our target was to develop a compiler that produced good code that was capable of being hand optimised by developers before being deployed to the network.
 
-To reach this goal, we followed good development principles and broke down the creation of this executable code into to separate phases: the compiler and the assembler. The compiler parsed the predicate language and compiled it down to a human readable intermediate representation (IR) that could be understood and modified by humans. The assembler then converted this into the raw bytecode that would be sent to the motes for evaluation. Having a human readable IR makes editing it as simple as opening up a text editor. This separation leads to the workflow of developing and deploying a predicate as shown in \autoref{fig:pred-workflow}.
+To reach this goal, we followed good development principles and broke down the creation of this executable code into to separate phases: the compiler and the assembler. The compiler parsed the predicate language and compiled it down to a human readable intermediate representation (IR) that could be understood and modified by humans. The assembler then converted this into the raw bytecode that would be sent to the motes for evaluation. Having a human readable IR makes hand--optimisation very simple, and easy to support directly within the visualisation tool. This separation leads to the workflow of developing and deploying a predicate as shown in \autoref{fig:pred-workflow}.
 
 \begin{figure}[H]
 \centering
@@ -197,21 +198,21 @@ Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
 
 When we were implementing the parsing for the predicate language one of the major issues encountered was that parsing infix operators (that is the operator is between two operands) was much harder to accomplish than prefix or postfix operators, \cite{ParsingRecursiveDescent} was used as a guide to implement infix parsing.
 
-Another important factor to mention is one that is prevalent in other languages as well. The language definition specifies how the language is parsed, but it fails to capture some of the subtleties of compilation. One example is that even if a variable name or a function name are valid strings, unless they have been defined by a previous statement the compilation will fail because those symbols do not exist.
+Another important issue to mention is the distinction between syntax and semanatics. The language definition specifies the syntax, but it fails to capture some of the semantic subtleties of valid programs. One example is that even if a variable name or a function name are syntactically valid strings, compilation should fail if they have not been defined by a statement prior to their usage. However, JavaCC provides a very capable framework for validating semantics during construction of the program's IR.
 
 \subsubsection{Example Predicates}
 \label{sec:example-predicates}
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 1 as slot returning int in
     using Neighbours(2) as twohopn in
         @(x : twohopn ~
             slot(x) != slot(this)
         )
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}%
 \begin{minipage}{.5\linewidth}
 \begin{align*}
@@ -227,7 +228,7 @@ function 1 as slot returning int in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 0 as addr returning int in
 function 1 as slot returning int in
@@ -237,7 +238,7 @@ function 1 as slot returning int in
                 => slot(a) != slot(b))
              & slot(a) != slot(this)
         )
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}%
 \begin{minipage}{.5\linewidth}
 \begin{align*}
@@ -257,11 +258,11 @@ The predicates specified in \autoref{fig:two-hop-slot-pred-lang} and \autoref{fi
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [1.0]
 function 3 as humidity returning float in
     humidity(this) <= 40.0
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}%
 \begin{minipage}{.5\linewidth}
 \begin{align*}
@@ -276,12 +277,12 @@ function 3 as humidity returning float in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 2 as temperature returning float in
     using Neighbours(2) as twohopn in
         abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}
 
 \begin{minipage}{.5\linewidth}
@@ -299,7 +300,7 @@ The two predicates in \autoref{fig:app1-pred-lang} and \autoref{fig:app2-pred-la
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 0 as addr returning int in
     using Neighbours(1) as onehopn in
@@ -307,7 +308,7 @@ function 0 as addr returning int in
         @(a : onehopn ~
             #(b : twohopn ~ addr(a) == addr(b))
         )
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}%
 \begin{minipage}{.5\linewidth}
 \begin{align*}
@@ -323,19 +324,19 @@ This predicate is perhaps not as interesting as other predicates but it has a va
 
 
 \begin{figure}[H]
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 5 as sink-distance returning int in
     using Neighbours(1) as onehopn in
         sink-distance(this) == min(sink-distance, onehopn) + 1
-\end{verbatim}
+\end{lstlisting}
 \caption{We are one hop further from the base station than the closest of our neighbours. May be used to check parent in aggregation tree is actually closer to the sink.}
 \label{fig:tree-agg-parent-hops-pred-lang}
 \end{figure}
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{verbatim}
+\begin{lstlisting}
 [all]
 function 0 as addr returning int in
 function 4 as ch returning int in
@@ -344,7 +345,7 @@ function 6 as H returning int in
         #(node : neighbours ~
             ch(this) == addr(node)
         )
-\end{verbatim}
+\end{lstlisting}
 \end{minipage}%
 \begin{minipage}{.5\linewidth}
 \begin{align*}

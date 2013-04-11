@@ -9,6 +9,8 @@
 % This needs to occur before hyperref and minted
 \usepackage{float}
 
+\usepackage[usenames,dvipsnames]{xcolor}
+
 \usepackage{multirow}
 
 \usepackage[hyphens]{url}
@@ -55,6 +57,29 @@
 % For use in the title page
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 
+% Predicate language syntax highlighting
+\usepackage{listings}
+\definecolor{keywordblue}{RGB}{20,105,176}
+\lstdefinelanguage{Hoppy}{
+    morekeywords={all,function,as,returning,in,using},
+    sensitive=true,
+}
+\lstset{
+    language=Hoppy,
+    keywordstyle=\color{keywordblue},
+%
+    keywords=[2]{this},
+    keywordstyle=[2]\color{OliveGreen},
+%
+    keywords=[3]{int,float},
+    keywordstyle=[3]\color{YellowOrange},
+%
+    keywords=[4]{Neighbours,abs,mean,max,min,sum,len},
+    keywordstyle=[4]\color{Purple},
+%
+    basicstyle=\ttfamily,
+    columns=fullflexible,
+}
 
 % For \begin{acknowledgements}
 % From: http://www.latex-community.org/forum/viewtopic.php?f=47&t=5464

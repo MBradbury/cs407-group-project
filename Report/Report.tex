@@ -55,6 +55,19 @@
 % For use in the title page
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 
+% Predicate language syntax highlighting
+\usepackage{listings}
+\definecolor{keywordblue}{rgb}{0.24,0.59,0.7}
+\lstdefinelanguage{Hoppy}{
+    morekeywords={all,function,as,returning,in,using,Neighbours,addr},
+    sensitive=true,
+}
+\lstset{
+    language=Hoppy,
+    keywordstyle=\color{keywordblue},
+    basicstyle=\ttfamily,
+    columns=fullflexible,
+}
 
 % For \begin{acknowledgements}
 % From: http://www.latex-community.org/forum/viewtopic.php?f=47&t=5464

@@ -15,7 +15,8 @@
 
 struct pegp_conn;
 
-typedef void (* pegp_predicate_failed_fn)(struct pegp_conn * conn, rimeaddr_t const * from, uint8_t hops);
+typedef void (* pegp_predicate_failed_fn)(struct pegp_conn * conn,
+	rimeaddr_t const * from, uint8_t hops);
 
 typedef struct pegp_conn
 {

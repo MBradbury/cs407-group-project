@@ -12,7 +12,8 @@
 struct pele_conn;
 
 typedef bool (* pele_data_differs_fn)(void const * data1, void const * data2);
-typedef void (* pele_predicate_failed_fn)(struct pele_conn * conn, rimeaddr_t const * from, uint8_t hops);
+typedef void (* pele_predicate_failed_fn)(struct pele_conn * conn,
+	rimeaddr_t const * from, uint8_t hops);
 
 typedef struct pele_conn
 {

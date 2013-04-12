@@ -12,7 +12,6 @@ static void free_hops_data(void * voiddata)
 	free(data);
 }
 
-
 bool hop_manager_init(hop_data_t * hop_data)
 {
 	if (hop_data != NULL)

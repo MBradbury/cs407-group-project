@@ -62,6 +62,68 @@ TCP/IP is traditionally viewed as unsuitable in sensor networks, \citeauthor{Est
 
 The RIME communication stack presents a solution to the cross-layer information-sharing problem of a layered communication stack by separating the protocol logic from the details of the packet headers. Packet headers need to be small, yet adaptive enough to encompass any type of communications. They solved this by using the notion of Packet Attributes. Modules would be used to transform data and the attributes into the corresponding packets (with headers and payloads). This provides the developer access too lower level information, without violating layering principles, yet with similar execution performance. This also allows interoperability with all protocols, abstracting the networking layers from the main application layer. For the application layer, RIME provides many communication primitives (such as Single-Hop Broadcasting) \cite{Dunkels:2007:ACA:1322263.1322295}, these primitives were selected based on analysis on the common use cases in WSNs.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{Diagrams/rime-stack}
+	\caption{The communication primitives in the Rime network stack \cite{Dunkels:2007:ACA:1322263.1322295}}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | }
+		\hline
+		Name & Header & Address \\
+		\hline
+		Anonymous Broadcast & abc.h & \url{contiki.sourceforge.net/docs/2.6/a01717.html} \\
+		Broadcast & broadcast.h & \url{contiki.sourceforge.net/docs/2.6/a01720.html} \\
+		Stubborn Broadcast & stbroadcast.h & \url{contiki.sourceforge.net/docs/2.6/a01739.html} \\
+		Anonymous Polite Broadcast & polite.h & \url{contiki.sourceforge.net/docs/2.6/a01730.html} \\
+		Polite Broadcast & ipolite.h & \url{contiki.sourceforge.net/docs/2.6/a01724.html} \\
+		Unicast & unicast.h & \url{contiki.sourceforge.net/docs/2.6/a01738.html} \\
+		Stubborn Unicast & stunicast.h & \url{contiki.sourceforge.net/docs/2.6/a01740.html} \\
+		Reliable Unicast & runicast.h & \url{contiki.sourceforge.net/docs/2.6/a01738.html} \\
+		Network Flooding & netflood.h & \url{contiki.sourceforge.net/docs/2.6/a01728.html} \\
+		Multi-hop Unicast & multihop.h & \url{contiki.sourceforge.net/docs/2.6/a01726.html} \\
+		Reliable Multi-hop Unicast & rmh.h & \url{contiki.sourceforge.net/docs/2.6/a01732.html} \\
+		Reliable Unicast Bulk Transfer & rucb.h& \url{contiki.sourceforge.net/docs/2.6/a00365.html} \\
+		\hline
+		\hline
+		Mesh & mesh.h & \url{contiki.sourceforge.net/docs/2.6/a01725.html} \\
+		Collect & collect.h & \url{contiki.sourceforge.net/docs/2.6/a01723.html} \\
+		Trickle & trickle.h & \url{contiki.sourceforge.net/docs/2.6/a01742.html} \\
+		\hline
+	\end{tabular}
+	\caption{Communication Primitives headers and documentation location}
+\end{table}
+
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | l | }
+		\hline
+		Name & Reliable & Target & Sender Known\\
+		\hline
+		Anonymous Broadcast & No & 1-hop neighbours & No\\
+		Broadcast & No & 1-hop neighbours & Yes\\
+		Stubborn Broadcast & No & 1-hop neighbours & No\\
+		Anonymous Polite Broadcast & No & 1-hop neighbours & No\\
+		Polite Broadcast & No & 1-hop neighbours & Yes\\
+		Unicast & No & destination & Yes\\
+		Stubborn Unicast & No & destination & Yes\\
+		Reliable Unicast & Yes & destination & Yes\\
+		Network Flooding & No & network & Yes\\
+		Multi-hop Unicast & No & destination & Yes\\
+		Reliable Multi-hop Unicast & Yes & destination & Yes\\
+		\hline
+		\hline
+		Mesh & No & destination & Yes \\
+		Collect & Yes & destination & Yes \\
+		Trickle & Yes & network & No \\
+		\hline
+	\end{tabular}
+	\caption{Communication Primitives behaviour}
+\end{table}
+
 \paragraph{Beacon Coordination}
 \cite{Dunkels:2011:ALB:1966251.1966270} % http://dunkels.com/adam/dunkels11announcement.pdf
 

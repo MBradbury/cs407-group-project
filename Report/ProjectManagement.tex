@@ -4,6 +4,8 @@
 \subsection{Methodology}
 % Just notes...
 
+\subsubsection*{Term 1}
+
 From the beginning, our main objective was to develop a wireless sensor network (WSN) to investigate the debugging of distributed programs in such environments. However, WSN is a fast growing research area and encompasses a wide range of applications and practical aspects of sensor deployment. From our research, such applications include wildlife monitoring such as animal habitat and behaviour and environment monitoring like air pollution and volcanic activity. These applications where developed and deployed in real situations but for our project we decided to take on a more general approach by investigating the issues regarding debugging and fault detection in wireless sensor networks.
 
 As a result, we spent the first few weeks researching on the different aspects of wireless sensor networks as well as the appropriate tools and platform to develop our system. These include;
@@ -17,7 +19,7 @@ As a result, we spent the first few weeks researching on the different aspects o
 	\item Routing protocols and sensor communication
 	\item Predicate evaluation
 		\begin{enumerate}
-			\item Hardcode response handling
+			\item Hardcode of response handling
 			\item VM with opcodes
 		\end{enumerate}
 	\item Monitoring and interface tools
@@ -25,26 +27,39 @@ As a result, we spent the first few weeks researching on the different aspects o
 	\item Sensor limitations (e.g. energy and power usage)
 \end{enumerate} 
 
-Research: We managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model approach in the hopes of obtaining a more defined project scope by term 1.
+Research: We managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model in the hopes of obtaining a more defined project scope by term 1.
 
-The requirements of the project was also not fully understood at the time and we were unsure of the efficiency of our algorithms so we decided to go for a prototyping approach as part of an evolutionary process model. This allows us to start with a set of core product and system requirements (i.e. the operating system) and then incorporate other extensions as the requirements are better understood. We also had frequent meetings with our supervisor to discuss the best ways to implement our system and any additional components. Where a new idea is defined, a prototype is modelled and constructed and is re-evaluated by our supervisor, who provides feedback that is used to further refine the requirements. This process is repeated until the supervisor is satisfied with the function of the system, while at the same time enabling us to better understand what needs to be done.
+The requirements of the project was also not fully understood at the time and we were unsure of the efficiency of our algorithms so we decided to go for a prototyping approach as part of an evolutionary process model. This allows us to start with a set of core product and system requirements (i.e. the operating system) and then incorporate other extensions as the requirements are better understood. We also had frequent meetings with our supervisor to discuss the best ways to implement our system and any additional components. Where a new idea is defined, a prototype is modelled and constructed and is re-evaluated by our supervisor, who provides feedback which is used to further refine the requirements. This process is repeated until the supervisor is satisfied with the function of the system, while at the same time enabling us to better understand what needs to be done.
+
+By the end of the first term, the scope of the project reached a more defined level as we have decided what is to be implemented and what has been disregarded from the provisional list of algorithms. This was demonstrated in our first delivery - the poster presentation, where we had to chance to explain our project at a high level to our supervisors and other professors.
+%Can state here what was said in the feedback form.
+
+\subsubsection*{Term 2}
+
+At this stage, most of the algorithms and protocols were implemented independently and treated as individual components to the core system. We decided to do it this way because of the benefits of modularity where the principles of "Separation of Concerns" allows for a more manageable set of modules. The composition of these components such as predicate checking and neighbour data retrieval was done during the entire winter vacation and the beginning of the second term.
+%We can mention here a small list of the algorithms that needed to be integrated together
+
+In the second term, we continued following the evolutionary process model but at a more relaxed approach and less meetings with the supervisor was needed. However, the next important issue to tackle was ensuring that the project will be completed in time. This required the effective scheduling of tasks and prioritising work force to the critical tasks. By the 3rd quarter of the term, progress had fallen to a halt due the high number of coursework deadlines and this meant that team members where preoccupied with these work. To address the issue, a meeting was held prior to the halt where we discussed our recovery plan once everyone was done with other courseworks. This allowed team members to continue working where they left off and avoid any delays.
+% Needs to be re-written 
+
+//Notes
+In the first half of the second term, most of the work was focused towards completing the implementation of sensor communication, converting existing codes into libraries and the development of network visualisation. 
+
+By the second half, many people where preoccupied with other module coursework and progress was slowed down. Towards the end of the term, some of the algorithms such as Tree Aggregation needed optimization 
 
 
-\subsection{Planning and Organisation}
+\begin{itemize}
+	\item The main task was to integrate the tasks that worked together and convert them into libraries which would be needed at a high levels of the system
+	\item Visualisation and Base station
+	\item Optimisation
+	\item Debug and testing
+	\item Run simulation and gather results
+\end{itemize}
 
-\subsubsection{Deliverables}
-
-\begin{enumerate}
-	\item Abstract
-	\item Specification
-    \item Poster presentation
-    \item Final Group Report
-    \item Individual Report
-\end{enumerate}
 
 \subsection{Work Overview}
 
-\subsubsection{Term 1}
+\subsubsection*{Term 1}
 
 \begin{center}
 	\begin{longtable}{| l | p{9cm} | p{3.5cm} |}
@@ -232,7 +247,7 @@ The requirements of the project was also not fully understood at the time and we
 	\end{longtable}
 \end{center}
 
-\subsubsection{Term 2}
+\subsubsection*{Term 2}
 
 \begin{center}
 	\begin{longtable}{| l | p{7.5cm} | p{5cm} |}
@@ -337,6 +352,17 @@ The requirements of the project was also not fully understood at the time and we
 	\end{longtable}
 \end{center}
 
+\subsection{Planning and Organisation}
+
+\subsubsection{Deliverables}
+
+\begin{enumerate}
+	\item Abstract
+	\item Specification
+    \item Poster presentation
+    \item Final Group Report
+    \item Individual Report
+\end{enumerate}
 
 \subsection{Role Allocation and stakeholders}
 
@@ -525,6 +551,9 @@ Unfortunately two of our group members were without internet for the first 3 wee
 
 \subsubsection{Society Exec Clashes}
 Two members of our team are on the exec of Warwick Societies, this means that at certain parts of the year they were in high demand for those jobs. For instance during the first few weeks of term during Freshers' Fortnight, the exec members were required to be involved in many of their events that they were running. However, after these first weeks the demand on their time decreased and made balancing the time been the demands of this project and their exec roles much easier.
+
+\subsubsection{High number of coursework deadline in term 2}
+In the second term, there where many coursework deadlines for other course modules and some of the team members where unable to contribute towards the project for some periods of time. On several occasion, the team leader had to put pressure on us and ensure that some time was delegated to project work. 
 
 \subsection{Legal, social, ethical and professional issues}
 

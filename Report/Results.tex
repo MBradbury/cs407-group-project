@@ -113,6 +113,9 @@ As messages sent and received use the most energy in a WSN system \cite{Shnayder
 \label{fig:predeval2.0}
 \end{figure}
 
+At first glance of figure \autoref{fig:predeval2.0} the results seem to mirror those of figure \autoref{fig:predeval4.0}, however there is a key difference, in that the performance of the global periodic-based implementation had a lower success rate, when the predicate period is 2.0 minutes. This is likely due to the fact messages are sent more often, and are therefore causing more collisions, loosing messages, ultimately resulting in a lower success rate. 
+
+The graphs also show that there were a larger number of messages both sent and received in these tests, although this can be attributed to the fact the predicate period is more often, requiring more messages to be passed around the network. Comparing the two sets of data we can see there were similar performance levels, regardless of the predicate period length. It can also be suggested that increasing the predicate period would increase the evaluation success rate, as there would be less collisions for the network to deal with. 
 
 \begin{figure}[H]
 \centering

@@ -4,20 +4,28 @@
 \subsection{Methodology}
 % Just notes...
 
-From the beginning, our main objective was to develop a wireless sensor network to investigate the practical issues of predicate checking. However, WSN is a fast growing research area and encompasses a wide range of applications and practical aspects of sensor deployment. From our research, such applications include wildlife monitoring such as animal habitat and behaviour and environment monitoring like air pollution and volcanic activity. These applications where developed and deployed in real situations but for our project we decided to take on a more general approach in WSN by investigating the issues regarding debugging and fault detection.
+From the beginning, our main objective was to develop a wireless sensor network (WSN) to investigate the debugging of distributed programs in such environments. However, WSN is a fast growing research area and encompasses a wide range of applications and practical aspects of sensor deployment. From our research, such applications include wildlife monitoring such as animal habitat and behaviour and environment monitoring like air pollution and volcanic activity. These applications where developed and deployed in real situations but for our project we decided to take on a more general approach by investigating the issues regarding debugging and fault detection in wireless sensor networks.
 
-As a result, we spent the first few weeks researching on the different aspects of wireless sensor networks and the appropriate tools and platform to develop our system. These include;
+As a result, we spent the first few weeks researching on the different aspects of wireless sensor networks as well as the appropriate tools and platform to develop our system. These include;
 
 \begin{enumerate}
-	\item Operating system and simulation platform
+	\item Operating systems and simulation platforms
+		\begin{enumerate}
+			\item TinyOS with TOSSIM
+			\item Contiki with Cooja
+		\end{enumerate}
 	\item Routing protocols and sensor communication
+	\item Predicate evaluation
+		\begin{enumerate}
+			\item Hardcode response handling
+			\item VM with opcodes
+		\end{enumerate}
 	\item Monitoring and interface tools
 	\item Logging and error reporting
-	\item Predicate evaluation
 	\item Sensor limitations (e.g. energy and power usage)
 \end{enumerate} 
 
-Research: We managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless we produced a list of all the possible algorithms and protocols to implement and was ranked according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a development model in the hopes of obtaining a more defined project scope by term 1.
+Research: We managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model approach in the hopes of obtaining a more defined project scope by term 1.
 
 The requirements of the project was also not fully understood at the time and we were unsure of the efficiency of our algorithms so we decided to go for a prototyping approach as part of an evolutionary process model. This allows us to start with a set of core product and system requirements (i.e. the operating system) and then incorporate other extensions as the requirements are better understood. We also had frequent meetings with our supervisor to discuss the best ways to implement our system and any additional components. Where a new idea is defined, a prototype is modelled and constructed and is re-evaluated by our supervisor, who provides feedback that is used to further refine the requirements. This process is repeated until the supervisor is satisfied with the function of the system, while at the same time enabling us to better understand what needs to be done.
 
@@ -39,7 +47,7 @@ The requirements of the project was also not fully understood at the time and we
 \subsubsection{Term 1}
 
 \begin{center}
-	\begin{longtable}{| l | p{7.5cm} | p{5cm} |}
+	\begin{longtable}{| l | p{9cm} | p{3.5cm} |}
 	\hline
 	Week & Activities & Task Allocation\\
 	\hline
@@ -49,12 +57,12 @@ The requirements of the project was also not fully understood at the time and we
 			\item Investigated two OSes and their corresponding simulators TinyOS with TOSSIM and Contiki with Cooja
 		\end{enumerate} &
 	\begin{enumerate}
-		\item[] Amit: 1, 2, 3
-		\item[] Dan: 1, 2, 3
-		\item[] Ivan: 1, 2, 3
-		\item[] Joe: 1, 2, 3
-		\item[] Matt: 1, 2, 3
-		\item[] Tim: 1, 2, 3
+		\item[] Amit: All
+		\item[] Dan: All
+		\item[] Ivan: All
+		\item[] Joe: All
+		\item[] Matt: All
+		\item[] Tim: All
 	\end{enumerate}
 	\\ \hline
 
@@ -179,9 +187,9 @@ The requirements of the project was also not fully understood at the time and we
 		\end{enumerate} &
 	\begin{enumerate}
 		\item[] Amit: 1, 5, 6
-		\item[] Dan: 1, 3, (possibly 7)
-		\item[] Ivan: 1, 2, (possibly 7)
-		\item[] Joe: 1, 2, (possibly 7)
+		\item[] Dan: 1, 3, (~7)
+		\item[] Ivan: 1, 2, (~7)
+		\item[] Joe: 1, 2, (~7)
 		\item[] Matt: 1, 4, 6
 		\item[] Tim: 1, 4
 	\end{enumerate}

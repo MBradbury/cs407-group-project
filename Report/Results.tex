@@ -96,35 +96,50 @@ As messages sent and received use the most energy in a WSN system \cite{?} we wi
 \centering
 \subfigure[Rx]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/messagesPE/rx/graph.pdf}
+	\label{fig:predeval2.0-rx}
 }
 \subfigure[Tx]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/messagesPE/tx/graph.pdf}
+	\label{fig:predeval2.0-tx}
 }
 
 \subfigure[Percentage of predicates correctly evaluated]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/pcCorrectlyEvaluated/graph.pdf}
+	\label{fig:predeval2.0-correct}
 }
 \subfigure[Percentage of responses received]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/2.0/1HOP/pcResponsesReachedSink/graph.pdf}
+	\label{fig:predeval2.0-recv}
 }
 \caption{Results when predicate period is every 2.0 seconds using a 1-hop predicate}
+\label{fig:predeval2.0}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \subfigure[Rx]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/2HOP/messagesPE/rx/graph.pdf}
+	\label{fig:predeval2hop-rx}
 }
 \subfigure[Tx]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/2HOP/messagesPE/tx/graph.pdf}
+	\label{fig:predeval2hop-tx}
 }
 
 \subfigure[Percentage of predicates correctly evaluated]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/2HOP/pcCorrectlyEvaluated/graph.pdf}
+	\label{fig:predeval2hop-correct}
 }
 \subfigure[Percentage of responses received]{%
 	\includegraphics[width=0.44\linewidth]{../Results/Graphs/4.0/2HOP/pcResponsesReachedSink/graph.pdf}
+	\label{fig:predeval2hop-recv}
 }
 \caption{Results when predicate period is every 4.0 seconds using a 2-hop predicate}
+\label{fig:predeval2hop}
 \end{figure}
 
+When predicate evaluation algorithms are executed using predicates concerning the 2-hop neighbourhoods of nodes (the results of which are shown in \autoref{fig:predeval2hop}), several measurable differences are immediately apparent when compared to the equivalent 1-hop case of \autoref{fig:predeval4.0}. First and foremost, while the PEGP, PEGE and PELP algorithms in \subref{fig:predeval2hop-tx} show little difference in the numbers of messages transmitted, PELE moves from having the second-fewest transmissions to sending the most messages, even managing to outpace the superlinear growth of the global algorithms -- though PELE itself maintains a linear trend, so one may expect PEGE and PEGP to regain the lead in larger networks than those used for testing. In accordance with this, in \subref{fig:predeval2hop-rx} is seen to PELE extend on its 1-hop lead in number of receptions to receive at least double the number of messages compared to any other algorithm, for any size of network. In short, these results show that local event-based predicate evaluation is significantly less energy-efficient when dealing with a 2-hop neighbourhood.
+
+This loss of efficiency is compounded by the observation in \subref{fig:predeval2hop-correct} that PELE does not even maintain its previous level of accuracy; adding the extra hop to the predicates has caused it to drop by approximately 30 percentage points compared to \autoref{fig:predeval4.0}. Both periodic and event-based global evaluation algorithms have also shown a decrease in accuracy, though by a lesser degree. By contrast, the accuracy of periodic local evaluation has shown an increase. Of these four results, only those for the two global algorithms make intuitive sense -- the added complexity of gathering data from the 2-hop neighbourhood as opposed to only the node's immediate neighbours reduces the probability of all of the requested or required data being received, in turn lowering the probability of correctly evaluating the given predicate. One could perhaps suspect that event-based local evaluation shows such a significant drop because of the significantly increased overlap in the sets of nodes from which each evaluating node is requesting data (leading to more collisions, and similar issues). However, this reasoning does not explain why the accuracy of local periodic evaluation increases; the cohesion between both methods of global evaluation suggests that the difference between periodic and event-based methods does not play a part, and yet the local factor appears unrelated as well.
+
+Less confounding results are found in \subref{fig:predeval2hop-recv}, as the values for the receipt of evaluated predicates are sufficiently similar to those in \autoref{fig:predeval4.0} to conclude that extending predicates to the 2-hop neighbourhood does not appear to impact the success of sending results back to the sink, once the required data has been gathered by the respective nodes. Assuming the explanations made previously were accurate, this is the expected result as only the nodes close to the sink were successfully sending their results for 1-hop predicates, and these nodes will be relatively unaffected by the increased traffic in the majority of the network (and it does not matter if nodes further afield are adversely affected, as the effect cannot worsen their failure).

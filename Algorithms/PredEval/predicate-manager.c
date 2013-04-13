@@ -556,7 +556,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		char const * line = (char const *)data;
 		const unsigned int length = strlen(line);
 
-		PMDPRINTF("PredMan: line:`%s' (%u) in %d\n", line, length, state);
+		printf("PredMan: line:`%s' (%u) in %d\n", line, length, state);
 
 		switch (state)
 		{
@@ -565,7 +565,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 			{
 				if (length == 1 && line[0] == '[' && line[1] == '\0')
 				{
-					PMDPRINTF("PredMan: Starting predicate input...\n");
+					printf("PredMan: Starting predicate input...\n");
 					state = 1;
 				}
 			} break;
@@ -582,7 +582,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else
 				{
-					PMDPRINTF("PredMan: going to error handler\n");
+					printf("PredMan: going to error handler\n");
 					state = 99;
 					continue;
 				}
@@ -614,7 +614,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 			{
 				if (line[0] == 'b')
 				{
-					PMDPRINTF("PredMan: processing bytecode\n");
+					printf("PredMan: processing bytecode\n");
 
 					unsigned int bytecode_count = (length - 1) / 2;
 					
@@ -642,7 +642,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else if (line[0] == 'v')
 				{
-					PMDPRINTF("PredMan: processing variable details\n");
+					printf("PredMan: processing variable details\n");
 
 					var_elem_t * new = malloc(
 						sizeof(var_elem_t) * (1 + current.variables_details_length));
@@ -696,7 +696,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				}
 				else
 				{
-					PMDPRINTF("PredMan: going to error handler\n");
+					printf("PredMan: going to error handler\n");
 					state = 99;
 					continue;
 				}

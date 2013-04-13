@@ -8,7 +8,7 @@ PROJECT_SOURCEFILES =
 CONTIKIDIRS :=
 CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c predlang.c linked-list.c \
 array-list.c map.c unique-array.c random-range.c eventupdate.c nhopflood.c rimeaddr-helpers.c \
-predicate-manager.c hop-data-manager.c
+predicate-manager.c hop-data-manager.c pele.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \
@@ -24,7 +24,7 @@ CFLAGS += -DNDEBUGVM
 
 CFLAGS += -fdata-sections
 
-CFLAGS += -DPELE_APPLICATION -DRIMESTATS_CONF_ENABLED=1 -DENERGEST_CONF_ON=1
+CFLAGS += -DRIMESTATS_CONF_ENABLED=1 -DENERGEST_CONF_ON=1
 
 # Disable uip
 #CONTIKI_NO_NET=1

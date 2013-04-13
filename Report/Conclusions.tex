@@ -1,3 +1,10 @@
 % !TeX root = Report.tex
 \section{Evaluation and Conclusions}
 
+To conclude we have found this a difficult project to complete. Mostly due to the fact that a number of the libraries that we expected to be available were not, our unfamiliarity with Contiki and the initial lack of direction for the project. We have learnt that it is much better to have a very well defined goal to being with, even in a research project such as this.
+
+As part of this project we have produced four different predicate evaluation libraries that were analysed to find the relative performances between evaluating predicates in-network or at a sink node after gathering the network's data. We also investigated under what circumstances should a node's data be sent, when it changes or periodically, and how to send that data. In order to aid system administrators of sensor networks we developed a GUI that could communicate with the network, this GUI was used to send predicates into the network and visually display the network's configuration and predicate failure responses to the user. To evaluate predicates a virtual machine and scripting language were developed so that new predicates could be deployed and old ones updated or removed. Our aim was to eliminate the need to redeploy the firmware across the networks.
+
+From our results some libraries perform well in certain situations and other libraries in other situations, which means that it is up to the developers of systems to choose which to deploy. We believe that there is much room for improvement in the number of messages sent and the number of failure responses received. Improving the percentage of predicates evaluated successfully may be harder due to the time delays between data being generated and sent and the predicates being evaluated.
+
+Overall, we have learnt a lot as a group in terms of undertaking projects and how to develop for unreliable distributed systems such as wireless sensor networks. We hope that some of the work here can be contributed back to the open source community where it will help others to develop applications with Contiki.

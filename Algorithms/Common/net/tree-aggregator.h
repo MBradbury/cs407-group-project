@@ -1,7 +1,6 @@
 #ifndef CS407_TREE_AGGREGATOR_H
 #define CS407_TREE_AGGREGATOR_H
 
-#include "net/rime.h"
 #include "net/rime/stbroadcast.h"
 
 #include "net/multipacket.h"
@@ -12,12 +11,14 @@ typedef struct
 {
 	/** The function called when a message is received at the sink.
 		The arguments are: the connection and the message source. */
-	void (* recv)(struct tree_agg_conn * conn, rimeaddr_t const * source, void const * packet, unsigned int length);
+	void (* recv)(struct tree_agg_conn * conn,
+		rimeaddr_t const * source, void const * packet, unsigned int length);
 
 	/** This function is called when a node has finished setting up */
 	void (* setup_complete)(struct tree_agg_conn * conn);
 
-	void (* aggregate_update)(struct tree_agg_conn * tconn, void * data, void const * to_apply, unsigned int length);
+	void (* aggregate_update)(struct tree_agg_conn * tconn,
+		void * data, void const * to_apply, unsigned int length);
 
 	/** This function is used to add a nodes own one data */
 	void (* aggregate_own)(struct tree_agg_conn * tconn, void * data);
@@ -51,15 +52,13 @@ typedef struct tree_agg_conn
 
 	tree_agg_callbacks_t const * callbacks;
 
-	// ctimers
+	// timers
 	struct ctimer ctrecv;
 	struct ctimer aggregate_ct;
 	struct ctimer ct_parent_detect;
 	struct ctimer ct_open;
 	struct ctimer ct_wait_finished;
 } tree_agg_conn_t;
-
-
 
 bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 				   uint16_t ch1, uint16_t ch2,

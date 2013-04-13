@@ -11,7 +11,8 @@
 
 struct pelp_conn;
 
-typedef void (* pelp_predicate_failed_fn)(struct pelp_conn * conn, rimeaddr_t const * from, uint8_t hops);
+typedef void (* pelp_predicate_failed_fn)(struct pelp_conn * conn,
+	rimeaddr_t const * from, uint8_t hops);
 
 typedef struct pelp_conn
 {

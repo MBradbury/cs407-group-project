@@ -10,7 +10,8 @@ PROJECT_SOURCEFILES =
 CONTIKIDIRS :=
 CONTIKI_SOURCEFILES = debug-helper.c sensor-converter.c predlang.c array-list.c map.c \
 unique-array.c random-range.c tree-aggregator.c led-helper.c neighbour-detect.c \
-neighbour-aggregate.c rimeaddr-helpers.c multipacket.c linked-list.c predicate-manager.c hop-data-manager.c
+neighbour-aggregate.c rimeaddr-helpers.c multipacket.c linked-list.c predicate-manager.c hop-data-manager.c \
+pegp.c
 
 CFLAGS = -Wall -W -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes \
 -Wmissing-prototypes -Wfloat-equal -Wpointer-arith -Wbad-function-cast \
@@ -26,7 +27,7 @@ CFLAGS += -DNDEBUGVM
 
 CFLAGS += -fdata-sections
 
-CFLAGS += -DPEGP_APPLICATION -DRIMESTATS_CONF_ENABLED=1 -DENERGEST_CONF_ON=1
+CFLAGS += -DRIMESTATS_CONF_ENABLED=1 -DENERGEST_CONF_ON=1
 
 # Disable uip
 #CONTIKI_NO_NET=1

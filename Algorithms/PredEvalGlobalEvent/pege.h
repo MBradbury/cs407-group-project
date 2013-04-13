@@ -16,7 +16,8 @@
 struct pege_conn;
 
 typedef bool (* pege_data_differs_fn)(void const * data1, void const * data2);
-typedef void (* pege_predicate_failed_fn)(struct pege_conn * conn, rimeaddr_t const * from, uint8_t hops);
+typedef void (* pege_predicate_failed_fn)(struct pege_conn * conn,
+	rimeaddr_t const * from, uint8_t hops);
 
 typedef struct pege_conn
 {
@@ -30,8 +31,6 @@ typedef struct pege_conn
 	node_data_fn data_fn;
 	pege_data_differs_fn differs_fn;
 	size_t data_size;
-
-	//uint8_t max_comm_hops;
 
 	uint8_t functions_count;
 	function_details_t const * function_details;
@@ -60,6 +59,5 @@ bool pege_start(pege_conn_t * conn,
 	clock_time_t predicate_period);
 
 void pege_stop(pege_conn_t * conn);
-
 
 #endif /*CS407_PEGE_H*/

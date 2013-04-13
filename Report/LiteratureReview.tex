@@ -62,6 +62,68 @@ TCP/IP is traditionally viewed as unsuitable in sensor networks, \citeauthor{Est
 
 The RIME communication stack presents a solution to the cross-layer information-sharing problem of a layered communication stack by separating the protocol logic from the details of the packet headers. Packet headers need to be small, yet adaptive enough to encompass any type of communications. They solved this by using the notion of Packet Attributes. Modules would be used to transform data and the attributes into the corresponding packets (with headers and payloads). This provides the developer access too lower level information, without violating layering principles, yet with similar execution performance. This also allows interoperability with all protocols, abstracting the networking layers from the main application layer. For the application layer, RIME provides many communication primitives (such as Single-Hop Broadcasting) \cite{Dunkels:2007:ACA:1322263.1322295}, these primitives were selected based on analysis on the common use cases in WSNs.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{Diagrams/rime-stack}
+	\caption{The communication primitives in the Rime network stack \cite{Dunkels:2007:ACA:1322263.1322295}}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | }
+		\hline
+		Name & Header & Address \\
+		\hline
+		Anonymous Broadcast & abc.h & \url{contiki.sourceforge.net/docs/2.6/a01717.html} \\
+		Broadcast & broadcast.h & \url{contiki.sourceforge.net/docs/2.6/a01720.html} \\
+		Stubborn Broadcast & stbroadcast.h & \url{contiki.sourceforge.net/docs/2.6/a01739.html} \\
+		Anonymous Polite Broadcast & polite.h & \url{contiki.sourceforge.net/docs/2.6/a01730.html} \\
+		Polite Broadcast & ipolite.h & \url{contiki.sourceforge.net/docs/2.6/a01724.html} \\
+		Unicast & unicast.h & \url{contiki.sourceforge.net/docs/2.6/a01738.html} \\
+		Stubborn Unicast & stunicast.h & \url{contiki.sourceforge.net/docs/2.6/a01740.html} \\
+		Reliable Unicast & runicast.h & \url{contiki.sourceforge.net/docs/2.6/a01738.html} \\
+		Network Flooding & netflood.h & \url{contiki.sourceforge.net/docs/2.6/a01728.html} \\
+		Multi-hop Unicast & multihop.h & \url{contiki.sourceforge.net/docs/2.6/a01726.html} \\
+		Reliable Multi-hop Unicast & rmh.h & \url{contiki.sourceforge.net/docs/2.6/a01732.html} \\
+		Reliable Unicast Bulk Transfer & rucb.h& \url{contiki.sourceforge.net/docs/2.6/a00365.html} \\
+		\hline
+		\hline
+		Mesh & mesh.h & \url{contiki.sourceforge.net/docs/2.6/a01725.html} \\
+		Collect & collect.h & \url{contiki.sourceforge.net/docs/2.6/a01723.html} \\
+		Trickle & trickle.h & \url{contiki.sourceforge.net/docs/2.6/a01742.html} \\
+		\hline
+	\end{tabular}
+	\caption{Communication Primitives headers and documentation location}
+\end{table}
+
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | l | }
+		\hline
+		Name & Reliable & Target & Sender Known\\
+		\hline
+		Anonymous Broadcast & No & 1-hop neighbours & No\\
+		Broadcast & No & 1-hop neighbours & Yes\\
+		Stubborn Broadcast & No & 1-hop neighbours & No\\
+		Anonymous Polite Broadcast & No & 1-hop neighbours & No\\
+		Polite Broadcast & No & 1-hop neighbours & Yes\\
+		Unicast & No & destination & Yes\\
+		Stubborn Unicast & No & destination & Yes\\
+		Reliable Unicast & Yes & destination & Yes\\
+		Network Flooding & No & network & Yes\\
+		Multi-hop Unicast & No & destination & Yes\\
+		Reliable Multi-hop Unicast & Yes & destination & Yes\\
+		\hline
+		\hline
+		Mesh & No & destination & Yes \\
+		Collect & Yes & destination & Yes \\
+		Trickle & Yes & network & No \\
+		\hline
+	\end{tabular}
+	\caption{Communication Primitives behaviour}
+\end{table}
+
 \paragraph{Beacon Coordination}
 \cite{Dunkels:2011:ALB:1966251.1966270} % http://dunkels.com/adam/dunkels11announcement.pdf
 
@@ -78,7 +140,7 @@ JProwler \cite{JProwler} is a Java implementation of Prowler which is implemente
 
 \subsubsection*{TinyOS}
 
-TinyOS is an event driven wireless sensor network operating system \cite{?}. Programs are written for in nesC a dialect of C \cite{Gay:2003:NLH:780822.781133}. While TinyOS is often described as an operating system it is better described as a framework for developing programs for embedded systems (specifically sensor networks). Developing for TinyOS can be easier than other implementations because the nesC language models that tasks that a developer would be programming a sensor node to be doing better than developing programs directly in C. To simulate applications developed for TinyOS TOSSIM \cite{levis2003tossim} can be used to compile the same nesC code that would be used to run on the hardware to an intermediate format that is understood by the simulator. TOSSIM supports radio models where the bit error rate is configurable and emulates the hardware to provide an accurate simulation of what may occur in a real life situation. Finally the simulator supports visualising the network, so developers can get a good understanding of what is happening.
+TinyOS is an event driven wireless sensor network operating system \cite{tinyos}. Programs are written for in nesC a dialect of C \cite{Gay:2003:NLH:780822.781133}. While TinyOS is often described as an operating system it is better described as a framework for developing programs for embedded systems (specifically sensor networks). Developing for TinyOS can be easier than other implementations because the nesC language models that tasks that a developer would be programming a sensor node to be doing better than developing programs directly in C. To simulate applications developed for TinyOS TOSSIM \cite{levis2003tossim} can be used to compile the same nesC code that would be used to run on the hardware to an intermediate format that is understood by the simulator. TOSSIM supports radio models where the bit error rate is configurable and emulates the hardware to provide an accurate simulation of what may occur in a real life situation. Finally the simulator supports visualising the network, so developers can get a good understanding of what is happening.
 
 
 \subsubsection*{Simulating Energy Consumption}
@@ -170,13 +232,8 @@ Besides efficient energy harvesting methods, GENESI also emphasizes on reducing 
 % This article doesn't really talk about the issues faced in the development...
 
 \subsubsection*{Air Pollution}
-\cite{libeliumAirPollution}
-\cite{wsnpollution} 
 
-\cite{fotuewsnpollution}
-% http://files.cameroonwebnews.com/uploads/2010/01/airpollution.pdf
-
-Air pollution has been a growing concern in congested urban cities as a result of industrialisation and heavy transportation. These concerns include poor air quality and visibility and long term damaging of human health. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densely deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and industrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
+Air pollution has been a growing concern in congested urban cities as a result of industrialisation and heavy transportation. These concerns include poor air quality and visibility and long term damaging of human health \cite{libeliumAirPollution,wsnpollution}. Traditional methods of air quality monitoring involving quality control stations are expensive and provides low resolution sensing since monitoring stations are less densely deployed. Wireless sensor networks can be used as an urban monitoring system as it has the advantages of being small, easy to set up and inexpensive with real time monitoring capabilities. Sensors which have the ability to measure a wide range of meteorological data such as rainfall, wind speed, temperature, humidity and concentration of pollutants can be deployed in areas of high population density of vehicles and industrial areas. Collected data is transmitted back to the base station via a global system for mobile communication.
 
 \citeauthor{fotuewsnpollution} in \cite{fotuewsnpollution} proposed a Wireless Mesh Network to establish internet connectivity and simultaneously measure air pollution in Sub-Saharan African cities. These cities experience the most problems due to the increase of industry, domestic waste and fuel combustion and that many chemical industries have been established in the central urban areas. However, with poor infrastructure and telecommunication links in Africa, it would be difficult to deploy a sensor network that will measure air pollution since some pollution areas are out of range of the communication service. In addtion, some polluted areas lack the security measures or have industrial restrictions to deploy fixed sensors so they had to use mobile sensors which were attached on vehicles. 
 
@@ -234,9 +291,6 @@ During the deployment, the team managed to log 54 hours of continuous data which
 \paragraph{Conclusion and Improvements}
 
 In general, the event-triggered model was successful in detecting eruptions and other volcanic events and was able to verify the working of the local and global event detectors by examining the downloaded data. However, since the experiment was deployed over a limited area space of the volcano, further work is to be done to instrument volcanoes at a larger scale. This includes, and most importantly, the management of energy and bandwidth usage of the sensors and increasing its computational power to deviate from continuous data collection to enabling the collection of well-correlated signals. 
-
-\subsubsection*{Development of Applications}
-\cite{Fagerstrom:1988:DTD:55823.55833}
 
 
 \subsubsection*{Power Considerations}

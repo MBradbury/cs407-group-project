@@ -95,6 +95,8 @@ public class NodeComms {
        
        output.write(characters);
        output.flush();
+       
+       System.out.println("Serial Send: " + line);
     }
     
     public void writePredicate(int id, String target, int[] bytecode, VariableDetails[] vars) 

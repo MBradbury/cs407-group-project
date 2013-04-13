@@ -60,6 +60,9 @@ public class WSNInterface {
         for (NodeIdPair pair : edges) {
             roundState.addEdge(pair.getLeft(), pair.getRight());
         }
+        
+        //Attach network state to specified round.
+        //TODO
     }
     
     /**
@@ -68,6 +71,10 @@ public class WSNInterface {
      * @param data 
      */
     public void receivePredicateData(int id, String data) {
+        //Build PredicateData from predicate data.
+        PredicateData predicateData = new PredicateData(PredicateData.PredicateStatus.UNSATISFIED, data);
         
+        //Attach data to specified predicate.
+        //TODO
     }
 }

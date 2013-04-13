@@ -2,31 +2,31 @@
 \section{Project Management}
 
 \subsection{Methodology}
-% Just notes...
+
+The requirements of the project was not fully understood at the beginning and we were unsure of the efficiency of our algorithms so we decided to go for a prototyping approach as part of an evolutionary process model. This allows us to start with a set of core product and system requirements (i.e. the operating system) and then incorporate other extensions as the requirements are better understood. We also had frequent meetings with our supervisor to discuss the best ways to implement our system and any additional components. Where a new idea is defined, a prototype is modelled and constructed and is re-evaluated by our supervisor, who provides feedback which is used to further refine the requirements. This process is repeated until the supervisor is satisfied with the function of the system, while at the same time enabling us to better understand what needs to be done.
 
 \subsubsection*{Term 1}
 
-From the beginning, our main objective was to develop a wireless sensor network (WSN) to investigate the debugging of distributed programs in such environments. However, WSN is a fast growing research area and encompasses a wide range of applications and practical aspects of sensor deployment. From our research, such applications include wildlife monitoring such as animal habitat and behaviour and environment monitoring like air pollution and volcanic activity. These applications where developed and deployed in real situations but for our project we decided to take on a more general approach by investigating the issues regarding debugging and fault detection in wireless sensor networks.
+From the beginning, our main objective was to develop a wireless sensor network (WSN) to investigate the debugging of distributed programs in such environments. However, WSN is a fast growing research area and encompasses a wide range of applications and practical aspects of sensor deployment, such as wildlife monitoring such as animal habitat and behaviour and environment monitoring like air pollution and volcanic activity. These applications where developed and deployed in real situations but for our project we decided to take on a more general approach by investigating the issues regarding debugging and fault detection in wireless sensor networks.
 
-As a result, we spent the first few weeks researching on the different aspects of wireless sensor networks as well as the appropriate tools and platform to develop our system. These include;
+%As a result, we spent the first few weeks researching on the different aspects of wireless sensor networks as well as the appropriate tools and platform to develop our system. These include;
 
-\begin{enumerate}
-	\item Operating systems and simulation platforms
-		\begin{enumerate}
-			\item TinyOS with TOSSIM
-			\item Contiki with Cooja
-		\end{enumerate}
-	\item Routing protocols and sensor communication
-	\item Predicate evaluation
-	\item Monitoring and interface tools
-	\item Logging and error reporting
-	\item Sensor limitations (e.g. energy and power usage)
-\end{enumerate} 
+% Irrelevant
+%\begin{enumerate}
+	%\item Operating systems and simulation platforms
+		%\begin{enumerate}
+			%\item TinyOS with TOSSIM
+			%\item Contiki with Cooja
+		%\end{enumerate}
+	%\item Routing protocols and sensor communication
+	%\item Predicate evaluation
+	%\item Monitoring and interface tools
+	%\item Logging and error reporting
+	%\item Sensor limitations (e.g. energy and power usage)
+%\end{enumerate} 
 
 %Research
-We managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model in the hopes of obtaining a more defined project scope by term 1.
-
-The requirements of the project was also not fully understood at the time and we were unsure of the efficiency of our algorithms so we decided to go for a prototyping approach as part of an evolutionary process model. This allows us to start with a set of core product and system requirements (i.e. the operating system) and then incorporate other extensions as the requirements are better understood. We also had frequent meetings with our supervisor to discuss the best ways to implement our system and any additional components. Where a new idea is defined, a prototype is modelled and constructed and is re-evaluated by our supervisor, who provides feedback which is used to further refine the requirements. This process is repeated until the supervisor is satisfied with the function of the system, while at the same time enabling us to better understand what needs to be done.
+From our research we managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model in the hopes of obtaining a more defined project scope by term 1.
 
 %Can state here what was said in the feedback form.
 
@@ -36,19 +36,14 @@ At this stage, most of the algorithms and protocols were implemented independent
 %We can mention here a small list of the algorithms that needed to be integrated together
 
 In the second term, we continued following the evolutionary process model but at a more relaxed approach which focuses on finishing the system components and preparing the gathering of results. Since the project scope was clear and we had a more directed goal,less meetings with the supervisor was needed, but we still required him to evaluate our work and provide feedback. Ensuring that the development and debugging phase to complete in time required the effective scheduling of tasks and prioritising work force to the critical ones. By the third quarter of the term, progress had fallen to a halt due the high number of coursework deadlines and this meant that team members where preoccupied with other duties. To address the issue, a meeting was held prior to the halt where we discussed our recovery plan and actions to take once members was free. This allowed team members to continue working where they left off and avoid any delays.
-% Needs to be re-written 
 
-%Notes
-%In the first half of the second term, most of the work was focused towards completing the implementation of sensor communication, converting existing codes into libraries and the development of network visualisation. 
+\subsection{PRINCE Methods}
 
-%By the second half, many people where preoccupied with other module coursework and progress was slowed down. Towards the end of the term, some of the algorithms such as Tree Aggregation needed optimization 
+Brief into as to how we applied the PRINCE methods to our project
 
-	%\item The main task was to integrate the tasks that worked together and convert them into libraries which would be needed at a high levels of the system
-	%\item Visualisation and Base station
-	%\item Optimisation
-	%\item Debug and testing
-	%\item Run simulation and gather results
-\subsection{Role Allocation and stakeholders}
+\subsubsection{Plan and Process}
+
+\subsection{Role Allocation}
 
 We decided to allocate roles in the second week after we had the first week to perform research into the problem and find out what has been done. The following were how we assigned roles, although we intend for these to be flexible:
 
@@ -91,7 +86,13 @@ Whilst the entire team was responsible for system design and development, it was
 
 Need to mention our supervisors role here: What does he want us to accomplish? His interests?
 
-\subsection{Schedule}
+
+
+\subsection{Project Planning}
+
+\subsubsection{Work Breakdown Structure}
+
+\subsubsection{Schedule}
 
 Throughout the term, every member was assigned specific tasks and was given a time frame to complete them. The table below shows the time schedule allocated to each members.
 
@@ -136,8 +137,6 @@ Throughout the term, every member was assigned specific tasks and was given a ti
 	\end{tabular}
 \end{table}
 
-\subsection{Delivery plan}
-
 \subsubsection{Gantt Chart}
 
 Gantt Chart comes here
@@ -167,11 +166,36 @@ Our project consists of 5 deliverables which includes one individual report. It 
     
     Demonstrate our final project to a judge of panels and supervisor.
  
-    
 \end{enumerate}
+
+\subsection{Resources}
+% Can explain more on the software we used to share resources, communicate and discuss ideas.
+
+\subsubsection{Working Concurrently}
+
+We signed up for a Git repository on BitBucket \cite{bitbucket} where we plan to commit all the work we produce. We initially had an issue that free private repositories hosted on BitBucket have a maximum of 5 participants, whereas we had 6 group members. Fortunately when new users sign up to the services from an invite, the person that sends the invite gets additional capacity. This meant that the person who created the repository ended up with enough capacity for all members to access the account. The use of BitBucket also gives the advantage of branching and merging codes from different users without needing to replicate any files and worry about redundancy. 
+
+\subsubsection{Communication}
+
+When group members are working offline, the main source of communication is via the popular social networking platform - Facebook. We created a group for our team where members could post any messages regarding the project such as issues in code development, assignment of tasks to team members and reminders of any project activities (e.g. weekly meetings).
+
+\subsubsection{Development Platform}
+
+Develop the below points in a table
+
+\begin{enumerate}
+	\item Software
+	Contiki, Simulator (Cooja), VM, GUI, etc
+	
+	\item Hardware
+	DSC workstations, network sensors (appendix), laptops.
+\end{enumerate}
+
 
 \subsection{Risk Analysis}
 %Potentially the issues below can form part of risk
+
+\subsubsection{Risk Identification}
 
 \begin{center}
 	\begin{longtable}{| p{5cm} | l | p{8cm} |}
@@ -221,20 +245,7 @@ Need to keep track of all new ideas proposed by the supervisor and raise any cha
 
 \end{center}
 
-\subsection{Resources}
-% Can explain more on the software we used to share resources, communicate and discuss ideas.
-
-\subsubsection{Working Concurrently}
-
-We signed up for a Git repository on BitBucket \cite{bitbucket} where we plan to commit all the work we produce. We initially had an issue that free private repositories hosted on BitBucket have a maximum of 5 participants, whereas we had 6 group members. Fortunately when new users sign up to the services from an invite, the person that sends the invite gets additional capacity. This meant that the person who created the repository ended up with enough capacity for all members to access the account. The use of BitBucket also gives the advantage of branching and merging codes from different users without needing to replicate any files and worry about redundancy. 
-
-\subsubsection{Communication}
-
-When group members are working offline, the main source of communication is via the popular social networking platform - Facebook. We created a group for our team where members could post any messages regarding the project such as issues in code development, assignment of tasks to team members and reminders of any project activities (e.g. weekly meetings).
-
-\subsubsection{Development Platform}
-
-Contiki, Simulator (Cooja), DCS machines, etc 
+\subsubsection{Risk Management}
 
 \subsection{Work Overview}
 

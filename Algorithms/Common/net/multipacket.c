@@ -111,7 +111,7 @@ static void send_loop_callback(void * ptr)
 
 		unsigned int to_send = min(PACKETBUF_SIZE, details->length - details->sent);
 
-		void * send_start = ((char *) sending_data(details)) + details->sent;
+		void const * send_start = ((char const *) sending_data(details)) + details->sent;
 
 		packetbuf_clear();
 		packetbuf_set_datalen(to_send);
@@ -132,7 +132,10 @@ static void send_loop_callback(void * ptr)
 		// Check to see if we have finished sending
 		if (details->sent == details->length)
 		{
-			conn->callbacks->sent(conn, &details->target, sending_data(details), details->length);
+			if (conn->callbacks->sent != NULL)
+			{
+				conn->callbacks->sent(conn, &details->target, sending_data(details), details->length);
+			}
 
 			linked_list_pop(&conn->sending_packets);
 		}
@@ -255,11 +258,11 @@ bool multipacket_open(multipacket_conn_t * conn,
 
 		conn->callbacks = callbacks;
 
-		ctimer_set(&conn->ct_sender, SEND_PERIOD, &send_loop_callback, conn);
-
 		linked_list_init(&conn->sending_packets, &free);
 
 		map_init(&conn->receiving_packets, &recv_key_equality, &free);
+
+		ctimer_set(&conn->ct_sender, SEND_PERIOD, &send_loop_callback, conn);
 
 		return true;
 	}

@@ -134,9 +134,15 @@ public class NodeComms {
     
     public void writeCancelPredicate(int id, String target)
             throws RuntimeException, IOException {
-        writeln("[");       
+        writeln("[");
+        
         writeln(Integer.toString(id));
+        
+        // Fix the target
+        if (target.equals("all"))
+            target = "0.0";
         writeln(target);
+        
         writeln("]");
     }
     

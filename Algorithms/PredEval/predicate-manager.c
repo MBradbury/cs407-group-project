@@ -591,6 +591,8 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 		// Read in the predicate target
 		case 2:
 			{
+				printf("PredMan: processing target\n");
+
 				char buffer[4];
 
 				char const * position = strchr(line, '.');

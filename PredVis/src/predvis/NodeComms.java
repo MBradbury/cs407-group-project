@@ -103,6 +103,10 @@ public class NodeComms {
             throws RuntimeException, IOException {
         writeln("[");
         writeln(Integer.toString(id));
+        
+        // Fix the target
+        if (target.equals("all"))
+            target = "0.0";
         writeln(target);
         
         String toWrite = "b";

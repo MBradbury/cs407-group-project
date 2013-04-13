@@ -18,20 +18,17 @@ As a result, we spent the first few weeks researching on the different aspects o
 		\end{enumerate}
 	\item Routing protocols and sensor communication
 	\item Predicate evaluation
-		\begin{enumerate}
-			\item Hardcode of response handling
-			\item VM with opcodes
-		\end{enumerate}
 	\item Monitoring and interface tools
 	\item Logging and error reporting
 	\item Sensor limitations (e.g. energy and power usage)
 \end{enumerate} 
 
-Research: We managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model in the hopes of obtaining a more defined project scope by term 1.
+%Research
+We managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model in the hopes of obtaining a more defined project scope by term 1.
 
 The requirements of the project was also not fully understood at the time and we were unsure of the efficiency of our algorithms so we decided to go for a prototyping approach as part of an evolutionary process model. This allows us to start with a set of core product and system requirements (i.e. the operating system) and then incorporate other extensions as the requirements are better understood. We also had frequent meetings with our supervisor to discuss the best ways to implement our system and any additional components. Where a new idea is defined, a prototype is modelled and constructed and is re-evaluated by our supervisor, who provides feedback which is used to further refine the requirements. This process is repeated until the supervisor is satisfied with the function of the system, while at the same time enabling us to better understand what needs to be done.
 
-By the end of the first term, the scope of the project reached a more defined level as we have decided what is to be implemented and what has been disregarded from the provisional list of algorithms. This was demonstrated in our first delivery - the poster presentation, where we had to chance to explain our project at a high level to our supervisors and other professors.
+By the end of the first term, the scope of the project had reached a more defined level as we had decided what is to be implemented and what has been disregarded from the provisional list of algorithms. This was demonstrated in our first delivery - the poster presentation, where we had to chance to explain our project at a high level to our supervisors and other professors.
 %Can state here what was said in the feedback form.
 
 \subsubsection*{Term 2}
@@ -39,25 +36,191 @@ By the end of the first term, the scope of the project reached a more defined le
 At this stage, most of the algorithms and protocols were implemented independently and treated as individual components to the core system. We decided to do it this way because of the benefits of modularity where the principles of "Separation of Concerns" allows for a more manageable set of modules. The composition of these components such as predicate checking and neighbour data retrieval was done during the entire winter vacation and the beginning of the second term.
 %We can mention here a small list of the algorithms that needed to be integrated together
 
-In the second term, we continued following the evolutionary process model but at a more relaxed approach and less meetings with the supervisor was needed. However, the next important issue to tackle was ensuring that the project will be completed in time. This required the effective scheduling of tasks and prioritising work force to the critical tasks. By the 3rd quarter of the term, progress had fallen to a halt due the high number of coursework deadlines and this meant that team members where preoccupied with these work. To address the issue, a meeting was held prior to the halt where we discussed our recovery plan once everyone was done with other courseworks. This allowed team members to continue working where they left off and avoid any delays.
+In the second term, we continued following the evolutionary process model but at a more relaxed approach which focuses on finishing the system components and preparing the gathering of results. Since the project scope was clear and we had a more directed goal,less meetings with the supervisor was needed, but we still required him to evaluate our work and provide feedback. Ensuring that the development and debugging phase to complete in time required the effective scheduling of tasks and prioritising work force to the critical ones. By the third quarter of the term, progress had fallen to a halt due the high number of coursework deadlines and this meant that team members where preoccupied with other duties. To address the issue, a meeting was held prior to the halt where we discussed our recovery plan and actions to take once members was free. This allowed team members to continue working where they left off and avoid any delays.
 % Needs to be re-written 
 
-//Notes
-In the first half of the second term, most of the work was focused towards completing the implementation of sensor communication, converting existing codes into libraries and the development of network visualisation. 
+%Notes
+%In the first half of the second term, most of the work was focused towards completing the implementation of sensor communication, converting existing codes into libraries and the development of network visualisation. 
 
-By the second half, many people where preoccupied with other module coursework and progress was slowed down. Towards the end of the term, some of the algorithms such as Tree Aggregation needed optimization 
+%By the second half, many people where preoccupied with other module coursework and progress was slowed down. Towards the end of the term, some of the algorithms such as Tree Aggregation needed optimization 
 
+	%\item The main task was to integrate the tasks that worked together and convert them into libraries which would be needed at a high levels of the system
+	%\item Visualisation and Base station
+	%\item Optimisation
+	%\item Debug and testing
+	%\item Run simulation and gather results
+\subsection{Role Allocation and stakeholders}
+
+We decided to allocate roles in the second week after we had the first week to perform research into the problem and find out what has been done. The following were how we assigned roles, although we intend for these to be flexible:
+
+\begin{table}[H]
+\centering
+	\begin{tabular}{| c | c |}
+		\hline
+		Name & Role\\
+		\hline
+		Matthew Bradbury & Group Leader\\
+		Daniel Robertson & Project Manager\\
+		Amit Shah & Technical Leader\\
+		Ivan Leong & Developer and Tester\\
+		Joe Yarnall & Developer and Tester\\
+		Tim Law & Developer and Researcher\\
+		\hline
+	\end{tabular}
+\end{table}
+
+Whilst the entire team was responsible for system design and development, it was critical to have a group leader and other leading roles to facilitate and provide resources to the team. Their individual responsibilities is as follows:
 
 \begin{itemize}
-	\item The main task was to integrate the tasks that worked together and convert them into libraries which would be needed at a high levels of the system
-	\item Visualisation and Base station
-	\item Optimisation
-	\item Debug and testing
-	\item Run simulation and gather results
+	\item[] {\bf Matthew Bradbury} - Group Leader
+	
+	Responsible for defining and managing the entire project.
+	Responsible for allocating tasks to its team members and providing direction for meeting the project objectives.
+	Understands all the workings of the project and communicating the ideas to the stakeholders (i.e supervisor).
+	Ensures that everyone is performing their roles accordingly and resolving conflicts within the team.
+	Monitors the progress of the team and providing motivation when the project is slowing down.	
+
+	\item[] {\bf Daniel Robertson} - Project Manager
+	
+	He supports the group leader by facilitating the management of the project and ensuring that the overall work is done on schedule. He arranges weekly meetings and provides a summary report prior to each meeting and records all discussions.
+	
+	\item[] {\bf Amit Shah} - Technical Leader
+	
+	Responsible for overseeing the work done by other members and ensures that all code written by the team meets the technical specification and design requirements of the project.	
+	
 \end{itemize}
 
+Need to mention our supervisors role here: What does he want us to accomplish? His interests?
+
+\subsection{Schedule}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{| l | l | l | l | l | l | l |}
+	\hline
+	Task Description & \multicolumn{6}{l|}{Time Allocated (Weeks)}\\
+	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
+	\hline
+	\hline
+	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application predicate checking} \\
+	\hline
+
+
+	Research around the Problem & 2 & 2 & 2 & 2 & 2 & 2\\
+	Writing Specification & 1 & 1 & 1 & 1 & 1 & 1\\
+	H-SEND Implementation & 3.5 & ~ & ~ & 3.5 & ~ & ~\\
+	``Send to Base'' Implementation & ~ & ~ & ~ & ~ & 2 & 1.5\\
+	Clustering Implementation & ~ & 3.5 & 2 & ~ & ~ & ~\\
+	Aggregation Tree Implementation & ~ & ~ & ~ & ~ & 1.5 & ~\\
+	Develop Visualisation Tool & ~ & ~ & 1.5 & ~ & ~ & 2\\
+	Develop Predicate Language Runtime & ~ & ~ & ~ & ~ & ~ & 2\\
+	Testing and Adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
+	Message Logging & ~ & ~ & ~ & 1 & ~ & ~\\
+	Poster Creation and Presentation preparation & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
+
+	\hline
+	\hline
+	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking and where the predicate is checked} \\
+	\hline
+	
+	Additional Research & 1 & 1 & 1 & 1 & 1 & 1\\
+	Improving Dynamic Predicate Specification & 2 & 2 & ~ & ~ & 2 & 2\\
+	Develop Visualisation Tool & 2 & ~ & 2 & 2 & ~ & 2\\
+	Modify Algorithms to Selectively Evaluate Predicates & ~ & 2 & 2 & 2 & 2 & ~\\
+	Performance Testing & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
+	Testing and Adapting to Physical Nodes & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
+	Report Writing & 2 & 2 & 2 & 2 & 2 & 2\\
+	
+	\hline
+	
+	\end{tabular}
+\end{table}
+
+\subsection{Delivery plan}
+
+\subsubsection{Gantt Chart}
+
+Gantt Chart comes here
+
+\subsubsection{Deliverables}
+
+\begin{enumerate}
+	\item Specification
+    \item Progress Poster Presentation
+    \item Final Group Report
+    \item Individual Report
+    \item Final Project Presentation
+\end{enumerate}
+
+\subsection{Risk Analysis}
+%Potentially the issues below can form part of risk
+
+\begin{center}
+	\begin{longtable}{| p{5cm} | l | p{8cm} |}
+	\hline
+	Risk & Severity & Mitigation\\
+	\hline	
+	
+	Hardware and Software failure
+	\begin{itemize}
+		\item Report and research
+		\item Software code
+	\end{itemize}
+	 & 8 & To prevent the risk of data lost, we used a Bitbucket repository to save and store all our documents and program coding online. This also allows the concurrent development of our project and ensuring that all team members are up to date.
+	\\ \hline
+	
+	Team member illness and absence
+	& 4 & There would be circumstances where team members would be unavailable to work on the project for a short period of time. To ensure that work is progressive, necessary measures were taken. For example an absent member can temporary delegate his current task to a different member.
+	\\ \hline
+		
+	Meeting deadlines and schedules
+	& 8 & It was important that every milestone of the project was met so that no marks were penalised. The progress of the project was monitored and we had weekly meetings to ensure that everyone was on track of their given tasks.
+	\\ \hline
+	
+	Integration of code based on simulated data to real hardware
+	& 5 & Most of the code that was developed in the beginning was tested with the cooja simulator. It would be unlikely to obtain similar results when deployed on the actual hardware due to a wide range of environmental factors such as //NEED EXAMPLE HERE.
+		\\ \hline
+		
+	Defining the scope of our project
+	& 5 & There are many issues and research problems that revolve around the topic of wireless sensor networks.
+
+It is important to define the scope of the project to prevent scope creep and necessary expansion of the project.
+
+Need to keep track of all new ideas proposed by the supervisor and raise any change requests to the project.
+
+		\\ \hline
+		
+	Safety of the sensor nodes
+	& 6 & Each of the sensor nodes cost xxxGBP. The sensors must be handled with care to prevent any cost of damage. //WHAT IF WE DO??
+		\\ \hline
+		
+	Components of the project that could not be implemented with current tools.
+	& 6 & Research on alternative methods
+	\\ \hline		
+		
+	\end{longtable}
+
+\end{center}
+
+\subsection{Resources}
+% Can explain more on the software we used to share resources, communicate and discuss ideas.
+
+\subsubsection{Working Concurrently}
+
+We signed up for a Git repository on BitBucket \cite{bitbucket} where we plan to commit all the work we produce. We initially had an issue that free private repositories hosted on BitBucket have a maximum of 5 participants, whereas we had 6 group members. Fortunately when new users sign up to the services from an invite, the person that sends the invite gets additional capacity. This meant that the person who created the repository ended up with enough capacity for all members to access the account.
+
+\subsubsection{Communication}
+
+Facebook
+
+\subsubsection{Development Platform}
+
+Contiki, Simulator (Cooja), DCS machines, etc 
 
 \subsection{Work Overview}
+
+This section highlights the different tasks that was undertaken by each group member for every week of term 1 and term 2. At every weekly meetings, the project leader would discuss the progress of the tasks that was assigned in the previous week and any new tasks for the current week would be recorded as shown in the table below.
+%perhaps number the table below 
 
 \subsubsection*{Term 1}
 
@@ -67,9 +230,9 @@ By the second half, many people where preoccupied with other module coursework a
 	Week & Activities & Task Allocation\\
 	\hline
 	1 & \begin{enumerate}
-			\item Met up with Supervisor and discussed project direction
-			\item Decided to research what has been done and what we could do, before settling on main aims
-			\item Investigated two OSes and their corresponding simulators TinyOS with TOSSIM and Contiki with Cooja
+			\item Meet up with Supervisor and discuss project direction
+			\item Research on related work and what we can develop, before settling on main aims
+			\item Investigate two OS and their corresponding simulators: TinyOS with TOSSIM and Contiki with Cooja
 		\end{enumerate} &
 	\begin{enumerate}
 		\item[] Amit: All
@@ -352,197 +515,7 @@ By the second half, many people where preoccupied with other module coursework a
 	\end{longtable}
 \end{center}
 
-\subsection{Planning and Organisation}
 
-\subsubsection{Deliverables}
-
-\begin{enumerate}
-	\item Abstract
-	\item Specification
-    \item Poster presentation
-    \item Final Group Report
-    \item Individual Report
-\end{enumerate}
-
-\subsection{Role Allocation and stakeholders}
-
-We decided to allocate roles in the second week after we had the first week to perform research into the problem and find out what has been done. The following were how we assigned roles, although we intend for these to be flexible:
-
-\begin{table}[H]
-\centering
-	\begin{tabular}{| c | c |}
-		\hline
-		Name & Role\\
-		\hline
-		Matthew Bradbury & Group Leader\\
-		Tim Law & Developer and Researcher\\
-		Ivan Leong & Developer and Tester\\
-		Daniel Robertson & Project Manager\\
-		Amit Shah & Technical Leader\\
-		Joe Yarnall & Developer and Tester\\
-		\hline
-	\end{tabular}
-\end{table}
-
-//Need to mention our supervisors role here: What does he want us to accomplish? His interests?
-
-\subsection{Schedule}
-
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{| l | l | l | l | l | l | l |}
-	\hline
-	Task Description & \multicolumn{6}{l|}{Time Allocated (Weeks)}\\
-	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
-	\hline
-	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application predicate checking} \\
-	\hline
-
-
-	Research around the Problem & 2 & 2 & 2 & 2 & 2 & 2\\
-	Writing Specification & 1 & 1 & 1 & 1 & 1 & 1\\
-	H-SEND Implementation & 3.5 & ~ & ~ & 3.5 & ~ & ~\\
-	``Send to Base'' Implementation & ~ & ~ & ~ & ~ & 2 & 1.5\\
-	Clustering Implementation & ~ & 3.5 & 2 & ~ & ~ & ~\\
-	Aggregation Tree Implementation & ~ & ~ & ~ & ~ & 1.5 & ~\\
-	Develop Visualisation Tool & ~ & ~ & 1.5 & ~ & ~ & 2\\
-	Develop Predicate Language Runtime & ~ & ~ & ~ & ~ & ~ & 2\\
-	Testing and Adapting to Physical Nodes & 2 & 2 & 2 & 2 & 2 & 2\\
-	Message Logging & ~ & ~ & ~ & 1 & ~ & ~\\
-	Poster Creation and Presentation preparation & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
-
-	\hline
-	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking and where the predicate is checked} \\
-	\hline
-	
-	Additional Research & 1 & 1 & 1 & 1 & 1 & 1\\
-	Improving Dynamic Predicate Specification & 2 & 2 & ~ & ~ & 2 & 2\\
-	Develop Visualisation Tool & 2 & ~ & 2 & 2 & ~ & 2\\
-	Modify Algorithms to Selectively Evaluate Predicates & ~ & 2 & 2 & 2 & 2 & ~\\
-	Performance Testing & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
-	Testing and Adapting to Physical Nodes & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
-	Report Writing & 2 & 2 & 2 & 2 & 2 & 2\\
-	
-	\hline
-	
-	\end{tabular}
-\end{table}
-
-\subsection{Time Spent}
-
-//This looks similar to schedule.. what is its difference?
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{| l | l | l | l | l | l | l |}
-	\hline
-	Task Description & \multicolumn{6}{l|}{Time Allocated (Weeks)}\\
-	~ & Amit & Dan & Ivan & Joe & Matt & Tim \\
-	\hline
-	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 1} - Developing for application predicate checking} \\
-	\hline
-
-
-	Research around the Problem & 2 & 2 & 2 & 2 & 2 & 2\\
-	Writing Specification & 1.5 & 1.5 & 1.5 & 1.5 & 1.5 & 1.5\\
-	H-SEND Implementation & 5 & ~ & ~ & ~ & 2 & ~\\
-	``Send to Base'' Implementation & ~ & ~ & ~ & ~ & 2 & ~\\
-	Clustering Implementation & ~ & ~ & ~ & 3 & 0.5 & ~\\
-	Aggregation Tree Implementation & ~ & ~ & ~ & ~ & 1 & ~\\
-	Develop Visualisation Tool & ~ & ~ & ~ & ~ & ~ & 2\\
-	Develop Predicate Language Runtime & ~ & ~ & ~ & ~ & ~ & 2\\
-	Testing and Adapting to Physical Nodes & 1 & ~ & ~ & ~ & 0.5 & ~\\
-	Message Logging & ~ & ~ & ~ & 1 & ~ & ~\\
-	Poster Creation and Presentation preparation & 0.5 & 0.5 & 0.5 & 0.5 & 0.5 & 0.5\\
-
-	\hline
-	\hline
-	\multicolumn{7}{|l|}{\textbf{Term 2} - Developing for network predicate checking and where the predicate is checked} \\
-	\hline
-	
-	Additional Research & 1 & ~ & ~ & ~ & ~ & 1\\
-	Improving Dynamic Predicate Specification & ~ & ~ & ~ & ~ & ~ & ~\\
-	Develop Visualisation Tool & ~ & ~ & ~ & ~ & ~ & 8\\
-	Modify Algorithms to Selectively Evaluate Predicates & 2 & ~ & ~ & ~ & ~ & ~\\
-	Performance Testing & 1 & ~ & ~ & ~ & ~ & ~\\
-	Testing and Adapting to Physical Nodes & 4 & ~ & ~ & ~ & ~ & ~\\
-	Report Writing & 2 & ~ & ~ & ~ & ~ & 3\\
-	
-	\hline
-	
-	\end{tabular}
-\end{table}
-
-\subsection{Delivery plan (Gantt Chart)}
-
-\subsection{Risk Analysis}
-%Potentially the issues below can form part of risk
-
-\begin{center}
-	\begin{longtable}{| p{5cm} | l | p{8cm} |}
-	\hline
-	Risk & Severity & Mitigation\\
-	\hline	
-	
-	Hardware and Software failure
-	\begin{itemize}
-		\item Report and research
-		\item Software code
-	\end{itemize}
-	 & 8 & To prevent the risk of data lost, we used a Bitbucket repository to save and store all our documents and program coding online. This also allows the concurrent development of our project and ensuring that all team members are up to date.
-	\\ \hline
-	
-	Team member illness and absence
-	& 4 & There would be circumstances where team members would be unavailable to work on the project for a short period of time. To ensure that work is progressive, necessary measures were taken. For example an absent member can temporary delegate his current task to a different member.
-	\\ \hline
-		
-	Meeting deadlines and schedules
-	& 8 & It was important that every milestone of the project was met so that no marks were penalised. The progress of the project was monitored and we had weekly meetings to ensure that everyone was on track of their given tasks.
-	\\ \hline
-	
-	Integration of code based on simulated data to real hardware
-	& 5 & Most of the code that was developed in the beginning was tested with the cooja simulator. It would be unlikely to obtain similar results when deployed on the actual hardware due to a wide range of environmental factors such as //NEED EXAMPLE HERE.
-		\\ \hline
-		
-	Defining the scope of our project
-	& 5 & There are many issues and research problems that revolve around the topic of wireless sensor networks.
-
-It is important to define the scope of the project to prevent scope creep and necessary expansion of the project.
-
-Need to keep track of all new ideas proposed by the supervisor and raise any change requests to the project.
-
-		\\ \hline
-		
-	Safety of the sensor nodes
-	& 6 & Each of the sensor nodes cost xxxGBP. The sensors must be handled with care to prevent any cost of damage. //WHAT IF WE DO??
-		\\ \hline
-		
-	Components of the project that could not be implemented with current tools.
-	& 6 & Research on alternative methods
-	\\ \hline		
-		
-	\end{longtable}
-
-\end{center}
-
-\subsection{Resources}
-% Can explain more on the software we used to share resources, communicate and discuss ideas.
-
-\subsubsection{Working Concurrently}
-
-We signed up for a Git repository on BitBucket \cite{bitbucket} where we plan to commit all the work we produce. We initially had an issue that free private repositories hosted on BitBucket have a maximum of 5 participants, whereas we had 6 group members. Fortunately when new users sign up to the services from an invite, the person that sends the invite gets additional capacity. This meant that the person who created the repository ended up with enough capacity for all members to access the account.
-
-\subsubsection{Communication}
-
-Facebook
-
-\subsubsection{Development Platform}
-
-Contiki, Simulator (Cooja), DCS machines, etc 
 
 \subsection{Management Issues}
 

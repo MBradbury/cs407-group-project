@@ -139,7 +139,7 @@ public class NodeComms {
         if (line.startsWith("R=")) {
             //Round and network state.
             int round = 0;
-            List<NodeIdPair> pairs = new ArrayList<NodeIdPair>();
+            List<NodeIdPair> pairs = new ArrayList<>();
         
             String[] results = line.split("\\|");
             
@@ -171,7 +171,7 @@ public class NodeComms {
             
             int predicateId = Integer.parseInt(splitFirst[1]);
             
-            HashMap<VariableDetails, Integer> vds = new HashMap<VariableDetails, Integer>();
+            HashMap<VariableDetails, Integer> vds = new HashMap<>();
             
             for (String det : splitFirst[2].split(",")) {
                 String[] detSplit = det.split("#");
@@ -237,6 +237,7 @@ public class NodeComms {
 
     public void lostConnection(Exception e) {
         System.err.println("Lost connection to node (" + e + ")");
+        e.printStackTrace();
     }
     
     public void close()

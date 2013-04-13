@@ -284,12 +284,13 @@ public class PredVis extends JFrame {
                 JSlider source = (JSlider)e.getSource();
                 if (!source.getValueIsAdjusting()) {
                     visibleRound = (int)source.getValue();
+                    showRound(visibleRound);
                 }
             }
         });
         
         panel.add(roundSlider);
-        visibleRoundNumber = new JLabel("1 / 1");
+        visibleRoundNumber = new JLabel("0 / 0");
         panel.add(visibleRoundNumber);
         parentPanel.add(panel);
         
@@ -535,11 +536,11 @@ public class PredVis extends JFrame {
     }
     
     private void deployPredicate(Predicate p) {
-        //wsnInterface.deployPredicate(p);
+        wsnInterface.deployPredicate(p);
     }
     
     private void rescindPredicate(Predicate p) {
-        //wsnInterface.rescindPredicate(p);
+        wsnInterface.rescindPredicate(p);
     }
     
     private void updateNetworkView(NetworkState ns) {
@@ -555,7 +556,7 @@ public class PredVis extends JFrame {
         }
         
         //Initialise network viewer.
-        layout = new DAGLayout<NodeId, String>(ns.getGraph());
+        layout = new CircleLayout<NodeId, String>(ns.getGraph());
         layout.setSize(new Dimension(550, 550));
         vv = new BasicVisualizationServer<NodeId, String>(layout);
         vv.setPreferredSize(new Dimension(600, 600));
@@ -584,16 +585,23 @@ public class PredVis extends JFrame {
         
         graphPanel.add(vv);
         graphPanel.repaint();
+        networkPanel.repaint();
     }
     
     public void receiveNetworkState(int round, NetworkState ns) {
-        System.out.println("Hello");
+        System.out.println("Received network state for round " + round);
         if (rounds.containsKey(round)) {
-            rounds.put(round, ns);
+            NetworkState nsv = rounds.get(round);
+            for (String edge : ns.getGraph().getEdges()) {
+                String[] nodes = edge.split(" <-> ");
+                NodeId a = new NodeId(nodes[0].split("\\."));
+                NodeId b = new NodeId(nodes[1].split("\\."));
+                nsv.addEdge(a, b);
+            }
         } else {
             rounds.put(round, ns);
             //Update slider values and rerender visible round.
-            int min = 0;
+            int min = Integer.MAX_VALUE;
             int max = 0;
             for (Integer i : rounds.keySet()) {
                 if (i < min) min = i;
@@ -601,6 +609,8 @@ public class PredVis extends JFrame {
             }
             roundSliderModel.setMinimum(min);
             roundSliderModel.setMaximum(max);
+            visibleRoundNumber.setText(visibleRound + " / " + max);
+            repaint();
         }
         
         showRound(round);

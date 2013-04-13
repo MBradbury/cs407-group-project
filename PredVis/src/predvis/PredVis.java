@@ -16,6 +16,7 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;
 import java.util.*;
+import java.util.List;
 import org.apache.commons.collections15.Transformer;
 
 /**
@@ -27,7 +28,7 @@ class PredicateListRenderer extends DefaultListCellRenderer {
     private static final Map<PredicateData.PredicateStatus, Color> BACKGROUND_MAPPING;
     static {
         //Initialise mapping of status to foreground colour.
-        Map<PredicateData.PredicateStatus, Color> fg = new EnumMap<PredicateData.PredicateStatus, Color>(PredicateData.PredicateStatus.class);
+        Map<PredicateData.PredicateStatus, Color> fg = new EnumMap<>(PredicateData.PredicateStatus.class);
         fg.put(PredicateData.PredicateStatus.UNMONITORED, Color.WHITE);
         fg.put(PredicateData.PredicateStatus.UNEVALUATED, Color.BLACK);
         fg.put(PredicateData.PredicateStatus.SATISFIED, Color.BLACK);
@@ -35,7 +36,7 @@ class PredicateListRenderer extends DefaultListCellRenderer {
         FOREGROUND_MAPPING = Collections.unmodifiableMap(fg);
         
         //Initialise mapping of status to background colour.
-        Map<PredicateData.PredicateStatus, Color> bg = new EnumMap<PredicateData.PredicateStatus, Color>(PredicateData.PredicateStatus.class);
+        Map<PredicateData.PredicateStatus, Color> bg = new EnumMap<>(PredicateData.PredicateStatus.class);
         bg.put(PredicateData.PredicateStatus.UNMONITORED, Color.BLUE);
         bg.put(PredicateData.PredicateStatus.UNEVALUATED, Color.YELLOW);
         bg.put(PredicateData.PredicateStatus.SATISFIED, Color.GREEN);
@@ -43,8 +44,8 @@ class PredicateListRenderer extends DefaultListCellRenderer {
         BACKGROUND_MAPPING = Collections.unmodifiableMap(bg);
     }
     
-    private Map<Predicate, java.util.List<PredicateData>> predicateData = null;
-    public void setPredicateData(Map<Predicate, java.util.List<PredicateData>> predicateData) {
+    private Map<Predicate, List<PredicateData>> predicateData = null;
+    public void setPredicateData(Map<Predicate, List<PredicateData>> predicateData) {
         this.predicateData = predicateData;
     }
     
@@ -54,7 +55,7 @@ class PredicateListRenderer extends DefaultListCellRenderer {
         super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);  
         
         Predicate p = (Predicate)value;
-        java.util.List<PredicateData> l = predicateData.get(p);
+        List<PredicateData> l = predicateData.get(p);
         PredicateData pd = null;
         if(!l.isEmpty()) {
             pd = l.get(l.size() - 1);
@@ -92,15 +93,15 @@ public class PredVis extends JFrame {
     public static final String NO_PREDICATE_SELECTED_MESSAGE = "No predicate selected.";
     
     //Round data.
-    private Map<Integer, NetworkState> rounds = new HashMap<Integer, NetworkState>();
+    private final Map<Integer, NetworkState> rounds = new HashMap<>();
     private int visibleRound = 0;
-    private DefaultBoundedRangeModel roundSliderModel = new DefaultBoundedRangeModel(0, 0, 0, 0);
+    private final DefaultBoundedRangeModel roundSliderModel = new DefaultBoundedRangeModel(0, 0, 0, 0);
     
     //Predicate data.
-    private DefaultListModel predicateListModel = new DefaultListModel();
-    private PredicateListRenderer predicateListRenderer = new PredicateListRenderer();
+    private final DefaultListModel<Predicate> predicateListModel = new DefaultListModel<>();
+    private final PredicateListRenderer predicateListRenderer = new PredicateListRenderer();
     private Predicate currentPredicate = null;
-    private Map<Predicate, java.util.List<PredicateData>> predicateData = new HashMap<Predicate, java.util.List<PredicateData>>();
+    private final Map<Predicate, List<PredicateData>> predicateData = new HashMap<>();
     
     //Network visualisation data.
     private Layout<NodeId, String> layout = null;
@@ -117,7 +118,7 @@ public class PredVis extends JFrame {
     private JLabel visibleRoundNumber = null;
     private JPanel predicatePanel = null;
     private JPanel predicateDetailPanel = null;
-    private JList predicateList = null;
+    private JList<Predicate> predicateList = null;
     private JTextArea predicateScriptEditor = null;
     private JTextArea predicateAssemblyEditor = null;
     private JPanel predicateStatsPanel = null;
@@ -331,7 +332,7 @@ public class PredVis extends JFrame {
         
         //List init
         panel = new JPanel();
-        predicateList = new JList(predicateListModel);
+        predicateList = new JList<>(predicateListModel);
         predicateListRenderer.setPredicateData(predicateData);
         predicateList.setCellRenderer(predicateListRenderer);
         predicateList.setPreferredSize(new Dimension(200, 550));
@@ -341,7 +342,7 @@ public class PredVis extends JFrame {
             @Override
             public void valueChanged(ListSelectionEvent le) {
                 if (predicateList.getSelectedIndex() != -1) {
-                    setCurrentPredicate((Predicate)predicateList.getSelectedValue());
+                    setCurrentPredicate(predicateList.getSelectedValue());
                 } else {
                     //Do nothing
                 }
@@ -516,7 +517,7 @@ public class PredVis extends JFrame {
     }
     
     private void refreshPredicateDetails() {
-        java.util.List<PredicateData> pd = predicateData.get(currentPredicate);
+        List<PredicateData> pd = predicateData.get(currentPredicate);
         if (!pd.isEmpty()) {
             StringBuilder sd = new StringBuilder();
             for (PredicateData pdd : pd) {
@@ -613,7 +614,7 @@ public class PredVis extends JFrame {
         //Store data with predicate.
         for (Predicate p : predicateData.keySet()) {
             if (p.getId() == id) {
-                java.util.List<PredicateData> l = predicateData.get(p);
+                List<PredicateData> l = predicateData.get(p);
                 l.add(pd);
             }
         }

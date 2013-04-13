@@ -17,6 +17,10 @@ import javax.swing.event.*;
 import java.util.*;
 import org.apache.commons.collections15.Transformer;
 
+/**
+ * 
+ * @author Tim
+ */
 class PredicateListRenderer extends DefaultListCellRenderer {
     private static final Map<PredicateData.PredicateStatus, Color> FOREGROUND_MAPPING;
     private static final Map<PredicateData.PredicateStatus, Color> BACKGROUND_MAPPING;
@@ -129,7 +133,6 @@ public class PredVis extends JFrame {
     private JButton rescindPredicateButton = null;
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
-    private JSlider historySlider = null;
     
     public PredVis(String port) {
         super("Predicate Visualiser");
@@ -478,61 +481,18 @@ public class PredVis extends JFrame {
         tabbedPane.addTab("Predicates", null, predicatePanel, "View Predicate List");
     }
     
-    private void handleNetworkUpdated(final Map<Integer, NetworkState> networkstates) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                /*if (networkstates.containsKey(currentRound)) {
-                    updateNetworkView(networkstates.get(currentRound));
-                }*/
-                // TODO: Work out what the java 6 alternative of this is!
-                // it doesn't work anyway... still need to figure it out - tim
-                //revalidate();
-                repaint();
-            }
-        });
-    }
-    
     private void initNetworkViewer() {
         networkPanel = new JPanel();
         graphPanel = new JPanel(new BorderLayout());
         updateNetworkView(null);
         networkPanel.add(graphPanel);
         
-        historySlider = new JSlider(JSlider.VERTICAL, 0, 0, 0);
-        historySlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent ce) {
-                if (!historySlider.getValueIsAdjusting()) {
-                    //currentRound = historySlider.getValue();
-                    handleNetworkUpdated(wsnInterface.getStates());
-                }
-            }
-        });
-        
-        historySlider.setPaintLabels(true);
-        historySlider.setPaintTicks(true);
-        networkPanel.add(historySlider);
-        
         tabbedPane.addTab("Network", null, networkPanel, "View Network Diagram");
     }
     
     private void initMonitoring(String port) {        
         //Listen for updates to network state.
-        wsnInterface = new WSNInterface(port);
-        wsnInterface.addListener(new NetworkUpdateListener() {
-            @Override
-            public void networkUpdated(final Map<Integer, NetworkState> networkStates) {
-                handleNetworkUpdated(networkStates);
-                
-                // Update the maximum tick of the history slider
-                for (Integer i : networkStates.keySet()) {
-                    if (i > historySlider.getMaximum()) {
-                        historySlider.setMaximum(i);
-                    }
-                }
-            }
-        });
+        wsnInterface = new WSNInterface(this, port);
     }
     
     private void setCurrentPredicate(Predicate p) {
@@ -608,6 +568,9 @@ public class PredVis extends JFrame {
             predicateListModel.addElement(p);
         }
         
+        //Display network state.
+        updateNetworkView(round.getNetworkState());
+        
         //Show round # in bottom right.
         int roundNumber;
         if (round == currentRound) {
@@ -656,7 +619,6 @@ public class PredVis extends JFrame {
             graphPanel.repaint();
             return;
         }
-        
         
         //Initialise network viewer.
         layout = new CircleLayout<NodeId, String>(ns.getGraph());

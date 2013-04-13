@@ -33,7 +33,8 @@ public class WSNInterface {
         try {
             comms.writePredicate(p.getId(), p.getTarget(), p.getBytecode(), p.getVariableDetails());
         } catch (IOException e) {
-            //TODO
+            System.err.println(e);
+            e.printStackTrace();
         }
     }
     

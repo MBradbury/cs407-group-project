@@ -1,39 +1,6 @@
 % This file was created with JabRef 2.9.2.
 % Encoding: Cp1252
 
-@TECHREPORT{23839452,
-  author = {\"{O}sterlind, Fredrik},
-  title = {A Sensor Network Simulator for the Contiki OS},
-  institution = {SICS publications database [http://eprints.sics.se/perl/oai2] (Sweden)},
-  year = {2006},
-  abstract = {This report introduces a new sensor network simulator for the Contiki
-	OS - the COOJA Simulator. The Contiki OS is a portable operating
-	system designed specifically for resource limited devices such as
-	sensor nodes. It is built around an event-driven kernel but supports
-	pre-emptive multithreading at a per-process basis. It also supports
-	a full TCP/IP stack via uIP and the programming abstraction Protothreads.
-	The main design goal of the COOJA Simulator is extendibility, for
-	which Interfaces and Plugins are used. An Interface represents a
-	sensor node property or device, such as a position, a button or a
-	radio transmitter. A Plugin is used to interact with a simulation,
-	for example to control the simulation speed or to watch all network
-	traffic between the simulated nodes. Both new Plugins and Interfaces
-	can easily be created and added to the simulation environment. A
-	number of other parts of the simulator, for example a radio medium
-	responsible for forwarding radio network data, can also be implemented
-	and added to the simulator. And by supporting several different simulation
-	environments at the same time in one simulation, different underlying
-	hardware platforms can be simulated in heterogeneous networks. Java
-	Native Interface is used to connect the new simulator with Contiki,
-	allowing simulated applications to run in a real Contiki system.
-	By using this approach, any simulated application can then be run
-	on a real sensor node unaltered.},
-  issn = {1100-3154},
-  location = {http://www.scientificcommons.org/23839452},
-  notes = {TODO: FIX ME, not a correct reference},
-  publisher = {Swedish Institute of Computer Science}
-}
-
 @INPROCEEDINGS{Osterlind:2010:CTP:1869983.1870035,
   author = {\"{O}sterlind, Fredrik and Eriksson, Joakim and Dunkels, Adam},
   title = {Cooja TimeLine: a power visualizer for sensor network simulation},
@@ -234,15 +201,23 @@
 	sensor networks;wireless sensors;wireless sensor networks;}
 }
 
-@ARTICLE{DBLP:journals/corr/abs-0808-0920,
-  author = {Mahesh Arumugam},
+@INPROCEEDINGS{DBLP:journals/corr/abs-0808-0920,
+  author = {Arumugam, Mahesh},
   title = {A Distributed and Deterministic TDMA Algorithm for Write-All-With-Collision
 	Model},
-  journal = {CoRR},
+  booktitle = {Proceedings of the 10th International Symposium on Stabilization,
+	Safety, and Security of Distributed Systems},
   year = {2008},
-  volume = {abs/0808.0920},
-  bibsource = {DBLP, http://dblp.uni-trier.de},
-  ee = {http://arxiv.org/abs/0808.0920}
+  series = {SSS '08},
+  pages = {4--18},
+  address = {Berlin, Heidelberg},
+  publisher = {Springer-Verlag},
+  acmid = {1484024},
+  doi = {10.1007/978-3-540-89335-6_4},
+  isbn = {978-3-540-89334-9},
+  location = {Detroit, MI},
+  numpages = {15},
+  url = {http://dx.doi.org/10.1007/978-3-540-89335-6_4}
 }
 
 @MISC{bitbucket,
@@ -558,21 +533,6 @@
   url = {http://tools.ietf.org/html/rfc2386}
 }
 
-@INPROCEEDINGS{fotuewsnpollution,
-  author = {David Fotue, Guy Tanonkou and Thomas Engel},
-  title = {An ad-hoc Wireless Sensor Networks with Application to Air Pollution
-	Detection},
-  booktitle = {Proceedings of the ISCA First International Conference on Sensor
-	Networks and Applications (SNA-2009), November 4-6, 2009, Hilton
-	San Francisco Fisherman s Wharf, San Francisco, California, USA},
-  year = {2009},
-  editor = {Gordon K. Lee},
-  pages = {48-53},
-  publisher = {ISCA},
-  owner = {Ivan},
-  timestamp = {2013.03.29}
-}
-
 @INPROCEEDINGS{placement,
   author = {M. Dhanaraj and C. Siva Ram Murthy},
   title = {On Achieving Maximum Network Lifetime Through Optimal Placement of
@@ -704,6 +664,24 @@
   year = {2009}
 }
 
+@INPROCEEDINGS{Dunkels:2007:SOE:1278972.1278979,
+  author = {Dunkels, Adam and \"{O}sterlind, Fredrik and Tsiftes, Nicolas and
+	He, Zhitao},
+  title = {Software-based on-line energy estimation for sensor nodes},
+  booktitle = {Proceedings of the 4th workshop on Embedded networked sensors},
+  year = {2007},
+  series = {EmNets '07},
+  pages = {28--32},
+  address = {New York, NY, USA},
+  publisher = {ACM},
+  acmid = {1278979},
+  doi = {10.1145/1278972.1278979},
+  isbn = {978-1-59593-694-3},
+  location = {Cork, Ireland},
+  numpages = {5},
+  url = {http://doi.acm.org/10.1145/1278972.1278979}
+}
+
 @ARTICLE{Dunkels04makingtcp/ip,
   author = {Adam Dunkels and Juan Alonso and Thiemo Voigt},
   title = {{Making TCP/IP Viable for Wireless Sensor Networks}},
@@ -748,24 +726,6 @@
   location = {Bonn, Germany},
   numpages = {16},
   url = {http://dl.acm.org/citation.cfm?id=1966251.1966270}
-}
-
-@INPROCEEDINGS{Dunkels:2007:SOE:1278972.1278979,
-  author = {Dunkels, Adam and Osterlind, Fredrik and Tsiftes, Nicolas and He,
-	Zhitao},
-  title = {Software-based on-line energy estimation for sensor nodes},
-  booktitle = {Proceedings of the 4th workshop on Embedded networked sensors},
-  year = {2007},
-  series = {EmNets '07},
-  pages = {28--32},
-  address = {New York, NY, USA},
-  publisher = {ACM},
-  acmid = {1278979},
-  doi = {10.1145/1278972.1278979},
-  isbn = {978-1-59593-694-3},
-  location = {Cork, Ireland},
-  numpages = {5},
-  url = {http://doi.acm.org/10.1145/1278972.1278979}
 }
 
 @INPROCEEDINGS{Dunkels:2006:PSE:1182807.1182811,
@@ -936,6 +896,54 @@
   owner = {Matt},
   timestamp = {2013.03.26},
   url = {http://hdl.handle.net/10388/etd-06292010-135305}
+}
+
+@INPROCEEDINGS{fotuewsnpollution,
+  author = {David Fotue and Guy Tanonkou and Thomas Engel},
+  title = {An ad-hoc Wireless Sensor Networks with Application to Air Pollution
+	Detection},
+  booktitle = {Proceedings of the ISCA First International Conference on Sensor
+	Networks and Applications (SNA-2009), November 4-6, 2009, Hilton
+	San Francisco Fisherman s Wharf, San Francisco, California, USA},
+  year = {2009},
+  editor = {Gordon K. Lee},
+  pages = {48-53},
+  publisher = {ISCA},
+  owner = {Ivan},
+  timestamp = {2013.03.29}
+}
+
+@TECHREPORT{23839452,
+  author = {Fredrik \"{O}sterlind,},
+  title = {A Sensor Network Simulator for the Contiki OS},
+  institution = {SICS publications database [http://eprints.sics.se/perl/oai2] (Sweden)},
+  year = {2006},
+  abstract = {This report introduces a new sensor network simulator for the Contiki
+	OS - the COOJA Simulator. The Contiki OS is a portable operating
+	system designed specifically for resource limited devices such as
+	sensor nodes. It is built around an event-driven kernel but supports
+	pre-emptive multithreading at a per-process basis. It also supports
+	a full TCP/IP stack via uIP and the programming abstraction Protothreads.
+	The main design goal of the COOJA Simulator is extendibility, for
+	which Interfaces and Plugins are used. An Interface represents a
+	sensor node property or device, such as a position, a button or a
+	radio transmitter. A Plugin is used to interact with a simulation,
+	for example to control the simulation speed or to watch all network
+	traffic between the simulated nodes. Both new Plugins and Interfaces
+	can easily be created and added to the simulation environment. A
+	number of other parts of the simulator, for example a radio medium
+	responsible for forwarding radio network data, can also be implemented
+	and added to the simulator. And by supporting several different simulation
+	environments at the same time in one simulation, different underlying
+	hardware platforms can be simulated in heterogeneous networks. Java
+	Native Interface is used to connect the new simulator with Contiki,
+	allowing simulated applications to run in a real Contiki system.
+	By using this approach, any simulated application can then be run
+	on a real sensor node unaltered.},
+  issn = {1100-3154},
+  location = {http://www.scientificcommons.org/23839452},
+  notes = {TODO: FIX ME, not a correct reference},
+  publisher = {Swedish Institute of Computer Science}
 }
 
 @ARTICLE{5010224,
@@ -1111,7 +1119,7 @@
 	era},
   publisher = {Springer--Verlag},
   year = {2010},
-  author = {Hara, Takahiro. and Zadorozhny, Vladimir I. and Buchmann, Erik.},
+  author = {Hara, Takahiro and Zadorozhny, Vladimir I and Buchmann, Erik},
   pages = {271},
   address = {Berlin; Heidelberg},
   bb = {/z-wcorg/},

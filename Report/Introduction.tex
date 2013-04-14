@@ -178,3 +178,107 @@ Since the network includes mobile sensors, there are chances that it can lose co
 
 \subsubsection{Tools and Platforms}
 
+To develop the aforementioned wireless sensor network application there are many tools that allow developed to actually develop, test and simulate the behaviour of their software before it is deployed to the physical hardware and real world situations. These pieces of software are vital for developing reliable, low energy sensor network software.
+
+\paragraph{JProwler} To being with JProwler \cite{JProwler} is a Java implementation of Prowler which is implemented in MATLAB. JProwler is designed to simulate MICA motes and provides two radio models: Gaussian and Rayleigh, one is for use with stationary nodes and the other is for use with mobile nodes. The main use case of JProwler is to simulate large networks very quickly. The implementation of algorithms is written in Java, using the simulator as a base, so to transplant the algorithms to run on actual hardware will mean rewriting the program for a different platform. The benefits of it are: that it is very fast and it is implemented using Java this enables quick prototyping of algorithms, easy testing and fast analysis.
+
+\paragraph{NS2} A set up from JProwler is NS2, a ``discrete event simulator targeted at networking research'' \cite{NS2} that ``provides substantial support for simulation of TCP, routing, and multicast protocols over wired and wireless'' networks. Due to its initial focus on wired networks the support for wireless networks can be below expectations. NS2 is written in C++ and uses OTcl to manage the simulation of networks. NS2 has a very large number of features, for example many of the routing protocols are built in and it comes with support for mobility models such as random waypoint. Due to the number of features NS2 can be very useful to people who wish to utilise it to its full potential, but it can be difficult to newcomers who may be overwhelmed.
+
+\paragraph{TinyOS} Moving from two simulators, we now look at two sensor network operating systems that can be simulated. The first is TinyOS is an event driven wireless sensor network operating system \cite{tinyos}. Programs are written for in nesC a dialect of C \cite{Gay:2003:NLH:780822.781133}. While TinyOS is often described as an operating system it is better described as a framework for developing programs for embedded systems (specifically sensor networks). Developing for TinyOS can be easier than other implementations because the nesC language models that tasks that a developer would be programming a sensor node to be doing better than developing programs directly in C. To simulate applications developed for TinyOS TOSSIM \cite{levis2003tossim} can be used to compile the same nesC code that would be used to run on the hardware to an intermediate format that is understood by the simulator. TOSSIM supports radio models where the bit error rate is configurable and emulates the hardware to provide an accurate simulation of what may occur in a real life situation. Finally the simulator supports visualising the network, so developers can get a good understanding of what is happening.
+
+\paragraph{Contiki}
+
+\textbf{TODO}
+
+
+\subsubsection{Communication}
+
+Within sensor networks TCP/IP is traditionally viewed as unsuitable, \citeauthor{Estrin:1999:NCC:313451.313556} suggested that sensor networks have such different requirements to traditional networks that the overall structure of these networks needs to be reconsidered \cite{Estrin:1999:NCC:313451.313556}. Some of the problems \citeauthor{Estrin:1999:NCC:313451.313556} associated with IP in sensor networks included \cite{Estrin:1999:NCC:313451.313556}:
+\begin{itemize}
+	\item ``The sheer numbers of these devices, and their unattended deployment, will preclude reliance on a broadcast communication or the conﬁguration currently needed to deploy and operate networked devices.''
+	\item ``Unlike traditional networks, a sensor node may not need an identity (e.g., an address).''
+	\item ``Traditional networks are designed to accommodate a wide range of applications.''
+\end{itemize}
+\citeauthor{Hui:2008:IDL:1460412.1460415} suggested that these problems are largely due to IPv4 and not the later IPv6 stating ``IPv6 is better suited to the needs of WSNs than IPv4 in every dimension'' \cite{Hui:2008:IDL:1460412.1460415}, further showing that a IPv6 based network architecture could be used in sensor networks, and provides a strong foundation in which to base further work \cite{Durvy:2008:MSN:1460412.1460483}. Simplified versions have been suggested as well as optimisations performed with headers \cite{Dunkels:2003:FTA:1066116.1066118,Dunkels04makingtcp/ip}, but they still had issues with regards to being based on IPv4.  \citeauthor{Estrin:1999:NCC:313451.313556} implementation of an IPv6 based architecture still had some problems, such as large headers, and the reliance on routing tables. The implementation had many benefits when concerning applications involving Neighbour Discovery and routing, but provided little improvements towards applications not involving identities (such as Flooding).
+
+\citeauthor{Dunkels:2007:ACA:1322263.1322295} developed a common architecture, which allowed for much more code reuse and interoperability between protocols, this involved the RIME communication stack. The need for this new layer was brought about from applications needing to run over multiple protocols, leaving them unable to rely on specific communication mechanisms (such as retransmissions and acknowledgements) \cite{Dunkels:2007:ACA:1322263.1322295}. Previous work \cite{Ee:2006:MNL:1298455.1298479,Polastre:2005:ULA:1098918.1098928} did not effectively solve the problem of protocols running on top of the lower layers, but did provide a basis for the RIME stack used in Contiki \cite{Dunkels:2007:ACA:1322263.1322295}. 
+
+The RIME communication stack presents a solution to the cross-layer information-sharing problem of a layered communication stack by separating the protocol logic from the details of the packet headers. Packet headers need to be small, yet adaptive enough to encompass any type of communications. They solved this by using the notion of Packet Attributes. Modules would be used to transform data and the attributes into the corresponding packets (with headers and payloads). This provides the developer access too lower level information, without violating layering principles, yet with similar execution performance. This also allows interoperability with all protocols, abstracting the networking layers from the main application layer. For the application layer, RIME provides many communication primitives (such as Single-Hop Broadcasting) \cite{Dunkels:2007:ACA:1322263.1322295}, these primitives were selected based on analysis on the common use cases in WSNs.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{Diagrams/rime-stack}
+	\caption{The communication primitives in the Rime network stack \cite{Dunkels:2007:ACA:1322263.1322295}}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | }
+		\hline
+		Name & Header & Address \\
+		\hline
+		Anonymous Broadcast & abc.h & \url{http://contiki.sf.net/docs/2.6/a01717.html} \\
+		Broadcast & broadcast.h & \url{http://contiki.sf.net/docs/2.6/a01720.html} \\
+		Stubborn Broadcast & stbroadcast.h & \url{http://contiki.sf.net/docs/2.6/a01739.html} \\
+		Anonymous Polite Broadcast & polite.h & \url{http://contiki.sf.net/docs/2.6/a01730.html} \\
+		Polite Broadcast & ipolite.h & \url{http://contiki.sf.net/docs/2.6/a01724.html} \\
+		Unicast & unicast.h & \url{http://contiki.sf.net/docs/2.6/a01738.html} \\
+		Stubborn Unicast & stunicast.h & \url{http://contiki.sf.net/docs/2.6/a01740.html} \\
+		Reliable Unicast & runicast.h & \url{http://contiki.sf.net/docs/2.6/a01738.html} \\
+		Network Flooding & netflood.h & \url{http://contiki.sf.net/docs/2.6/a01728.html} \\
+		Multi-hop Unicast & multihop.h & \url{http://contiki.sf.net/docs/2.6/a01726.html} \\
+		Reliable Multi-hop Unicast & rmh.h & \url{http://contiki.sf.net/docs/2.6/a01732.html} \\
+		Reliable Unicast Bulk Transfer & rucb.h& \url{http://contiki.sf.net/docs/2.6/a00365.html} \\
+		\hline
+		\hline
+		Mesh & mesh.h & \url{http://contiki.sf.net/docs/2.6/a01725.html} \\
+		Collect & collect.h & \url{http://contiki.sf.net/docs/2.6/a01723.html} \\
+		Trickle & trickle.h & \url{http://contiki.sf.net/docs/2.6/a01742.html} \\
+		\hline
+	\end{tabular}
+	\caption{Communication Primitives headers and documentation location}
+\end{table}
+
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | l | }
+		\hline
+		Name & Reliable & Target & Sender Known\\
+		\hline
+		Anonymous Broadcast & No & 1-hop neighbours & No\\
+		Broadcast & No & 1-hop neighbours & Yes\\
+		Stubborn Broadcast & No & 1-hop neighbours & No\\
+		Anonymous Polite Broadcast & No & 1-hop neighbours & No\\
+		Polite Broadcast & No & 1-hop neighbours & Yes\\
+		Unicast & No & destination & Yes\\
+		Stubborn Unicast & No & destination & Yes\\
+		Reliable Unicast & Yes & destination & Yes\\
+		Network Flooding & No & network & Yes\\
+		Multi-hop Unicast & No & destination & Yes\\
+		Reliable Multi-hop Unicast & Yes & destination & Yes\\
+		\hline
+		\hline
+		Mesh & No & destination & Yes \\
+		Collect & Yes & destination & Yes \\
+		Trickle & Yes & network & No \\
+		\hline
+	\end{tabular}
+	\caption{Communication Primitives behaviour}
+\end{table}
+
+\paragraph{Flooding and Gossiping} Flooding and Gossiping are arguably the most simplistic routing algorithms available to a wireless sensor network developer. In flooding, wireless sensor network nodes broadcast to all their neighbours any messages that they receive, messages only stops when either i) the packet arrives at its intended recipient or ii) the messages maximum number of node hops is reached. Gossiping is similar to flooding in many ways, the only difference being when a node receives a message instead of broadcasting it to every neighbour the node randomly picks one neighbour to forward the message too. Due to the simplicity of Flooding and Gossiping there is no need for any complex routing algorithms or topology maintenance \cite{Akkaya2005325}. However, these two routing algorithms do suffer from several drawbacks, these are: \emph{Implosion} - is when the same message is sent to the same recipient twice (Gossiping avoids this but causes delays in the propagation of messages through the network), \emph{Overlap} - is when two nodes sense the same change in a local environment and both send similar messages to the same neighbour and \emph{Resource Blindness} -  is when the routing algorithm consumes large amounts of energy with no consideration for efficiency \cite{Akkaya2005325}. Sensor Protocols for Information via Negotiation (SPIN) is a family of routing algorithms designed to address the issues with traditional Flooding and Gossiping protocols\cite{TankBible, Akkaya2005325}. The family does this by using data negotiation and resource-adaptive algorithms, for example nods running SPIN have access to the current battery level of the node and uses this information to adapt the protocol based on how much energy is remaining. Additionally, the SPIN family of protocols uses the concept of meta-data to reduce the level of redundant data sent around the network.
+
+
+\paragraph{Clustering} Clustering is a form of hierarchical routing that has a long history of improving the efficiency of networks, originally it was used to find the optimal placement of logic gates in digital circuits \cite{clustering}. Both in these applications and more modern variations the basic principle of clustering remains the same, to group (in a logical way) nodes of a network according to their (typically geographic) locality \cite{1628365}. Each node in one of these \emph{clusters} has a single point of contact with the rest of the network, in a wireless sensor network this is a specific node in each cluster known as the cluster head (CH). The cluster heads then communicates with each other and the base station to route packets around the network. The benefit of clustering a network is in reducing global network traffic, in a clustered network each node need only route messages to its CH rather than all the way to its destination. In some applications the CH can perform data aggregation or compression function\cite{1285913, aggregation} on the messages it forwards to reduce traffic between clusters; The nature of these functions is always application-specific. However, the nature of clustering means that a cluster head has a significantly higher workload than any other node in its cluster, it must listen to every message sent from the cluster and possibly forward just as many to the other cluster heads in the network. In domains where nodes do not have permanent power source (such as WSNs), this leads to greater energy usage, causing CH batteries to drain faster\cite{placement}. As a result of this, many modern clustering algorithms (e.g. \cite{eemc, secc}) rely on or take inspiration from the Low Energy Adaptive Clustering Hierarchy (LEACH) \cite{LEACH}.
+
+LEACH and LEACH-C are two clustering algorithms proposed by \citeauthor{LEACH}, in their paper the authors showed that the standard LEACH protocol performed significantly better than static clustering in terms of energy efficiency, with LEACH-C performing better still. However, the inclusion of both rounds and TDMA in LEACH means that it requires nodes in a WSN to be synchronised, which comes with significant implications in terms of operational complexity. LEACH itself offers no solutions either towards ensuring that nodes maintain synchronisation, or towards detecting if some nodes (or more likely, an entire cluster) is not performing correctly due to slipping from the prescribed TDMA schedule. However, the authors themselves suggest that a possible improvement to negate the need for TDMA is some event-based method for applications in which nodes do not generate transmissible data constantly or at prescribed intervals.
+
+
+
+\paragraph{Tree Aggregation} Tree aggregation is another hierarchical routing protocol, this algorithm differs from clustering in that it divides a network into a tree structure with the root node situated at the base station. Nodes that are furthest from the base station (in hops) become leaves of the tree and any intermediate nodes become branches. Leaves and branches forward messages towards the base station and around the network using the tree structure, this results in a reduced number of global network messages over other algorithms such as flooding. The message count can be further reduced in a similar way to clustering, by implementing a data aggregation or compression function at each branch node of the network. The drawbacks of tree aggregation are clearly similar to clustering i) branch nodes have a higher workload than leaf nodes ii) if a branch nodes battery is depleted and the node turns off it can leave entire section of the network that it connects with the base station disconnected. There are several prominent tree aggregation algorithm (such as TAG, MFS and DCTC \cite{1628365}). Although very similar, they all take differing approaches to organising the data aggregation process of the branch nodes in order to reduce collisions and therefore messages in the network. For example, TAG uses the idea of a periodic traffic pattern which is divided into time intervals for each layer of the tree, this ensures that each branch receives as many messages from its children as possible before it forwards to the next layer.   
+
+\subsection{Summary}
+
+\textbf{TODO}
+

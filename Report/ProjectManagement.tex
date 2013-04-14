@@ -154,26 +154,37 @@ The following table summaries all the software and hardware used to develop our 
 %To add more items increment multirow
 
 \begin{table}[H]
-\begin{tabular}{| l | l | p{6cm} | p{3.5cm} |}
+\centering
+\begin{tabular}{| l | p{2.5cm} | p{4.5cm} | p{4.25cm} |}
 	\hline
-	~ & ~ & Description & Constraints/Issues\\
+	~ & Name & Description & Constraints/Issues\\
 	\hline
 
-	\multirow{3}{*}{Software} & Contiki & Operating System for WSN & ~\\ 
-	
+	\multirow{6}{*}{Software} & Contiki & Operating System for WSNs & ~\\ 
 	\cline{2-4}
 
 	& Cooja & Contiki Simulator & ~\\ 
-	
+	\cline{2-4}
+
+	& Bash and Python & Scripting numerous tasks & Some dependencies had to be manually installed\\ 
+	\cline{2-4}
+
+	& Make & To compile the C source code for the project & ~\\ 
+	\cline{2-4}
+
+	& MSP-GCC & The custom compiler used & Did not come installed on DCS computers, needed to compile ourselves\\ 
+	\cline{2-4}
+
+	& Netbeans and Java & To develop the GUI & ~\\ 
 	\cline{2-4}
 	
 	& ~ & ~ & ~ \\ \hline
 
-	\multirow{2}{*}{Hardware} & Sensor nodes & See appendix & ~\\ 
-	
+	\multirow{2}{*}{Hardware} & Sensor nodes & See \autoref{sec:dev-spec} & Provided by department, needed to share with PhD student who also required them\\ 
 	\cline{2-4}
 
-	& DCS Workstations & Testing/Running Simulation & ~\\ 
+	& USB Hub and USB cables & To work with multiple sensor nodes at once & Hub required purchasing, cables were borrowed from DCS\\
+	\cline{2-4}
 	
 	\hline
 

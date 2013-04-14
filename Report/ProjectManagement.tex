@@ -57,7 +57,45 @@ Whilst the entire team was responsible for system design and development, it was
 
 \subsection{Project Planning}
 
+Our initial planning was done in the first few group meetings and most of the plan details was explained in the project specification. As we progressed through the project development, we encountered many changes from the initial plan as well as changes in task schedule. This section presents the final overall plan of the project including the revised time schedule of development activities, resources used and issues encountered.
+
 \subsubsection{Work Breakdown Structure}
+
+The figure below shows the work breakdown structure as designed for the project specification.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Diagrams/pm-wbs.pdf}
+\caption{Work Breakdown structure}
+\label{fig:Work Breakdown structure}
+\end{figure}
+
+\subsubsection{Deliverables}
+
+Our project consists of 5 deliverables which includes one individual report. It was very important that these milestones were met because it allows us to monitor our progress and prove that we were working in the direction of the stated goals and requirements of the project.
+
+\begin{enumerate}
+	\item Specification \emph{(Due Week 4 - Term 1)}
+	
+	This was the first deliverable of the project. At the time, we were still undergoing research on the different components of the system and the project scope was not clearly defined. Nevertheless, we highlighted in the specification the main goals of our project and the different algorithms that we wished to implement. We also included a schedule of all the planned activities for the remainder of the project and an approximate time taken to complete them.
+	
+    \item Progress Poster Presentation \emph{(Due Week 10 - Term 1)}
+    
+	By the end of the first term, the scope of the project had reached a more defined level as we had decided what is to be implemented and what has been disregarded from the provisional list of algorithms. This was demonstrated in our first delivery - the poster presentation, where we had to chance to explain our project at a high level to our supervisors and other professors.
+    
+    \item Final Group Report \emph{(Due Week 1 - Term 3)}
+    
+	Although the report is due in term three we started adding content since the first term. This included the introduction, literature review, a list of algorithms and protocols to be implemented and a brief description of their functions. In the beginning of the second term, much of the algorithms were described in the report and it was only towards the end of the term that the report was being updated on a full scale. Each member was assign a specific section to work on but with the flexibility to update other sections if it was related to them.
+	
+    \item Individual Report \emph{(Due Week 1 - Term 3)}
+    
+	Every team member needs to write a 3000 words report to reflect on their performance and contribution towards the project as an individual.
+    
+    \item Final Project Presentation \emph{(Due Week 3 - Term 3)}
+    
+    Demonstrate our final project to a judge of panels and supervisor.
+ 
+\end{enumerate}
 
 \subsubsection{Schedule}
 
@@ -108,32 +146,7 @@ Throughout the term, every member was assigned specific tasks and was given a ti
 
 Gantt Chart comes here
 
-\subsubsection{Deliverables}
 
-Our project consists of 5 deliverables which includes one individual report. It was very important that these milestones were met because it allows us to monitor our progress and prove that we were working in the direction of the stated goals and requirements of the project.
-
-\begin{enumerate}
-	\item Specification \emph{(Due Week 4 - Term 1)}
-	
-	This was the first deliverable of the project. At the time, we were still undergoing research on the different components of the system and the project scope was not clearly defined. Nevertheless, we highlighted in the specification the main goals of our project and the different algorithms that we wished to implement. We also included a schedule of all the planned activities for the remainder of the project and an approximate time taken to complete them.
-	
-    \item Progress Poster Presentation \emph{(Due Week 10 - Term 1)}
-    
-	By the end of the first term, the scope of the project had reached a more defined level as we had decided what is to be implemented and what has been disregarded from the provisional list of algorithms. This was demonstrated in our first delivery - the poster presentation, where we had to chance to explain our project at a high level to our supervisors and other professors.
-    
-    \item Final Group Report \emph{(Due Week 1 - Term 3)}
-    
-	Although the report is due in term three we started adding content since the first term. This included the introduction, literature review, a list of algorithms and protocols to be implemented and a brief description of their functions. In the beginning of the second term, much of the algorithms were described in the report and it was only towards the end of the term that the report was being updated on a full scale. Each member was assign a specific section to work on but with the flexibility to update other sections if it was related to them.
-	
-    \item Individual Report \emph{(Due Week 1 - Term 3)}
-    
-	Every team member needs to write a 3000 words report to reflect on their performance and contribution towards the project as an individual.
-    
-    \item Final Project Presentation \emph{(Due Week 3 - Term 3)}
-    
-    Demonstrate our final project to a judge of panels and supervisor.
- 
-\end{enumerate}
 
 \subsection{Resources}
 % Can explain more on the software we used to share resources, communicate and discuss ideas.
@@ -148,7 +161,7 @@ When group members are working offline, the main source of communication is via 
 
 \subsubsection{Development tools}
 
-The following table summaries all the software and hardware used to develop our wireless sensor network system. 
+The following table summaries all the software and hardware used to develop the wireless sensor network application. 
 
 
 %To add more items increment multirow
@@ -160,11 +173,13 @@ The following table summaries all the software and hardware used to develop our 
 	~ & Name & Description & Constraints/Issues\\
 	\hline
 
-	\multirow{6}{*}{Software} & Contiki & Operating System for WSNs & ~\\ 
-	\cline{2-4}
+	\multirow{6}{*}{Software} & Contiki & Operating System for WSNs & ~
+	
+	\\ \cline{2-4}
 
-	& Cooja & Contiki Simulator & ~\\ 
-	\cline{2-4}
+	& Cooja & Contiki Simulator & ~
+	
+	\\ \cline{2-4}
 
 	& Bash and Python & Scripting numerous tasks & Some dependencies had to be manually installed\\ 
 	\cline{2-4}
@@ -176,9 +191,7 @@ The following table summaries all the software and hardware used to develop our 
 	\cline{2-4}
 
 	& Netbeans and Java & To develop the GUI & ~\\ 
-	\cline{2-4}
-	
-	& ~ & ~ & ~ \\ \hline
+	\hline
 
 	\multirow{2}{*}{Hardware} & Sensor nodes & See \autoref{sec:dev-spec} & Provided by department, needed to share with PhD student who also required them\\ 
 	\cline{2-4}

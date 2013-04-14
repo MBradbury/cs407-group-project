@@ -7,28 +7,9 @@ The requirements of the project was not fully understood at the beginning and we
 
 \subsubsection*{Term 1}
 
-From the beginning, our main objective was to develop a wireless sensor network (WSN) to investigate the debugging of distributed programs in such environments. However, WSN is a fast growing research area and encompasses a wide range of applications and practical aspects of sensor deployment, such as wildlife monitoring such as animal habitat and behaviour and environment monitoring like air pollution and volcanic activity. These applications where developed and deployed in real situations but for our project we decided to take on a more general approach by investigating the issues regarding debugging and fault detection in wireless sensor networks.
+We spent the first few weeks researching on the different aspects of wireless sensor networks as well as the appropriate tools and platform to develop our system. From on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model in the hopes of obtaining a more defined project scope by term 1.
 
-%As a result, we spent the first few weeks researching on the different aspects of wireless sensor networks as well as the appropriate tools and platform to develop our system. These include;
-
-% Irrelevant
-%\begin{enumerate}
-	%\item Operating systems and simulation platforms
-		%\begin{enumerate}
-			%\item TinyOS with TOSSIM
-			%\item Contiki with Cooja
-		%\end{enumerate}
-	%\item Routing protocols and sensor communication
-	%\item Predicate evaluation
-	%\item Monitoring and interface tools
-	%\item Logging and error reporting
-	%\item Sensor limitations (e.g. energy and power usage)
-%\end{enumerate} 
-
-%Research
-From our research we managed to gather a lot of information on these topics and had to pick the most suitable ones to implement in our system. However, some concepts such as broadcasting consists of numerous methods where each are tailored to work best in different systems and working environments. Since this is beyond our practical knowledge, we had to implement most of the methods and tested it on the system to determine the most efficient one. With this proceeding, it was hard to define the overall scope of our project since there were many factors that had to be considered. Nevertheless, we produced a list of all the possible algorithms and protocols to implement and ranked them according to its relevance. We followed a 'dive-in' procedure by implementing the most relevant components first and updated the list by removing or adding algorithms. To facilitate this, we employed a prototyping development model in the hopes of obtaining a more defined project scope by term 1.
-
-%Can state here what was said in the feedback form.
+%Can state here what was said in the feedback form. nahh
 
 \subsubsection*{Term 2}
 
@@ -36,12 +17,6 @@ At this stage, most of the algorithms and protocols were implemented independent
 %We can mention here a small list of the algorithms that needed to be integrated together
 
 In the second term, we continued following the evolutionary process model but at a more relaxed approach which focuses on finishing the system components and preparing the gathering of results. Since the project scope was clear and we had a more directed goal,less meetings with the supervisor was needed, but we still required him to evaluate our work and provide feedback. Ensuring that the development and debugging phase to complete in time required the effective scheduling of tasks and prioritising work force to the critical ones. By the third quarter of the term, progress had fallen to a halt due the high number of coursework deadlines and this meant that team members where preoccupied with other duties. To address the issue, a meeting was held prior to the halt where we discussed our recovery plan and actions to take once members was free. This allowed team members to continue working where they left off and avoid any delays.
-
-\subsection{PRINCE Methods}
-
-Brief into as to how we applied the PRINCE methods to our project
-
-\subsubsection{Plan and Process}
 
 \subsection{Role Allocation}
 
@@ -68,11 +43,7 @@ Whilst the entire team was responsible for system design and development, it was
 \begin{itemize}
 	\item[] {\bf Matthew Bradbury} - Group Leader
 	
-	Responsible for defining and managing the entire project.
-	Responsible for allocating tasks to its team members and providing direction for meeting the project objectives.
-	Understands all the workings of the project and communicating the ideas to the stakeholders (i.e supervisor).
-	Ensures that everyone is performing their roles accordingly and resolving conflicts within the team.
-	Monitors the progress of the team and providing motivation when the project is slowing down.	
+	His main task is to lead the entire project and have a clear understanding of the components that is to be implemented. He is responsible for allocating tasks to its team members and providing direction for meeting the project objectives.He also possesses strong communication skills with his team members as well as being able to explain the concepts to the supervisor concisely.Ensures that everyone is performing their roles accordingly and providing motivation when the project is slowing down.	
 
 	\item[] {\bf Daniel Robertson} - Project Manager
 	
@@ -83,10 +54,6 @@ Whilst the entire team was responsible for system design and development, it was
 	Responsible for overseeing the work done by other members and ensures that all code written by the team meets the technical specification and design requirements of the project.	
 	
 \end{itemize}
-
-Need to mention our supervisors role here: What does he want us to accomplish? His interests?
-
-
 
 \subsection{Project Planning}
 
@@ -179,28 +146,49 @@ We signed up for a Git repository on BitBucket \cite{bitbucket} where we plan to
 
 When group members are working offline, the main source of communication is via the popular social networking platform - Facebook. We created a group for our team where members could post any messages regarding the project such as issues in code development, assignment of tasks to team members and reminders of any project activities (e.g. weekly meetings).
 
-\subsubsection{Development Platform}
+\subsubsection{Development tools}
 
-Develop the below points in a table
+The following table summaries all the software and hardware used to develop our wireless sensor network system. 
 
-\begin{enumerate}
-	\item Software
-	Contiki, Simulator (Cooja), VM, GUI, etc
+
+%To add more items increment multirow
+
+\begin{table}[H]
+\begin{tabular}{| l | l | p{6cm} | p{3.5cm} |}
+	\hline
+	~ & ~ & Description & Constraints/Issues\\
+	\hline
+
+	\multirow{3}{*}{Software} & Contiki & Operating System for WSN & ~\\ 
 	
-	\item Hardware
-	DSC workstations, network sensors (appendix), laptops.
-\end{enumerate}
+	\cline{2-4}
+
+	& Cooja & Contiki Simulator & ~\\ 
+	
+	\cline{2-4}
+	
+	& ~ & ~ & ~ \\ \hline
+
+	\multirow{2}{*}{Hardware} & Sensor nodes & See appendix & ~\\ 
+	
+	\cline{2-4}
+
+	& DCS Workstations & Testing/Running Simulation & ~\\ 
+	
+	\hline
+
+\end{tabular}
+\end{table}
 
 
 \subsection{Risk Analysis}
 %Potentially the issues below can form part of risk
-
-\subsubsection{Risk Identification}
+It is almost certain that every project contains risks which could impact its progress and success if not well managed. Risk management involves two basic steps, 1) to identify the different possible risks that may occur in the project and its likelihood of occurrence and 2) state the actions to mitigate the effects of any threats.
 
 \begin{center}
-	\begin{longtable}{| p{5cm} | l | p{8cm} |}
+	\begin{longtable}{| p{4cm} | l | l | p{7cm} |}
 	\hline
-	Risk & Severity & Mitigation\\
+	Risk & Likelihood & Severity & Mitigation\\
 	\hline	
 	
 	Hardware and Software failure
@@ -208,24 +196,27 @@ Develop the below points in a table
 		\item Report and research
 		\item Software code
 	\end{itemize}
-	 & 8 & To prevent the risk of data lost, we used a Bitbucket repository to save and store all our documents and program coding online. This also allows the concurrent development of our project and ensuring that all team members are up to date.
+	 & 2 & 9 & To prevent the risk of data lost, we used a Bitbucket repository to save and store all our documents and program coding online. This also allows the concurrent development of our project and ensuring that all team members are up to date.
 	 
 	\\ \hline
 	
 	Team member illness and absence
-	& 4 & There would be circumstances where team members would be unavailable to work on the project for a short period of time. To ensure that work is progressive, necessary measures were taken. For example an absent member can temporary delegate his current task to a different member.
+	& 5 & 4 & There would be circumstances where team members would be unavailable to work on the project for a short period of time. To ensure that work is progressive, necessary measures were taken. For example an absent member can temporary delegate his current task to a different member.
+	
 	\\ \hline
 		
 	Meeting deadlines and schedules
-	& 8 & It was important that every milestone of the project was met so that no marks were penalised. The progress of the project was monitored and we had weekly meetings to ensure that everyone was on track of their given tasks.
+	& 5 & 7 & It was important that every milestone of the project was met so that no marks were penalised. The progress of the project was monitored and we had weekly meetings to ensure that everyone was on track of their given tasks.
+	
 	\\ \hline
 	
 	Integration of code based on simulated data to real hardware
-	& 5 & Most of the code that was developed in the beginning was tested with the cooja simulator. It would be unlikely to obtain similar results when deployed on the actual hardware due to a wide range of environmental factors such as //NEED EXAMPLE HERE.
+	& 5 & 5 & Most of the code that was developed in the beginning was tested with the cooja simulator. It would be unlikely to obtain similar results when deployed on the actual hardware due to a wide range of environmental factors such as //NEED E.G. HERE.
+	
 		\\ \hline
 		
 	Defining the scope of our project
-	& 5 & There are many issues and research problems that revolve around the topic of wireless sensor networks.
+	& 5 & 5 & There are many issues and research problems that revolve around the topic of wireless sensor networks.
 
 It is important to define the scope of the project to prevent scope creep and necessary expansion of the project.
 
@@ -233,19 +224,18 @@ Need to keep track of all new ideas proposed by the supervisor and raise any cha
 
 		\\ \hline
 		
-	Safety of the sensor nodes
-	& 6 & Each of the sensor nodes cost xxxGBP. The sensors must be handled with care to prevent any cost of damage. //WHAT IF WE DO??
+	Damage of the sensor nodes
+	& 3 & 5 & Each of the sensor nodes cost xxxGBP. The sensors must be handled with care to prevent any cost of damage. Assign a group member the responsibility to store the sensors after use and keep track of who is using them.
+	
 		\\ \hline
 		
 	Components of the project that could not be implemented with current tools.
-	& 6 & Research on alternative methods
+	& 4 & 4 & Research on alternative methods or implement custom tools.
 	\\ \hline		
 		
 	\end{longtable}
 
 \end{center}
-
-\subsubsection{Risk Management}
 
 \subsection{Work Overview}
 

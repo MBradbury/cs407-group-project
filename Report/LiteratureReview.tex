@@ -42,12 +42,6 @@ Tree aggregation is another hierarchical routing protocol, this algorithm differ
 \paragraph{Cooja / MSPSim}
 \cite{Eriksson:2009:CIT:1537614.1537650} % https://dl.acm.org/citation.cfm?id=1537614.1537650
 
-\paragraph{Protothreads}
-\cite{Dunkels:2006:PSE:1182807.1182811} % http://dunkels.com/adam/dunkels06protothreads.pdf
-
-\paragraph{Energy Estimation}
-\cite{Dunkels:2007:SOE:1278972.1278979} % http://dunkels.com/adam/dunkels07softwarebased.pdf
-
 \paragraph{RIME and IP Stacks}
 
 TCP/IP is traditionally viewed as unsuitable in sensor networks, \citeauthor{Estrin:1999:NCC:313451.313556} suggested that sensor networks have such different requirements to traditional networks, and that the overall structure of these networks needs to be reconsidered \cite{Estrin:1999:NCC:313451.313556}. Some of the problems \citeauthor{Estrin:1999:NCC:313451.313556} associated with IP in sensor networks included \cite{Estrin:1999:NCC:313451.313556}:
@@ -142,6 +136,8 @@ JProwler \cite{JProwler} is a Java implementation of Prowler which is implemente
 
 TinyOS is an event driven wireless sensor network operating system \cite{tinyos}. Programs are written for in nesC a dialect of C \cite{Gay:2003:NLH:780822.781133}. While TinyOS is often described as an operating system it is better described as a framework for developing programs for embedded systems (specifically sensor networks). Developing for TinyOS can be easier than other implementations because the nesC language models that tasks that a developer would be programming a sensor node to be doing better than developing programs directly in C. To simulate applications developed for TinyOS TOSSIM \cite{levis2003tossim} can be used to compile the same nesC code that would be used to run on the hardware to an intermediate format that is understood by the simulator. TOSSIM supports radio models where the bit error rate is configurable and emulates the hardware to provide an accurate simulation of what may occur in a real life situation. Finally the simulator supports visualising the network, so developers can get a good understanding of what is happening.
 
+\subsubsection*{Hardware}
+Mica \cite{Mica2002} and Sky \cite{?}
 
 \subsubsection*{Simulating Energy Consumption}
 \cite{Shnayder04}
@@ -169,25 +165,8 @@ With the sensor nodes, we as a group have been given responsibility over them. T
 
 
 
-\subsection{Sensor Network Platforms}
-
-\subsubsection*{MICA}
-\cite{Mica2002}
-
-\subsubsection*{Sky}
-
-
 \subsection{Practical Experience in Sensor Networks}
 \label{sec:lit-review-practical-experience}
-
-
-\subsubsection*{Volcano Monitoring}
-
-
-
-
-\subsubsection*{Power Considerations}
-
 
 \subsubsection*{Global Predicate Detection}
 

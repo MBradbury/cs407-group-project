@@ -62,7 +62,7 @@ public class WSNInterface {
         }
         
         //Attach network state to specified round.
-        //TODO
+        predVis.receiveNetworkState(roundState);
     }
     
     /**
@@ -75,6 +75,6 @@ public class WSNInterface {
         PredicateData predicateData = new PredicateData(PredicateData.PredicateStatus.UNSATISFIED, data);
         
         //Attach data to specified predicate.
-        //TODO
+        predVis.receivePredicateData(predicateData);
     }
 }

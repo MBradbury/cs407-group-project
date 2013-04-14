@@ -652,6 +652,16 @@ public class PredVis extends JFrame {
         graphPanel.repaint();
     }
     
+    public void receiveNetworkState(NetworkState ns) {
+        //TODO
+        updateNetworkView(ns);
+    }
+    
+    public void receivePredicateData(PredicateData pd) {
+        //TODO
+        
+    }
+    
     /**
      * @param args the command line arguments
      */

@@ -1,10 +1,9 @@
 % !TeX root = Report.tex
 \section{Future Work}
 
-\subsection{Improve memory Management}
+\subsection{Improve Memory Management}
 
-We use malloc to dynamically allocate memory when needed as this simplified development. This meant that we did not have to learn alternative memory allocators. However, we could use these alternate allocators to optimise the code to minimise (i) internal memory fragmentation (ii) external memory fragmentation (iii) performance (as malloc should not be used in RTS like WSNs due to \ldots) and (iv) memory usage.
-
+Throughout the code-base \verb|malloc| was used to dynamically allocate memory when needed as this simplified development. The advantage of this was that we did not have to learn alternative memory allocators used in Contiki. However \verb|malloc| is strongly advised against begin used due to memory fragmentation. This can causes problems with the memory components long time life, and dynamic linking of new firmware \cite{Dai:2004:EEL:1031495.1031516,Dunkels:2006:RDL:1182807.1182810}. Using the alternate allocators to optimise the code would minimise (i) internal memory fragmentation (ii) external memory fragmentation (iii) performance and (iv) memory usage.
 
 \subsection{Improve C Containers Developed}
 

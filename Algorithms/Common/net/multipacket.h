@@ -13,8 +13,10 @@ struct multipacket_conn;
 
 typedef struct multipacket_callbacks
 {
-	void (* recv)(struct multipacket_conn * conn, rimeaddr_t const * from, void * data, unsigned int length);
-	void (* sent)(struct multipacket_conn * conn, rimeaddr_t const * to, void * data, unsigned int length);
+	void (* recv)(struct multipacket_conn * conn,
+		rimeaddr_t const * from, void * data, unsigned int length);
+	void (* sent)(struct multipacket_conn * conn,
+		rimeaddr_t const * to, void * data, unsigned int length);
 } multipacket_callbacks_t;
 
 typedef struct multipacket_conn
@@ -24,8 +26,8 @@ typedef struct multipacket_conn
 
 	uint16_t id;
 	
-	linked_list_t sending_packets;
-	map_t receiving_packets;
+	linked_list_t sending_packets; // A queue of packets to be sent
+	map_t receiving_packets; // Map of recv_key_t to multipacket_receiving_packet_t
 	
 	multipacket_callbacks_t const * callbacks;
 

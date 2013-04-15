@@ -15,14 +15,18 @@ struct nhopreq_conn;
 
 typedef struct
 {
+	// Used to get information on the node to be sent
 	void (* data_fn)(struct nhopreq_conn * conn, void * data);
-
-	void (* receive_fn)(struct nhopreq_conn * conn, rimeaddr_t const * from, uint8_t hops, void const * data);
+	
+	// Called when requested data is received
+	void (* receive_fn)(struct nhopreq_conn * conn,
+		rimeaddr_t const * from, uint8_t hops, void const * data);
 
 } nhopreq_callbacks_t;
 
 typedef struct nhopreq_conn
 {
+	// Keep connections in this order
 	struct runicast_conn ru;
 	struct stbroadcast_conn bc;
 
@@ -40,12 +44,10 @@ typedef struct nhopreq_conn
 
 } nhopreq_conn_t;
 
-// Initialise multi-hop predicate checking
 bool nhopreq_start(
 	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2,
 	unsigned int data_size, nhopreq_callbacks_t const * callbacks);
 
-// Shutdown multi-hop predicate checking
 bool nhopreq_stop(nhopreq_conn_t * conn);
 
 void nhopreq_request_info(nhopreq_conn_t * conn, uint8_t hops);

@@ -9,25 +9,25 @@ struct tree_agg_conn;
 
 typedef struct
 {
-	/** The function called when a message is received at the sink.
-		The arguments are: the connection and the message source. */
+	// The function called when a message is received at the sink.
 	void (* recv)(struct tree_agg_conn * conn,
 		rimeaddr_t const * source, void const * packet, unsigned int length);
 
-	/** This function is called when a node has finished setting up */
+	// This function is called when a node has finished setting up 
 	void (* setup_complete)(struct tree_agg_conn * conn);
 
+	// Add the new data to the stored data
 	void (* aggregate_update)(struct tree_agg_conn * tconn,
 		void * data, void const * to_apply, unsigned int length);
 
-	/** This function is used to add a nodes own one data */
+	// This function is used to add a nodes own one data
 	void (* aggregate_own)(struct tree_agg_conn * tconn, void * data);
 
-	/** This function is called when a node needs to save a packet
-		The arguments are: Connection, Packet and the Packet Length  */
+	// This function is called when a node needs to save a packet
+	// The arguments are: Connection, Packet and the Packet Length
 	void (* store_packet)(struct tree_agg_conn * conn, void const * packet, unsigned int length);
 
-	/** This function is called to write the nodes stored data to an outward packet */
+	// This function is called to write the nodes stored data to an outward packet
 	void (* write_data_to_packet)(struct tree_agg_conn * conn, void ** data, unsigned int * length);
 } tree_agg_callbacks_t;
 
@@ -52,7 +52,7 @@ typedef struct tree_agg_conn
 
 	tree_agg_callbacks_t const * callbacks;
 
-	// timers
+	// Timers
 	struct ctimer ctrecv;
 	struct ctimer aggregate_ct;
 	struct ctimer ct_parent_detect;

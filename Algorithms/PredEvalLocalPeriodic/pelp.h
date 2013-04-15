@@ -43,5 +43,4 @@ bool pelp_start(pelp_conn_t * conn,
 
 void pelp_stop(pelp_conn_t * conn);
 
-
 #endif /*CS407_PELP_H*/

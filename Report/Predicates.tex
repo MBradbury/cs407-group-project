@@ -614,80 +614,6 @@ Instead of requesting information every node could simply periodically broadcast
 
 When using the N-Hop Request library to implement this predicate evaluator there is an important issue that needs to be considered: when we have sent the data request message how long should we wait for? We cannot simply wait until all the results are returned to the evaluating node because (i) we do not necessarily know what node's data we will be waiting for and (ii) we may not receive that data anyway. We could wait for $2 \times D \times T_{send} + \epsilon$ time units, where $D$ is the maximum number of hops we are asking for information from, $T_{send}$ is the amount of time it takes for a message to try to be sent and $\epsilon$ is a small extra amount of time to wait. However, knowing what $T_{send}$ is can be difficult, and is based on many complicated factors. For example, if the MAC protocol in use uses CSMA/CD or CSMA/CA then it is possible, when trying to send a message, to enter into an arbitrary number of back-off period while waiting for the channel to be free \cite{?}. If there is an upper bound on the number of retries then we can calculate a maximum $T_{send}$, otherwise we cannot. Therefore, for our implementation we chose to use a fixed large value in which it was reasonable to expect all the responses that would return, would return within that period. We expect that in the future, this wait period will need to be some function of $D$ the number of hops of information being asked for to support requesting information from deeper in the network.
 
-%TODO: include
-\begin{comment}
-\subsubsection{Implementing Primitives}
-
-There are certain primitives that we are going to need to implement. One of these is the $Neighbours(n, h)$ primitive, that takes a parameter $n$ that is the node we wish to get neighbour information on and $d$ which is the distance in hops from the node $n$ that we will ask for information.
-
-\begin{align}
-\label{eq:hcluster-neighbours-predicate}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		\exists n' \in Neighbours(n, H) \cdot \\
-& \hspace{9em}			IsClusterHead(n)
-\end{align}
-
-An example of a predicate that uses $Neighbours(n, h)$ is shown above. This predicate is for Hierarchical Clustering where $H$ is a parameter that defines the distance between cluster heads. The predicate checks that for every node there is a neighbour in the $H$-hop neighbourhood that is a cluster head.
-
-An alternative way that we might specify this predicate is to check that the distance between a node and the cluster head (that it knows the address of) is within $H$ hops.
-
-\begin{align}
-\label{eq:hcluster-distance-predicate}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		IsSink(n) \lor Distance(n, ClusterHead(n)) \leq H
-\end{align}
-
-However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for  time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter.
-
-
-\subsubsection{Getting and Waiting for Neighbourhood Data}
-
-\begin{enumerate}
-	\item If all neighbours are known then 1-hop predicates can wait for each node to send data. This has extra memory and communication requirements
-	\item If we do not know who our n-hop neighbours are then we can just set a time out to wait for results
-	\begin{enumerate}
-		\item If we do not receive all items what should be done?
-		\item Should we report that the predicate is true, even though we didn't receive all the information?
-	\end{enumerate}
-	\item What data should be sent from surrounding nodes and how could we access it?
-\end{enumerate}
-
-
-When asking for information on the neighbourhood, it possible to consider optimisations due to the structure of the predicate. For example take conjunctive predicates where the structure of the predicate $P$ is $P = P_1 \land P_2 \land \ldots \land P_n$. If one of the $P_i$ is false then the result of the predicate $P$ is false ($False \land P \Leftrightarrow False$). This means that the statements could potentially be evaluated in an order such that the $P_i$ that requires the fewest resources is evaluated first and the $P_j$ that requires the most resources is evaluated last.
-
-The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use to us is when gathering data for in-network predicates that are checked periodically.
-
-Surprisingly, asking for and receiving all the required information actually requires fewer messages than incrementally asking for information. This is because of the communication that needs to be repeated when asking for more information. For example if you have a conjunctive predicate where the sub-predicates require 1 and 3 hops of information. If we ask for all information then we simply send messages out 3 hops and then receive replies from all the nodes in that neighbourhood. If we instead ask for one-hop information first and then three-hop, we first have to send a message to local neighbours and then will end up sending them another data request message when asking for three-hop information (as the 1-hop neighbourhood is contained within the 3-hop neighbourhood).
-
-For some predicates it may make obvious sense, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would end up degrading the performance of requesting the near-by information. Also adding this feature would increase the firmware size, which began to reach the limit when the predicate evaluation libraries that aggregate data to the sink were implemented.
-
-% Include equations if someone can be bothered to work them out
-%\begin{comment}
-\begin{figure}[H]
-\begin{equation}
-\sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
-\end{equation}
-\caption{The number of messages required to respond x hops}
-\end{figure}
-
-The sigma function is defined as it is because for each of the nodes that are $x$ hops away they will require sending their data message $x$ hops to reach the requesting node.
-
-\begin{figure}[H]
-\begin{equation}
-\sum_{j \in H} j + \sigma(j)
-\end{equation}
-\caption{Maximum number of messages for an incremental data request}
-\end{figure}
-
-\begin{figure}[H]
-\begin{equation}
-|N_F(\text{max}(H))| \times \text{max}(H) + \sigma(\text{max}(H))
-\end{equation}
-\caption{Number of messages for a complete data request}
-\end{figure}
-%\end{comment}
-\end{comment}
-
 
 \subsubsection{Global}
 
@@ -801,7 +727,65 @@ However, there is one final factor to take into account that even though using 2
 
 % Problem of Distance(n, n')
 
+The only network primitive we have implemented is a function that gets information on nodes within a certain number of hops of the asking node. There are a number of other network primitives that might be useful for both network and application predicates. One of these is the ability to get the distance between two nodes.
+
+An example of a predicate that uses $Neighbours(n, h)$ is shown below. This predicate is for Hierarchical Clustering where $H$ is a parameter that defines the distance between cluster heads. The predicate checks that for every node there is a neighbour in the $H$-hop neighbourhood that is a cluster head.
+
+\begin{align*}
+& \hspace{2em}	\forall n \in Nodes \cdot \\
+& \hspace{4em}		\exists n' \in Neighbours(n, H) \cdot \\
+& \hspace{6em}			IsClusterHead(n)
+\end{align*}
+
+An alternative way that we might specify this predicate is to check that the distance between a node and the cluster head (that it knows the address of) is within $H$ hops.
+
+\begin{align*}
+& \hspace{2em}	\forall n \in Nodes \cdot \\
+& \hspace{4em}		IsClusterHead(n) \lor Distance(n, ClusterHead(n)) \leq H
+\end{align*}
+
+However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for  time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter. Due to this issue we have not implemented such a network primitive function.
+
 
 \subsection{Optimising on Predicate Structure}
 
 % Conjuntive vs disjuntive predicates
+
+
+When evaluating predicates in-network, it possible to consider optimisations due to the structure of the predicate to reduce the amount of information that is requested. For example take conjunctive predicates where the structure of the predicate $P$ is $P = P_1 \land P_2 \land \ldots \land P_n$. If one of the $P_i$ is false then the result of the predicate $P$ is false ($False \land P \Leftrightarrow False$). This means that the statements could potentially be evaluated in an order such that the $P_i$ that requires the fewest resources is evaluated first and the $P_j$ that requires the most resources is evaluated last.
+
+The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use to us is when gathering data for in-network predicates that are checked periodically.
+
+%Surprisingly, asking for and receiving all the required information actually requires fewer messages than incrementally asking for information. This is because of the communication that needs to be repeated when asking for more information. For example if you have a conjunctive predicate where the sub-predicates require 1 and 3 hops of information. If we ask for all information then we simply send messages out 3 hops and then receive replies from all the nodes in that neighbourhood. If we instead ask for one-hop information first and then three-hop, we first have to send a message to local neighbours and then will end up sending them another data request message when asking for three-hop information (as the 1-hop neighbourhood is contained within the 3-hop neighbourhood).
+
+For some predicates it may make obvious sense to implement such an optimisation, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would not serve to optimise what we are targeting our system to evaluate. Another issue is that many of the predicates we have thought up are not of this form, they mostly have quantifiers as the outer structure with other logical operators inside that quantifier. It may be the case where you have a predicate of the following structure $P = P_{local} \land \land P_{network}$ where $P_{local}$ needs no network information, here there is the possibility to optimise the network request out if $P_{local}$ is false. However as adding this feature would increase the firmware size we decided against adding more optimisations. This was because the software began to reach the limit of the firmware size when the virtual machine was integrated with the message communication. However, investigating these kinds of optimisations is a future possibility.
+
+%
+%\begin{figure}[H]
+%\begin{equation}
+%\sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
+%\end{equation}
+%\caption{The number of messages required to respond x hops}
+%\end{figure}
+%
+%The sigma function is defined as it is because for each of the nodes that are $x$ hops away they will require sending their data message $x$ hops to reach the requesting node.
+%
+%\begin{figure}[H]
+%\begin{equation}
+%\sum_{j \in H} |N_F(j)| + \sigma(j)
+%\end{equation}
+%\caption{Maximum number of messages for an incremental data request}
+%\end{figure}
+%
+%\begin{figure}[H]
+%\begin{equation}
+%|N_F(\text{max}(H))| + \sigma(\text{max}(H))
+%\end{equation}
+%\caption{Number of messages for a complete data request}
+%\end{figure}
+
+
+
+
+
+

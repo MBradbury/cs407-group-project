@@ -26,4 +26,8 @@ When a predicate fails it sends a failure message to the base station, this mess
 
 The second issue is that once the failure message reaches the sink and the result is shown in the GUI, but nothing else happens. What would be useful to the users of the system would be to run that data that was used to evaluate the predicate through a virtual machine that doesn't focus on fast evaluating with a small firmware size, but instead focuses on producing a detailed error message. This error message would contain useful messages such as the values the variable names had and why their state causes the predicate to be false.
 
+\subsection{Use Lower Level APIs}
+
+The libraries developed for mote communication such as \verb|nhopflood| rely on the RIME communication stack's implemented primitives. While building on top of these protocols allows for easier distribution and addition to the communication stack, it suffers in that there is unnecessary code included, increasing the overall binary size. Building primitives that don't require the higher levels of the communication stack could also possibly allow for more reliable correspondence between the nodes, as communication could be optimised for the libraries themselves (rather than for the APIs they use). This optimisation was deliberately left at the beginning due to the complexity involved in building a low level API.
+
 \textbf{TODO: finish off}

@@ -9,6 +9,10 @@ Throughout the code-base \verb|malloc| was used to dynamically allocate memory w
 
 To aid in the development of our applications (and to ease developers from other languages such as Java to C) we developed a library of containers. These containers are very simple with the aim of having low memory usage. However, the complexity of certain operations could be improved. For example the \verb|map| container's time complexity for retrieval of an element given a key is O(n) where n is the number of elements in the container as the underlying container is simply an array. This could be improved to O(log(n)) by sorting the elements in the underlying array, or improved further to amortized O(1) by using a hash table. Although, whatever improved container is chosen, the importance of memory usage (including issues such as fragmentation) should be taken into account.
 
+\subsection{Use Lower Level APIs}
+
+The libraries developed for mote communication such as \verb|nhopflood| rely on the RIME communication stack's implemented primitives. While building on top of these protocols allows for easier distribution and addition to the communication stack, it suffers in that there is unnecessary code included, increasing the overall binary size. Building primitives that don't require the higher levels of the communication stack could also possibly allow for more reliable correspondence between the nodes, as communication could be optimised for the libraries themselves (rather than for the APIs they use). This optimisation was deliberately left at the beginning due to the complexity involved in building a low level API.
+
 \subsection{Stateful Predicates}
 
 In \autoref{sec:lit-review-practical-experience} we discussed a number of real-world deployments that have been undertaken, one of these was habitat monitoring on Great Duck Island by \citeauthor{SzewczykPMC04}. One of the issues that the authors found was that clock drift could lead to lots of collisions because assigned slots that should not overlap will come to do so after a large period of time. A way that our solution could have been extended to detect this is to add the notion of history to a predicate. So instead of just evaluating the predicate based on what is available at that instant, the predicate is also evaluated on what is known about that node in the past.
@@ -26,8 +30,5 @@ When a predicate fails it sends a failure message to the base station, this mess
 
 The second issue is that once the failure message reaches the sink and the result is shown in the GUI, but nothing else happens. What would be useful to the users of the system would be to run that data that was used to evaluate the predicate through a virtual machine that doesn't focus on fast evaluating with a small firmware size, but instead focuses on producing a detailed error message. This error message would contain useful messages such as the values the variable names had and why their state causes the predicate to be false.
 
-\subsection{Use Lower Level APIs}
-
-The libraries developed for mote communication such as \verb|nhopflood| rely on the RIME communication stack's implemented primitives. While building on top of these protocols allows for easier distribution and addition to the communication stack, it suffers in that there is unnecessary code included, increasing the overall binary size. Building primitives that don't require the higher levels of the communication stack could also possibly allow for more reliable correspondence between the nodes, as communication could be optimised for the libraries themselves (rather than for the APIs they use). This optimisation was deliberately left at the beginning due to the complexity involved in building a low level API.
 
 \textbf{TODO: finish off}

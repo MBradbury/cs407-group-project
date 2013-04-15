@@ -30,13 +30,13 @@
 
 #define NODE_DATA_INDEX(array, index, size) \
 	(((char *)array) + ((index) * (size)))
+#define CNODE_DATA_INDEX(array, index, size) \
+	(((char const *)array) + ((index) * (size)))
 
 typedef struct
 {
 	unsigned int round_count;
-
-	// List of rimeaddr_t
-	unique_array_t list;
+	unique_array_t list; // List of rimeaddr_t
 } aggregation_data_t;
 
 typedef struct
@@ -72,14 +72,13 @@ static void handle_neighbour_data(neighbour_agg_conn_t * conn,
 	pege_conn_t * pege = conncvt_neighbour_agg(conn);
 
 	PEDPRINTF("PEGE: Handling neighbour data round=%u length=%u\n", round_count, length);
-
+	
+	// When receiving neighbour data at the base station
+	// record it into the neighbour info list
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		unique_array_append_precheck(
-			&pege->neighbour_info,
-			&pairs[i],
-			rimeaddr_pair_clone);
+		unique_array_append_precheck(&pege->neighbour_info, &pairs[i], rimeaddr_pair_clone);
 	}
 }
 
@@ -103,8 +102,10 @@ static void tree_agg_recv(tree_agg_conn_t * conn,
 	unsigned int i;
 	for (i = 0; i < length; ++i)
 	{
-		void const * item = ((char const *)msgdata) + (i * pege->data_size);
+		// Get the data at the current index
+		void const * item = CNODE_DATA_INDEX(msgdata, i, pege->data_size);
 
+		// Store this data
 		void * stored = map_get(&pege->received_data, item);
 
 		if (stored == NULL)
@@ -130,6 +131,7 @@ static void tree_agg_setup_finished(tree_agg_conn_t * conn)
 		leds_on(LEDS_RED);
 	}
 
+	// Start sending data once setup has finished
 	process_start(&send_data_process, (void *)pege);
 }
 
@@ -139,18 +141,18 @@ static void tree_aggregate_update(tree_agg_conn_t * tconn,
 	pege_conn_t * pege = conncvt_tree_agg(tconn);
 
 	PEDPRINTF("PEGE: Update local data\n");
-
 	toggle_led_for(LEDS_RED, CLOCK_SECOND);
 
 	unique_array_t * data = &((aggregation_data_t *)voiddata)->list;
 	collected_data_t const * data_to_apply = (collected_data_t const *)to_apply;
 
-	void const * msgdata = (data_to_apply + 1);
+	void const * msgdata = (data_to_apply + 1); // Get the pointer after the message
 
+	// Add the receieved data to the temporary store
 	unsigned int i;
 	for (i = 0; i < data_to_apply->length; ++i)
 	{
-		void const * item = ((char const *)msgdata) + (i * pege->data_size);
+		void const * item = CNODE_DATA_INDEX(msgdata, i, pegp->data_size);
 
 		if (!unique_array_contains(data, item))
 		{
@@ -178,7 +180,6 @@ static void tree_aggregate_own(tree_agg_conn_t * tconn, void * ptr)
 }
 
 // Store an inbound packet to the datastructure
-// Arguments are: Connection, Packet, packet length
 static void tree_agg_store_packet(tree_agg_conn_t * conn,
 	void const * packet, unsigned int length)
 {
@@ -192,6 +193,7 @@ static void tree_agg_store_packet(tree_agg_conn_t * conn,
 
 	conn_data->round_count = msg->round_count;
 
+	// We need to initalise the list as this is the first packet received
 	unique_array_init(&conn_data->list, &rimeaddr_equality, &free);
 
 	// Store the received data
@@ -284,6 +286,7 @@ PROCESS_THREAD(send_data_process, ev, data)
 	
 	round_count = 0;
 
+	// Send data only if it has changed
 	while (true)
 	{
 		etimer_set(&et, ROUND_LENGTH);
@@ -329,7 +332,6 @@ exit:
 	free(current_data);
 	free(previous_data);
 #endif
-
 	PROCESS_END();
 }
 
@@ -423,7 +425,7 @@ static void data_evaluation(pege_conn_t * pege)
 			unique_array_t acquired_nodes;
 			unique_array_init(&acquired_nodes, &rimeaddr_equality, &free);
 
-			// Get the data for each hop level
+			// Get the data for each hop level (essentially a depth first search)
 			uint8_t hops;
 			for (hops = 1; hops <= max_hops; ++hops)
 			{
@@ -579,9 +581,7 @@ PROCESS_THREAD(data_evaluation_process, ev, data)
 
 exit:
 	(void)0;
-	// Don't ever expect to reach this point
-	//map_free(&pege->received_data);
-
+	//map_free(&pege->received_data); // Don't ever expect to reach this point
 	PROCESS_END();
 }
 

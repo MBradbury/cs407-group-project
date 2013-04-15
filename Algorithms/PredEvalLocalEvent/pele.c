@@ -60,8 +60,7 @@ static void receieved_data(event_update_conn_t * c,
 		addr2str(from), hops, previous_hops);
 
 	// If we have previously stored data from this node at
-	// a different location, then we need to forget about that
-	// information
+	// a different location, then we need to forget about that information
 	if (previous_hops != 0 && hops != previous_hops)
 	{
 		hop_manager_remove(&pele->hop_data, previous_hops, from);
@@ -79,6 +78,7 @@ static void pm_update_callback(struct predicate_manager_conn * conn)
 	pele->max_comm_hops = 0;
 
 	// We need to find and set the maximum distance of all predicates
+	
 	map_elem_t elem;
 	for (elem = map_first(predicate_map);
 		 map_continue(predicate_map, elem);
@@ -96,6 +96,8 @@ static void pm_update_callback(struct predicate_manager_conn * conn)
 		}
 	}
 
+	// We need to tell event update this distance, so it knows
+	// have far it must flood information when it changes
 	event_update_set_distance(&pele->euc, pele->max_comm_hops);
 }
 
@@ -104,6 +106,7 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn,
 {
 	pele_conn_t * pele = conncvt_predicate_manager(conn);
 
+	// Pass the failure messahe upwards
 	pele->predicate_failed(pele, from, hops);
 }
 
@@ -132,6 +135,7 @@ PROCESS_THREAD(pele_process, ev, data)
 	{
 		PEDPRINTF("PELE: Starting long wait...\n");
 
+		// This determines how often predicates are evaluated
 		etimer_set(&et, pele->predicate_period);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
@@ -148,6 +152,7 @@ PROCESS_THREAD(pele_process, ev, data)
 			// Position in all_neighbour_data
 			unsigned int count = 0;
 
+			// Copy neighbour data into the correct location in the memory block
 			uint8_t i;
 			for (i = 1; i <= pele->max_comm_hops; ++i)
 			{
@@ -171,6 +176,7 @@ PROCESS_THREAD(pele_process, ev, data)
 
 		map_t const * predicate_map = predicate_manager_get_map(&pele->predconn);
 
+		// Evaluate all predicates targeted at this node
 		map_elem_t elem;
 		for (elem = map_first(predicate_map);
 			 map_continue(predicate_map, elem);

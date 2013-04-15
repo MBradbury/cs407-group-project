@@ -13,7 +13,9 @@
 
 struct nhopflood_conn;
 
-typedef void (*nhopflood_recv_fn)(struct nhopflood_conn * conn, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops);
+// Callback function when data is receieved
+typedef void (*nhopflood_recv_fn)(struct nhopflood_conn * conn,
+	rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops);
 
 typedef struct nhopflood_conn
 {
@@ -23,8 +25,7 @@ typedef struct nhopflood_conn
 
 	uint8_t current_id;
 
-	// Maximum number of retransmits
-	uint8_t maxrx;
+	uint8_t maxrx; // Maximum number of retransmits
 
 	clock_time_t send_period;
 

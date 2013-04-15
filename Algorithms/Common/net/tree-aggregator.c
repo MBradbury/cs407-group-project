@@ -30,7 +30,7 @@ static inline tree_agg_conn_t * conncvt_multipacket(struct multipacket_conn * co
 		(((char *)conn) - sizeof(struct stbroadcast_conn));
 }
 
-// The amount of subborn broadcasts to allow time for
+// The amount of subborn broadcasts to allow time for and how often for them to broadcast
 #define STUBBORN_WAIT_COUNT 3u
 #define MIN_SEND_TIME 1
 #define MAX_SEND_TIME 3
@@ -69,27 +69,17 @@ static void parent_detect_finished(void * ptr)
 	TADPRINTF("Tree Agg: Found Parent:%s Hop:%u\n",
 		addr2str(&conn->best_parent), conn->best_hop);
 
-	// Send a message that is to be received by the children
-	// of this node.
+	// Send a message that is to be received by the children of this node.
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
 	setup_tree_msg_t * msg = (setup_tree_msg_t *)packetbuf_dataptr();
 
-	// We set the parent of this node to be the best
-	// parent we heard
+	// We set the parent of this node to be the best parent we heard
 	rimeaddr_copy(&msg->source, &rimeaddr_node_addr);
 	rimeaddr_copy(&msg->parent, &conn->best_parent);
 	
-	// If at the max, want to keep as UINT_MAX to prevent
-	// integer overflow to 0
-	if (conn->best_hop == UINT_MAX) 
-	{
-		msg->hop_count = UINT_MAX;
-	}
-	else 
-	{
-		msg->hop_count = conn->best_hop + 1;
-	}
+	// If at the max, want to keep as UINT_MAX to prevent integer overflow to 0
+	msg->hop_count = (conn->best_hop == UINT_MAX) ? UINT_MAX : conn->best_hop + 1;
 
 	clock_time_t send_period = random_time(MIN_SEND_TIME, MAX_SEND_TIME, 0.1);
 	clock_time_t wait_period = send_period * STUBBORN_WAIT_COUNT;
@@ -131,7 +121,7 @@ static void finish_aggregate_collect(void * ptr)
 	memset(conn->data, 0, conn->data_length);
 }
 
-// The function that will be executed when a message is received
+// The function that will be executed when a message is received to be aggregated
 static void recv_aggregate(struct multipacket_conn * ptr,
 	rimeaddr_t const * originator, void * msg, unsigned int length)
 {
@@ -186,13 +176,14 @@ static void recv_aggregate(struct multipacket_conn * ptr,
 	}
 }
 
-// The function that will be executed when a message is received
+// The function that will be executed when a setup message is received
 static void recv_setup(struct stbroadcast_conn * ptr)
 {
 	toggle_led_for(LEDS_GREEN, CLOCK_SECOND);
 
 	tree_agg_conn_t * conn = conncvt_stbcast(ptr);
 
+	// Store a local copy of the message
 	setup_tree_msg_t msg;
 	memcpy(&msg, packetbuf_dataptr(), sizeof(setup_tree_msg_t));
 
@@ -244,12 +235,8 @@ static void recv_setup(struct stbroadcast_conn * ptr)
 	}
 }
 
-static const struct stbroadcast_callbacks callbacks_setup =
-	{ &recv_setup, NULL };
-
-static const struct multipacket_callbacks callbacks_aggregate =
-	{ &recv_aggregate, NULL };
-
+static const struct stbroadcast_callbacks callbacks_setup = { &recv_setup, NULL };
+static const struct multipacket_callbacks callbacks_aggregate = { &recv_aggregate, NULL };
 
 void tree_agg_setup_wait_finished(void * ptr)
 {
@@ -257,8 +244,7 @@ void tree_agg_setup_wait_finished(void * ptr)
 
 	leds_on(LEDS_BLUE);
 
-	// Send the first message that will be used to set up the
-	// aggregation tree
+	// Send the first message that will be used to set up the aggregation tree
 	packetbuf_clear();
 	packetbuf_set_datalen(sizeof(setup_tree_msg_t));
 	setup_tree_msg_t * msg = (setup_tree_msg_t *)packetbuf_dataptr();
@@ -276,8 +262,6 @@ void tree_agg_setup_wait_finished(void * ptr)
 	ctimer_set(&conn->ct_wait_finished, wait_period, &stbroadcast_cancel, &conn->bc);
 }
  
-
-
 bool tree_agg_open(tree_agg_conn_t * conn, rimeaddr_t const * sink,
 				   uint16_t ch1, uint16_t ch2,
 				   size_t data_size,

@@ -12,10 +12,15 @@
 
 struct event_update_conn;
 
+// Called to get the node's data into a given memory location
 typedef void (*data_generation_fn)(void * data);
+
+// Checks if the node's data differs from another piece od node data
 typedef bool (*data_differs_fn)(void const * data1, void const * data2);
 
-typedef void (*update_fn)(struct event_update_conn * c, rimeaddr_t const * from, uint8_t distance, uint8_t previous_distance);
+// Called when a packet is received
+typedef void (*update_fn)(struct event_update_conn * c,
+	rimeaddr_t const * from, uint8_t distance, uint8_t previous_distance);
 
 typedef struct event_update_conn
 {

@@ -503,6 +503,46 @@
   publisher = {ACM}
 }
 
+@ARTICLE{1219475,
+  author = {Chee-Yee Chong and Kumar, S.P.},
+  title = {Sensor networks: evolution, opportunities, and challenges},
+  journal = {Proceedings of the IEEE},
+  year = {2003},
+  volume = {91},
+  pages = {1247-1256},
+  number = {8},
+  abstract = {Wireless microsensor networks have been identified as one of the most
+	important technologies for the 21st century. This paper traces the
+	history of research in sensor networks over the past three decades,
+	including two important programs of the Defense Advanced Research
+	Projects Agency (DARPA) spanning this period: the Distributed Sensor
+	Networks (DSN) and the Sensor Information Technology (SensIT) programs.
+	Technology trends that impact the development of sensor networks
+	are reviewed, and new applications such as infrastructure security,
+	habitat monitoring, and traffic control are presented. Technical
+	challenges in sensor network development include network discovery,
+	control and routing, collaborative signal and information processing,
+	tasking and querying, and security. The paper concludes by presenting
+	some recent research results in sensor network algorithms, including
+	localized algorithms and directed diffusion, distributed tracking
+	in wireless ad hoc networks, and distributed classification using
+	local agents.},
+  doi = {10.1109/JPROC.2003.814918},
+  issn = {0018-9219},
+  keywords = {ad hoc networks;condition monitoring;distributed sensors;distributed
+	tracking;military communication;research initiatives;technological
+	forecasting;telecommunication network routing;telecommunication security;traffic
+	control;DARPA;Defense Advanced Research Projects Agency;SensIT programs;collaborative
+	signal and information processing;directed diffusion;distributed
+	classification;distributed tracking;habitat monitoring;infrastructure
+	security;local agents;localized algorithms;network discovery;network
+	routing;querying;sensor network algorithms;sensor network development;tasking;technology
+	trends;traffic control;wireless ad hoc networks;wireless microsensor
+	networks;History;Information security;Information technology;Microsensors;Monitoring;Online
+	Communities/Technical Collaboration;Routing;Signal processing;Traffic
+	control;Wireless sensor networks}
+}
+
 @ARTICLE{Cooper:1991:CDG:127695.122774,
   author = {Cooper, Robert and Marzullo, Keith},
   title = {Consistent detection of global predicates},
@@ -531,6 +571,26 @@
   institution = {RFC},
   publisher = {RFC Editor},
   url = {http://tools.ietf.org/html/rfc2386}
+}
+
+@INPROCEEDINGS{Dai:2004:EEL:1031495.1031516,
+  author = {Dai, Hui and Neufeld, Michael and Han, Richard},
+  title = {ELF: an efficient log-structured flash file system for micro sensor
+	nodes},
+  booktitle = {Proceedings of the 2nd international conference on Embedded networked
+	sensor systems},
+  year = {2004},
+  series = {SenSys '04},
+  pages = {176--187},
+  address = {New York, NY, USA},
+  publisher = {ACM},
+  acmid = {1031516},
+  doi = {10.1145/1031495.1031516},
+  isbn = {1-58113-879-2},
+  keywords = {eeprom, file system, flash, log structured, reliability, sensor},
+  location = {Baltimore, MD, USA},
+  numpages = {12},
+  url = {http://doi.acm.org/10.1145/1031495.1031516}
 }
 
 @INPROCEEDINGS{placement,
@@ -820,6 +880,43 @@
   url = {http://dx.doi.org/10.4108/ICST.SIMUTOOLS2009.5637}
 }
 
+@ARTICLE{DAIKON,
+  author = {Ernst, M.D. and Cockrell, J. and Griswold, William G. and Notkin,
+	D.},
+  title = {Dynamically discovering likely program invariants to support program
+	evolution},
+  journal = {Software Engineering, IEEE Transactions on},
+  year = {2001},
+  volume = {27},
+  pages = {99-123},
+  number = {2},
+  abstract = {Explicitly stated program invariants can help programmers by identifying
+	program properties that must be preserved when modifying code. In
+	practice, however, these invariants are usually implicit. An alternative
+	to expecting programmers to fully annotate code with invariants is
+	to automatically infer likely invariants from the program itself.
+	This research focuses on dynamic techniques for discovering invariants
+	from execution traces. This article reports three results. First,
+	it describes techniques for dynamically discovering invariants, along
+	with an implementation, named Daikon, that embodies these techniques.
+	Second, it reports on the application of Daikon to two sets of target
+	programs. In programs from Gries's work (1981) on program derivation,
+	the system rediscovered predefined invariants. In a C program lacking
+	explicit invariants, the system discovered invariants that assisted
+	a software evolution task. These experiments demonstrate that, at
+	least for small programs, invariant inference is both accurate and
+	useful. Third, it analyzes scalability issues, such as invariant
+	detection runtime and accuracy, as functions of test suites and program
+	points instrumented},
+  doi = {10.1109/32.908957},
+  issn = {0098-5589},
+  keywords = {reverse engineering;software maintenance;Daikon;execution traces;explicitly
+	stated program invariants;invariant inference;likely program invariants;modifying
+	code;program derivation;program evolution;program properties;scalability;small
+	programs;software evolution;Application software;Computer Society;Detectors;Formal
+	specifications;Instruments;Pattern analysis;Programming profession;Runtime;Scalability;Testing}
+}
+
 @INPROCEEDINGS{Estrin:1999:NCC:313451.313556,
   author = {Estrin, Deborah and Govindan, Ramesh and Heidemann, John and Kumar,
 	Satish},
@@ -837,6 +934,31 @@
   location = {Seattle, Washington, USA},
   numpages = {8},
   url = {http://doi.acm.org/10.1145/313451.313556}
+}
+
+@ARTICLE{976940,
+  author = {Evans, D. and Larochelle, D.},
+  title = {Improving security using extensible lightweight static analysis},
+  journal = {Software, IEEE},
+  year = {2002},
+  volume = {19},
+  pages = {42-51},
+  number = {1},
+  abstract = {Most security attacks exploit instances of well-known classes of implementation
+	flaws. Developers could detect and eliminate many of these flaws
+	before deploying the software, yet these problems persist with disturbing
+	frequency-not because the security community doesn't sufficiently
+	understand them but because techniques for preventing them have not
+	been integrated into the software development process. This article
+	describes an extensible tool that uses lightweight static analysis
+	to detect common security vulnerabilities (including buffer overflows
+	and format string vulnerabilities)},
+  doi = {10.1109/52.976940},
+  issn = {0740-7459},
+  keywords = {program diagnostics;security of data;software engineering;buffer overflows;extensible
+	lightweight static analysis;format string vulnerabilities;security
+	attacks;software development;Application software;Buffer overflow;Computer
+	bugs;Computer crime;Frequency;Humans;Information security;Programming;Runtime;Testing}
 }
 
 @INPROCEEDINGS{1382572,
@@ -1576,6 +1698,15 @@
 	instrumentation;shared objects}
 }
 
+@BOOK{lethbridge2001object,
+  title = {Object-oriented software engineering},
+  publisher = {McGraw-Hill Higher Education},
+  year = {2005},
+  author = {Timothy C. Lethbridge and Robert Lagani\`{e}re},
+  edition = {2nd},
+  isbn = {0-07-70109082}
+}
+
 @ARTICLE{Levis:2002:MTV:635508.605407,
   author = {Levis, Philip and Culler, David},
   title = {Mat\'{e}: a tiny virtual machine for sensor networks},
@@ -2108,6 +2239,37 @@
 	sensor networks}
 }
 
+@ARTICLE{1368897,
+  author = {Romer, K. and Mattern, F.},
+  title = {The design space of wireless sensor networks},
+  journal = {Wireless Communications, IEEE},
+  year = {2004},
+  volume = {11},
+  pages = {54-61},
+  number = {6},
+  abstract = {In the recent past, wireless sensor networks have found their way
+	into a wide variety of applications and systems with vastly varying
+	requirements and characteristics. As a consequence, it is becoming
+	increasingly difficult to discuss typical requirements regarding
+	hardware issues and software support. This is particularly problematic
+	in a multidisciplinary research area such as wireless sensor networks,
+	where close collaboration between users, application domain experts,
+	hardware designers, and software developers is needed to implement
+	efficient systems. In this article we discuss the consequences of
+	this fact with regard to the design space of wireless sensor networks
+	by considering its various dimensions. We justify our view by demonstrating
+	that specific existing applications occupy different points in the
+	design space.},
+  doi = {10.1109/MWC.2004.1368897},
+  issn = {1536-1284},
+  keywords = {design;wireless sensor networks;application domain expert;hardware
+	designer;multidisciplinary research area;network space design;software
+	developer;software support;wireless sensor network;Application software;Collaborative
+	software;Concrete;Europe;Hardware;Intelligent sensors;Large-scale
+	systems;Sensor phenomena and characterization;Spread spectrum communication;Wireless
+	sensor networks}
+}
+
 @TECHREPORT{DCATechReport,
   author = {Abusayeed Saifullah and You Xu and Chenyang Lu and Yixin Chen},
   title = {{Distributed Channel Allocation Algorithms for Wireless Sensor Networks}},
@@ -2251,6 +2413,17 @@
   location = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=779919}
 }
 
+@BOOK{stallman1992gdb,
+  title = {The GDB Manual: The GNU Source-level Debugger},
+  publisher = {Free Software Foundation},
+  year = {1992},
+  author = {Stallman, Richard and Pesch, Roland H},
+  pages = {162},
+  edition = {4.03},
+  month = {January},
+  isbn = {9781882114115}
+}
+
 @BOOK{Tanenbaum:2002:CN:572404,
   title = {Computer Networks},
   publisher = {Prentice Hall Professional Technical Reference},
@@ -2365,6 +2538,31 @@
 	testing;uniprocessor systems;Algorithm design and analysis;Clouds;Communication
 	networks;Computer networks;Computer science;Concurrent computing;Debugging;Distributed
 	computing;Software engineering;System testing}
+}
+
+@INPROCEEDINGS{898880,
+  author = {Viega, J. and Bloch, J. T. and Kohno, Y. and McGraw, Gary},
+  title = {ITS4: a static vulnerability scanner for C and C++ code},
+  booktitle = {Computer Security Applications, 2000. ACSAC '00. 16th Annual Conference},
+  year = {2000},
+  pages = {257-267},
+  abstract = {We describe ITS4, a tool for statically scanning security-critical
+	C source code for vulnerabilities. Compared to other approaches,
+	our scanning technique stakes out a new middle ground between accuracy
+	and efficiency. This method is efficient enough to offer real-time
+	feedback to developers during coding while producing few false negatives.
+	Unlike other techniques, our method is also simple enough to scan
+	C++ code despite the complexities inherent in the language. Using
+	ITS4 we found new remotely-exploitable vulnerabilities in a widely
+	distributed software package as well as in a major piece of e-commerce
+	software. The ITS4 source distribution is available at http://www.rstcorp.com/its4},
+  doi = {10.1109/ACSAC.2000.898880},
+  keywords = {C language;C++ language;security of data;software packages;software
+	tools;C code;C++ code;ITS4;e-commerce software;real-time feedback;security-critical
+	source code;software package;software vulnerabilities;static vulnerability
+	scanner;Buffer overflow;Computer languages;Data security;Feedback;Information
+	security;Libraries;Programming profession;Software packages;Software
+	tools;Writing}
 }
 
 @INPROCEEDINGS{dunkels2009efficient,

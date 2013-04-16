@@ -6,14 +6,14 @@ When considering how to evaluate predicates there are many points that need to b
 
 \subsection{Types of Predicates}
 
-In the introduction several different classes of predicates were discussed, of which the most important one is the locality of the predicate. A majority of the work focuses on global predicates \cite{277788,345831,553309} which while useful in general for distributed systems is perhaps not as helpful for wireless sensor networks. To begin with many of the problems that a sensor network may encounter are local problems. By local we mean that a node in the network only has access to a specific subset of the networks information, in our case we focus on the surrounding neighbours of the node evaluating the predicate. When forcing a local problem to be evaluated globally it means that investigating evaluating that predicate locally is eliminated. This is problematic as there may be energy savings when evaluating a predicate locally. So the first major decision is that instead of focusing on global predicates, local predicates are instead the focus - in order to investigate any potential energy savings.
+In the introduction several different classes of predicates were discussed, of which the most important one to us is the locality of the predicate. A majority of the work focuses on global predicates \cite{277788,345831,553309} which while useful in general for distributed systems is perhaps not as helpful for wireless sensor networks. To begin with many of the problems that a sensor network may encounter are local problems. By local we mean that a node in the network only has access to a specific subset of the networks information, in our case we focus on the surrounding neighbours of the node evaluating the predicate. When forcing a local problem to be evaluated globally it means that investigating evaluating that predicate locally is eliminated. This is problematic as there may be energy savings when evaluating a predicate locally. So the first major decision is that instead of focusing on global predicates, local predicates are instead the focus - in order to investigate any potential energy savings.
 
 \begin{mydef}
 \emph{Global Predicate}: A predicate $P$ that operates on some global state $S$ where $S$ is a mapping from a node id to some data on that node.
 \end{mydef}
 
 \begin{mydef}
-\emph{Local Predicate}: A predicate $P$ evaluated on the node $j$, where the state $N(n) \subseteq S$ available contains information on some $n$-hop neighbourhood of $j$.
+\emph{Local Predicate}: A predicate $P$ evaluated on the node $j$, where the state $N(j, n) \subseteq S$ available contains information on some $n$-hop neighbourhood of $j$. Where $N(j, n)$ is a function that returns the state of all nodes within $n$ hops of $j$.
 \end{mydef}
 
 The second decision is to decide on is the stability of the predicate being detected. As discussed in the introduction there is a choice between stable predicates that remain true and unstable predicates whose truth value can alternate. This decision is important because it will affect the algorithm structure, an example of this is that taking snapshots of global state and checking the predicate against that works for checking stable predicates. However, for unstable predicates detailed recording of the traces of the system is required \cite{bansod2004distributed}. Due to the limited resources of sensor nodes we focus on the simpler problem of stable predicates. This is mainly because complex programs tend to require a greater number of instructions to do more things and the size of the firmware on the motes is limited \cite{CM5000}.
@@ -99,61 +99,63 @@ To reach this goal, we followed good development principles and broke down the c
 
 \subsubsection{Domain Specific Language}
 
-The following is the definition of how to parse our predicate language. We implemented it in Java using JavaCC, using several resources \footnote{JavaCC tutorial: \url{http://cs.lmu.edu/~ray/notes/javacc/}} to help in the development. Of the languages there are four main components. The first is the target of the predicate specified within square brackets, the target can be a node address (such as 1.0) or `all' to target all nodes in the network. The second is the function definitions. When users initialise our library on the motes, they need to provide a function that provides the current information on the node and a mapping of function ids to the functions used to access this data. The function definition statement in the predicate language allows a human understandable name to be assigned to a function id and it also tells the compiler what id function should be called and the type that that function returns. The third is the `using' statement that allows a set of neighbouring information to be assigned to a variable name. This is the only way to request node information not about the current node that is evaluating the predicate. The fourth and final part if the predicate itself, which includes expected logic operators that operate over sets, integers, floating point numbers and booleans. What is equivalent to what is described below.
+The following is the definition of how to parse our predicate language. We implemented it in Java using JavaCC, using several resources \footnote{JavaCC tutorial: \url{http://cs.lmu.edu/~ray/notes/javacc/}} to help in the development. In the language there are four main components. The first is the target of the predicate specified within square brackets, the target can be a node address (such as 1.0) or `all' to target all nodes in the network. The second is the function definitions. When users initialise our library on the motes, they need to provide a function that provides the current information on the node and a mapping of function ids to the functions used to access this data. The function definition statement in the predicate language allows a human understandable name to be assigned to a function id and it also tells the compiler what id function should be called and the type that that function returns. The third is the `using' statement that allows a set of neighbouring information to be assigned to a variable name. This is the only way to request node information not about the current node that is evaluating the predicate. The fourth and final part if the predicate itself, which includes expected logic operators that operate over sets, integers, floating point numbers and booleans. The logical operators that make up the predicate are described in \autoref{tab:lang-operators}.
 
 
 \begin{table}[H]
 \centering
 \begin{tabular}{| l | l | l | l | l |}
 \hline
-Name & Logic Symbol & Our Symbol & Input Type(s) & Output Type\\
+Name & Logic & Symbol & Input Type(s) & Output Type\\
 \hline
 
-For All & $\forall$ & $\sm{@}$ & Sets of user defined data & Boolean\\
-Exists & $\exists$ & $\sm{\#}$ & Sets of user defined data & Boolean\\
-
-\hline
-
-And & $\land$ & $\sm{\&}$ & Booleans & Boolean\\
-Or & $\lor$ & $\sm{\textbar}$ & Booleans & Boolean\\
-Xor & $\oplus$ & $\sm{\textasciicircum}$ & Booleans & Boolean\\
-Implies & $\implies$ & $\sm{=\textgreater}$ & Booleans & Boolean\\
-Equivalence & $\iff$ & $\sm{\textless=\textgreater}$ & Booleans & Boolean\\
+For All & $\forall$ & \sm{@} & Set of user defined data & Boolean\\
+Exists & $\exists$ & \sm{\#} & Set of user defined data & Boolean\\
 
 \hline
 
-Not & $\lnot$ & $\sm{!}$ & Boolean & Boolean\\
+And & $\land$ & \sm{\&} & Booleans & Boolean\\
+Or & $\lor$ & \sm{\textbar} & Booleans & Boolean\\
+Xor & $\oplus$ & \sm{\textasciicircum} & Booleans & Boolean\\
+Implies & $\implies$ & \sm{=\textgreater} & Booleans & Boolean\\
+Equivalence & $\iff$ & \sm{\textless=\textgreater} & Booleans & Boolean\\
 
 \hline
 
-Equality & $=$ & $\sm{==}$ & Integers or Floats & Boolean\\
-Inequality & $\not=$ & $\sm{!=}$ & Integers or Floats & Boolean\\
-Less Than & $<$ & $\sm{\textless}$ & Integers or Floats & Boolean\\
-Less Than or Equal To & $\leq$ & $\sm{\textless=}$ & Integers or Floats & Boolean\\
-Greater Than & $>$ & $\sm{\textgreater}$ & Integers or Floats & Boolean\\
-Greater Than or Equal To & $\geq$ & $\sm{\textgreater=}$ & Integers or Floats & Boolean\\
+Not & $\lnot$ & \sm{!} & Boolean & Boolean\\
 
 \hline
 
-Addition & $+$ & $\sm{+}$ & Integers or Floats & Integer or Float\\
-Subtraction & $-$ & $\sm{-}$ & Integers or Floats & Integer or Float\\
-Multiplication & $\times$ & $\sm{*}$ & Integers or Floats & Integer or Float\\
-Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
+Equality & $=$ & \sm{==} & Integers or Floats & Boolean\\
+Inequality & $\not=$ & \sm{!=} & Integers or Floats & Boolean\\
+Less Than & $<$ & \sm{\textless} & Integers or Floats & Boolean\\
+Less Than or Equal To & $\leq$ & \sm{\textless=} & Integers or Floats & Boolean\\
+Greater Than & $>$ & \sm{\textgreater} & Integers or Floats & Boolean\\
+Greater Than or Equal To & $\geq$ & \sm{\textgreater=} & Integers or Floats & Boolean\\
+
+\hline
+
+Addition & $+$ & \sm{+} & Integers or Floats & Integer or Float\\
+Subtraction & $-$ & \sm{-} & Integers or Floats & Integer or Float\\
+Multiplication & $\times$ & \sm{*} & Integers or Floats & Integer or Float\\
+Division & $\div$ & \sm{/} & Integers or Floats & Integer or Float\\
 
 \hline
 \end{tabular}
+\caption{Logical operators implemented in predicate language}
+\label{tab:lang-operators}
 \end{table}
 
-
+\begin{figure}[H]
 \begin{eqnarray*}
 	\pn{eval} & \pp & [ \pn{target} ] \ww \pn{function} \\
-	\pn{target} & \pp & \sm{all} \\
+	\pn{target} & \pp & \smlst{all} \\
 	~ & \oo & \pn{number}\sm{.}\pn{number} \\
 %
-	\pn{function} & \pp & \sm{function} \ww \pn{number} \ww \sm{as} \ww \pn{string} \ww \sm{returning} \ww \pn{type} \ww \sm{in} \ww \pn{function} \\
+	\pn{function} & \pp & \smlst{function} \ww \pn{number} \ww \smlst{as} \ww \pn{string} \ww \smlst{returning} \ww \pn{type} \ww \smlst{in} \ww \pn{function} \\
 	~ & \oo & \pn{using} \\
 %
-	\pn{using} & \pp & \sm{using} \ww \sm{Neighbours}\sm{(}\pn{number}\sm{)} \ww \sm{as} \ww \pn{variable} \ww \sm{in} \ww \pn{using} \\
+	\pn{using} & \pp & \smlst{using} \ww \smlst{Neighbours}\sm{(}\pn{number}\sm{)} \ww \smlst{as} \ww \pn{variable} \ww \smlst{in} \ww \pn{using} \\
 	~ & \oo & \pn{predicate} \\
 %
 	\pn{predicate} & \pp &  \sm{(}\pn{predicate}\sm{)} \\
@@ -166,18 +168,18 @@ Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
 	~ & \oo & \pn{number} \\
 	~ & \oo & \pn{string}\sm{(}\pn{this-variable}\sm{)} \\
 	~ & \oo & \pn{var-expr} \ww \pn{math-binary} \ww \pn{var-expr} \\
-	~ & \oo & \sm{abs}\sm{(}\pn{var-expr}\sm{)} \\
+	~ & \oo & \smlst{abs}\sm{(}\pn{var-expr}\sm{)} \\
 	~ & \oo & \pn{set-fn}\sm{(}\pn{variable}\sm{)} \\
 	~ & \oo & \pn{transform-set-fn}\sm{(}\pn{transform-fn}\sm{,} \ww \pn{variable}\sm{)} \\
 %
-	\pn{this-variable} & \pp & \pn{variable} \oo \sm{this} \\
+	\pn{this-variable} & \pp & \pn{variable} \oo \smlst{this} \\
 	\pn{variable} & \pp & \pn{string} \\
 %
 	\pn{transform-fn} & \pp & \pn{string} \\
-	\pn{transform-set-fn} & \pp & \sm{sum} \oo  \sm{mean} \oo \sm{max} \oo \sm{min} \\
-	\pn{set-fn} & \pp & \sm{len} \\
+	\pn{transform-set-fn} & \pp & \smlst{sum} \oo  \smlst{mean} \oo \smlst{max} \oo \smlst{min} \\
+	\pn{set-fn} & \pp & \smlst{len} \\
 %
-	\pn{type} & \pp & \sm{float} \oo \sm{int} \\
+	\pn{type} & \pp & \smlst{float} \oo \smlst{int} \\
 %
 	\pn{logical-binary} & \pp & \sm{\&}  \oo \sm{\textbar} \oo \sm{\textasciicircum} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
 	\pn{logical-unary} & \pp & \sm{!} \\
@@ -195,10 +197,12 @@ Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
 %	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
 	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
 \end{eqnarray*}
+\caption{Language definition}
+\end{figure}
 
 When we were implementing the parsing for the predicate language one of the major issues encountered was that parsing infix operators (that is the operator is between two operands) was much harder to accomplish than prefix or postfix operators, \cite{ParsingRecursiveDescent} was used as a guide to implement infix parsing.
 
-Another important issue to mention is the distinction between syntax and semanatics. The language definition specifies the syntax, but it fails to capture some of the semantic subtleties of valid programs. One example is that even if a variable name or a function name are syntactically valid strings, compilation should fail if they have not been defined by a statement prior to their usage. However, JavaCC provides a very capable framework for validating semantics during construction of the program's IR.
+Another important issue to mention is the distinction between syntax and semantics. The language definition specifies the syntax, but it fails to capture some of the semantic subtleties of valid programs. One example is that even if a variable name or a function name are syntactically valid strings, compilation should fail if they have not been defined by a statement prior to their usage. However, JavaCC provides a very capable framework for validating semantics during construction of the program's IR.
 
 \subsubsection{Example Predicates}
 \label{sec:example-predicates}

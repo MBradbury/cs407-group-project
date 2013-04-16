@@ -1339,6 +1339,37 @@
   publisher = {ACM}
 }
 
+@INPROCEEDINGS{897468,
+  author = {Hoblos, G. and Staroswiecki, M. and Aitouche, A.},
+  title = {Optimal design of fault tolerant sensor networks},
+  booktitle = {Control Applications, 2000. Proceedings of the 2000 IEEE International
+	Conference on},
+  year = {2000},
+  pages = {467-472},
+  abstract = {The selection of measurements is one of the most important problems
+	in the design of process instrumentation. This paper deals with the
+	design of sensor networks such that the observability of the variables,
+	which are necessary for the process control, remains satisfied in
+	the presence of sensor failures. Pseudo-minimal and minimal sensor
+	sets are organized into an oriented graph which contains all the
+	possible reconfiguration paths for which those variables remain observable.
+	A bottom-up analysis of this graph allows one to compute reliability
+	functions which evaluate the robustness of the observability property
+	with respect to sensor failures. The design of optimal sensor networks
+	thus resumes to finding pseudo-minimal sensor sets such that the
+	mean time before losing the observability property is larger than
+	a pre-defined value},
+  doi = {10.1109/CCA.2000.897468},
+  keywords = {fault tolerance;graph theory;instrumentation;observability;process
+	control;reliability;sensors;bottom-up analysis;fault tolerance;graph
+	structure;observability;process control;process instrumentation;reconfiguration
+	paths;reliability;sensor networks;Chemical industry;Chemical sensors;Fault
+	tolerance;Fault tolerant systems;Observability;Process design;Redundancy;Robustness;Sensor
+	systems;Steady-state},
+  owner = {Ivan},
+  timestamp = {2013.04.16}
+}
+
 @INPROCEEDINGS{6128220,
   author = {Jun Hu and Zeng Ma and Chunsheng Sun},
   title = {Energy-efficient MAC Protocol Designed for Wireless Sensor Network
@@ -2229,6 +2260,19 @@
   volume = {11},
   pages = {54-61},
   number = {6},
+  abstract = {In the recent past, wireless sensor networks have found their way
+	into a wide variety of applications and systems with vastly varying
+	requirements and characteristics. As a consequence, it is becoming
+	increasingly difficult to discuss typical requirements regarding
+	hardware issues and software support. This is particularly problematic
+	in a multidisciplinary research area such as wireless sensor networks,
+	where close collaboration between users, application domain experts,
+	hardware designers, and software developers is needed to implement
+	efficient systems. In this article we discuss the consequences of
+	this fact with regard to the design space of wireless sensor networks
+	by considering its various dimensions. We justify our view by demonstrating
+	that specific existing applications occupy different points in the
+	design space.},
   doi = {10.1109/MWC.2004.1368897},
   issn = {1536-1284},
   keywords = {design;wireless sensor networks;application domain expert;hardware
@@ -2247,19 +2291,6 @@
   volume = {11},
   pages = {54-61},
   number = {6},
-  abstract = {In the recent past, wireless sensor networks have found their way
-	into a wide variety of applications and systems with vastly varying
-	requirements and characteristics. As a consequence, it is becoming
-	increasingly difficult to discuss typical requirements regarding
-	hardware issues and software support. This is particularly problematic
-	in a multidisciplinary research area such as wireless sensor networks,
-	where close collaboration between users, application domain experts,
-	hardware designers, and software developers is needed to implement
-	efficient systems. In this article we discuss the consequences of
-	this fact with regard to the design space of wireless sensor networks
-	by considering its various dimensions. We justify our view by demonstrating
-	that specific existing applications occupy different points in the
-	design space.},
   doi = {10.1109/MWC.2004.1368897},
   issn = {1536-1284},
   keywords = {design;wireless sensor networks;application domain expert;hardware
@@ -2306,6 +2337,48 @@
   pages = {376--378},
   number = {4},
   publisher = {JSTOR}
+}
+
+@ARTICLE{7382719,
+  author = {Sharma, Abhishek B. and Golubchik, Leana and Govindan, Ramesh},
+  title = {Sensor faults: Detection methods and prevalence in real-world datasets},
+  journal = {ACM Trans. Sen. Netw.},
+  year = {2010},
+  volume = {6},
+  pages = {1-39},
+  number = {3},
+  month = {jun},
+  abstract = {Various sensor network measurement studies have reported instances
+	of transient faults in sensor readings. In this work, we seek to
+	answer a simple question: How often are such faults observed in real
+	deployments\&quest; We focus on three types of transient faults,
+	caused by faulty sensor readings that appear abnormal. To understand
+	the prevalence of such faults, we first explore and characterize
+	four qualitatively different classes of fault detection methods.
+	Rule-based methods leverage domain knowledge to develop heuristic
+	rules for detecting and identifying faults. Estimation methods predict
+	normal sensor behavior by leveraging sensor correlations, flagging
+	anomalous sensor readings as faults. Time-series-analysis-based methods
+	start with an a priori model for sensor readings. A sensor measurement
+	is compared against its predicted value computed using time series
+	forecasting to determine if it is faulty. Learning-based methods
+	infer a model for the normal sensor readings using training data,
+	and then statistically detect and identify classes of faults. We
+	find that these four classes of methods sit at different points on
+	the accuracy/robustness spectrum. Rule-based methods can be highly
+	accurate, but their accuracy depends critically on the choice of
+	parameters. Learning methods can be cumbersome to train, but can
+	accurately detect and classify faults. Estimation methods are accurate,
+	but cannot classify faults. Time-series-analysis-based methods are
+	more effective for detecting short duration faults than long duration
+	ones, and incur more false positives than the other methods. We apply
+	these techniques to four real-world sensor datasets and find that
+	the prevalence of faults as well as their type varies with datasets.
+	All four methods are qualitatively consistent in identifying sensor
+	faults, lending credence to our observations. Our work is a first
+	step towards automated online fault detection and classification.},
+  owner = {Ivan},
+  timestamp = {2013.04.16}
 }
 
 @INPROCEEDINGS{6115161,

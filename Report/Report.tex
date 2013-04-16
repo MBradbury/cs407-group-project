@@ -61,22 +61,40 @@
 \usepackage{listings}
 \definecolor{keywordblue}{RGB}{20,105,176}
 \lstdefinelanguage{Hoppy}{
-    morekeywords={all,function,as,returning,in,using},
+    morekeywords=[1]{all,function,as,returning,in,using},
+    morekeywords=[2]{this},
+    morekeywords=[3]{int,float},
+    morekeywords=[4]{Neighbours,abs,mean,max,min,sum,len},
     sensitive=true,
 }
 \lstset{
     language=Hoppy,
-    keywordstyle=\color{keywordblue},
-%
-    keywords=[2]{this},
+    keywordstyle=[1]\color{keywordblue},
     keywordstyle=[2]\color{OliveGreen},
-%
-    keywords=[3]{int,float},
     keywordstyle=[3]\color{YellowOrange},
-%
-    keywords=[4]{Neighbours,abs,mean,max,min,sum,len},
     keywordstyle=[4]\color{Purple},
-%
+    basicstyle=\ttfamily,
+    columns=fullflexible,
+}
+
+\lstdefinelanguage{Dragon}{
+    morekeywords=[1]{IPUSH,IPOP,IFETCH,ISTORE,IADD,ISUB,IMUL,IDIV1,IDIV2,IINC,IDEC,IEQ,INEQ,ILT,ILEQ,IGT,IGEQ,IABS,IVAR,ICASTF},
+    morekeywords=[2]{FPUSH,FPOP,FFETCH,FSTORE,FADD,FSUB,FMUL,FDIV1,FDIV2,FEQ,FNEQ,FLT,FLEQ,FGT,FGEQ,FABS,FVAR,FCASTI},
+    morekeywords=[3]{AFETCH,ALEN,ASUM,AMEAN,AMAX,AMIN},
+    morekeywords=[4]{HALT,CALL,JMP,JZ,JNZ},
+    morekeywords=[5]{VIINC,VIDEC,VIFAFC,THISC},
+    morekeywords=[6]{AND,OR,XOR,EQUIVALENT,IMPLIES,NOT},
+    morecomment=[l]{//},
+    sensitive=true,
+}
+\lstset{
+    language=Dragon,
+    keywordstyle=[1]\color{Cyan},
+    keywordstyle=[2]\color{WildStrawberry},
+    keywordstyle=[3]\color{YellowOrange},
+    keywordstyle=[4]\color{Violet},
+    keywordstyle=[5]\color{ForestGreen},
+    keywordstyle=[6]\color{BurntOrange},
     basicstyle=\ttfamily,
     columns=fullflexible,
 }

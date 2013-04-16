@@ -205,7 +205,7 @@ Another important issue to mention is the distinction between syntax and semanat
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 1 as slot returning int in
     using Neighbours(2) as twohopn in
@@ -228,7 +228,7 @@ function 1 as slot returning int in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 0 as addr returning int in
 function 1 as slot returning int in
@@ -258,7 +258,7 @@ The predicates specified in \autoref{fig:two-hop-slot-pred-lang} and \autoref{fi
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [1.0]
 function 3 as humidity returning float in
     humidity(this) <= 40.0
@@ -277,7 +277,7 @@ function 3 as humidity returning float in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 2 as temperature returning float in
     using Neighbours(2) as twohopn in
@@ -300,7 +300,7 @@ The two predicates in \autoref{fig:app1-pred-lang} and \autoref{fig:app2-pred-la
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 0 as addr returning int in
     using Neighbours(1) as onehopn in
@@ -324,7 +324,7 @@ This predicate is perhaps not as interesting as other predicates but it has a va
 
 
 \begin{figure}[H]
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 5 as sink-distance returning int in
     using Neighbours(1) as onehopn in
@@ -336,7 +336,7 @@ function 5 as sink-distance returning int in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 0 as addr returning int in
 function 4 as ch returning int in
@@ -371,9 +371,8 @@ The virtual machine that was developed is very simple and takes inspiration from
 
 The program is stored as a block of memory that is a list of opcode followed by their arguments.
 
-\begin{verbatim}
-_ is either I for int or F for float
-
+%\begin{verbatim}
+\begin{lstlisting}[language=Dragon]
 For binary operations the order the operands are used is specified as x op x.
 When x is 0 the value on the top of the stack is used. When x is 1 the
 value after the one on the top of the stack is used.
@@ -382,18 +381,18 @@ HALT
     Halts execution.
     The stack should always have at least one integer on it when halting.
 
-_PUSH (_)
-    Pushes an _ onto the stack.
+IPUSH (int) / FPUSH (float)
+    Pushes an int or a float on to the stack.
 
-_POP
-    Pops the stack by sizeof(_) bytes.
+IPOP / FPOP
+    Pops the stack by sizeof(int) or sizeof(float) bytes.
 
-_FETCH (variable id - ubyte)
+IFETCH (variable id - ubyte) / FFETCH (variable id - ubyte)
     Fetches the value of the given variable and pushes the
-    first sizeof(_) bytes of it onto the stack.
+    first sizeof(int) or sizeof(float) bytes of it on to the stack.
 
-_STORE (variable id - ubyte)
-    Stores the first sizeof(_) bytes in the variable
+ISTORE (variable id - ubyte) / FSTORE (variable id - ubyte)
+    Stores the first sizeof(int) or sizeof(float) bytes in the variable
     of the given name.
 
 AFETCH (variable id - ubyte)
@@ -441,12 +440,12 @@ JNZ (ubyte)
     the program jumps to the location, otherwise evaluation
     continues
 
-_ADD        1 op 0
-_SUB        1 op 0
-_MUL        1 op 0
-_DIV1       0 op 1
-_DIV2       1 op 0
-    Performs a mathematical operations on the first two sizeof(_)
+IADD / FADD       1 op 0
+ISUB / FSUB        1 op 0
+IMUL / FMUL        1 op 0
+IDIV1 / FDIV1       0 op 1
+IDIV2 / FDIV2       1 op 0
+    Performs a mathematical operations on the first two sizeof(int) or sizeof(float)
     values on the stack. Pops both values off the stack, stores
     the result in the same type back on the stack.
 
@@ -455,13 +454,13 @@ IDEC
     Pops the top of the stack by sizeof(int) bytes, increments or decrements
     the value as an integer. Pushes the result back on the stack
 
-_EQ	        1 op 0
-_NEQ        1 op 0
-_ILT        1 op 0
-_LEQ        1 op 0
-_GT	        1 op 0
-_GEQ        1 op 0
-    Performs a mathematical operations on the first two sizeof(_)
+IEQ / FEQ	        1 op 0
+INEQ / FNEQ        1 op 0
+ILT / FLT        1 op 0
+ILEQ / FLEQ        1 op 0
+IGT / FGT	        1 op 0
+IGEQ / FGEQ        1 op 0
+    Performs a mathematical operations on the first two sizeof(int) or sizeof(float)
     values on the stack. Pops both values off the stack, stores
     the result in an integer on the stack.
 
@@ -480,13 +479,13 @@ NOT
     Pops an integer off the stack, performs logical not on it.
     Pushes the result back on the stack.
 	
-_VAR (variable id - ubyte)
-    Creates a variable of type _ with the id set to the given
+IVAR (variable id - ubyte) / FVAR (variable id - ubyte)
+    Creates a variable of type int or float with the id set to the given
     unsigned byte.
 
-_ABS
-    Pops the stack by sizeof(_) bytes performs the abs function
-    on the integer of float value and pushes sizeof(_) back onto
+IABS / FABS
+    Pops the stack by sizeof(int) or sizeof(float) bytes performs the abs function
+    on the integer of float value and pushes sizeof(int) or sizeof(float) back onto
     the stack.
 
 VIINC (x - variable id)
@@ -517,8 +516,8 @@ THISC (f - function id)
     IPUSH 0
     AFETCH 0
     CALL f
-    
-\end{verbatim}
+\end{lstlisting}
+%\end{verbatim}
 
 
 \subsubsection{Bytecode}
@@ -552,6 +551,111 @@ When developing the virtual machine what also became important was the fact that
 \end{figure}
 
 As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead. As we copy out byte-by-byte and not by word we can access the memory correctly.
+
+\subsection{Examples of Compiled Programs}
+
+\begin{figure}[H]
+\begin{minipage}{0.5\linewidth}
+\begin{lstlisting}[language=Dragon]
+//TARGETING all
+//FUNC 1 AS slot
+//STORING 2 IN twohopn
+IVAR 1
+IPUSH 1
+IPUSH 0
+ISTORE 1
+start1: ALEN 255
+INEQ
+JZ end1
+//slot(a[*1])
+VIFAFC 1 255 1
+//slot(this)
+THISC 1
+INEQ
+AND
+VIINC 1
+JMP start1
+end1: HALT
+//VD 2 = 255
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+\begin{lstlisting}[language=Dragon]
+//TARGETING all
+//FUNC 0 AS addr
+//FUNC 1 AS slot
+//STORING 1 IN onehopn
+IVAR 1
+IPUSH 1
+IPUSH 0
+ISTORE 1
+start1: ALEN 255
+INEQ
+JZ end1
+//slot(a[*1])
+VIFAFC 1 255 1
+//slot(this)
+THISC 1
+INEQ
+IVAR 2
+IPUSH 1
+IPUSH 0
+ISTORE 2
+start2: ALEN 255
+INEQ
+JZ end2
+//addr(a[*1])
+VIFAFC 1 255 0
+//addr(b[*2])
+VIFAFC 2 255 0
+INEQ
+//slot(a[*1])
+VIFAFC 1 255 1
+//slot(b[*2])
+VIFAFC 2 255 1
+INEQ
+IMPLIES
+AND
+VIINC 2
+JMP start2
+end2: AND
+AND
+VIINC 1
+JMP start1
+end1: HALT
+//VD 1 = 255
+\end{lstlisting}
+\end{minipage}
+\caption{Compiled check for slot collisions. Using 2-hop information of \autoref{fig:two-hop-slot-pred-lang} on the left and using 1-hop information of \autoref{fig:one-hop-slot-pred-lang} on the right.}
+\label{fig:two-hop-slot-pred-lang-compiled}
+\end{figure}
+
+Here we can see the vast difference that is caused by using a single loop versus a nested loop. The single loop program that uses two hop information as an assembled binary size of 28 bytes, whereas the assembled size of the one hop information program has a size of 68 bytes. This program size may eventually become important when reaching the maximum allowed size of a single packet, as it is unlikely that a program like this will be able to go much over 100 bytes (without support for splitting the program up).
+
+Also included in the programs are comments placed there by the compiler to indicate what the code is doing, the aim is that the developers will be able to manually tweak the code to try to reduce the size of it. Perhaps one of the startling differences is the benefit of some of the special array opcodes as can be seen in \autoref{fig:app2-pred-lang-compiled} which is only 13 bytes long. Without the \verb|AMEAN| opcode there would need to be a loop in IR to calculate the mean, by shifting this responsibility to the interpreter the code size can reduced by eliminating an interpreted loop.
+
+\begin{figure}[H]
+\begin{lstlisting}[language=Dragon]
+//TARGETING all
+//FUNC 2 AS temperature
+//STORING 2 IN twohopn
+//temperature(this)
+THISC 2
+AMEAN 255 2
+FSUB
+FABS
+IPUSH 10
+ICASTF
+FLEQ
+HALT
+//VD 2 = 255
+\end{lstlisting}
+\caption{Compiled mean temperature check of \autoref{fig:app2-pred-lang}}
+\label{fig:app2-pred-lang-compiled}
+\end{figure}
+
+One final optimisation that is worth mentioning is that, while we have support for it, we will often not generate code that involves pushing floats onto the stack. This is because if it is possible it we can save a byte of the program size by instead pushing an integer and then casting it to a float. When pushing a float we need 1 byte for the opcode and 4 bytes for the float being pushed giving 5 bytes of program. In the optimised case we need 1 byte for the \verb|IPUSH| opcode, 2 bytes for the integer and 1 byte for the \verb|ICASTF| opcode giving 4 bytes of program instead of 5.
+
 
 \subsection{Testing}
 

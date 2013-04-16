@@ -1,16 +1,14 @@
-//[all] (FUNDEF 2 AS temperature RETURNING Float IN (USING 1 AS onehopn IN (USING 2 AS twohopn IN ((((N:this F:temperature) (N:twohopn N:temperature F:mean) MINUS) F:abs) I:10 LESS_THAN_EQUAL))))
+//[all] (FUNDEF 2 AS temperature RETURNING Float IN (USING 2 AS twohopn IN ((((N:this F:temperature) (N:twohopn N:temperature F:mean) MINUS) F:abs) I:10 LESS_THAN_EQUAL)))
 //TARGETING all
 //FUNC 2 AS temperature
-//STORING 1 IN onehopn
-//STORING 2 IN twohopn
+//STORING 1 IN twohopn
 //temperature(this)
 THISC 2
-AMEAN 254 2
+AMEAN 255 2
 FSUB
 FABS
 IPUSH 10
 ICASTF
 FLEQ
 HALT
-//VD 1 = 255
-//VD 2 = 254
+//VD 2 = 255

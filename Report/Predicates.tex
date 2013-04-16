@@ -281,7 +281,7 @@ function 3 as humidity returning float in
 [all]
 function 2 as temperature returning float in
     using Neighbours(2) as twohopn in
-        abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
+        abs(temperature(this) - mean(temperature, twohopn)) <= 10
 \end{lstlisting}
 \end{minipage}
 

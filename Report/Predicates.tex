@@ -236,7 +236,7 @@ function 1 as slot returning int in
         @(a : onehopn ~
             @(b : onehopn ~ addr(a) != addr(b)
                 => slot(a) != slot(b))
-             & slot(a) != slot(this)
+            & slot(a) != slot(this)
         )
 \end{lstlisting}
 \end{minipage}%
@@ -555,7 +555,16 @@ As can be seen in \autoref{fig:alignment-issues} if we were to align the words a
 \subsection{Examples of Compiled Programs}
 
 \begin{figure}[H]
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.65\linewidth}
+\hrule
+\begin{lstlisting}[language=Hoppy]
+[all]
+function 1 as slot returning int in
+    using Neighbours(2) as twohopn in
+        @(x : twohopn ~
+            slot(x) != slot(this)
+        )
+\end{lstlisting}
 \begin{lstlisting}[language=Dragon]
 //TARGETING all
 //FUNC 1 AS slot
@@ -578,8 +587,20 @@ JMP start1
 end1: HALT
 //VD 2 = 255
 \end{lstlisting}
-\end{minipage}
-\begin{minipage}{0.5\linewidth}
+\hrule
+\begin{lstlisting}[language=Hoppy]
+[all]
+function 0 as addr returning int in
+function 1 as slot returning int in
+    using Neighbours(1) as onehopn in
+        @(a : onehopn ~
+            @(b : onehopn ~ addr(a) != addr(b)
+                => slot(a) != slot(b))
+            & slot(a) != slot(this)
+        )
+\end{lstlisting}
+\end{minipage}\hspace{1em}
+\begin{minipage}{0.25\linewidth}
 \begin{lstlisting}[language=Dragon]
 //TARGETING all
 //FUNC 0 AS addr
@@ -592,11 +613,6 @@ ISTORE 1
 start1: ALEN 255
 INEQ
 JZ end1
-//slot(a[*1])
-VIFAFC 1 255 1
-//slot(this)
-THISC 1
-INEQ
 IVAR 2
 IPUSH 1
 IPUSH 0
@@ -618,7 +634,12 @@ IMPLIES
 AND
 VIINC 2
 JMP start2
-end2: AND
+//slot(a[*1])
+end2: VIFAFC 1 255 1
+//slot(this)
+THISC 1
+INEQ
+AND
 AND
 VIINC 1
 JMP start1
@@ -635,11 +656,20 @@ Here we can see the vast difference that is caused by using a single loop versus
 Also included in the programs are comments placed there by the compiler to indicate what the code is doing, the aim is that the developers will be able to manually tweak the code to try to reduce the size of it. Perhaps one of the startling differences is the benefit of some of the special array opcodes as can be seen in \autoref{fig:app2-pred-lang-compiled} which is only 13 bytes long. Without the \verb|AMEAN| opcode there would need to be a loop in IR to calculate the mean, by shifting this responsibility to the interpreter the code size can reduced by eliminating an interpreted loop.
 
 \begin{figure}[H]
+\begin{minipage}{0.7\linewidth}
+\begin{lstlisting}[language=Hoppy]
+[all]
+function 2 as temp returning float in
+    using Neighbours(2) as twohopn in
+        abs(temp(this) - mean(temp, twohopn)) <= 10
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.2\linewidth}
 \begin{lstlisting}[language=Dragon]
 //TARGETING all
-//FUNC 2 AS temperature
+//FUNC 2 AS temp
 //STORING 2 IN twohopn
-//temperature(this)
+//temp(this)
 THISC 2
 AMEAN 255 2
 FSUB
@@ -650,6 +680,7 @@ FLEQ
 HALT
 //VD 2 = 255
 \end{lstlisting}
+\end{minipage}
 \caption{Compiled mean temperature check of \autoref{fig:app2-pred-lang}}
 \label{fig:app2-pred-lang-compiled}
 \end{figure}

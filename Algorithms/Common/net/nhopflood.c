@@ -43,7 +43,6 @@ typedef struct
 	uint8_t data_length;
 
 	// Data stored from here onwards
-
 } packet_details_t;
 
 static inline void * packet_details_data(packet_details_t * details)
@@ -51,11 +50,13 @@ static inline void * packet_details_data(packet_details_t * details)
 	return (details + 1);
 }
 
+// Creates a packet_details_t struct from the given information
 static packet_details_t * alloc_packet_details(uint8_t id, uint8_t hops)
 {
 	unsigned int data_length = packetbuf_datalen();
 
-	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t) + data_length);
+	packet_details_t * details =
+		(packet_details_t *)malloc(sizeof(packet_details_t) + data_length);
 
 	rimeaddr_copy(&details->sender, &rimeaddr_node_addr);
 	details->id = id;
@@ -71,11 +72,13 @@ static packet_details_t * alloc_packet_details(uint8_t id, uint8_t hops)
 	return details;
 }
 
+// Creates a packet_details_t struct from the data in the packetbuf
 static packet_details_t * packet_details_from_packetbuf(void)
 {
 	unsigned int data_length = packetbuf_datalen();
 
-	packet_details_t * details = (packet_details_t *)malloc(sizeof(packet_details_t) + data_length);
+	packet_details_t * details =
+		(packet_details_t *)malloc(sizeof(packet_details_t) + data_length);
 
 	rimeaddr_copy(&details->sender, packetbuf_addr(PACKETBUF_ADDR_ESENDER));
 	details->id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
@@ -97,7 +100,6 @@ typedef struct
 	uint8_t id;
 	uint8_t hops;
 } last_seen_t;
-
 
 static inline nhopflood_conn_t * conncvt_broadcast(struct broadcast_conn * conn)
 {
@@ -136,7 +138,7 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 	}
 	// Not seen this message before, but have received from this node before
 	else if (last->id < packet_id || 
-			(packet_id == 0 && last->id > 240) // Handle integer overflow
+			(packet_id == 0 && last->id > 240) // Handle integer overflow, TODO: Improve this
 			)
 	{
 		seenbefore = false;
@@ -191,7 +193,6 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 		// and we have not seen it before.
 		if (ttl != 0)
 		{
-			//printf("Adding received message to queue\n");
 			packet_details_t * details = packet_details_from_packetbuf();
 			linked_list_append(&conn->packet_queue, details);
 		}
@@ -200,7 +201,6 @@ static void flood_message_recv(struct broadcast_conn * c, rimeaddr_t const * sen
 
 // Setup the Stubborn Broadcast Callbacks
 static const struct broadcast_callbacks broadcastCallbacks = { &flood_message_recv };
-
 
 
 static void nhopflood_delayed_start_sending(void * ptr)
@@ -215,9 +215,6 @@ static void nhopflood_delayed_start_sending(void * ptr)
 		// Only send if the TTL is greater than 0
 		if (details->ttl > 0)
 		{
-			//printf("Sending onwards data with id:%d ttl:%d hops:%d from:%s\n",
-			//	details->id, details->ttl - 1, details->hops + 1, addr2str(&details->sender));
-
 			// Create the memory for the packet
 			packetbuf_clear();
 			packetbuf_set_datalen(details->data_length);
@@ -245,7 +242,6 @@ static void nhopflood_delayed_start_sending(void * ptr)
 		// Or the TTL is 0
 		if (details->retx >= conn->maxrx || details->ttl == 0)
 		{
-			//printf("Removing packet from queue RETX(%d >= %d) or TTL(%d == 0)\n", details->retx, conn->maxrx, details->ttl);
 			linked_list_pop(&conn->packet_queue);
 		}
 	}
@@ -253,7 +249,6 @@ static void nhopflood_delayed_start_sending(void * ptr)
 	// Restart the ctimer
 	ctimer_restart(&conn->send_timer);
 }
-
 
 // Initialise n-hop data flooding.
 bool nhopflood_start(nhopflood_conn_t * conn, uint8_t ch, nhopflood_recv_fn receive_fn,

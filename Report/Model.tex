@@ -3,7 +3,7 @@
 
 \subsection{Plan}
 
-As stated in the introduction we are investigating developing tools to aid in debugging the distributed programs running on wireless sensor networks. We aim to do this by implementing libraries that use different technique to check predicates, with a focus on correctly evaluating these predicates. We also intend to visualise some of the state of the network.
+As stated in the introduction we are investigating developing tools to aid in debugging the distributed programs running on wireless sensor networks. We aim to do this by implementing libraries that use different technique to check predicates, with a focus on correctly evaluating these predicates and investigating if there are places in the network where evaluation is cheaper in terms of energy. We also intend to visualise some of the state of the network, as part of a tool to inform system users what state the network is in.
 
 Due to the research-led nature of this project we were unsure of how we were going to implement the desired applications as some approaches may have been infeasible. Therefore we undertook a long research period as has been reflected by our research into related work. The remainder of our project management can be found towards the end of this report.
 
@@ -36,6 +36,10 @@ When checking predicates we much deal with the notion of the \emph{correctness o
 \end{mydef}
 
 To evaluate a predicate there is some predicate-evaluating function $E$ that takes a mapping from node identifiers to a user-defined structure of valued about that node and returns a boolean. By executing this function the result of a predicate is obtained. The input can be obtain through various means.The next chapter will discuss how this function is evaluated and how the required information can be disseminated to the node that requires it to perform the evaluation.
+
+\begin{mydef}
+\emph{$diameter$}: The maximum distance between any two nodes in the network.
+\end{mydef}
 
 \subsection{Algorithm Descriptions}
 

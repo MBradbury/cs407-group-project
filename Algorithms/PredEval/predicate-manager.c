@@ -19,16 +19,16 @@
 #	define PMDPRINTF(...)
 #endif
 
-
+// Helper macro
 #define UINT8_MIN 0
 
-
+// Amount of time to wait for a mesh response
 static const clock_time_t MESH_WAIT_PERIOD = 120 * CLOCK_SECOND;
 
-
+// The process that handles serial input
 PROCESS(predicate_input_process, "PredManager Read Input");
 
-
+// Repurpose packetbuf attributes
 #define PACKETBUF_ATTR_PREDICATE_ID PACKETBUF_ATTR_HOPS
 #define PACKETBUF_ATTR_BYTECODE_LEN PACKETBUF_ATTR_ERELIABLE
 #define PACKETBUF_ATTR_VAR_LEN PACKETBUF_ATTR_EPACKET_TYPE
@@ -43,7 +43,6 @@ static const struct packetbuf_attrlist trickle_attributes[] = {
 	TRICKLE_ATTRIBUTES
 	PACKETBUF_ATTR_LAST
 };
-
 
 static void predicate_detail_entry_cleanup(void * item)
 {
@@ -78,7 +77,6 @@ static inline predicate_manager_conn_t * conncvt_mesh(struct mesh_conn * conn)
 }
 
 
-
 static void trickle_recv(struct trickle_conn * tc)
 {
 	predicate_manager_conn_t * conn = conncvt_trickle(tc);
@@ -92,12 +90,9 @@ static void trickle_recv(struct trickle_conn * tc)
 	// Get eventual destination from header
 	rimeaddr_t const * target = packetbuf_addr(PACKETBUF_ADDR_ERECEIVER);
 
-	//printf("Rcv packet length %d\n", packetbuf_datalen());
-
 	if (bytecode_length == 0)
 	{
-		// There is no bytecode, so interpret this as a request to stop
-		// evaluating this predicate
+		// There is no bytecode, so interpret this as a request to stop evaluating this predicate
 		map_remove(&conn->predicates, &predicate_id);
 
 		printf("PredMan: Remove %u\n", predicate_id);
@@ -105,7 +100,8 @@ static void trickle_recv(struct trickle_conn * tc)
 	else
 	{
 		// Add or update entry
-		predicate_detail_entry_t * stored = (predicate_detail_entry_t *)map_get(&conn->predicates, &predicate_id);
+		predicate_detail_entry_t * stored =
+			(predicate_detail_entry_t *)map_get(&conn->predicates, &predicate_id);
 
 		if (stored != NULL)
 		{
@@ -132,7 +128,7 @@ static void trickle_recv(struct trickle_conn * tc)
 			// Allocate memory for the data
 			stored = malloc(sizeof(predicate_detail_entry_t));
 
-			stored->id = predicate_id; //set the key
+			stored->id = predicate_id; // Set the key
 			stored->bytecode = malloc(sizeof(ubyte) * bytecode_length);
 			stored->variables_details = malloc(sizeof(var_elem_t) * variables_length);
 
@@ -153,17 +149,22 @@ static void trickle_recv(struct trickle_conn * tc)
 		stored->bytecode_length = bytecode_length;
 		stored->variables_details_length = variables_length;
 
-		memcpy(stored->bytecode, bytecode_instructions, sizeof(ubyte) * stored->bytecode_length);
-		memcpy(stored->variables_details, variables, sizeof(var_elem_t) * stored->variables_details_length);
+		memcpy(stored->bytecode, bytecode_instructions,
+			sizeof(ubyte) * stored->bytecode_length);
+		memcpy(stored->variables_details, variables,
+			sizeof(var_elem_t) * stored->variables_details_length);
 	}
 
 	leds_off(LEDS_RED);
 
 	// Set the red led on to indicate that we are evaluating a predicate
 	map_elem_t elem;
-	for (elem = map_first(&conn->predicates); map_continue(&conn->predicates, elem); elem = map_next(elem))
+	for (elem = map_first(&conn->predicates);
+		 map_continue(&conn->predicates, elem);
+		 elem = map_next(elem))
 	{
-		predicate_detail_entry_t const * pe = (predicate_detail_entry_t const *)map_data(&conn->predicates, elem);
+		predicate_detail_entry_t const * pe =
+			(predicate_detail_entry_t const *)map_data(&conn->predicates, elem);
 
 		// Set the led to be red if this node will evaluate a predicate
 		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) ||
@@ -184,8 +185,6 @@ static void trickle_recv(struct trickle_conn * tc)
 static const struct trickle_callbacks tc_callbacks = { &trickle_recv };
 
 
-
-
 // Used to handle receiving predicate failure messages
 static void mesh_rcv(struct mesh_conn * c, rimeaddr_t const * from, uint8_t hops)
 {
@@ -202,9 +201,6 @@ static void mesh_timeout(struct mesh_conn * c)
 	predicate_manager_conn_t * conn = conncvt_mesh(c);
 
 	printf("PredMan: PF reply timedout\n");
-
-	// We timedout, so start sending again
-	//mesh_send(c, &conn->basestation);
 }
 
 static const struct mesh_callbacks mc_callbacks = { &mesh_rcv, NULL, &mesh_timeout };
@@ -214,7 +210,7 @@ bool predicate_manager_open(
 	predicate_manager_conn_t * conn, uint16_t ch1, uint16_t ch2, rimeaddr_t const * basestation,
 	clock_time_t trickle_interval, predicate_manager_callbacks_t const * callbacks)
 {
-	if (conn != NULL && callbacks != NULL)
+	if (conn != NULL && callbacks != NULL && basestation != NULL)
 	{
 		conn->callbacks = callbacks;
 
@@ -264,12 +260,12 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 	ubyte const * bytecode, uint8_t bytecode_length,
 	var_elem_t const * var_details, uint8_t var_details_length)
 {
-	if (destination == NULL || bytecode == NULL || bytecode_length == 0 || var_details == NULL || var_details_length == 0)
+	if (destination == NULL || bytecode == NULL || bytecode_length == 0 ||
+		var_details == NULL || var_details_length == 0)
 		return false;
 
 	// Send the request message
 	const unsigned int packet_size =
-		//sizeof(eval_pred_req_t) +
 		(sizeof(ubyte) * bytecode_length) +
 		(sizeof(var_elem_t) * var_details_length);
 
@@ -289,10 +285,6 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 	packetbuf_set_attr(PACKETBUF_ATTR_PREDICATE_ID, id);
 	packetbuf_set_attr(PACKETBUF_ATTR_BYTECODE_LEN, bytecode_length);
 	packetbuf_set_attr(PACKETBUF_ATTR_VAR_LEN, var_details_length);
-
-	//msg->predicate_id = id;
-	//msg->bytecode_length = bytecode_length;
-	//msg->num_of_bytecode_var = var_details_length;
 
 	var_elem_t * msg_vars = (var_elem_t *)msg;
 
@@ -322,7 +314,8 @@ bool predicate_manager_create(predicate_manager_conn_t * conn,
 	return true;
 }
 
-bool predicate_manager_cancel(predicate_manager_conn_t * conn, uint8_t id, rimeaddr_t const * destination)
+bool predicate_manager_cancel(predicate_manager_conn_t * conn,
+	uint8_t id, rimeaddr_t const * destination)
 {
 	if (conn == NULL || destination == NULL)
 		return false;
@@ -360,8 +353,7 @@ bool predicate_manager_send_response(predicate_manager_conn_t * conn, hop_data_t
 
 	if (packet_length > PACKETBUF_SIZE)
 	{
-		printf("PredMan: Pred reply too long %u > %d\n",
-			packet_length, PACKETBUF_SIZE);
+		printf("PredMan: Pred reply too long %u > %d\n", packet_length, PACKETBUF_SIZE);
 
 		return false;
 	}
@@ -440,8 +432,6 @@ uint8_t predicate_manager_max_hop(predicate_detail_entry_t const * pe)
 		{
 			max_hops = pe->variables_details[i].hops;
 		}
-
-		//printf("variables added: %d %d\n",varmap_cleariables[i].hops,variables[i].var_id);
 	}
 
 	return max_hops;
@@ -490,16 +480,16 @@ bool evaluate_predicate(predicate_manager_conn_t * conn,
 	return result;
 }
 
-void print_node_data(void const * ptr, function_details_t const * function_details, size_t functions_count)
+void print_node_data(void const * ptr, function_details_t const * fn_details, size_t fn_count)
 {
 	size_t i;
-	for (i = 0; i != functions_count; ++i)
+	for (i = 0; i != fn_count; ++i)
 	{
-		printf("%u=", function_details[i].id);
+		printf("%u=", fn_details[i].id);
 
-		void const * data = function_details[i].fn(ptr);
+		void const * data = fn_details[i].fn(ptr);
 
-		switch (function_details[i].return_type)
+		switch (fn_details[i].return_type)
 		{
 		case TYPE_INTEGER:
 			{
@@ -518,14 +508,14 @@ void print_node_data(void const * ptr, function_details_t const * function_detai
 			break;
 		}
 
-		if (i + 1 < functions_count)
+		if (i + 1 < fn_count)
 		{
 			printf(",");
 		}
 	}
 }
 
-
+// Simple, no error checking to reduce firmware size
 #define HEX_CHAR_TO_NUM(ch) (((ch) >= '0' && (ch) <= '9') ? (ch) - '0' : (ch) - 'A')
 
 // From: http://www.techinterview.org/post/526339864/int-atoi-char-pstr
@@ -542,12 +532,11 @@ static uint8_t myatoi(char const * str)
 	return result;
 }
 
-
 PROCESS_THREAD(predicate_input_process, ev, data)
 {
 	static predicate_manager_conn_t * conn;
 	static predicate_detail_entry_t current;
-	static unsigned int state;
+	static unsigned int state; // The state in the automata parser
 
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
@@ -560,8 +549,10 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 	while (true)
 	{
 		// Let others do work until we have a line to process
+		// This prevents us stealing the CPU while doing no work
 		PROCESS_YIELD_UNTIL(ev == serial_line_event_message);
 
+		// Get the data from the line message
 		char const * line = (char const *)data;
 		const unsigned int length = strlen(line);
 
@@ -640,15 +631,8 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 					unsigned int i = 0;
 					for (i = 0; i != bytecode_count; ++i)
 					{
-						starting[i] = HEX_CHAR_TO_NUM(current_pair[0]) * 16 + HEX_CHAR_TO_NUM(current_pair[1]);
-
-						// Nice code is below, compared to CHAR_TO_NUM
-						/*char buffer[3];
-						buffer[0] = current_pair[0];
-						buffer[1] = current_pair[1];
-						buffer[2] = '\0';
-
-						starting[i] = (ubyte) strtol(buffer, NULL, 16);*/
+						starting[i] = HEX_CHAR_TO_NUM(current_pair[0]) * 16 +
+									  HEX_CHAR_TO_NUM(current_pair[1]);
 
 						current_pair += 2;
 					}
@@ -660,12 +644,17 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 				{
 					PMDPRINTF("PredMan: processing variable details\n");
 
-					var_elem_t * new = malloc(sizeof(var_elem_t) * (1 + current.variables_details_length));
-					memcpy(new, current.variables_details, sizeof(var_elem_t) * current.variables_details_length);
+					var_elem_t * new = malloc(
+						sizeof(var_elem_t) * (1 + current.variables_details_length));
+					
+					memcpy(new, current.variables_details,
+						sizeof(var_elem_t) * current.variables_details_length);
+					
 					free(current.variables_details);
 					current.variables_details = new;
 
-					var_elem_t * to_store_at = current.variables_details + current.variables_details_length;
+					var_elem_t * to_store_at =
+						current.variables_details + current.variables_details_length;
 
 					char const * start = line + 1;
 
@@ -683,9 +672,7 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 					// After dot
 					to_store_at->var_id = (uint8_t)myatoi(position + 1);
 
-
 					current.variables_details_length += 1;
-
 				}
 				else if (length == 1 && line[0] == ']' && line[1] == '\0')
 				{
@@ -729,12 +716,10 @@ PROCESS_THREAD(predicate_input_process, ev, data)
 			printf("PredMan: Not sure what to do state=%d, line=%s\n", state, line);
 			break;
 		}
-
 	}
 
 exit:
 	free(current.variables_details);
 	free(current.bytecode);
-
 	PROCESS_END();
 }

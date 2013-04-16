@@ -10,13 +10,15 @@
 
 #include <string.h>
 
+// This library is a component of predicate evaluation
+// it is used to manage the data structures that contain
+// node information a certain number of hops away.
+
 typedef struct hop_data
 {
-	array_list_t maps;
+	array_list_t maps; // List of maps 
 	unsigned int max_size;
-
 } hop_data_t;
-
 
 bool hop_manager_init(hop_data_t * hop_data);
 void hop_manager_free(hop_data_t * hop_data);
@@ -28,6 +30,7 @@ void hop_manager_remove(hop_data_t * hop_data,
 
 void hop_manager_reset(hop_data_t * hop_data);
 
+// Gets a map of data on nodes that a a certain number of hops away
 map_t * hop_manager_get(hop_data_t * hop_data, uint8_t hops);
 
 unsigned int hop_manager_length(hop_data_t * hop_data, var_elem_t const * variable);

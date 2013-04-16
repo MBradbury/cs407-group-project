@@ -50,6 +50,7 @@ static inline pelp_conn_t * conncvt_hop_data(hop_data_t * conn)
 		(((char *)conn) - sizeof(nhopreq_conn_t) - sizeof(predicate_manager_conn_t));
 }
 
+// Expose the node data function for nhopreq
 static void nhopreq_data_fn(nhopreq_conn_t * conn, void * data)
 {
 	pelp_conn_t * pelp = conncvt_nhopreq(conn);
@@ -62,12 +63,17 @@ static void receieved_data(nhopreq_conn_t * conn,
 {
 	pelp_conn_t * pelp = conncvt_nhopreq(conn);
 
+	// Record the receieved data
 	hop_manager_record(&pelp->hop_data, hops, data, pelp->data_size);
 }
 
 static void pm_update_callback(predicate_manager_conn_t * conn)
 {
 	pelp_conn_t * pelp = conncvt_predicate_manager(conn);
+	
+	// The predicates that are being evaluated have changed,
+	// we need to recalculate the maximum number of hops of
+	// data that we ever need to ask for
 
 	map_t const * predicate_map = predicate_manager_get_map(conn);
 
@@ -82,6 +88,7 @@ static void pm_update_callback(predicate_manager_conn_t * conn)
 			predicate_detail_entry_t const *)
 				map_data(predicate_map, elem);
 
+		// We evaluate nodes targeted at us, or rimeaddr_null
 		if (rimeaddr_cmp(&pe->target, &rimeaddr_node_addr) ||
 			rimeaddr_cmp(&pe->target, &rimeaddr_null))
 		{
@@ -100,6 +107,7 @@ static void pm_predicate_failed(predicate_manager_conn_t * conn,
 {
 	pelp_conn_t * pelp = conncvt_predicate_manager(conn);
 
+	// Pass the predicate failure message upwards
 	pelp->predicate_failed(pelp, from, hops);
 }
 
@@ -145,6 +153,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 			const unsigned int max_size = hop_manager_max_size(&pelp->hop_data);
 
+			// If we have receieved any data
 			if (max_size > 0)
 			{
 				// Generate array of all the data
@@ -153,6 +162,8 @@ PROCESS_THREAD(pelp_process, ev, data)
 				// Position in all_neighbour_data
 				unsigned int count = 0;
 
+				// Copy in neighbour's data into the correct location in
+				// the allocated block of memory				
 				uint8_t i;
 				for (i = 1; i <= pelp->max_comm_hops; ++i)
 				{
@@ -182,6 +193,7 @@ PROCESS_THREAD(pelp_process, ev, data)
 
 		map_t const * predicate_map = predicate_manager_get_map(&pelp->predconn);
 
+		// Evaluate every predicate targeted at this node
 		map_elem_t elem;
 		for (elem = map_first(predicate_map);
 			 map_continue(predicate_map, elem);

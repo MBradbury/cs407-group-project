@@ -2,14 +2,13 @@
 
 #include "contiki.h"
 #include "packetbuf.h"
+#include "lib/random.h"
 
 #include "dev/leds.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-#include "lib/random.h"
 
 #include "net/rimeaddr-helpers.h"
 
@@ -45,6 +44,7 @@ static const struct packetbuf_attrlist runicast_attributes[] = {
 	PACKETBUF_ATTR_LAST
 };
 
+// Number of retransmissions allowed
 static const uint8_t RUNICAST_MAX_RETX = 3;
 static const clock_time_t STUBBORN_SEND_REPEATS = 3;
 
@@ -67,10 +67,9 @@ typedef struct
 
 } path_record_t;
 
-// Struct used to ask other nodes for predicate values
-typedef struct
-{
-} request_data_msg_t;
+// Struct used to ask other nodes for values,
+// this is empty, as we simply use header attributes
+typedef struct { } request_data_msg_t;
 
 
 static inline nhopreq_conn_t * conncvt_runicast(struct runicast_conn * conn)
@@ -83,7 +82,6 @@ static inline nhopreq_conn_t * conncvt_datareq_bcast(struct stbroadcast_conn * c
 	return (nhopreq_conn_t *)
 		(((char *)conn) - sizeof(struct runicast_conn));
 }
-
 
 // Argument structs
 typedef struct
@@ -114,7 +112,7 @@ static void send_reply(
 
 
 // STUBBORN BROADCAST
-static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
+static void datareq_recv(struct stbroadcast_conn * c)
 {
 	nhopreq_conn_t * conn = conncvt_datareq_bcast(c);
 
@@ -133,15 +131,11 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	const uint8_t hop_limit = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_TTL);
 	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS);
 
-	// We don't want to do anything if the message we sent
-	// has got back to ourselves
+	// We don't want to do anything if the message we sent  has got back to ourselves
 	if (rimeaddr_cmp(&originator, &rimeaddr_node_addr))
 	{
 		return;
 	}
-
-	printf("nhopreq: I just recieved a Stubborn Broadcast Message! Originator: %s Hop: %u Message ID: %u\n",
-		addr2str(&originator), hop_limit, message_id);
 
 	bool respond = false;
 
@@ -179,7 +173,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 		// This is a newer message, so we need to respond to it.
 		if (message_id > record->id)
 		{
-			printf("nhopreq: Seen a newer message from %s (%u), so we will need to respond with our data.\n",
+			printf("nhopreq: Seen a newer message from %s (%u), so respond.\n",
 				addr2str(&originator), message_id);
 
 			record->id = message_id;
@@ -187,10 +181,9 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 		}
 	}
 
-	// Respond To
 	if (respond)
 	{
-		// Send predicate value back to originator
+		// Send values back to originator
 		delayed_reply_data_params_t * p =
 			(delayed_reply_data_params_t *)
 				malloc(sizeof(delayed_reply_data_params_t));
@@ -199,11 +192,10 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 		rimeaddr_copy(&p->target, &originator);
 
 		// In time we will need to reply to this
-		ctimer_set(
-			&conn->runicast_timer, 21 * CLOCK_SECOND,
-			&delayed_reply_data, p);
+		ctimer_set(&conn->runicast_timer,
+			21 * CLOCK_SECOND, &delayed_reply_data, p);
 
-		// Forwward request onwards if we have not reached hop limit
+		// Forward request onwards if we have not reached hop limit
 		if (hop_limit > 0)
 		{
 			// Broadcast message onwards
@@ -214,9 +206,7 @@ static void datareq_stbroadcast_recv(struct stbroadcast_conn * c)
 	}
 }
 
-// TODO: need to collate responses, then send the on,
-// right now messages collide while a node is trying to forward
-// RELIABLE UNICAST
+// Receive reply messages
 static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uint8_t seqno)
 {
 	nhopreq_conn_t * conn = conncvt_runicast(c);
@@ -224,6 +214,7 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	// When receive message, forward the message on to the originator
 	// if the final originator, do something with the value
 
+	// Store a copy of the message
 	char tmpBuffer[PACKETBUF_SIZE];
 	memcpy(tmpBuffer, packetbuf_dataptr(), packetbuf_datalen());
 
@@ -233,14 +224,12 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	rimeaddr_copy(&target, packetbuf_addr(PACKETBUF_ADDR_ERECEIVER));
 	const uint8_t hops = (uint8_t)packetbuf_attr(PACKETBUF_ATTR_HOPS) + 1;
 
-
 	void * msgdata = tmpBuffer;
 	
 	// If this node was the one who sent the message
 	if (rimeaddr_cmp(&rimeaddr_node_addr, &target)) 
 	{
-		// The target node has received the required data,
-		// so provide it to the upper layer
+		// The target node has received the required data, so provide it to the upper layer
 		conn->callbacks->receive_fn(conn, &sender, hops, msgdata);
 	}
 	else
@@ -257,25 +246,14 @@ static void runicast_recv(struct runicast_conn * c, rimeaddr_t const * from, uin
 	}
 }
 
-static void runicast_timedout(struct runicast_conn * c, rimeaddr_t const * to, uint8_t retransmissions)
-{
-	printf("nhopreq: Runicast timed out to:%s retransmissions:%u\n", addr2str(to), retransmissions);
-}
-
-
 // Callbacks
-static const struct runicast_callbacks runicastCallbacks =
-	{ &runicast_recv, NULL, &runicast_timedout };
-
-static const struct stbroadcast_callbacks datareq_stbroadcastCallbacks =
-	{ &datareq_stbroadcast_recv, NULL };
+static const struct runicast_callbacks runicastCallbacks = { &runicast_recv, NULL, NULL };
+static const struct stbroadcast_callbacks datareqCallbacks = { &datareq_recv, NULL };
 
 
-// Methods
 static void delayed_reply_data(void * ptr)
 {
-	delayed_reply_data_params_t * p =
-		(delayed_reply_data_params_t *)ptr;
+	delayed_reply_data_params_t * p = (delayed_reply_data_params_t *)ptr;
 
 	printf("nhopreq: Starting delayed send of node data to %s\n", addr2str(&p->target));
 
@@ -284,7 +262,7 @@ static void delayed_reply_data(void * ptr)
 		&rimeaddr_node_addr, // Source
 		&p->target, // Destination
 		0,
-		NULL
+		NULL // NULL specifies node data should be generated and sent
 	);
 
 	// Need to free allocated parameter struct
@@ -296,9 +274,9 @@ static void delayed_forward_reply(void * ptr)
 	delayed_forward_reply_params_t * p =
 		(delayed_forward_reply_params_t *)ptr;
 
-	void const * data_dest = (void *)(p + 1);
+	void const * data_to_send = (void *)(p + 1);
 
-	send_reply(p->conn, &p->sender, &p->target, p->hops, data_dest);
+	send_reply(p->conn, &p->sender, &p->target, p->hops, data_to_send);
 
 	// Need to free allocated parameter struct
 	free(ptr);
@@ -377,8 +355,6 @@ static void send_reply(
 	}
 }
 
-
-
 static bool send_n_hop_data_request(
 	nhopreq_conn_t * conn, rimeaddr_t const * originator,
 	uint16_t message_id, uint8_t hop_limit, uint8_t hops)
@@ -415,7 +391,6 @@ static bool send_n_hop_data_request(
 }
 
 
-// Initialise multi-hop predicate checking
 bool nhopreq_start(
 	nhopreq_conn_t * conn, uint8_t ch1, uint8_t ch2,
 	unsigned int data_size, nhopreq_callbacks_t const * callbacks)
@@ -430,7 +405,7 @@ bool nhopreq_start(
 	// We need to set the random number generator here
 	random_init(*(uint16_t*)(&rimeaddr_node_addr));
 
-	stbroadcast_open(&conn->bc, ch1, &datareq_stbroadcastCallbacks);
+	stbroadcast_open(&conn->bc, ch1, &datareqCallbacks);
 	channel_set_attributes(ch1, stbroadcast_attributes);
 
 	runicast_open(&conn->ru, ch2, &runicastCallbacks);
@@ -447,7 +422,6 @@ bool nhopreq_start(
 	return true;
 }
 
-// Shutdown multi-hop predicate checking
 bool nhopreq_stop(nhopreq_conn_t * conn)
 {
 	if (conn == NULL)

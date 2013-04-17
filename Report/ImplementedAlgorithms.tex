@@ -179,7 +179,6 @@ When a node receives a flooded message it checks to see what the time-to-live (T
     \null\qq \var{seen}: map of address to (int, int) init $\emptyset$;\\
   \end{boxedminipage}
   \caption{N-Hop Flood Algorithm}
-  \label{fig:n-hop-flood-algorithm}
 \end{figure}
 \begin{figure}[H]
   \centering
@@ -239,7 +238,6 @@ When a node receives a flooded message it checks to see what the time-to-live (T
     %
   \end{boxedminipage}
   \caption{N-Hop Flood Algorithm}
-  \label{fig:n-hop-flood-algorithm}
 \end{figure}
 
 \subsubsection{Event Update}
@@ -716,25 +714,24 @@ When testing for memory leaks we couldn't use the same approach as used to test 
 
 In order to interface with the sensor network, we require the software running on the sink node to be capable with communicating the network's status to a connected computer. We have developed a GUI written in Java for this purpose. It's main functions include creating predicates to be monitored, deploying these predicates to the network, and displaying node's neighbourhoods.
 
-The tool has two main views, predicate view and network view. As shown in Figure~\ref{fig:predview} and Figure~\ref{fig:netview}. Predicate view provides a list of predicates along with their status (satisfied (green), unsatisfied (red), unmonitored (blue) and unevaluated (yellow)), source code (written in our predicate scripting language), and more detailed evaluation results when available.
+The tool has two main views, predicate view and network view, as shown in \autoref{fig:predview} and \autoref{fig:netview}. Predicate view provides a list of predicates along with their status (satisfied (green), unsatisfied (red), unmonitored (blue) and unevaluated (yellow)), source code (written in our predicate scripting language), and more detailed evaluation results when available.
+
+The network view on the other hand displays a visualisation of the WSN as a graph --- with vertices representing nodes and edges representing neighbour relationships. The user can scroll freely back and forth between previous rounds and view the data contained in each view for any of them.
 
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.5]{Images/gui-predicate-view}
+\includegraphics[width=\textwidth]{Images/gui-predicate-view}
 \caption{Visualisation Tool Predicate View}
 \label{fig:predview}
 \end{figure}
 
+
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.5]{Images/gui-network-view}
+\includegraphics[width=\textwidth]{Images/gui-network-view}
 \caption{Visualisation Tool Network View}
 \label{fig:netview}
 \end{figure}
-
-The network view on the other hand displays a visualisation of the WSN as a graph --- with vertices representing nodes and edges representing neighbour relationships.
-
-The user can scroll freely back and forth between previous rounds and view the data contained in each view for any of them.
 
 \subsection{Summary}
 

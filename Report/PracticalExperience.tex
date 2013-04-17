@@ -12,6 +12,7 @@ One of the first confusing aspects of Contiki is that when creating connections 
 As mentioned in the previous section there exists an API that can be used to set the transmission power of the radio (\verb|cc2420_set_txpower|). We experimented using the hardware in the Computer Science building at the University of Warwick at different power levels. This was done because ideally we wished to experiment deploying the applications to the hardware and then testing them in a real world environment. The reason that we needed to investigate power levels was so that we could control the neighbourhood of motes to be a small space, otherwise we would have been very spread out through the building making it difficult to update motes as necessary. Unfortunately at the low transmission power that would allow nodes to communicate when within 15cm of one another but not when further away, we found that very few messages were received by nodes. We believe that this was caused by the environment that we were testing in (DCS building), as we expect the traffic on the 2.4GHz frequency to be very busy due to the number of phones and wireless devices in the department. Therefore, we recommend to do as many other who investigate sensor networks do, and test in remote areas away from interference from commonly used devices \cite{5355013}.
 
 
+
 \subsection{Sensor Data Conversion}
 
 The sensors attached to our hardware did not provide results in a binary format such as an integer or a float. This meant that we had to convert from their custom binary representation to the binary representation desired. Equations were provided by the manufacturer to perform these conversions \cite{sensiriondatasheet}, however, constants in those equations are heavily dependant on the specifications of the sensor (such as the voltage levels and the number of bits of data the sensor reports). So we recommend making sure that the correct constants are used by comparing the results of the sensor to a known accurate measuring device - such as a thermometer.
@@ -76,6 +77,7 @@ We found that Cooja's default settings when run using \verb|ant run| were suitab
 
 As Cooja is written in Java \cite{4116633} it means that all of Java's configuration flags are also up for modification. This however, means that the \verb|ant| build script at \verb|~/contiki/tools/cooja/build.xml| will need to be modified to include the flags that need to be passed to Java. We modified the build script to add the following arguments (\verb|-XX:+OptimizeStringConcat| \verb|-XX:UseSSE=3| \verb|-XX:+UseFastAccessorMethods| \verb|-XX:+UseLargePages|) but did not see much improvement of performance.
 
+
 Finally, there is one other useful mode, and that is the ability to run Cooja without a GUI. This is done by changing the run command to \verb|ant run_nogui|. Running in this mode is very useful when running many simulations to obtain results from them as fast as possible without the overhead of running the GUI.
 
 
@@ -117,7 +119,7 @@ PROCESS_THREAD(proc, ev, data)
 
 \subsection{Firmware Size}
 
-Reducing firmware size is a very important issue for WSN applications. As there is a small amount of space for firmware \cite{Deng:2006:SCD:1127777.1127822} the smaller the compiled code the more functionality that can be included in it. The Contiki wiki\footnote{\url{https://github.com/contiki-os/contiki/wiki/Reducing-Contiki-OS-firmware-size}} has a number of techniques that they have included in Contiki to optimise the code size. As these are already done, to reduce code size further it is the responsibility of the system developer to reduce the code size. The following are a number of techniques that were used to reduce the firmware size of the code that was developed:
+Reducing firmware size is a very important issue for WSN applications. As there is a small amount of space for firmware (48KB for our hardware, see: \autoref{sec:dev-spec}) the smaller the compiled code the more functionality that can be included in it. The Contiki wiki\footnote{\url{https://github.com/contiki-os/contiki/wiki/Reducing-Contiki-OS-firmware-size}} has a number of techniques that they have included in Contiki to optimise the code size. As these are already done, to reduce code size further it is the responsibility of the system developer to reduce the code size. The following are a number of techniques that were used to reduce the firmware size of the code that was developed:
 
 \begin{enumerate}
 \item Remove as many static strings as possible. Static strings take up lots of space in the ROM and are only helpful for debugging. Once debugging is finished these strings should be removed.

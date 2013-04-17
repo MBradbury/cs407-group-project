@@ -552,9 +552,6 @@ static void data_evaluation(pege_conn_t * pege)
 	// Empty details received and let the next round fill them up
 	// We do not clear received_data, as that is sent only when it changes
 	unique_array_free(&pege->neighbour_info);
-
-	PEDPRINTF("PEGE: Finishing=%u received_data=%u\n",
-		pege->pred_round_count, map_length(&pege->received_data));
 	
 	pege->pred_round_count += 1;
 }

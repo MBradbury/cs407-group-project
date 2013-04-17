@@ -47,8 +47,11 @@ The predicate evaluation language that we designed needed to be fairly simple to
 
 We managed to implement the majority of the features we desired, however there were some that were difficult to implement or had to be implemented differently. The first is feature 4 (set operations), which simply would have been too difficult to implement and would have greatly increased the code size. The next is feature 6 (targeting multiple nodes), this was not implemented because it would have required a variable amount of space in the message that disseminated the predicate throughout the network. There is also a simple work around, which is to create a new predicate using the same code for each of the nodes that wish to be targeted.
 
-For some of the features we desired we ended up implementing them differently than expected. Initially we expected to allow users to define functions and structures that could be operated on (like in C). However, what we ended up with was slightly different. We ended up with a primitive called \verb|Neighbours(n)| which allowed the predicate to ask for its $n$-hop neighbourhood, we also ended up with a single structure which the user defined themselves in C and provided functions to access data in that structure. These functions are then exposed to the predicate language. Finally information on a node is only exposed to the predicate if the user provides some way to store this data in the nodes data structure and provides functions to access it. These functions and the user data structure will be explained further on.
+For some of the features we desired we ended up implementing them differently than expected. Initially we expected to allow users to define functions and structures that could be operated on (like in C). However, what we ended up with was slightly different. We ended up with a primitive called $\text{Neighbours}(n)$ which allowed the predicate to ask for its $n$-hop neighbourhood, it may also be expressed with two parameters as $\text{Neighbours}(j, n)$ where $j$ refers to the node neighbour's are being requested of, for the single argument function the node should be implied from the context it is called from. We also ended up with a single structure which the user defined themselves in C and provided functions to access data in that structure. These functions are then exposed to the predicate language. Finally information on a node is only exposed to the predicate if the user provides some way to store this data in the nodes data structure and provides functions to access it. These functions and the user data structure will be explained further on.
 
+\begin{equation}
+\text{Neighbours}(j, n) = \{ x | x \in V \land \text{distance}(j, x) \leq n \land x \not= j \}
+\end{equation}
 
 \begin{table}[H]
 \centering
@@ -197,12 +200,16 @@ Division & $\div$ & \sm{/} & Integers or Floats & Integer or Float\\
 %	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
 	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
 \end{eqnarray*}
+\vspace{-2.5em}
 \caption{Language definition}
 \end{figure}
+\vspace{-1em}
 
 When we were implementing the parsing for the predicate language one of the major issues encountered was that parsing infix operators (that is the operator is between two operands) was much harder to accomplish than prefix or postfix operators, \cite{ParsingRecursiveDescent} was used as a guide to implement infix parsing.
 
 Another important issue to mention is the distinction between syntax and semantics. The language definition specifies the syntax, but it fails to capture some of the semantic subtleties of valid programs. One example is that even if a variable name or a function name are syntactically valid strings, compilation should fail if they have not been defined by a statement prior to their usage. However, JavaCC provides a very capable framework for validating semantics during construction of the program's IR.
+
+An important part of this language is that certain parts of the program need to be written to reflect what is implemented in the actual firmware of the motes. For example the virtual machine must be provided with a function that produces the node's current data that can be accessed through \smlst{this}. Calling \smlst{this} just puts a block of memory on the evaluation stack, the user must also tell the compiler what functions are available, how it should access them and what type of data they return. In this way the user defined data can have data extracted from it in a form that the virtual machine knows how to deal with.
 
 \subsubsection{Example Predicates}
 \label{sec:example-predicates}
@@ -554,7 +561,7 @@ When developing the virtual machine what also became important was the fact that
 \caption{Example of the error messages produced by MSPSim in Cooja that led to the discovery of this bug}
 \end{figure}
 
-As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead. As we copy out byte-by-byte and not by word we can access the memory correctly.
+As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead. As we copy out byte-by-byte and not by word we can access the memory correctly which allows us to store the bytecode in its more compact form desired by us.
 
 \subsection{Examples of Compiled Programs}
 

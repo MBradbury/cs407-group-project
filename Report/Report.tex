@@ -29,6 +29,9 @@
 
 \usepackage{comment}
 
+\usepackage[firstpage]{draftwatermark}
+\SetWatermarkText{\includegraphics[width=\paperwidth,angle=-45]{Images/wallpaper}}
+
 % Use minted and set the visual style to be the
 % same as the one used by visual studio
 \usepackage{minted}
@@ -156,16 +159,20 @@
 % Upper part of the page
 \includegraphics[scale=0.6]{the_warwick_uni_blue.eps}\\[0.75cm]
 
-\textsc{\LARGE Department of Computer Science}\\[1.5cm] 
+\textsc{\LARGE \bfseries Department of Computer Science}\\[1.5cm] 
 
-\textsc{\Large Fourth Year Project}\\[0.5cm]
-
+\textsc{\Large \bfseries Fourth Year Project}\\[0.5cm]
 
 % Title
 \HRule \\[0.4cm]
 {\Huge \bfseries Towards Practical Debugging of Wireless Sensor Network Applications}\\[0.4cm]
 
-\HRule \\[2cm]
+\HRule \\[9.5cm]
+
+\vfill
+\vfill
+\vfill
+\vfill
 
 % Author and supervisor
 \noindent{
@@ -190,14 +197,6 @@ Dr.~Arshad Jhumka
 \end{minipage}}
 
 \vfill
-
-\begin{abstract} 
-Debugging tools are vital for developers to produce reliable software, however traditional tools are less useful when developing software for new system paradigms such as wireless sensor networks. As wireless sensor networks (WSNs) become increasing prevalent in our lives it will become ever more important that the software they are running works reliably and to do this debugging tools will be required. This project investigates how predicates can be specified and accurately checked throughout WSNs and how errors can be reported to a base station. We also develop a system that facilitates reporting predicate statuses to a desktop application.
-\newline
-\newline
-\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Reliability; Predicate Checking;
-\end{abstract}
-
 \vfill
 \vfill
 \vfill
@@ -215,11 +214,17 @@ Debugging tools are vital for developers to produce reliable software, however t
 
 \newpage
 
+\begin{abstract}
+Debugging tools are vital for developers to produce reliable software, however traditional tools are less useful when developing software for new system paradigms such as wireless sensor networks. As wireless sensor networks (WSNs) become increasing prevalent in our lives it will become ever more important that the software they are running works reliably and to do this debugging tools will be required. This project investigates how predicates can be specified and accurately checked throughout WSNs and how errors can be reported to a base station. We also develop a system that facilitates reporting predicate statuses to a desktop application.
+\newline
+\newline
+\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Reliability; Predicate Checking;
+\end{abstract}
+
 %\begin{acknowledgements}
 %Acknowledgements
 %\end{acknowledgements}
-\thispagestyle{empty}
-\mbox{}
+
 \clearpage
 
 

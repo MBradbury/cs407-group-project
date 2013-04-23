@@ -143,19 +143,21 @@ public class NodeComms {
         
             String[] results = line.split("\\|");
             
-            round = Integer.valueOf(results[0].split("=")[1]);
-            
-            String[] results1 = results[1].split("~");
-            
-            for (String pair : results1) {
-                String[] currentpair = pair.split(",");
-                pairs.add(new NodeIdPair(
-                        new NodeId(currentpair[0].split("\\.")),
-                        new NodeId(currentpair[1].split("\\."))
-                        ));
+            if (results.length == 2 && results[1].length() > 0) {
+                round = Integer.valueOf(results[0].split("=")[1]);
+                
+                String[] results1 = results[1].split("~");
+
+                for (String pair : results1) {
+                    String[] currentpair = pair.split(",");
+                    pairs.add(new NodeIdPair(
+                            new NodeId(currentpair[0].split("\\.")),
+                            new NodeId(currentpair[1].split("\\."))
+                            ));
+                }
+
+                wsnInterface.receiveNeighbourData(round, pairs);
             }
-            
-            wsnInterface.receiveNeighbourData(round, pairs);
         } else if (line.startsWith("PF")) {
             //Predicate data.
             String stripped = line

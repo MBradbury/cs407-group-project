@@ -198,12 +198,10 @@ public class PredVis extends JFrame {
 
                 //Set new predicate as current
                 Predicate p = new Predicate(predicateName, scriptFile);
+                predicateData.put(p, new ArrayList<PredicateData>());
                 predicateListModel.addElement(p);
                 predicateList.setSelectedValue(p, true);
                 setCurrentPredicate(p);
-                
-                //Add data history.
-                predicateData.put(p, new ArrayList<PredicateData>());
             }
         });
         menu.add(menuItem);
@@ -226,12 +224,10 @@ public class PredVis extends JFrame {
 
                 //Set new predicate as current
                 Predicate p = new Predicate(scriptFile.getName(), scriptFile);
+                predicateData.put(p, new ArrayList<PredicateData>());
                 predicateListModel.addElement(p);
                 predicateList.setSelectedValue(p, true);
                 setCurrentPredicate(p);
-                
-                //Add data history.
-                predicateData.put(p, new ArrayList<PredicateData>());
             }
         });
         menu.add(menuItem);
@@ -591,7 +587,7 @@ public class PredVis extends JFrame {
     
     public void receiveNetworkState(int round, NetworkState ns) {
         System.out.println("Hello");
-        if (rounds.get(round) != null) {
+        if (rounds.containsKey(round)) {
             rounds.put(round, ns);
         } else {
             rounds.put(round, ns);
@@ -606,7 +602,7 @@ public class PredVis extends JFrame {
             roundSliderModel.setMaximum(max);
         }
         
-        showRound(visibleRound);
+        showRound(round);
     }
     
     public void receivePredicateData(int id, PredicateData pd) {
@@ -615,9 +611,11 @@ public class PredVis extends JFrame {
             if (p.getId() == id) {
                 java.util.List<PredicateData> l = predicateData.get(p);
                 l.add(pd);
+                
+                refreshPredicateDetails();
+                break;
             }
         }
-        
     }
     
     /**

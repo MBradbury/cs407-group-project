@@ -62,7 +62,7 @@ public class WSNInterface {
         }
         
         //Attach network state to specified round.
-        predVis.receiveNetworkState(roundState);
+        predVis.receiveNetworkState(round, roundState);
     }
     
     /**

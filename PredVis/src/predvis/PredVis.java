@@ -42,16 +42,10 @@ class PredicateListRenderer extends DefaultListCellRenderer {
         bg.put(PredicateData.PredicateStatus.UNSATISFIED, Color.RED);
         BACKGROUND_MAPPING = Collections.unmodifiableMap(bg);
     }
-
-    private RoundData visibleRound = null;
-    private RoundData currentRound = null;
     
-    public void setVisibleRound(RoundData visibleRound) {
-        this.visibleRound = visibleRound;
-    }
-    
-    public void setCurrentRound(RoundData currentRound) {
-        this.currentRound = currentRound;
+    private Map<Predicate, java.util.List<PredicateData>> predicateData = null;
+    public void setPredicateData(Map<Predicate, java.util.List<PredicateData>> predicateData) {
+        this.predicateData = predicateData;
     }
     
     @Override
@@ -60,16 +54,16 @@ class PredicateListRenderer extends DefaultListCellRenderer {
         super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);  
         
         Predicate p = (Predicate)value;
+        java.util.List<PredicateData> l = predicateData.get(p);
+        PredicateData pd = null;
+        if(!l.isEmpty()) {
+            pd = l.get(l.size() - 1);
+        }
         
         if (p.isMonitored()) {
-            PredicateData pd = visibleRound.getPredicateData().get(p);
             if (pd != null) {
                 setForeground(FOREGROUND_MAPPING.get(pd.getStatus()));
                 setBackground(BACKGROUND_MAPPING.get(pd.getStatus()));
-            } else if (visibleRound != currentRound) {
-                //If it's not the current round, don't display evaluation pending.
-                setForeground(FOREGROUND_MAPPING.get(PredicateData.PredicateStatus.UNMONITORED));
-                setBackground(BACKGROUND_MAPPING.get(PredicateData.PredicateStatus.UNMONITORED));
             } else {
                 //Not yet evaluated.
                 setForeground(FOREGROUND_MAPPING.get(PredicateData.PredicateStatus.UNEVALUATED));
@@ -98,15 +92,15 @@ public class PredVis extends JFrame {
     public static final String NO_PREDICATE_SELECTED_MESSAGE = "No predicate selected.";
     
     //Round data.
-    private java.util.List<RoundData> previousRounds = new ArrayList<RoundData>();
-    private RoundData currentRound = new RoundData();
-    private RoundData visibleRound = currentRound;
+    private Map<Integer, NetworkState> rounds = new HashMap<Integer, NetworkState>();
+    private int visibleRound = 0;
     private DefaultBoundedRangeModel roundSliderModel = new DefaultBoundedRangeModel(0, 0, 0, 0);
     
     //Predicate data.
     private DefaultListModel predicateListModel = new DefaultListModel();
     private PredicateListRenderer predicateListRenderer = new PredicateListRenderer();
     private Predicate currentPredicate = null;
+    private Map<Predicate, java.util.List<PredicateData>> predicateData = new HashMap<Predicate, java.util.List<PredicateData>>();
     
     //Network visualisation data.
     private Layout<NodeId, String> layout = null;
@@ -173,9 +167,6 @@ public class PredVis extends JFrame {
         menuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //Must be on current round to add new predicates.
-                showRound(currentRound);
-                
                 //Ask for predicate name
                 final String predicateName = (String)JOptionPane.showInputDialog(
                     frame,
@@ -208,9 +199,11 @@ public class PredVis extends JFrame {
                 //Set new predicate as current
                 Predicate p = new Predicate(predicateName, scriptFile);
                 predicateListModel.addElement(p);
-                currentRound.getPredicateData().put(p, null);
                 predicateList.setSelectedValue(p, true);
                 setCurrentPredicate(p);
+                
+                //Add data history.
+                predicateData.put(p, new ArrayList<PredicateData>());
             }
         });
         menu.add(menuItem);
@@ -219,9 +212,6 @@ public class PredVis extends JFrame {
         menuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //Must be on current round to load new predicates.
-                showRound(currentRound);
-                
                 //Get user to locate existing script file
                 File scriptFile;
                 final JFileChooser fileDialog = new JFileChooser("../PredicateLanguage/Hoppy-Tests/");
@@ -237,9 +227,11 @@ public class PredVis extends JFrame {
                 //Set new predicate as current
                 Predicate p = new Predicate(scriptFile.getName(), scriptFile);
                 predicateListModel.addElement(p);
-                currentRound.getPredicateData().put(p, null);
                 predicateList.setSelectedValue(p, true);
                 setCurrentPredicate(p);
+                
+                //Add data history.
+                predicateData.put(p, new ArrayList<PredicateData>());
             }
         });
         menu.add(menuItem);
@@ -263,11 +255,10 @@ public class PredVis extends JFrame {
         menuBar.add(menu);
         
         menuItem = new JMenuItem("About", KeyEvent.VK_A);
-        //TODO
         menuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                newRound();
+                //TODO
             }
         });
         menu.add(menuItem);
@@ -295,19 +286,7 @@ public class PredVis extends JFrame {
                 //if it is not the one we're already on.
                 JSlider source = (JSlider)e.getSource();
                 if (!source.getValueIsAdjusting()) {
-                    int round = (int)source.getValue();
-                    if (round == previousRounds.size()) {
-                        if (visibleRound == currentRound) {
-                            return;
-                        } else {
-                            showRound(currentRound);
-                        }
-                    } else {
-                        RoundData newRound = previousRounds.get(round);
-                        if (currentRound != newRound) {
-                            showRound(newRound);
-                        }
-                    }
+                    visibleRound = (int)source.getValue();
                 }
             }
         });
@@ -353,6 +332,7 @@ public class PredVis extends JFrame {
         //List init
         panel = new JPanel();
         predicateList = new JList(predicateListModel);
+        predicateListRenderer.setPredicateData(predicateData);
         predicateList.setCellRenderer(predicateListRenderer);
         predicateList.setPreferredSize(new Dimension(200, 550));
         predicateList.setBorder(WIDGET_BORDER);
@@ -506,31 +486,21 @@ public class PredVis extends JFrame {
 
             refreshPredicateDetails();
 
-            if (visibleRound == currentRound) {
-                //Set active states based on whether the predicate is being monitored.
-                if (!p.isMonitored()) {
-                    predicateScriptEditor.setEditable(true);
-                    predicateAssemblyEditor.setEditable(true);
-                    savePredicateScriptButton.setEnabled(true);
-                    savePredicateAssemblyButton.setEnabled(true);
-                    deployPredicateButton.setEnabled(true);
-                    rescindPredicateButton.setEnabled(false);
-                } else {
-                    predicateScriptEditor.setEditable(false);
-                    predicateAssemblyEditor.setEditable(false);
-                    savePredicateScriptButton.setEnabled(false);
-                    savePredicateAssemblyButton.setEnabled(false);
-                    deployPredicateButton.setEnabled(false);
-                    rescindPredicateButton.setEnabled(true);
-                }
+            //Set active states based on whether the predicate is being monitored.
+            if (!p.isMonitored()) {
+                predicateScriptEditor.setEditable(true);
+                predicateAssemblyEditor.setEditable(true);
+                savePredicateScriptButton.setEnabled(true);
+                savePredicateAssemblyButton.setEnabled(true);
+                deployPredicateButton.setEnabled(true);
+                rescindPredicateButton.setEnabled(false);
             } else {
-                //Can't edit expired rounds.
                 predicateScriptEditor.setEditable(false);
                 predicateAssemblyEditor.setEditable(false);
                 savePredicateScriptButton.setEnabled(false);
                 savePredicateAssemblyButton.setEnabled(false);
                 deployPredicateButton.setEnabled(false);
-                rescindPredicateButton.setEnabled(false);
+                rescindPredicateButton.setEnabled(true);
             }
         } else {
             predicateScriptEditor.setEditable(false);
@@ -546,60 +516,25 @@ public class PredVis extends JFrame {
     }
     
     private void refreshPredicateDetails() {
-        if (currentPredicate.isMonitored()) {
-            PredicateData pd = visibleRound.getPredicateData().get(currentPredicate);
-            if (pd != null) {
-                predicateDetails.setText(pd.getDetails());
-            } else {
-                //Not yet evaluated.
-                predicateDetails.setText("No data available for this predicate.");
+        java.util.List<PredicateData> pd = predicateData.get(currentPredicate);
+        if (!pd.isEmpty()) {
+            StringBuilder sd = new StringBuilder();
+            for (PredicateData pdd : pd) {
+                sd.append(pdd.getDetails()).append("\n");
             }
+            predicateDetails.setText(sd.toString());
         } else {
-            //Not being monitored.
-            predicateDetails.setText("This predicate is not being monitored.");
+            predicateDetails.setText("No data available for this predicate.");
         }
     }
     
-    private void showRound(RoundData round) {
-        //Displaying a new round deselects all predicates.
-        setCurrentPredicate(null);
-        
-        //Load new set of predicates into list.
-        predicateListModel.clear();
-        for (Predicate p : round.getPredicateData().keySet()) {
-            predicateListModel.addElement(p);
-        }
-        
+    private void showRound(int round) {
         //Display network state.
-        updateNetworkView(round.getNetworkState());
+        updateNetworkView(rounds.get(round));
         
         //Show round # in bottom right.
-        int roundNumber;
-        if (round == currentRound) {
-            roundNumber = previousRounds.size() + 1;
-        } else {
-            roundNumber = previousRounds.indexOf(round) + 1;
-        }
-        visibleRoundNumber.setText(roundNumber + " / " + (previousRounds.size() + 1));
-        
-        predicateListRenderer.setVisibleRound(round);
+        visibleRoundNumber.setText((round + 1) + " / " + rounds.size());
         visibleRound = round;
-    }
-    
-    private void newRound() {
-        //Move current round onto previous list, create new current with all the predicates.
-        previousRounds.add(currentRound);
-        RoundData oldCurrent = currentRound;
-        currentRound = new RoundData();
-        for (Predicate p : oldCurrent.getPredicateData().keySet()) {
-            currentRound.getPredicateData().put(p, null);
-        }
-        
-        predicateListRenderer.setCurrentRound(currentRound);
-        
-        //Update slider values and rerender visible round.
-        roundSliderModel.setMaximum(roundSliderModel.getMaximum() + 1);
-        showRound(visibleRound);
     }
     
     private void deployPredicate(Predicate p) {
@@ -654,17 +589,32 @@ public class PredVis extends JFrame {
         graphPanel.repaint();
     }
     
-    public void receiveNetworkState(NetworkState ns) {
-        //TODO
-        updateNetworkView(ns);
+    public void receiveNetworkState(int round, NetworkState ns) {
+        System.out.println("Hello");
+        if (rounds.get(round) != null) {
+            rounds.put(round, ns);
+        } else {
+            rounds.put(round, ns);
+            //Update slider values and rerender visible round.
+            int min = 0;
+            int max = 0;
+            for (Integer i : rounds.keySet()) {
+                if (i < min) min = i;
+                if (i > max) max = i;
+            }
+            roundSliderModel.setMinimum(min);
+            roundSliderModel.setMaximum(max);
+        }
+        
+        showRound(visibleRound);
     }
     
     public void receivePredicateData(int id, PredicateData pd) {
         //Store data with predicate.
-        Map<Predicate, PredicateData> dm = currentRound.getPredicateData();
-        for (Predicate p : dm.keySet()) {
+        for (Predicate p : predicateData.keySet()) {
             if (p.getId() == id) {
-                dm.put(p, pd);
+                java.util.List<PredicateData> l = predicateData.get(p);
+                l.add(pd);
             }
         }
         

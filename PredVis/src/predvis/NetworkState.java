@@ -15,23 +15,7 @@ public class NetworkState {
      * @return graph
      */
     public Graph<NodeId, String> getGraph() {
-        //return g;
-        
-        //Pre constructed graph for testing
-        Graph<NodeId, String> _g = new UndirectedSparseGraph<NodeId, String>();
-        NodeId n1 = new NodeId(new String[]{"1"});
-        NodeId n2 = new NodeId(new String[]{"2"});
-        NodeId n3 = new NodeId(new String[]{"3"});
-        NodeId n4 = new NodeId(new String[]{"4"});
-        NodeId n5 = new NodeId(new String[]{"5"});
-        NodeId n6 = new NodeId(new String[]{"6"});
-        _g.addVertex(n1);
-        _g.addEdge(nodePairToEdgeName(n1, n2), n1, n2);
-        _g.addEdge(nodePairToEdgeName(n2, n3), n1, n3);
-        _g.addEdge(nodePairToEdgeName(n3, n4), n3, n4);
-        _g.addEdge(nodePairToEdgeName(n4, n5), n4, n5);
-        _g.addEdge(nodePairToEdgeName(n5, n6), n4, n6);
-        return _g;
+        return g;
     }
     
     public void clearGraph() {

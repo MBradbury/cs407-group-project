@@ -191,8 +191,7 @@ public class NodeComms {
             // The key in a hash map is the function id, the value
             // is what that function returned on the node data.
             @SuppressWarnings("unchecked")
-            HashMap<Integer, Object>[] nodeData = new HashMap[dataSplit.length]; 
-
+            HashMap<Integer, Object>[] nodeData = new HashMap[dataSplit.length];
             int i = 0;
             for (String data : dataSplit) {
                 nodeData[i] = new HashMap<Integer, Object>();

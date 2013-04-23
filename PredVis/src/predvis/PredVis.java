@@ -1,6 +1,7 @@
 package predvis;
 
 import edu.uci.ics.jung.algorithms.layout.CircleLayout;
+import edu.uci.ics.jung.algorithms.layout.DAGLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.visualization.BasicVisualizationServer;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
@@ -142,6 +143,7 @@ public class PredVis extends JFrame {
             public void windowClosing(WindowEvent ev) {
                 dispose();
                 wsnInterface.close();
+                try { Runtime.getRuntime().exec("pkill -KILL " + NodeComms.SERIALDUMP_LINUX).destroy(); } catch(Exception e) {}
             }
         });
         
@@ -621,7 +623,7 @@ public class PredVis extends JFrame {
         }
         
         //Initialise network viewer.
-        layout = new CircleLayout<NodeId, String>(ns.getGraph());
+        layout = new DAGLayout<NodeId, String>(ns.getGraph());
         layout.setSize(new Dimension(550, 550));
         vv = new BasicVisualizationServer<NodeId, String>(layout);
         vv.setPreferredSize(new Dimension(600, 600));
@@ -678,6 +680,6 @@ public class PredVis extends JFrame {
         }
         
         PredVis pv = new PredVis(args[0]);
-        pv.setVisible(true); 
+        pv.setVisible(true);
     }
 }

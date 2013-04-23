@@ -134,7 +134,7 @@ public class PredVis extends JFrame {
     private JPanel networkPanel = null;
     private JPanel graphPanel = null;
     
-    public PredVis(String port) {
+    public PredVis(String device) {
         super("Predicate Visualiser");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -152,7 +152,7 @@ public class PredVis extends JFrame {
         initNetworkViewer();
         
         //Init monitoring.
-        initMonitoring(port);
+        initMonitoring(device);
         
         pack();
     }
@@ -657,8 +657,14 @@ public class PredVis extends JFrame {
         updateNetworkView(ns);
     }
     
-    public void receivePredicateData(PredicateData pd) {
-        //TODO
+    public void receivePredicateData(int id, PredicateData pd) {
+        //Store data with predicate.
+        Map<Predicate, PredicateData> dm = currentRound.getPredicateData();
+        for (Predicate p : dm.keySet()) {
+            if (p.getId() == id) {
+                dm.put(p, pd);
+            }
+        }
         
     }
     

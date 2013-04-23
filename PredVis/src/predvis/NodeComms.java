@@ -20,7 +20,7 @@ public class NodeComms {
     
     private final WSNInterface wsnInterface;
     
-    private final String port;
+    private final String device;
     private Thread readInput = null;
     private volatile boolean stop = false;
     
@@ -29,13 +29,13 @@ public class NodeComms {
     
     private Process serialDumpProcess = null;
     
-    public NodeComms(WSNInterface wsnInterface, String port) {
+    public NodeComms(WSNInterface wsnInterface, String device) {
         this.wsnInterface = wsnInterface;
-        this.port = port;
+        this.device = device;
     }
     
     public void connect() {
-        final String[] cmd = new String[] { SERIALDUMP_LINUX, "-b115200", port };
+        final String[] cmd = new String[] { SERIALDUMP_LINUX, "-b115200", device };
         
         //Open streams from sink node.
         try {

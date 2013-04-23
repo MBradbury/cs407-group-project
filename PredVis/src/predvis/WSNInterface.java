@@ -11,10 +11,10 @@ public class WSNInterface {
     private final PredVis predVis;
     private final NodeComms comms;
     
-    public WSNInterface(PredVis predVis, String port) {
+    public WSNInterface(PredVis predVis, String device) {
         this.predVis = predVis;
         
-        comms = new NodeComms(this, port);
+        comms = new NodeComms(this, device);
         comms.connect();
     }
     
@@ -75,6 +75,6 @@ public class WSNInterface {
         PredicateData predicateData = new PredicateData(PredicateData.PredicateStatus.UNSATISFIED, data);
         
         //Attach data to specified predicate.
-        predVis.receivePredicateData(predicateData);
+        predVis.receivePredicateData(id, predicateData);
     }
 }

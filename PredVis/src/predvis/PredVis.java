@@ -601,23 +601,23 @@ public class PredVis extends JFrame {
     }
     
     private void deployPredicate(Predicate p) {
-        wsnInterface.deployPredicate(p);
+        //wsnInterface.deployPredicate(p);
     }
     
     private void rescindPredicate(Predicate p) {
-        wsnInterface.rescindPredicate(p);
+        //wsnInterface.rescindPredicate(p);
     }
     
     private void updateNetworkView(NetworkState ns) {
         graphPanel.removeAll();
         
         if (ns == null) {
-            //ns = new NetworkState();
-            JLabel label = new JLabel("No network state received.", SwingConstants.CENTER);
+            /*JLabel label = new JLabel("No network state received.", SwingConstants.CENTER);
             label.setPreferredSize(new Dimension(600, 600));
             graphPanel.add(label);
             graphPanel.repaint();
-            return;
+            return;*/
+            ns = new NetworkState();
         }
         
         //Initialise network viewer.

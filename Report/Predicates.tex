@@ -2,21 +2,21 @@
 
 \section{Predicates}
 
-When considering how to evaluate predicates there are many points that need to be considered. Depending on what the intention is certain implementations of predicate evaluation are going to be better than other implementations. Also, when developing with considerations of the predicate evaluation such as accuracy, the considerations of sensor networks will need to be taken into account (such as the minimisation of energy usage). This section will first detail the types of predicates that we identify that we wish to be able to detect, then it will cover how we can evaluate such predicates and finally will discuss several implementations of transmitting the information to the required part of the network.
+When considering how to evaluate predicates there are many points that need to be considered. Depending on what the intention is, certain implementations of predicate evaluation are going to be better than other implementations. Also, when developing with considerations of the predicate evaluation such as accuracy, the considerations of sensor networks will need to be taken into account (such as the minimisation of energy usage). This section will first detail the types of predicates that we identify that we wish to be able to detect, then it will cover how we can evaluate such predicates and finally will discuss several implementations of transmitting the information to the required part of the network.
 
 \subsection{Types of Predicates}
 
-In the introduction several different classes of predicates were discussed, of which the most important one is the locality of the predicate. A majority of the work focuses on global predicates \cite{277788,345831,553309} which while useful in general for distributed systems is perhaps not as helpful for wireless sensor networks. To begin with many of the problems that a sensor network may encounter are local problems. By local we mean that a node in the network only has access to a specific subset of the networks information, in our case we focus on the surrounding neighbours of the node evaluating the predicate. When forcing a local problem to be evaluated globally it means that investigating evaluating that predicate locally is eliminated. This is problematic as there may be energy savings when evaluating a predicate locally. So the first major decision is that instead of focusing on global predicates, local predicates are instead the focus - in order to investigate any potential energy savings.
+In the introduction several different classes of predicates were discussed, of which the most important one to us is the locality of the predicate. A majority of the work focuses on global predicates \cite{277788,345831,553309} which while useful in general for distributed systems, is perhaps not as helpful for wireless sensor networks. To begin with many of the problems that a sensor network may encounter are local problems. By local we mean that a node in the network only has access to a specific subset of the networks information, in our case we focus on the surrounding neighbours of the node evaluating the predicate. When forcing a local problem to be evaluated globally it means that investigating evaluating that predicate locally is eliminated. This is problematic as there may be energy savings when evaluating a predicate locally. So the first major decision is that instead of focusing on global predicates, local predicates are instead the focus - in order to investigate any potential energy savings.
 
 \begin{mydef}
 \emph{Global Predicate}: A predicate $P$ that operates on some global state $S$ where $S$ is a mapping from a node id to some data on that node.
 \end{mydef}
 
 \begin{mydef}
-\emph{Local Predicate}: A predicate $P$ evaluated on the node $j$, where the state $N(n) \subseteq S$ available contains information on some $n$-hop neighbourhood of $j$.
+\emph{Local Predicate}: A predicate $P$ evaluated on the node $j$, where the state $N(j, n) \subseteq S$ available contains information on some $n$-hop neighbourhood of $j$. Where $N(j, n)$ is a function that returns the state of all nodes within $n$ hops of $j$.
 \end{mydef}
 
-The second decision is to decide on is the stability of the predicate being detected. As discussed in the introduction there is a choice between stable predicates that remain true and unstable predicates whose truth value can alternate. This decision is important because it will affect the algorithm structure, an example of this is that taking snapshots of global state and checking the predicate against that works for checking stable predicates. However, for unstable predicates detailed recording of the traces of the system is required \cite{bansod2004distributed}. Due to the limited resources of sensor nodes we focus on the simpler problem of stable predicates. This is mainly because complex programs tend to require a greater number of instructions to do more things and the size of the firmware on the motes is limited \cite{CM5000}.
+The second decision to decide on is the stability of the predicate being detected. As discussed in the introduction there is a choice between stable predicates that remain true and unstable predicates whose truth value can alternate. This decision is important because it will affect the algorithm structure that works for checking stable predicates. An example of this is taking snapshots of global state and checking the predicate against what is expected. However, for unstable predicates detailed recording of the traces of the system is required \cite{bansod2004distributed}. Due to the limited resources of sensor nodes we focus on the simpler problem of stable predicates. This is mainly because complex programs tend to require a greater number of instructions to do more things and the size of the firmware on the motes is limited \cite{CM5000}.
 
 
 \begin{mydef}
@@ -27,15 +27,15 @@ The second decision is to decide on is the stability of the predicate being dete
 \emph{Network Predicate}: A predicate that is evaluated over the network interactions. Examples include detecting collisions where there should have been none, or checking that there are no loops in multi-hop communications.
 \end{mydef}
 
-So far traditional predicate properties have been focused on. However, we need to introduce two new classes of predicates. In previous work the authors dealt in the abstract notion of program traces, these traces are simply events that lead to some eventual state. When developing software for sensor networks we feared that (i) the hooks to detect the traces and (ii) record them would be too demanding on the limited resources. By considering what happens in the application separately from the network the impacts may be decreased. Network predicates would involve monitoring the low level MAC layer for network events and also including extra data to packets sent from the node. Application predicates could imply be evaluated instantaneously on the data available. Due to the simplicity, but the good results that application predicates may provide we focus solely on them.
+So far traditional predicate properties have been focused on. However, we need to introduce two new classes of predicates. In previous work the authors dealt in the abstract notion of program traces, these traces are simply events that lead to some eventual state. When developing software for sensor networks we feared that (i) the hooks to detect the traces and (ii) recording them would be too demanding on the limited resources available. By considering what happens in the application separately from the network, the impacts may be decreased. Network predicates would involve monitoring the low level MAC layer for network events and also including extra data to packets sent from the node. Application predicates could imply be evaluated instantaneously on the data available. Due to the simplicity, but the good results that application predicates may provide we focus solely on them.
 
-Much of the previous work exists in ideal worlds were assumptions such as ``no messages are lost'' \cite{277788} are made. Unfortunately this is not the case in the real world, while the MAC layer and the application layer can do much to mitigate packet loss \cite{?} without energy expensive protocols such as 802.11 \cite{?} it is not possible to eliminate packet loss. Therefore it must be realised that every time a predicate is evaluated it will have a certain level of accuracy. This is because some data may have been lost on the way to its destination or outdated information was used. We believe the accuracy is a very important angle to predicate evaluation as an accurate predicate evaluation that is not received often will inform the systems user more than a predicate evaluation result that is received very frequently but is also very inaccurate.
+Much of the previous work exists in ideal worlds were assumptions such as ``no messages are lost'' \cite{277788} are made. Unfortunately this is not the case in the real world, while the MAC layer and the application layer can do much to mitigate packet loss \cite{Buettner:2006:XSP:1182807.1182838} without energy expensive protocols such as 802.11 which use a MAC protocol based on CSMA/CA \cite{1028874} it is not possible to ensure a certain level of reliability. Therefore it must be realised that every time a predicate is evaluated it will have a certain level of accuracy. This is because some data may have been lost on the way to its destination or outdated information was used. We believe the accuracy is a very important angle to predicate evaluation as an accurate predicate evaluation that is not received often will inform the systems user more than a predicate evaluation result that is received very frequently but is also very inaccurate.
 
-In summary we focus on evaluating predicates that are stable and use local information. These predicates also deal excursively with information about the application running on the mote and not the communication it is involved with. Also there should be a focus that predicates are evaluated as accurately as possible with a minimum amount of energy. The next two sections will detail how predicates are evaluated in our implementation and then how the required information is disseminated to the correct motes.
+In summary we focus on evaluating predicates that are stable and use local information. These predicates also deal exclusively with information about the application running on the mote and not the communication it is involved with. Also there should be a focus that predicates are evaluated as accurately as possible with a minimum amount of energy. The next two sections will detail how predicates are evaluated in our implementation and then how the required information is disseminated to the correct motes.
 
 \subsection{Predicate Evaluation}
 
-When deciding how we would evaluate predicates once data was received there were two possible solutions that were considered. The first was to simply have the system developer hardcode the checking into the code and provide a library to handle responses, the second was to implement a virtual machine that would run a script that checks the predicate. Using hard checks written in C would have provided a more efficient way of checking the predicate and would be similar to the approach used by HSend \cite{herbert2007adaptive} which parsed the C source code and generated C code for the predicates specified in a special comment block. A downfall of hardcoding the predicate evaluation is that it could lead to a large inflation of the firmware and if the system developers wanted to change, add or remove a predicate then they would need to update the entire firmware image across the network \cite{Dunkels:2006:RDL:1182807.1182810,1437066}.
+When deciding how we would evaluate predicates, once data was received, there were two possible solutions that were considered. The first was to simply have the system developer hardcode the checking into the code and provide a library to handle responses, the second was to implement a virtual machine that would run a script that checks the predicate. Using hard checks written in C would have provided a more efficient way of checking the predicate and would be similar to the approach used by HSend \cite{herbert2007adaptive} which parsed the C source code and generated C code for the predicates specified in a special comment block. A downfall of hardcoding the predicate evaluation is that it could lead to a large inflation of the firmware and if the system developers wanted to change, add or remove a predicate then they would need to update the entire firmware image across the network \cite{Dunkels:2006:RDL:1182807.1182810,1437066}.
 
 With a scripting language, instead of sending a large firmware binary across the network a small program of high level opcodes could be sent instead. The difference could be huge, for example the maximum firmware size of the CM5000 is 48KB \cite{CM5000}, and it is conceivable that a program script utilising high level instructions could instead fit into the size of a single packet (128 bytes\footnote{\url{http://contiki.sourceforge.net/docs/2.6/a00302.html}}). Therefore to aid in the flexibility of our solution we implemented a simple virtual machine and language that was executed to evaluate the predicate.
 
@@ -43,12 +43,15 @@ With a scripting language, instead of sending a large firmware binary across the
 Initially we looked for an already developed scripting language that we could use on the motes. Having used high level scripting languages such as Python and Lua we first looked into using them. Unfortunately even though Lua offered an embedded alternative called eLua \cite{elua} the firmware size and the RAM usage would have been unacceptably high for the hardware at our disposal. We then started looking at a language called SCript  \cite{dunkels06lowoverhead} by  \citeauthor{dunkels06lowoverhead} who was also the author of Contiki, the wireless sensor network OS we were using. Unfortunately (in part due to the name) we were unable to find the implementation of it. Finally we looked at Antelope \cite{Tsiftes:2011:DS:2070942.2070974} which provided a way to query nodes using SQL like a database. Unfortunately we were unsure as to how much control we would have on being able to optimise energy usage via different ways of gathering data. So we concluded that we would need to create our own language, parser for it, assembler and virtual machine to execute the produced code.
 
 
-The predicate evaluation language that we designed needed to be fairly simple to make it (i) easy to implement and (ii) easy to execute. To do this we set out a number of desired features and then explicitly decided on features that would not be included because of their irrelevance as can be seen in \autoref{tab:language-requirements}. The most important feature was that we wanted to be able to test a sub-predicate over a set of neighbouring node's data, this meant that we would need a way to represent a set of data and iterate over it. As the program is always intended to return a boolean result, there was no need to implement comprehensive iteration of the form \verb|for (<INIT>; <CONTINUE>; <NEXT>)| we instead could just implement forall and exists operators. To simplify further the language was designed to be functional rather than imperative as we had no need for our predicate checker to directly cause state changes in the application running directly on the hardware.
+The predicate evaluation language that we designed needed to be fairly simple to make it (i) easy to implement and (ii) easy to execute. To do this we set out a number of desired features and then explicitly decided on features that would not be included because of their irrelevance as can be seen in \autoref{tab:language-requirements}. The most important feature was that we wanted to be able to test a sub-predicate over a set of neighbouring node's data, this meant that we would need a way to represent a set of data and iterate over it. As the program is always intended to return a boolean result, there was no need to implement comprehensive iteration of the form \verb|for (<INIT>; <CONTINUE>; <NEXT>)| we instead could just implement for-all and exists operators. To simplify further the language was designed to be functional rather than imperative as we had no need for our predicate checker to directly cause state changes in the application running directly on the hardware.
 
 We managed to implement the majority of the features we desired, however there were some that were difficult to implement or had to be implemented differently. The first is feature 4 (set operations), which simply would have been too difficult to implement and would have greatly increased the code size. The next is feature 6 (targeting multiple nodes), this was not implemented because it would have required a variable amount of space in the message that disseminated the predicate throughout the network. There is also a simple work around, which is to create a new predicate using the same code for each of the nodes that wish to be targeted.
 
-For some of the features we desired we ended up implementing them differently than expected. Initially we expected to allow users to define functions and structures that could be operated on (like in C). However, what we ended up with was slightly different. We ended up with a primitive called \verb|Neighbours(n)| which allowed the predicate to ask for its $n$-hop neighbourhood, we also ended up with a single structure which the user defined themselves in C and provided functions to access data in that structure. These functions are then exposed to the predicate language. Finally information on a node is only exposed to the predicate if the user provides some way to store this data in the nodes data structure and provides functions to access it. These functions and the user data structure will be explained further on.
+For some of the features we desired we ended up implementing them differently than expected. Initially we expected to allow users to define functions and structures that could be operated on (like in C). However, what we ended up with was slightly different. We ended up with a primitive called $\text{Neighbours}(n)$ which allowed the predicate to ask for its $n$-hop neighbourhood, it may also be expressed with two parameters as $\text{Neighbours}(j, n)$ where $j$ refers to the node neighbour's are being requested of, for the single argument function the node should be implied from the context it is called from. We also ended up with a single structure which the user defined themselves in C and provided functions to access data in that structure. These functions are then exposed to the predicate language. Finally information on a node is only exposed to the predicate if the user provides some way to store this data in the nodes data structure and provides functions to access it. These functions and the user data structure will be explained further on.
 
+\begin{equation}
+\text{Neighbours}(j, n) = \{ x | x \in V \land \text{distance}(j, x) \leq n \land x \not= j \}
+\end{equation}
 
 \begin{table}[H]
 \centering
@@ -99,61 +102,63 @@ To reach this goal, we followed good development principles and broke down the c
 
 \subsubsection{Domain Specific Language}
 
-The following is the definition of how to parse our predicate language. We implemented it in Java using JavaCC, using several resources \footnote{JavaCC tutorial: \url{http://cs.lmu.edu/~ray/notes/javacc/}} to help in the development. Of the languages there are four main components. The first is the target of the predicate specified within square brackets, the target can be a node address (such as 1.0) or `all' to target all nodes in the network. The second is the function definitions. When users initialise our library on the motes, they need to provide a function that provides the current information on the node and a mapping of function ids to the functions used to access this data. The function definition statement in the predicate language allows a human understandable name to be assigned to a function id and it also tells the compiler what id function should be called and the type that that function returns. The third is the `using' statement that allows a set of neighbouring information to be assigned to a variable name. This is the only way to request node information not about the current node that is evaluating the predicate. The fourth and final part if the predicate itself, which includes expected logic operators that operate over sets, integers, floating point numbers and booleans. What is equivalent to what is described below.
+The following is the definition of how to parse our predicate language. We implemented it in Java using JavaCC, using several resources \footnote{JavaCC tutorial: \url{http://cs.lmu.edu/~ray/notes/javacc/}} to help in the development. In the language there are four main components. The first is the target of the predicate specified within square brackets, the target can be a node address (such as 1.0) or `all' to target all nodes in the network. The second is the function definitions. When users initialise our library on the motes, they need to provide a function that provides the current information on the node and a mapping of function ids to the functions used to access this data. The function definition statement in the predicate language allows a human understandable name to be assigned to a function id and it also tells the compiler what id function should be called and the type that that function returns. The third is the `using' statement that allows a set of neighbouring information to be assigned to a variable name. This is the only way to request node information not about the current node that is evaluating the predicate. The fourth and final part if the predicate itself, which includes expected logic operators that operate over sets, integers, floating point numbers and booleans. The logical operators that make up the predicate are described in \autoref{tab:lang-operators}.
 
 
 \begin{table}[H]
 \centering
 \begin{tabular}{| l | l | l | l | l |}
 \hline
-Name & Logic Symbol & Our Symbol & Input Type(s) & Output Type\\
+Name & Logic & Symbol & Input Type(s) & Output Type\\
 \hline
 
-For All & $\forall$ & $\sm{@}$ & Sets of user defined data & Boolean\\
-Exists & $\exists$ & $\sm{\#}$ & Sets of user defined data & Boolean\\
-
-\hline
-
-And & $\land$ & $\sm{\&}$ & Booleans & Boolean\\
-Or & $\lor$ & $\sm{\textbar}$ & Booleans & Boolean\\
-Xor & $\oplus$ & $\sm{\textasciicircum}$ & Booleans & Boolean\\
-Implies & $\implies$ & $\sm{=\textgreater}$ & Booleans & Boolean\\
-Equivalence & $\iff$ & $\sm{\textless=\textgreater}$ & Booleans & Boolean\\
+For All & $\forall$ & \sm{@} & Set of user defined data & Boolean\\
+Exists & $\exists$ & \sm{\#} & Set of user defined data & Boolean\\
 
 \hline
 
-Not & $\lnot$ & $\sm{!}$ & Boolean & Boolean\\
+And & $\land$ & \sm{\&} & Booleans & Boolean\\
+Or & $\lor$ & \sm{\textbar} & Booleans & Boolean\\
+Xor & $\oplus$ & \sm{\textasciicircum} & Booleans & Boolean\\
+Implies & $\implies$ & \sm{=\textgreater} & Booleans & Boolean\\
+Equivalence & $\iff$ & \sm{\textless=\textgreater} & Booleans & Boolean\\
 
 \hline
 
-Equality & $=$ & $\sm{==}$ & Integers or Floats & Boolean\\
-Inequality & $\not=$ & $\sm{!=}$ & Integers or Floats & Boolean\\
-Less Than & $<$ & $\sm{\textless}$ & Integers or Floats & Boolean\\
-Less Than or Equal To & $\leq$ & $\sm{\textless=}$ & Integers or Floats & Boolean\\
-Greater Than & $>$ & $\sm{\textgreater}$ & Integers or Floats & Boolean\\
-Greater Than or Equal To & $\geq$ & $\sm{\textgreater=}$ & Integers or Floats & Boolean\\
+Not & $\lnot$ & \sm{!} & Boolean & Boolean\\
 
 \hline
 
-Addition & $+$ & $\sm{+}$ & Integers or Floats & Integer or Float\\
-Subtraction & $-$ & $\sm{-}$ & Integers or Floats & Integer or Float\\
-Multiplication & $\times$ & $\sm{*}$ & Integers or Floats & Integer or Float\\
-Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
+Equality & $=$ & \sm{==} & Integers or Floats & Boolean\\
+Inequality & $\not=$ & \sm{!=} & Integers or Floats & Boolean\\
+Less Than & $<$ & \sm{\textless} & Integers or Floats & Boolean\\
+Less Than or Equal To & $\leq$ & \sm{\textless=} & Integers or Floats & Boolean\\
+Greater Than & $>$ & \sm{\textgreater} & Integers or Floats & Boolean\\
+Greater Than or Equal To & $\geq$ & \sm{\textgreater=} & Integers or Floats & Boolean\\
+
+\hline
+
+Addition & $+$ & \sm{+} & Integers or Floats & Integer or Float\\
+Subtraction & $-$ & \sm{-} & Integers or Floats & Integer or Float\\
+Multiplication & $\times$ & \sm{*} & Integers or Floats & Integer or Float\\
+Division & $\div$ & \sm{/} & Integers or Floats & Integer or Float\\
 
 \hline
 \end{tabular}
+\caption{Logical operators implemented in predicate language}
+\label{tab:lang-operators}
 \end{table}
 
-
+\begin{figure}[H]
 \begin{eqnarray*}
 	\pn{eval} & \pp & [ \pn{target} ] \ww \pn{function} \\
-	\pn{target} & \pp & \sm{all} \\
+	\pn{target} & \pp & \smlst{all} \\
 	~ & \oo & \pn{number}\sm{.}\pn{number} \\
 %
-	\pn{function} & \pp & \sm{function} \ww \pn{number} \ww \sm{as} \ww \pn{string} \ww \sm{returning} \ww \pn{type} \ww \sm{in} \ww \pn{function} \\
+	\pn{function} & \pp & \smlst{function} \ww \pn{number} \ww \smlst{as} \ww \pn{string} \ww \smlst{returning} \ww \pn{type} \ww \smlst{in} \ww \pn{function} \\
 	~ & \oo & \pn{using} \\
 %
-	\pn{using} & \pp & \sm{using} \ww \sm{Neighbours}\sm{(}\pn{number}\sm{)} \ww \sm{as} \ww \pn{variable} \ww \sm{in} \ww \pn{using} \\
+	\pn{using} & \pp & \smlst{using} \ww \smlst{Neighbours}\sm{(}\pn{number}\sm{)} \ww \smlst{as} \ww \pn{variable} \ww \smlst{in} \ww \pn{using} \\
 	~ & \oo & \pn{predicate} \\
 %
 	\pn{predicate} & \pp &  \sm{(}\pn{predicate}\sm{)} \\
@@ -166,18 +171,18 @@ Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
 	~ & \oo & \pn{number} \\
 	~ & \oo & \pn{string}\sm{(}\pn{this-variable}\sm{)} \\
 	~ & \oo & \pn{var-expr} \ww \pn{math-binary} \ww \pn{var-expr} \\
-	~ & \oo & \sm{abs}\sm{(}\pn{var-expr}\sm{)} \\
+	~ & \oo & \smlst{abs}\sm{(}\pn{var-expr}\sm{)} \\
 	~ & \oo & \pn{set-fn}\sm{(}\pn{variable}\sm{)} \\
 	~ & \oo & \pn{transform-set-fn}\sm{(}\pn{transform-fn}\sm{,} \ww \pn{variable}\sm{)} \\
 %
-	\pn{this-variable} & \pp & \pn{variable} \oo \sm{this} \\
+	\pn{this-variable} & \pp & \pn{variable} \oo \smlst{this} \\
 	\pn{variable} & \pp & \pn{string} \\
 %
 	\pn{transform-fn} & \pp & \pn{string} \\
-	\pn{transform-set-fn} & \pp & \sm{sum} \oo  \sm{mean} \oo \sm{max} \oo \sm{min} \\
-	\pn{set-fn} & \pp & \sm{len} \\
+	\pn{transform-set-fn} & \pp & \smlst{sum} \oo  \smlst{mean} \oo \smlst{max} \oo \smlst{min} \\
+	\pn{set-fn} & \pp & \smlst{len} \\
 %
-	\pn{type} & \pp & \sm{float} \oo \sm{int} \\
+	\pn{type} & \pp & \smlst{float} \oo \smlst{int} \\
 %
 	\pn{logical-binary} & \pp & \sm{\&}  \oo \sm{\textbar} \oo \sm{\textasciicircum} \oo \sm{=\textgreater} \oo \sm{\textless=\textgreater} \\
 	\pn{logical-unary} & \pp & \sm{!} \\
@@ -195,17 +200,23 @@ Division & $\div$ & $\sm{/}$ & Integers or Floats & Integer or Float\\
 %	\pn{sign} & \pp & \sm{+} \oo \sm{-} \oo \nn \\
 	\pn{quantifier} & \pp & \sm{@} \oo \sm{\#} \\
 \end{eqnarray*}
+\vspace{-2.5em}
+\caption{Language definition}
+\end{figure}
+\vspace{-1em}
 
 When we were implementing the parsing for the predicate language one of the major issues encountered was that parsing infix operators (that is the operator is between two operands) was much harder to accomplish than prefix or postfix operators, \cite{ParsingRecursiveDescent} was used as a guide to implement infix parsing.
 
-Another important issue to mention is the distinction between syntax and semanatics. The language definition specifies the syntax, but it fails to capture some of the semantic subtleties of valid programs. One example is that even if a variable name or a function name are syntactically valid strings, compilation should fail if they have not been defined by a statement prior to their usage. However, JavaCC provides a very capable framework for validating semantics during construction of the program's IR.
+Another important issue to mention is the distinction between syntax and semantics. The language definition specifies the syntax, but it fails to capture some of the semantic subtleties of valid programs. One example is that even if a variable name or a function name are syntactically valid strings, compilation should fail if they have not been defined by a statement prior to their usage. However, JavaCC provides a very capable framework for validating semantics during construction of the program's IR.
+
+An important part of this language is that certain parts of the program need to be written to reflect what is implemented in the actual firmware of the motes. For example the virtual machine must be provided with a function that produces the node's current data that can be accessed through \smlst{this}. Calling \smlst{this} just puts a block of memory on the evaluation stack, the user must also tell the compiler what functions are available, how it should access them and what type of data they return. In this way the user defined data can have data extracted from it in a form that the virtual machine knows how to deal with.
 
 \subsubsection{Example Predicates}
 \label{sec:example-predicates}
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 1 as slot returning int in
     using Neighbours(2) as twohopn in
@@ -228,7 +239,7 @@ function 1 as slot returning int in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 0 as addr returning int in
 function 1 as slot returning int in
@@ -236,7 +247,7 @@ function 1 as slot returning int in
         @(a : onehopn ~
             @(b : onehopn ~ addr(a) != addr(b)
                 => slot(a) != slot(b))
-             & slot(a) != slot(this)
+            & slot(a) != slot(this)
         )
 \end{lstlisting}
 \end{minipage}%
@@ -258,7 +269,7 @@ The predicates specified in \autoref{fig:two-hop-slot-pred-lang} and \autoref{fi
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [1.0]
 function 3 as humidity returning float in
     humidity(this) <= 40.0
@@ -277,11 +288,11 @@ function 3 as humidity returning float in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 2 as temperature returning float in
     using Neighbours(2) as twohopn in
-        abs(temperature(this) - mean(temperature, twohopn)) <= 10.0
+        abs(temperature(this) - mean(temperature, twohopn)) <= 10
 \end{lstlisting}
 \end{minipage}
 
@@ -300,7 +311,7 @@ The two predicates in \autoref{fig:app1-pred-lang} and \autoref{fig:app2-pred-la
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 0 as addr returning int in
     using Neighbours(1) as onehopn in
@@ -324,7 +335,7 @@ This predicate is perhaps not as interesting as other predicates but it has a va
 
 
 \begin{figure}[H]
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 5 as sink-distance returning int in
     using Neighbours(1) as onehopn in
@@ -336,7 +347,7 @@ function 5 as sink-distance returning int in
 
 \begin{figure}[H]
 \begin{minipage}{.5\linewidth}
-\begin{lstlisting}
+\begin{lstlisting}[language=Hoppy]
 [all]
 function 0 as addr returning int in
 function 4 as ch returning int in
@@ -365,15 +376,14 @@ Unfortunately the predicate that checks the cluster head location would not work
 
 \subsection{Virtual Machine}
 
-The virtual machine that was developed is very simple and takes inspiration from the wren \cite{wren} language's virtual machine. At heart our virtual machine uses a stack to evaluate a program, values can be pushed onto the stack and are then popped of the stack later for use in evaluation and the results of that evaluation are pushed back onto the stack. The last value on the stack is the results of the evaluation. In the virtual machine there are three types: 16-bit integers (I), 32-bit floats (F) and user-defined size user data (U). A boolean is represented as an integer with 0 standing for false and 1 standing for true, the virtual machine relies on the compiler to have generated correct code that will be correctly evaluated, it has limited error checking and reporting to keep the firmware size down.The virtual machine also has a limited and fix stack space that is configured to be 256 bytes. If this overflows then the predicate evaluation will be terminated with an error. Due to the limited space, predicates that require  more stack space than there is to evaluate themselves will fail. In testing these issues can be detected and the stack size can be increased as desired.
+The virtual machine that was developed is very simple and takes inspiration from the wren \cite{wren} language's virtual machine. At its core our virtual machine uses a stack to evaluate a program, values can be pushed onto the stack and are then popped of the stack later for use in evaluation and the results of that evaluation are pushed back onto the stack. The last value on the stack is the results of the evaluation. In the virtual machine there are three types: 16-bit integers (I), 32-bit floats (F) and user-defined size user data (U). A boolean is represented as an integer with 0 standing for false and 1 standing for true, the virtual machine relies on the compiler to have generated correct code that will be correctly evaluated, it has limited error checking and reporting to keep the firmware size down.The virtual machine also has a limited and fix stack space that is configured to be 256 bytes. If this overflows then the predicate evaluation will be terminated with an error. Due to the limited space, predicates that require more stack space than there is to evaluate themselves will fail. In testing these issues can be detected and the stack size can be increased as desired.
 
 \subsubsection{Opcodes}
 
-The program is stored as a block of memory that is a list of opcode followed by their arguments.
+The program is stored as a block of memory that is a list of opcodes followed by their arguments. The following are the opcodes implemented in the virtual machine and the semantics of executing them.
 
-\begin{verbatim}
-_ is either I for int or F for float
-
+%\begin{verbatim}
+\begin{lstlisting}[language=Dragon]
 For binary operations the order the operands are used is specified as x op x.
 When x is 0 the value on the top of the stack is used. When x is 1 the
 value after the one on the top of the stack is used.
@@ -382,18 +392,18 @@ HALT
     Halts execution.
     The stack should always have at least one integer on it when halting.
 
-_PUSH (_)
-    Pushes an _ onto the stack.
+IPUSH (int) / FPUSH (float)
+    Pushes an int or a float on to the stack.
 
-_POP
-    Pops the stack by sizeof(_) bytes.
+IPOP / FPOP
+    Pops the stack by sizeof(int) or sizeof(float) bytes.
 
-_FETCH (variable id - ubyte)
+IFETCH (variable id - ubyte) / FFETCH (variable id - ubyte)
     Fetches the value of the given variable and pushes the
-    first sizeof(_) bytes of it onto the stack.
+    first sizeof(int) or sizeof(float) bytes of it on to the stack.
 
-_STORE (variable id - ubyte)
-    Stores the first sizeof(_) bytes in the variable
+ISTORE (variable id - ubyte) / FSTORE (variable id - ubyte)
+    Stores the first sizeof(int) or sizeof(float) bytes in the variable
     of the given name.
 
 AFETCH (variable id - ubyte)
@@ -441,12 +451,12 @@ JNZ (ubyte)
     the program jumps to the location, otherwise evaluation
     continues
 
-_ADD        1 op 0
-_SUB        1 op 0
-_MUL        1 op 0
-_DIV1       0 op 1
-_DIV2       1 op 0
-    Performs a mathematical operations on the first two sizeof(_)
+IADD / FADD       1 op 0
+ISUB / FSUB        1 op 0
+IMUL / FMUL        1 op 0
+IDIV1 / FDIV1       0 op 1
+IDIV2 / FDIV2       1 op 0
+    Performs a mathematical operations on the first two sizeof(int) or sizeof(float)
     values on the stack. Pops both values off the stack, stores
     the result in the same type back on the stack.
 
@@ -455,13 +465,13 @@ IDEC
     Pops the top of the stack by sizeof(int) bytes, increments or decrements
     the value as an integer. Pushes the result back on the stack
 
-_EQ	        1 op 0
-_NEQ        1 op 0
-_ILT        1 op 0
-_LEQ        1 op 0
-_GT	        1 op 0
-_GEQ        1 op 0
-    Performs a mathematical operations on the first two sizeof(_)
+IEQ / FEQ	        1 op 0
+INEQ / FNEQ        1 op 0
+ILT / FLT        1 op 0
+ILEQ / FLEQ        1 op 0
+IGT / FGT	        1 op 0
+IGEQ / FGEQ        1 op 0
+    Performs a mathematical operations on the first two sizeof(int) or sizeof(float)
     values on the stack. Pops both values off the stack, stores
     the result in an integer on the stack.
 
@@ -480,13 +490,13 @@ NOT
     Pops an integer off the stack, performs logical not on it.
     Pushes the result back on the stack.
 	
-_VAR (variable id - ubyte)
-    Creates a variable of type _ with the id set to the given
+IVAR (variable id - ubyte) / FVAR (variable id - ubyte)
+    Creates a variable of type int or float with the id set to the given
     unsigned byte.
 
-_ABS
-    Pops the stack by sizeof(_) bytes performs the abs function
-    on the integer of float value and pushes sizeof(_) back onto
+IABS / FABS
+    Pops the stack by sizeof(int) or sizeof(float) bytes performs the abs function
+    on the integer of float value and pushes sizeof(int) or sizeof(float) back onto
     the stack.
 
 VIINC (x - variable id)
@@ -517,8 +527,8 @@ THISC (f - function id)
     IPUSH 0
     AFETCH 0
     CALL f
-    
-\end{verbatim}
+\end{lstlisting}
+%\end{verbatim}
 
 
 \subsubsection{Bytecode}
@@ -551,7 +561,143 @@ When developing the virtual machine what also became important was the fact that
 \caption{Example of the error messages produced by MSPSim in Cooja that led to the discovery of this bug}
 \end{figure}
 
-As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead. As we copy out byte-by-byte and not by word we can access the memory correctly.
+As can be seen in \autoref{fig:alignment-issues} if we were to align the words as the CPU wanted the size of the bytecode would massively increase as every single byte bytecode would need to be padded by a byte to (i) make sure all bytecode entries were the same length and to ensure the word parameters are correctly aligned. To solve this issue instead of accessing the memory directly in the bytecode what can be done instead is to copy the memory out byte-by-byte into a correctly aligned block of memory and use that instead. As we copy out byte-by-byte and not by word we can access the memory correctly which allows us to store the bytecode in its more compact form desired by us.
+
+\subsection{Examples of Compiled Programs}
+
+\begin{figure}[H]
+\begin{minipage}{0.65\linewidth}
+\hrule
+\begin{lstlisting}[language=Hoppy]
+[all]
+function 1 as slot returning int in
+    using Neighbours(2) as twohopn in
+        @(x : twohopn ~
+            slot(x) != slot(this)
+        )
+\end{lstlisting}
+\begin{lstlisting}[language=Dragon]
+//TARGETING all
+//FUNC 1 AS slot
+//STORING 2 IN twohopn
+IVAR 1
+IPUSH 1
+IPUSH 0
+ISTORE 1
+start1: ALEN 255
+INEQ
+JZ end1
+//slot(a[*1])
+VIFAFC 1 255 1
+//slot(this)
+THISC 1
+INEQ
+AND
+VIINC 1
+JMP start1
+end1: HALT
+//VD 2 = 255
+\end{lstlisting}
+\hrule
+\begin{lstlisting}[language=Hoppy]
+[all]
+function 0 as addr returning int in
+function 1 as slot returning int in
+    using Neighbours(1) as onehopn in
+        @(a : onehopn ~
+            @(b : onehopn ~ addr(a) != addr(b)
+                => slot(a) != slot(b))
+            & slot(a) != slot(this)
+        )
+\end{lstlisting}
+\end{minipage}\hspace{1em}
+\begin{minipage}{0.25\linewidth}
+\begin{lstlisting}[language=Dragon]
+//TARGETING all
+//FUNC 0 AS addr
+//FUNC 1 AS slot
+//STORING 1 IN onehopn
+IVAR 1
+IPUSH 1
+IPUSH 0
+ISTORE 1
+start1: ALEN 255
+INEQ
+JZ end1
+IVAR 2
+IPUSH 1
+IPUSH 0
+ISTORE 2
+start2: ALEN 255
+INEQ
+JZ end2
+//addr(a[*1])
+VIFAFC 1 255 0
+//addr(b[*2])
+VIFAFC 2 255 0
+INEQ
+//slot(a[*1])
+VIFAFC 1 255 1
+//slot(b[*2])
+VIFAFC 2 255 1
+INEQ
+IMPLIES
+AND
+VIINC 2
+JMP start2
+//slot(a[*1])
+end2: VIFAFC 1 255 1
+//slot(this)
+THISC 1
+INEQ
+AND
+AND
+VIINC 1
+JMP start1
+end1: HALT
+//VD 1 = 255
+\end{lstlisting}
+\end{minipage}
+\caption{Compiled check for slot collisions. Using 2-hop information of \autoref{fig:two-hop-slot-pred-lang} on the left and using 1-hop information of \autoref{fig:one-hop-slot-pred-lang} on the right.}
+\label{fig:two-hop-slot-pred-lang-compiled}
+\end{figure}
+
+Here we can see the vast difference that is caused by using a single loop versus a nested loop in a predicate. The single loop program that uses two hop information as an assembled binary size of 28 bytes, whereas the assembled size of the one hop information program has a size of 68 bytes. This program size may eventually become important when reaching the maximum allowed size of a single packet, as it is unlikely that a program like this will be able to go much over 100 bytes (without support for splitting the program up into multiple packets).
+
+Also included in the programs are comments placed there by the compiler to indicate what the code is doing, the aim is that the developers will be able to manually tweak the code to try to reduce the size of it. Perhaps one of the startling differences is the benefit of some of the special array opcodes as can be seen in \autoref{fig:app2-pred-lang-compiled} which is only 13 bytes long. Without the \verb|AMEAN| opcode there would need to be a loop in IR to calculate the mean, by shifting this responsibility to the interpreter the code size can reduced by eliminating an interpreted loop.
+
+\begin{figure}[H]
+\begin{minipage}{0.7\linewidth}
+\begin{lstlisting}[language=Hoppy]
+[all]
+function 2 as temp returning float in
+    using Neighbours(2) as twohopn in
+        abs(temp(this) - mean(temp, twohopn)) <= 10
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.2\linewidth}
+\begin{lstlisting}[language=Dragon]
+//TARGETING all
+//FUNC 2 AS temp
+//STORING 2 IN twohopn
+//temp(this)
+THISC 2
+AMEAN 255 2
+FSUB
+FABS
+IPUSH 10
+ICASTF
+FLEQ
+HALT
+//VD 2 = 255
+\end{lstlisting}
+\end{minipage}
+\caption{Compiled mean temperature check of \autoref{fig:app2-pred-lang}}
+\label{fig:app2-pred-lang-compiled}
+\end{figure}
+
+One final optimisation that is worth mentioning is that, while we have support for it, we will often not generate code that involves pushing floats onto the stack. This is because if it is possible it we can save a byte of the program size by instead pushing an integer and then casting it to a float. When pushing a float we need 1 byte for the opcode and 4 bytes for the float being pushed giving 5 bytes of program. In the optimised case we need 1 byte for the \verb|IPUSH| opcode, 2 bytes for the integer and 1 byte for the \verb|ICASTF| opcode giving 4 bytes of program instead of 5.
+
 
 \subsection{Testing}
 
@@ -565,7 +711,7 @@ Different things are tested for each of the integration tests. When testing the 
 
 So far we have covered what we wish to evaluate and how that shall be evaluated, however, we have not talked about how data shall reach its destination to be evaluated. The how of evaluating data is split into two parts: `where' the predicate should be evaluated and `when' the data should be disseminated.
 
-Regarding where a predicate should be evaluated there seem to be two choices. Either there is collection of all the networks state at a single location designated as a sink (such as the base station), this is what traditional Global Predicate Evaluation algorithms would do. Or, the predicate could be evaluated in the network at some target node. We intend to investigate both of these.
+Regarding where a predicate should be evaluated there are two choices. Either there is collection of all the networks state at a single location designated as a sink (such as the base station), this is what traditional Global Predicate Evaluation algorithms would do. Or, the predicate could be evaluated in the network at some target node. We intend to investigate both of these.
 
 Considering when the data should be disseminated there are again several options available. The first and most obvious is to simply periodically send out the information. However, periodic data transmission could potentially inefficient, so we will also investigate event-based dissemination. Finally, nodes could also request information when it is desired. We investigate all three of these.
 
@@ -612,81 +758,7 @@ Instead of requesting information every node could simply periodically broadcast
 \caption{Predicate Evaluation Local Periodic (PELP)}
 \end{figure}
 
-When using the N-Hop Request library to implement this predicate evaluator there is an important issue that needs to be considered: when we have sent the data request message how long should we wait for? We cannot simply wait until all the results are returned to the evaluating node because (i) we do not necessarily know what node's data we will be waiting for and (ii) we may not receive that data anyway. We could wait for $2 \times D \times T_{send} + \epsilon$ time units, where $D$ is the maximum number of hops we are asking for information from, $T_{send}$ is the amount of time it takes for a message to try to be sent and $\epsilon$ is a small extra amount of time to wait. However, knowing what $T_{send}$ is can be difficult, and is based on many complicated factors. For example, if the MAC protocol in use uses CSMA/CD or CSMA/CA then it is possible, when trying to send a message, to enter into an arbitrary number of back-off period while waiting for the channel to be free \cite{?}. If there is an upper bound on the number of retries then we can calculate a maximum $T_{send}$, otherwise we cannot. Therefore, for our implementation we chose to use a fixed large value in which it was reasonable to expect all the responses that would return, would return within that period. We expect that in the future, this wait period will need to be some function of $D$ the number of hops of information being asked for to support requesting information from deeper in the network.
-
-%TODO: include
-\begin{comment}
-\subsubsection{Implementing Primitives}
-
-There are certain primitives that we are going to need to implement. One of these is the $Neighbours(n, h)$ primitive, that takes a parameter $n$ that is the node we wish to get neighbour information on and $d$ which is the distance in hops from the node $n$ that we will ask for information.
-
-\begin{align}
-\label{eq:hcluster-neighbours-predicate}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		\exists n' \in Neighbours(n, H) \cdot \\
-& \hspace{9em}			IsClusterHead(n)
-\end{align}
-
-An example of a predicate that uses $Neighbours(n, h)$ is shown above. This predicate is for Hierarchical Clustering where $H$ is a parameter that defines the distance between cluster heads. The predicate checks that for every node there is a neighbour in the $H$-hop neighbourhood that is a cluster head.
-
-An alternative way that we might specify this predicate is to check that the distance between a node and the cluster head (that it knows the address of) is within $H$ hops.
-
-\begin{align}
-\label{eq:hcluster-distance-predicate}
-& \hspace{3em}	\forall n \in Nodes \cdot \\
-& \hspace{6em}		IsSink(n) \lor Distance(n, ClusterHead(n)) \leq H
-\end{align}
-
-However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for  time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter.
-
-
-\subsubsection{Getting and Waiting for Neighbourhood Data}
-
-\begin{enumerate}
-	\item If all neighbours are known then 1-hop predicates can wait for each node to send data. This has extra memory and communication requirements
-	\item If we do not know who our n-hop neighbours are then we can just set a time out to wait for results
-	\begin{enumerate}
-		\item If we do not receive all items what should be done?
-		\item Should we report that the predicate is true, even though we didn't receive all the information?
-	\end{enumerate}
-	\item What data should be sent from surrounding nodes and how could we access it?
-\end{enumerate}
-
-
-When asking for information on the neighbourhood, it possible to consider optimisations due to the structure of the predicate. For example take conjunctive predicates where the structure of the predicate $P$ is $P = P_1 \land P_2 \land \ldots \land P_n$. If one of the $P_i$ is false then the result of the predicate $P$ is false ($False \land P \Leftrightarrow False$). This means that the statements could potentially be evaluated in an order such that the $P_i$ that requires the fewest resources is evaluated first and the $P_j$ that requires the most resources is evaluated last.
-
-The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use to us is when gathering data for in-network predicates that are checked periodically.
-
-Surprisingly, asking for and receiving all the required information actually requires fewer messages than incrementally asking for information. This is because of the communication that needs to be repeated when asking for more information. For example if you have a conjunctive predicate where the sub-predicates require 1 and 3 hops of information. If we ask for all information then we simply send messages out 3 hops and then receive replies from all the nodes in that neighbourhood. If we instead ask for one-hop information first and then three-hop, we first have to send a message to local neighbours and then will end up sending them another data request message when asking for three-hop information (as the 1-hop neighbourhood is contained within the 3-hop neighbourhood).
-
-For some predicates it may make obvious sense, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would end up degrading the performance of requesting the near-by information. Also adding this feature would increase the firmware size, which began to reach the limit when the predicate evaluation libraries that aggregate data to the sink were implemented.
-
-% Include equations if someone can be bothered to work them out
-%\begin{comment}
-\begin{figure}[H]
-\begin{equation}
-\sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
-\end{equation}
-\caption{The number of messages required to respond x hops}
-\end{figure}
-
-The sigma function is defined as it is because for each of the nodes that are $x$ hops away they will require sending their data message $x$ hops to reach the requesting node.
-
-\begin{figure}[H]
-\begin{equation}
-\sum_{j \in H} j + \sigma(j)
-\end{equation}
-\caption{Maximum number of messages for an incremental data request}
-\end{figure}
-
-\begin{figure}[H]
-\begin{equation}
-|N_F(\text{max}(H))| \times \text{max}(H) + \sigma(\text{max}(H))
-\end{equation}
-\caption{Number of messages for a complete data request}
-\end{figure}
-%\end{comment}
-\end{comment}
+When using the N-Hop Request library to implement this predicate evaluator there is an important issue that needs to be considered: when we have sent the data request message how long should we wait for? We cannot simply wait until all the results are returned to the evaluating node because (i) we do not necessarily know what node's data we will be waiting for and (ii) we may not receive that data anyway. We could wait for $2 \times D \times T_{send} + \epsilon$ time units, where $D$ is the maximum number of hops we are asking for information from, $T_{send}$ is the amount of time it takes for a message to try to be sent and $\epsilon$ is a small extra amount of time to wait. However, knowing what $T_{send}$ is can be difficult, and is based on many complicated factors. For example, if the MAC protocol in use uses CSMA/CD or CSMA/CA then it is possible, when trying to send a message, to enter into an arbitrary number of back-off period while waiting for the channel to be free \cite[p.~296]{Tanenbaum:2002:CN:572404}. If there is an upper bound on the number of retries then we can calculate a maximum $T_{send}$, otherwise we cannot. Therefore, for our implementation we chose to use a fixed large value in which it was reasonable to expect all the responses that would return, would return within that period. We expect that in the future, this wait period will need to be some function of $D$ the number of hops of information being asked for to support requesting information from deeper in the network.
 
 
 \subsubsection{Global}
@@ -751,7 +823,7 @@ The first predicate we might consider is the one where for every node, we get th
 	\item The node would need to report to the base station the result of the predicate
 \end{enumerate}
 
-So we would need at best $|V| + \Delta_{sink}(n) + M(P)$ messages to evaluate this predicate for the single node $n \in V$. We need $|V|$ message to flood the predicate to every node, $\Delta_{sink}(n)$ is needed to send a failure reply back to the sink and the last component $M(P_{2})$ is the message cost of evaluating the predicate on that node. For example $M(P_{2}) = 2|Neighbours(n, 1)|$ for PELP as a message has to be flooded out two hops to ask for the information and then those nodes need to respond.
+So we would need at best $|V| + \Delta_{sink}(n) + M(P_2)$ messages to evaluate this predicate for the single node $n \in V$. We need $|V|$ messages to flood the predicate to every node, $\Delta_{sink}(n)$ is needed to send a failure reply back to the sink and the last component $M(P_{2})$ is the message cost of evaluating the predicate on that node. For example $M(P_{2}) = 2|Neighbours(n, 2)|$ for PELP as a message has to be flooded out two hops to ask for the information and then those nodes need to respond.
 
 \begin{align}
 \label{eq:2-hop-slot-pred}
@@ -772,7 +844,7 @@ The second predicate we could consider is the one where every node checks their 
 
 Initially one may consider that this 1-hop predicate can simply be evaluated on a node $n' \in V$ where $\{n, n'\} \in E$. However, this means that this predicate is no longer equivalent to that 2-hop predicate. For example if $n$ has another neighbour $n''$ whose 1-hop neighbourhood is not contained within $n'$'s 1-hop neighbourhood ($Neighbours(n'', 1) \setminus Neighbours(n', 1) \not= \emptyset$) then $n''$ would also need to be checked.
 
-So the number of message that would be required to evaluate this 1-hop predicate on the required node is  $|V| + \sum_{n' \in Neighbours(n, 1)}{\Delta_{sink}(n')} + M(P_{1})$. Where $|V|$ is required for the same reasons as the 2-hop predicate and every neighbour $n'$ of $n$ needs to send a failure message. $M(P_{1}) = \sum_{n' \in Neighbours(n, 1)}{2|Neighbours(n', 1)|}$ for PELP because every neighbour $n'$ of $n$ needs to ask $n'$'s 1-hop neighbourhood for information.
+So the number of message that would be required to evaluate this 1-hop predicate on the required node is  $|V| + \sum_{n' \in Neighbours(n, 1)}{\Delta_{sink}(n')} + M(P_{1})$. Where $|V|$ is required for the same reasons as the 2-hop predicate and the second part is because every neighbour $n'$ of $n$ needs to send a failure message. $M(P_{1}) = \sum_{n' \in Neighbours(n, 1)}{2|Neighbours(n', 1)|}$ for PELP because every neighbour $n'$ of $n$ needs to ask $n'$'s 1-hop neighbourhood for information.
 
 
 \begin{align}
@@ -783,7 +855,7 @@ So the number of message that would be required to evaluate this 1-hop predicate
 & \hspace{6em}				\text{addr}(n') \not= \text{addr}(n'') \implies \text{slot}(n') \neq \text{slot}(n'')
 \end{align}
 
-So this introduction of the 1-hop predicate has led to a spreading out of the evaluation, but with roughly the same amount of energy usage. The energy usage is roughly the same as the number of nodes from which data is requested is the same in $M(P_{1})$ as $M(P_{2})$. However, the 1-hop implementation has a good advantage, which is that by asking nodes neighbouring the 1-hop neighbours of $n$ to also evaluate the predicate they can take advantage that some of the predicate is already being evaluated. As shown in \autoref{fig:1-hop-new-eval} a new node can be set to evaluate a predicate and that node will take advantage of the already evaluated neighbouring information that is not necessary to repeat. Whereas the 2-hop predicate would need to repeat a lot of data request and evaluation if it were to be evaluated on multiple nodes. So Adding more and more nodes that evaluate the 1-hop predicate will scale much better than the 2-hop predicate simply because the of way that the evaluation is distributed and the way that distribution can prevent duplicate requesting of information. So checking an entire network for slot collisions should be much more energy efficient when using the 1-hop predicate.
+So this introduction of the 1-hop predicate has led to a spreading out of the evaluation, but with roughly the same amount of energy usage. The energy usage is roughly the same as the number of nodes from which data is requested is the same in $M(P_{1})$ as $M(P_{2})$, the 1-hop predicate will likely require slightly more energy as nodes will be asked their data multiple times by other nodes. However, the 1-hop implementation has a good advantage, which is that by asking nodes neighbouring the 1-hop neighbours of $n$ to also evaluate the predicate they can take advantage that some of the predicate is already being evaluated. As shown in \autoref{fig:1-hop-new-eval} a new node can be set to evaluate a predicate and that node will take advantage of the already evaluated neighbouring information that is not necessary to repeat. Whereas the 2-hop predicate would need to repeat a lot of data request and evaluation if it were to be evaluated on multiple nodes. So Adding more and more nodes that evaluate the 1-hop predicate will scale much better than the 2-hop predicate simply because the of way that the evaluation is distributed and the way that distribution can prevent duplicate requesting of information. So checking an entire network for slot collisions should be much more energy efficient when using the 1-hop predicate.
 
 
 \begin{figure}[H]
@@ -801,7 +873,65 @@ However, there is one final factor to take into account that even though using 2
 
 % Problem of Distance(n, n')
 
+The only network primitive we have implemented is a function that gets information on nodes within a certain number of hops of the asking node. There are a number of other network primitives that might be useful for both network and application predicates. One of these is the ability to get the distance between two nodes.
+
+An example of a predicate that uses $Neighbours(n, h)$ is shown below. This predicate is for Hierarchical Clustering where $H$ is a parameter that defines the distance between cluster heads. The predicate checks that for every node there is a neighbour in the $H$-hop neighbourhood that is a cluster head.
+
+\begin{align*}
+& \hspace{2em}	\forall n \in Nodes \cdot \\
+& \hspace{4em}		\exists n' \in Neighbours(n, H) \cdot \\
+& \hspace{6em}			IsClusterHead(n)
+\end{align*}
+
+An alternative way that we might specify this predicate is to check that the distance between a node and the cluster head (that it knows the address of) is within $H$ hops.
+
+\begin{align*}
+& \hspace{2em}	\forall n \in Nodes \cdot \\
+& \hspace{4em}		IsClusterHead(n) \lor Distance(n, ClusterHead(n)) \leq H
+\end{align*}
+
+However, there is an issue with this predicate. How would we implement the $Distance(n, n')$ primitive? With $Neighbours(n, h)$ we know how far we need to ask for information ($h$ hops), with $Distance(n, n')$ the maximum distance that we will need to wait for information to return from is the diameter of the network. Unfortunately we cannot assume that the diameter is known. If instead we take a time-out approach there is no way that we can guarantee to wait for the correct amount of time. For example if we wait enough time to check if a node is at maximum $D$ hops from the given node the node will need to wait for  time units. However, if the node we are trying to find the distance of is at $D + 1 $ hops then we will not believe the two nodes are connected. To reliably wait to check if two nodes are connected in a network where the diameter is not known we will need to wait for $\infty$ time units. Thus making $Distance(n, n')$ impossible to implement without knowing the diameter. Due to this issue we have not implemented such a network primitive function.
+
 
 \subsection{Optimising on Predicate Structure}
 
 % Conjuntive vs disjuntive predicates
+
+
+When evaluating predicates in-network, it possible to consider optimisations due to the structure of the predicate to reduce the amount of information that is requested. For example take conjunctive predicates where the structure of the predicate $P$ is $P = P_1 \land P_2 \land \ldots \land P_n$. If one of the $P_i$ is false then the result of the predicate $P$ is false ($False \land P \Leftrightarrow False$). This means that the statements could potentially be evaluated in an order such that the $P_i$ that requires the fewest resources is evaluated first and the $P_j$ that requires the most resources is evaluated last.
+
+The aim of this optimisation is to reduce energy usage by sending fewer messages. For the two types of data gathering in-network and at the sink, when gathering this data at the sink it would not be of any use as the data is sent to the sink in an event-based or periodic way. The sink doesn't ask for this information, so it is not possible for it to not ask for certain pieces of data. This is also true of event-based in-network predicate checking. So the only time this optimisation would be of use is when gathering data for in-network predicates that are checked periodically.
+
+%Surprisingly, asking for and receiving all the required information actually requires fewer messages than incrementally asking for information. This is because of the communication that needs to be repeated when asking for more information. For example if you have a conjunctive predicate where the sub-predicates require 1 and 3 hops of information. If we ask for all information then we simply send messages out 3 hops and then receive replies from all the nodes in that neighbourhood. If we instead ask for one-hop information first and then three-hop, we first have to send a message to local neighbours and then will end up sending them another data request message when asking for three-hop information (as the 1-hop neighbourhood is contained within the 3-hop neighbourhood).
+
+For some predicates it may make obvious sense to implement such an optimisation, such as if there is a conjunctive predicate that needs 1-hop information and 15-hop information. If the 1-hop predicate is often false, then it saves asking for information from all nodes that are within 15 hops of the evaluating node. However, as many of the predicates are not likely to require information from that distance (we expect one to two hops, with the possibility of three hops) it is an optimisation that would not serve to optimise what we are targeting our system to evaluate. Another issue is that many of the predicates we have thought up are not of this form, they mostly have quantifiers as the outer structure with other logical operators inside that quantifier. It may be the case where you have a predicate of the following structure $P = P_{local} \land P_{network}$ where $P_{local}$ needs no network information, here there is the possibility to optimise the network request out if $P_{local}$ is false. However as adding this feature would increase the firmware size we decided against adding more optimisations. This was because the software began to reach the limit of the firmware size when the virtual machine was integrated with the message communication. However, investigating these kinds of optimisations is a future possibility.
+
+%
+%\begin{figure}[H]
+%\begin{equation}
+%\sigma(x) = \sum_{i=1}^{x} i \times |N(i)|
+%\end{equation}
+%\caption{The number of messages required to respond x hops}
+%\end{figure}
+%
+%The sigma function is defined as it is because for each of the nodes that are $x$ hops away they will require sending their data message $x$ hops to reach the requesting node.
+%
+%\begin{figure}[H]
+%\begin{equation}
+%\sum_{j \in H} |N_F(j)| + \sigma(j)
+%\end{equation}
+%\caption{Maximum number of messages for an incremental data request}
+%\end{figure}
+%
+%\begin{figure}[H]
+%\begin{equation}
+%|N_F(\text{max}(H))| + \sigma(\text{max}(H))
+%\end{equation}
+%\caption{Number of messages for a complete data request}
+%\end{figure}
+
+
+
+
+
+

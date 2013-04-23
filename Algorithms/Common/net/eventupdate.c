@@ -6,10 +6,10 @@
 #include "debug-helper.h"
 #include "random-range.h"
 
-static void flood_recv(struct nhopflood_conn * c, rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops)
+static void flood_recv(struct nhopflood_conn * c,
+	rimeaddr_t const * source, uint8_t hops, uint8_t previous_hops)
 {
-	// Prevent delivering details about the current node
-	// (that has been received via another node)
+	// Prevent delivering details about the current node (that has been received via another node)
 	if (!rimeaddr_cmp(source, &rimeaddr_node_addr))
 	{
 		event_update_conn_t * conn = (event_update_conn_t *)c;
@@ -66,7 +66,6 @@ static void data_check(void * p)
 		has_changed = true;
 	}
 
-
 	// Data has changed so send update message
 	if (has_changed)
 	{
@@ -85,7 +84,6 @@ static void data_check(void * p)
 	// Reset timer
 	ctimer_reset(&conn->check_timer);
 }
-
 
 bool event_update_start(
 	event_update_conn_t * conn, uint8_t ch, data_generation_fn data_fn,

@@ -29,6 +29,9 @@
 
 \usepackage{comment}
 
+\usepackage[firstpage]{draftwatermark}
+\SetWatermarkText{\includegraphics[width=\paperwidth,angle=-45]{Images/wallpaper}}
+
 % Use minted and set the visual style to be the
 % same as the one used by visual studio
 \usepackage{minted}
@@ -61,22 +64,40 @@
 \usepackage{listings}
 \definecolor{keywordblue}{RGB}{20,105,176}
 \lstdefinelanguage{Hoppy}{
-    morekeywords={all,function,as,returning,in,using},
+    morekeywords=[1]{all,function,as,returning,in,using},
+    morekeywords=[2]{this},
+    morekeywords=[3]{int,float},
+    morekeywords=[4]{Neighbours,abs,mean,max,min,sum,len},
     sensitive=true,
 }
 \lstset{
     language=Hoppy,
-    keywordstyle=\color{keywordblue},
-%
-    keywords=[2]{this},
+    keywordstyle=[1]\color{keywordblue},
     keywordstyle=[2]\color{OliveGreen},
-%
-    keywords=[3]{int,float},
     keywordstyle=[3]\color{YellowOrange},
-%
-    keywords=[4]{Neighbours,abs,mean,max,min,sum,len},
     keywordstyle=[4]\color{Purple},
-%
+    basicstyle=\ttfamily,
+    columns=fullflexible,
+}
+
+\lstdefinelanguage{Dragon}{
+    morekeywords=[1]{IPUSH,IPOP,IFETCH,ISTORE,IADD,ISUB,IMUL,IDIV1,IDIV2,IINC,IDEC,IEQ,INEQ,ILT,ILEQ,IGT,IGEQ,IABS,IVAR,ICASTF},
+    morekeywords=[2]{FPUSH,FPOP,FFETCH,FSTORE,FADD,FSUB,FMUL,FDIV1,FDIV2,FEQ,FNEQ,FLT,FLEQ,FGT,FGEQ,FABS,FVAR,FCASTI},
+    morekeywords=[3]{AFETCH,ALEN,ASUM,AMEAN,AMAX,AMIN},
+    morekeywords=[4]{HALT,CALL,JMP,JZ,JNZ},
+    morekeywords=[5]{VIINC,VIDEC,VIFAFC,THISC},
+    morekeywords=[6]{AND,OR,XOR,EQUIVALENT,IMPLIES,NOT},
+    morecomment=[l]{//},
+    sensitive=true,
+}
+\lstset{
+    language=Dragon,
+    keywordstyle=[1]\color{Cyan},
+    keywordstyle=[2]\color{WildStrawberry},
+    keywordstyle=[3]\color{YellowOrange},
+    keywordstyle=[4]\color{Violet},
+    keywordstyle=[5]\color{ForestGreen},
+    keywordstyle=[6]\color{BurntOrange},
     basicstyle=\ttfamily,
     columns=fullflexible,
 }
@@ -128,6 +149,8 @@
 \newcommand{\sm}[1]{\textnormal{#1}}
 \newcommand{\sd}[1]{\textnormal{\it #1}}
 
+\newcommand{\smlst}[1]{\textnormal{\lstinline[language=Hoppy]|#1|}}
+
 \begin{document}
 
 \begin{titlepage}
@@ -136,16 +159,21 @@
 % Upper part of the page
 \includegraphics[scale=0.6]{the_warwick_uni_blue.eps}\\[0.75cm]
 
-\textsc{\LARGE Department of Computer Science}\\[1.5cm] 
+{\LARGE \bfseries Department of Computer Science}\\[1.5cm] 
 
-\textsc{\Large Fourth Year Project}\\[0.5cm]
-
+{\Large \bfseries Fourth Year Project}\\[0.5cm]
 
 % Title
 \HRule \\[0.4cm]
-{\Huge \bfseries Towards Practical Debugging of Wireless Sensor Network Applications}\\[0.4cm]
+{\Huge \bfseries Towards Practical Debugging of Wireless Sensor Network Applications\par}
+%\\[0.4cm]
 
-\HRule \\[2cm]
+\HRule \\[8.5cm]
+
+\vfill
+\vfill
+\vfill
+\vfill
 
 % Author and supervisor
 \noindent{
@@ -170,21 +198,13 @@ Dr.~Arshad Jhumka
 \end{minipage}}
 
 \vfill
-
-\begin{abstract} 
-Debugging tools are vital for developers to produce reliable software, however traditional tools are less useful when developing software for new system paradigms such as wireless sensor networks. As wireless sensor networks (WSNs) become increasing prevalent in our lives it will become ever more important that the software they are running works reliably and to do this debugging tools will be required. This project investigates how predicates can be specified and accurately checked throughout WSNs and how errors can be reported to a base station. We also develop a system that facilitates reporting predicate statuses to a desktop application.
-\newline
-\newline
-\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Reliability; Predicate Checking;
-\end{abstract}
-
 \vfill
 \vfill
 \vfill
 \vfill
 
 % Bottom of the page
-{\large October 2012 - July 2013}
+{\large October 2012 - May 2013}
 
 \end{center}
 \end{titlepage}
@@ -195,11 +215,17 @@ Debugging tools are vital for developers to produce reliable software, however t
 
 \newpage
 
+\begin{abstract}
+Debugging tools are vital for developers to produce reliable software, however traditional tools are less useful when developing software for new system paradigms such as wireless sensor networks. As wireless sensor networks (WSNs) become increasing prevalent in our lives it will become ever more important that the software they are running works reliably and to do this debugging tools will be required. This project investigates how predicates can be specified and accurately checked throughout WSNs and how errors can be reported to a base station. We also develop a system that facilitates reporting predicate statuses to a desktop application.
+\newline
+\newline
+\noindent \textbf{Keywords} - Wireless Sensor Networks; Debugging; Reliability; Predicate Checking;
+\end{abstract}
+
 %\begin{acknowledgements}
 %Acknowledgements
 %\end{acknowledgements}
-\thispagestyle{empty}
-\mbox{}
+
 \clearpage
 
 

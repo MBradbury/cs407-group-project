@@ -17,7 +17,10 @@
 	   __typeof__ (b) _b = (b); \
 	 _a < _b ? _a : _b; })
 
+// The maximum number of retransmits before giving up sending a packet
 #define MAX_REXMITS 4
+
+// The time between transmits
 #define SEND_PERIOD ((clock_time_t) 1 * CLOCK_SECOND)
 
 typedef struct
@@ -34,6 +37,7 @@ typedef struct
 	// Data stored from here onwards
 } multipacket_sending_packet_t;
 
+// Need to use a union to not break the strict aliasing rule
 typedef union
 {
 	uint32_t i32;
@@ -47,7 +51,8 @@ typedef union
 
 typedef struct
 {
-	recv_key_t key;
+	recv_key_t key; // Keep this key first
+	
 	unsigned int length;
 	unsigned int data_received;
 	uint8_t last_seqno;
@@ -55,16 +60,17 @@ typedef struct
 	// Data stored from here onwards
 } multipacket_receiving_packet_t;
 
+// Gets the pointer to the data stored after the struct
 static inline void * sending_data(multipacket_sending_packet_t * packet)
 {
 	return (packet + 1);
 }
-
 static inline void * receiving_data(multipacket_receiving_packet_t * packet)
 {
 	return (packet + 1);
 }
 
+// Equality function for two recv_key_t
 static bool recv_key_equality(void const * left, void const * right)
 {
 	if (left == NULL || right == NULL)
@@ -98,15 +104,14 @@ static void send_loop_callback(void * ptr)
 {
 	multipacket_conn_t * conn = (multipacket_conn_t *)ptr;
 
-	// Check that we have something to send onwards and
-	// that runicast is not currently sending
+	// Check that we have something to send onwards and that runicast is not currently sending
 	if (!linked_list_is_empty(&conn->sending_packets) && !runicast_is_transmitting(&conn->rc))
 	{
 		multipacket_sending_packet_t * details = linked_list_peek(&conn->sending_packets);
 
 		unsigned int to_send = min(PACKETBUF_SIZE, details->length - details->sent);
 
-		void * send_start = (char *)(sending_data(details)) + details->sent;
+		void const * send_start = ((char const *) sending_data(details)) + details->sent;
 
 		packetbuf_clear();
 		packetbuf_set_datalen(to_send);
@@ -127,12 +132,16 @@ static void send_loop_callback(void * ptr)
 		// Check to see if we have finished sending
 		if (details->sent == details->length)
 		{
-			conn->callbacks->sent(conn, &details->target, sending_data(details), details->length);
+			if (conn->callbacks->sent != NULL)
+			{
+				conn->callbacks->sent(conn, &details->target, sending_data(details), details->length);
+			}
 
 			linked_list_pop(&conn->sending_packets);
 		}
 	}
-
+	
+	// Set the timer to call this function again
 	ctimer_reset(&conn->ct_sender);
 }
 
@@ -140,7 +149,8 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 {
 	multipacket_conn_t * conn = runicast_conncvt(rc);
 
-	// We have received a packet, now we need to join stuff back together
+	// We have received a packet, now we need to join segmented data back together
+	
 	const uint16_t packet_id = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ID);
 	const uint8_t seq = packetbuf_attr(PACKETBUF_ATTR_EPACKET_SEQNO);
 	const unsigned int data_length = packetbuf_attr(PACKETBUF_ATTR_EPACKET_ELENGTH);
@@ -154,9 +164,9 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 	key.data.id = packet_id;
 	rimeaddr_copy(&key.data.originator, source);
 
+	// Get the data already received about this packet
 	multipacket_receiving_packet_t * details =
 		(multipacket_receiving_packet_t *)map_get(&conn->receiving_packets, &key);
-
 
 	void * data_to_pass_onwards = NULL;
 	unsigned int length_of_data_to_pass_onwards = 0;
@@ -164,10 +174,10 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 
 	if (details == NULL)
 	{
+		// We have not received this message before!
+	
 		if (seq == 0)
 		{
-			// We have not received this message before!
-
 			// OPTIMISATION: avoid allocating memory when we will free it shortly
 			// this is the case when we have an entire message in a single packet
 			if (recv_length == data_length)
@@ -178,6 +188,7 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 			}
 			else
 			{
+				// Record this packet
 				details = (multipacket_receiving_packet_t *)
 					malloc(sizeof(multipacket_receiving_packet_t) + data_length);
 				details->key = key;
@@ -190,22 +201,26 @@ static void recv_from_runicast(struct runicast_conn * rc, rimeaddr_t const * fro
 				map_put(&conn->receiving_packets, details);
 			}
 		}
+		
+		// If we do not have a record, and the sequency number is greater
+		// than 0, then we have already missed the first packet and there
+		// would be no point in recording any more.
 	}
 	else
 	{
 		// Check that this is the next packet that we want
 		if (seq == details->last_seqno + 1)
 		{
-			void * data_ptr = (char *)(receiving_data(details)) + details->data_received;
+			void * data_ptr = ((char *) receiving_data(details)) + details->data_received;
 
+			// Copy in the newly receieved data
 			memcpy(data_ptr, data_recv, recv_length);
 
 			// Update the data received and the last seqno
 			details->data_received += recv_length;
 			details->last_seqno = seq;
 
-			// Check if we have got everything
-			// If so set the relevant variables
+			// Check if we have got everything, if so set the relevant variables
 			if (details->data_received == details->length)
 			{
 				data_to_pass_onwards = receiving_data(details);
@@ -243,11 +258,11 @@ bool multipacket_open(multipacket_conn_t * conn,
 
 		conn->callbacks = callbacks;
 
-		ctimer_set(&conn->ct_sender, SEND_PERIOD, &send_loop_callback, conn);
-
 		linked_list_init(&conn->sending_packets, &free);
 
 		map_init(&conn->receiving_packets, &recv_key_equality, &free);
+
+		ctimer_set(&conn->ct_sender, SEND_PERIOD, &send_loop_callback, conn);
 
 		return true;
 	}
@@ -271,7 +286,7 @@ void multipacket_close(multipacket_conn_t * conn)
 void multipacket_send(multipacket_conn_t * conn, rimeaddr_t const * target,
 	void * data, unsigned int length)
 {
-	// Allocate the packet
+	// Allocate the packet to send
 	multipacket_sending_packet_t * details =
 		(multipacket_sending_packet_t *)
 			malloc(sizeof(multipacket_sending_packet_t) + length);

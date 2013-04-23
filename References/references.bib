@@ -18,6 +18,15 @@
   numpages = {2}
 }
 
+@INPROCEEDINGS{dependability,
+  author = {A. Avizienis, V. Magnus U, J. C. Laprie, and B. Randell},
+  title = {Fundamental Concepts of Dependability},
+  booktitle = {Research Report No 1145},
+  year = {2001},
+  month = {April},
+  location = {http://www.cert.org/research/isw/isw2000/papers/56.pdf}
+}
+
 @INPROCEEDINGS{1281625,
   author = {Abdelzaher, T. and Blum, B. and Cao, Q. and Chen, Y. and Evans, D.
 	and George, J. and George, S. and Gu, L. and He, T. and Krishnamurthy,
@@ -47,6 +56,88 @@
 	networks;Distributed computing;Embedded computing;Middleware;Monitoring;Physics
 	computing;Sensor systems;Target tracking;Vehicles;Wireless sensor
 	networks}
+}
+
+@ARTICLE{protothreads,
+  author = {Adam Dunkels, Oliver Schmidt, Thiemo Voigt, Muneeb Ali},
+  title = {Protothreads: Simplifying Event-Driven Programming of Memory-Constrained
+	Embedded Systems},
+  journal = {ACM SenSys},
+  year = {2006},
+  abstract = {Event-driven programming is a popular model for writing programs for
+	tiny embedded systems and sensor network nodes. While event-driven
+	programming can keep the memory overhead down, it enforces a state
+	machine programming style which makes many programs dificult to write,
+	maintain, and debug. We present a novel programming abstraction called
+	protothreads that makes it possible to write event-driven programs
+	in a thread-like style, with a memory over-head of only two bytes
+	per protothread. We show that protothreads significantly reduce the
+	complexity of a number of widely used programs previously written
+	with event-driven state machines. For the examined programs the majority
+	of the state machines could be entirely removed. In the other cases
+	the number of states and transitions was drastically decreased. With
+	protothreads the number of lines of code was reduced by one third.
+	The execution time overhead of protothreads is on the order of a
+	few processor cycles@ARTICLE{Atzori20102787,
+	
+	 author = {Luigi Atzori and Antonio Iera and Giacomo Morabito},
+	
+	 title = {The Internet of Things: A survey },
+	
+	 journal = {Computer Networks },
+	
+	 year = {2010},
+	
+	 volume = {54},
+	
+	 pages = {2787 - 2805},
+	
+	 number = {15},
+	
+	 abstract = {This paper addresses the Internet of Things. Main enabling
+	factor
+	
+	of this promising paradigm is the integration of several technologies
+	
+	and communications solutions. Identification and tracking technologies,
+	
+	wired and wireless sensor and actuator networks, enhanced communication
+	
+	protocols (shared with the Next Generation Internet), and distributed
+	
+	intelligence for smart objects are just the most relevant. As one
+	
+	can easily imagine, any serious contribution to the advance of the
+	
+	Internet of Things must necessarily be the result of synergetic activities
+	
+	conducted in different fields of knowledge, such as telecommunications,
+	
+	informatics, electronics and social science. In such a complex scenario,
+	
+	this survey is directed to those who want to approach this complex
+	
+	discipline and contribute to its development. Different visions of
+	
+	this Internet of Things paradigm are reported and enabling technologies
+	
+	reviewed. What emerges is that still major issues shall be faced
+	
+	by the research community. The most relevant among them are addressed
+	
+	in details. },
+	
+	 doi = {10.1016/j.comnet.2010.05.010},
+	
+	 issn = {1389-1286},
+	
+	 keywords = {Internet of Things},
+	
+	 url = {http://www.sciencedirect.com/science/article/pii/S1389128610001568}
+	
+	}},
+  owner = {Joe},
+  timestamp = {2013.04.16}
 }
 
 @INPROCEEDINGS{5587352,
@@ -202,7 +293,7 @@
 }
 
 @INPROCEEDINGS{DBLP:journals/corr/abs-0808-0920,
-  author = {Arumugam, Mahesh},
+  author = {Mahesh Arumugam},
   title = {A Distributed and Deterministic TDMA Algorithm for Write-All-With-Collision
 	Model},
   booktitle = {Proceedings of the 10th International Symposium on Stabilization,
@@ -228,6 +319,38 @@
   owner = {Matt},
   timestamp = {2012.11.09},
   url = {https://bitbucket.org}
+}
+
+@ARTICLE{Atzori20102787,
+  author = {Luigi Atzori and Antonio Iera and Giacomo Morabito},
+  title = {The Internet of Things: A survey },
+  journal = {Computer Networks },
+  year = {2010},
+  volume = {54},
+  pages = {2787 - 2805},
+  number = {15},
+  abstract = {This paper addresses the Internet of Things. Main enabling factor
+	of this promising paradigm is the integration of several technologies
+	and communications solutions. Identification and tracking technologies,
+	wired and wireless sensor and actuator networks, enhanced communication
+	protocols (shared with the Next Generation Internet), and distributed
+	intelligence for smart objects are just the most relevant. As one
+	can easily imagine, any serious contribution to the advance of the
+	Internet of Things must necessarily be the result of synergetic activities
+	conducted in different fields of knowledge, such as telecommunications,
+	informatics, electronics and social science. In such a complex scenario,
+	this survey is directed to those who want to approach this complex
+	discipline and contribute to its development. Different visions of
+	this Internet of Things paradigm are reported and enabling technologies
+	reviewed. What emerges is that still major issues shall be faced
+	by the research community. The most relevant among them are addressed
+	in details. },
+  doi = {10.1016/j.comnet.2010.05.010},
+  issn = {1389-1286},
+  keywords = {Internet of Things},
+  owner = {Joe},
+  timestamp = {2013.04.16},
+  url = {http://www.sciencedirect.com/science/article/pii/S1389128610001568}
 }
 
 @ARTICLE{1335465,
@@ -350,6 +473,40 @@
   volume = {16},
   pages = {2002},
   owner = {Giles}
+}
+
+@INPROCEEDINGS{5355013,
+  author = {Boano, C.A. and Zhitao He and Yafei Li and Voigt, T. and ZuÌ?Ã±iga,
+	M. and Willig, A.},
+  title = {Controllable radio interference for experimental and testing purposes
+	in Wireless Sensor Networks},
+  booktitle = {Local Computer Networks, 2009. LCN 2009. IEEE 34th Conference on},
+  year = {2009},
+  pages = {865-872},
+  abstract = {We address the problem of generating customized, controlled interference
+	for experimental and testing purposes in wireless sensor networks.
+	The known coexistence problems between electronic devices sharing
+	the same ISM radio band drive the design of new solutions to mitigate
+	interference. The validation of these techniques and the assessment
+	of protocols under external interference require the creation of
+	reproducible and well-controlled interference patterns on real nodes,
+	a nontrivial and time-consuming task. In this paper, we study methods
+	to generate a precisely adjustable level of interference on a specific
+	channel, with lowcost equipment and rapid calibration. We focus our
+	work on the platforms carrying the CC2420 radio chip. We show that,
+	by setting the CC2420 in special mode, we can easily generate repeatable
+	and precise patterns of interference. We show how this method is
+	extremely useful for researchers to quickly investigate the behaviour
+	of sensor network protocols and applications under different patterns
+	of interference. We further evaluate the performance of our proposed
+	method.},
+  doi = {10.1109/LCN.2009.5355013},
+  keywords = {protocols;radiofrequency interference;wireless sensor networks;CC2420
+	radio chip;controllable radio interference;sensor network protocols;wireless
+	sensor networks;Application software;Conferences;Electromagnetic
+	interference;Helium;Microwave communication;Protocols;Radio control;Switches;Testing;Wireless
+	sensor networks;Directional antennas;Interference;Modulated carrier;Noise;SNR;Unmodulated
+	carrier;WSN}
 }
 
 @ARTICLE{Bond:2007:TBA:1297105.1297057,
@@ -503,6 +660,46 @@
   publisher = {ACM}
 }
 
+@ARTICLE{1219475,
+  author = {Chee-Yee Chong and Kumar, S.P.},
+  title = {Sensor networks: evolution, opportunities, and challenges},
+  journal = {Proceedings of the IEEE},
+  year = {2003},
+  volume = {91},
+  pages = {1247-1256},
+  number = {8},
+  abstract = {Wireless microsensor networks have been identified as one of the most
+	important technologies for the 21st century. This paper traces the
+	history of research in sensor networks over the past three decades,
+	including two important programs of the Defense Advanced Research
+	Projects Agency (DARPA) spanning this period: the Distributed Sensor
+	Networks (DSN) and the Sensor Information Technology (SensIT) programs.
+	Technology trends that impact the development of sensor networks
+	are reviewed, and new applications such as infrastructure security,
+	habitat monitoring, and traffic control are presented. Technical
+	challenges in sensor network development include network discovery,
+	control and routing, collaborative signal and information processing,
+	tasking and querying, and security. The paper concludes by presenting
+	some recent research results in sensor network algorithms, including
+	localized algorithms and directed diffusion, distributed tracking
+	in wireless ad hoc networks, and distributed classification using
+	local agents.},
+  doi = {10.1109/JPROC.2003.814918},
+  issn = {0018-9219},
+  keywords = {ad hoc networks;condition monitoring;distributed sensors;distributed
+	tracking;military communication;research initiatives;technological
+	forecasting;telecommunication network routing;telecommunication security;traffic
+	control;DARPA;Defense Advanced Research Projects Agency;SensIT programs;collaborative
+	signal and information processing;directed diffusion;distributed
+	classification;distributed tracking;habitat monitoring;infrastructure
+	security;local agents;localized algorithms;network discovery;network
+	routing;querying;sensor network algorithms;sensor network development;tasking;technology
+	trends;traffic control;wireless ad hoc networks;wireless microsensor
+	networks;History;Information security;Information technology;Microsensors;Monitoring;Online
+	Communities/Technical Collaboration;Routing;Signal processing;Traffic
+	control;Wireless sensor networks}
+}
+
 @ARTICLE{Cooper:1991:CDG:127695.122774,
   author = {Cooper, Robert and Marzullo, Keith},
   title = {Consistent detection of global predicates},
@@ -531,6 +728,46 @@
   institution = {RFC},
   publisher = {RFC Editor},
   url = {http://tools.ietf.org/html/rfc2386}
+}
+
+@INPROCEEDINGS{Dai:2004:EEL:1031495.1031516,
+  author = {Dai, Hui and Neufeld, Michael and Han, Richard},
+  title = {ELF: an efficient log-structured flash file system for micro sensor
+	nodes},
+  booktitle = {Proceedings of the 2nd international conference on Embedded networked
+	sensor systems},
+  year = {2004},
+  series = {SenSys '04},
+  pages = {176--187},
+  address = {New York, NY, USA},
+  publisher = {ACM},
+  acmid = {1031516},
+  doi = {10.1145/1031495.1031516},
+  isbn = {1-58113-879-2},
+  keywords = {eeprom, file system, flash, log structured, reliability, sensor},
+  location = {Baltimore, MD, USA},
+  numpages = {12},
+  url = {http://doi.acm.org/10.1145/1031495.1031516}
+}
+
+@INPROCEEDINGS{Deng:2006:SCD:1127777.1127822,
+  author = {Deng, Jing and Han, Richard and Mishra, Shivakant},
+  title = {Secure code distribution in dynamically programmable wireless sensor
+	networks},
+  booktitle = {Proceedings of the 5th international conference on Information processing
+	in sensor networks},
+  year = {2006},
+  series = {IPSN '06},
+  pages = {292--300},
+  address = {New York, NY, USA},
+  publisher = {ACM},
+  acmid = {1127822},
+  doi = {10.1145/1127777.1127822},
+  isbn = {1-59593-334-4},
+  keywords = {secure reprogramming, security, sensor networks},
+  location = {Nashville, Tennessee, USA},
+  numpages = {9},
+  url = {http://doi.acm.org/10.1145/1127777.1127822}
 }
 
 @INPROCEEDINGS{placement,
@@ -688,7 +925,7 @@
   journal = {Proceedings of the First European Workshop on Wireless Sensor Networks
 	(EWSN2004)},
   year = {2004},
-  institution = {Mälardalen University, Department of Computer Science and Electronics}
+  institution = {M\"{a}lardalen University, Department of Computer Science and Electronics}
 }
 
 @INPROCEEDINGS{Dunkels:2006:RDL:1182807.1182810,
@@ -820,6 +1057,43 @@
   url = {http://dx.doi.org/10.4108/ICST.SIMUTOOLS2009.5637}
 }
 
+@ARTICLE{DAIKON,
+  author = {Ernst, M.D. and Cockrell, J. and Griswold, William G. and Notkin,
+	D.},
+  title = {Dynamically discovering likely program invariants to support program
+	evolution},
+  journal = {Software Engineering, IEEE Transactions on},
+  year = {2001},
+  volume = {27},
+  pages = {99-123},
+  number = {2},
+  abstract = {Explicitly stated program invariants can help programmers by identifying
+	program properties that must be preserved when modifying code. In
+	practice, however, these invariants are usually implicit. An alternative
+	to expecting programmers to fully annotate code with invariants is
+	to automatically infer likely invariants from the program itself.
+	This research focuses on dynamic techniques for discovering invariants
+	from execution traces. This article reports three results. First,
+	it describes techniques for dynamically discovering invariants, along
+	with an implementation, named Daikon, that embodies these techniques.
+	Second, it reports on the application of Daikon to two sets of target
+	programs. In programs from Gries's work (1981) on program derivation,
+	the system rediscovered predefined invariants. In a C program lacking
+	explicit invariants, the system discovered invariants that assisted
+	a software evolution task. These experiments demonstrate that, at
+	least for small programs, invariant inference is both accurate and
+	useful. Third, it analyzes scalability issues, such as invariant
+	detection runtime and accuracy, as functions of test suites and program
+	points instrumented},
+  doi = {10.1109/32.908957},
+  issn = {0098-5589},
+  keywords = {reverse engineering;software maintenance;Daikon;execution traces;explicitly
+	stated program invariants;invariant inference;likely program invariants;modifying
+	code;program derivation;program evolution;program properties;scalability;small
+	programs;software evolution;Application software;Computer Society;Detectors;Formal
+	specifications;Instruments;Pattern analysis;Programming profession;Runtime;Scalability;Testing}
+}
+
 @INPROCEEDINGS{Estrin:1999:NCC:313451.313556,
   author = {Estrin, Deborah and Govindan, Ramesh and Heidemann, John and Kumar,
 	Satish},
@@ -837,6 +1111,31 @@
   location = {Seattle, Washington, USA},
   numpages = {8},
   url = {http://doi.acm.org/10.1145/313451.313556}
+}
+
+@ARTICLE{976940,
+  author = {Evans, D. and Larochelle, D.},
+  title = {Improving security using extensible lightweight static analysis},
+  journal = {Software, IEEE},
+  year = {2002},
+  volume = {19},
+  pages = {42-51},
+  number = {1},
+  abstract = {Most security attacks exploit instances of well-known classes of implementation
+	flaws. Developers could detect and eliminate many of these flaws
+	before deploying the software, yet these problems persist with disturbing
+	frequency-not because the security community doesn't sufficiently
+	understand them but because techniques for preventing them have not
+	been integrated into the software development process. This article
+	describes an extensible tool that uses lightweight static analysis
+	to detect common security vulnerabilities (including buffer overflows
+	and format string vulnerabilities)},
+  doi = {10.1109/52.976940},
+  issn = {0740-7459},
+  keywords = {program diagnostics;security of data;software engineering;buffer overflows;extensible
+	lightweight static analysis;format string vulnerabilities;security
+	attacks;software development;Application software;Buffer overflow;Computer
+	bugs;Computer crime;Frequency;Humans;Information security;Programming;Runtime;Testing}
 }
 
 @INPROCEEDINGS{1382572,
@@ -877,7 +1176,7 @@
 	this purpose. The issue of when nodes should report their data is
 	considered in the context of real-time monitoring applications. The
 	first part of this thesis shows that asynchronous aggregation, in
-	which the time of each node’s transmission is determined adaptively
+	which the time of each node's transmission is determined adaptively
 	based on its local history of past packet receptions from its children,
 	outperforms synchronous aggregation by providing lower delay for
 	a given end-to-end loss rate. Second, new broadcast-based aggregation
@@ -1037,6 +1336,80 @@
   numpages = {11},
   publisher = {ACM},
   url = {http://doi.acm.org/10.1145/780822.781133}
+}
+
+@ARTICLE{1028874,
+  author = {Goldsmith, A.J. and Wicker, S.B.},
+  title = {Design challenges for energy-constrained ad hoc wireless networks},
+  journal = {Wireless Communications, IEEE},
+  year = {2002},
+  volume = {9},
+  pages = {8-27},
+  number = {4},
+  abstract = {Ad hoc wireless networks enable new and exciting applications, but
+	also pose significant technical challenges. In this article we give
+	a brief overview of ad hoc wireless networks and their applications
+	with a particular emphasis on energy constraints. We then discuss
+	advances in the link, multiple access, network, and application protocols
+	for these networks. We show that cross-layer design of these protocols
+	is imperative to meet emerging application requirements, particularly
+	when energy is a limited resource.},
+  doi = {10.1109/MWC.2002.1028874},
+  issn = {1536-1284},
+  keywords = {access protocols;land mobile radio;multi-access systems;adaptive resource
+	allocation;application design;application protocols;coding;cross-layer
+	design;data networks;device networks;distributed control system;emerging
+	application requirements;energy-constrained ad hoc wireless networks;fundamental
+	capacity limits;home networks;link design issues;link protocols;medium
+	access control;multiple access;multiple antennas;network design;network
+	protocols;power control;sensor networks;wireless mobile nodes;Bit
+	error rate;Cross layer design;Interference;Protocols;Routing;Signal
+	to noise ratio;Spread spectrum communication;US Department of Defense;Vehicle
+	dynamics;Wireless networks}
+}
+
+@ARTICLE{4796311,
+  author = {Gungor, V.C. and Hancke, G.P.},
+  title = {Industrial Wireless Sensor Networks: Challenges, Design Principles,
+	and Technical Approaches},
+  journal = {Industrial Electronics, IEEE Transactions on},
+  year = {2009},
+  volume = {56},
+  pages = {4258-4265},
+  number = {10},
+  abstract = {In today's competitive industry marketplace, the companies face growing
+	demands to improve process efficiencies, comply with environmental
+	regulations, and meet corporate financial objectives. Given the increasing
+	age of many industrial systems and the dynamic industrial manufacturing
+	market, intelligent and low-cost industrial automation systems are
+	required to improve the productivity and efficiency of such systems.
+	The collaborative nature of industrial wireless sensor networks (IWSNs)
+	brings several advantages over traditional wired industrial monitoring
+	and control systems, including self-organization, rapid deployment,
+	flexibility, and inherent intelligent-processing capability. In this
+	regard, IWSN plays a vital role in creating a highly reliable and
+	self-healing industrial system that rapidly responds to real-time
+	events with appropriate actions. In this paper, first, technical
+	challenges and design principles are introduced in terms of hardware
+	development, system architectures and protocols, and software development.
+	Specifically, radio technologies, energy-harvesting techniques, and
+	cross-layer design for IWSNs have been discussed. In addition, IWSN
+	standards are presented for the system owners, who plan to utilize
+	new IWSN technologies for industrial automation applications. In
+	this paper, our aim is to provide a contemporary look at the current
+	state of the art in IWSNs and discuss the still-open research issues
+	in this field and, hence, to make the decision-making process more
+	effective and direct.},
+  doi = {10.1109/TIE.2009.2015754},
+  issn = {0278-0046},
+  keywords = {decision making;protocols;telecommunication computing;telecommunication
+	industry;wireless sensor networks;cross-layer design;decision-making
+	process;energy harvesting techniques;financial objectives;hardware
+	development;industrial automation applications;industrial wireless
+	sensor networks;industry marketplace;intelligent-processing capability;protocols;radio
+	technologies;self-healing industrial system;software development;system
+	architectures;6LoWPAN;Cross-layer design;ISA100;ZigBee;industrial
+	wireless sensor networks (IWSNs);ultrawideband (UWB);wireless HART}
 }
 
 @ARTICLE{hamming1950error,
@@ -1215,6 +1588,37 @@
 	programming models and languages, run-time, tools},
   location = {http://doi.acm.org/10.1145/1278460.1278462},
   publisher = {ACM}
+}
+
+@INPROCEEDINGS{897468,
+  author = {Hoblos, G. and Staroswiecki, M. and Aitouche, A.},
+  title = {Optimal design of fault tolerant sensor networks},
+  booktitle = {Control Applications, 2000. Proceedings of the 2000 IEEE International
+	Conference on},
+  year = {2000},
+  pages = {467-472},
+  abstract = {The selection of measurements is one of the most important problems
+	in the design of process instrumentation. This paper deals with the
+	design of sensor networks such that the observability of the variables,
+	which are necessary for the process control, remains satisfied in
+	the presence of sensor failures. Pseudo-minimal and minimal sensor
+	sets are organized into an oriented graph which contains all the
+	possible reconfiguration paths for which those variables remain observable.
+	A bottom-up analysis of this graph allows one to compute reliability
+	functions which evaluate the robustness of the observability property
+	with respect to sensor failures. The design of optimal sensor networks
+	thus resumes to finding pseudo-minimal sensor sets such that the
+	mean time before losing the observability property is larger than
+	a pre-defined value},
+  doi = {10.1109/CCA.2000.897468},
+  keywords = {fault tolerance;graph theory;instrumentation;observability;process
+	control;reliability;sensors;bottom-up analysis;fault tolerance;graph
+	structure;observability;process control;process instrumentation;reconfiguration
+	paths;reliability;sensor networks;Chemical industry;Chemical sensors;Fault
+	tolerance;Fault tolerant systems;Observability;Process design;Redundancy;Robustness;Sensor
+	systems;Steady-state},
+  owner = {Ivan},
+  timestamp = {2013.04.16}
 }
 
 @INPROCEEDINGS{6128220,
@@ -1576,6 +1980,15 @@
 	instrumentation;shared objects}
 }
 
+@BOOK{lethbridge2001object,
+  title = {Object-oriented software engineering},
+  publisher = {McGraw-Hill Higher Education},
+  year = {2005},
+  author = {Timothy C. Lethbridge and Robert Lagani\`{e}re},
+  edition = {2nd},
+  isbn = {0-07-70109082}
+}
+
 @ARTICLE{Levis:2002:MTV:635508.605407,
   author = {Levis, Philip and Culler, David},
   title = {Mat\'{e}: a tiny virtual machine for sensor networks},
@@ -1655,7 +2068,7 @@
 	node knows all its next-hop children in the tree, so it can choose
 	a proper time locally to aggregate the received data. Theoretical
 	analysis proves that TBDCS changes neither the network connectivity
-	nor the shortest path’s length between the sink and sensor nodes.
+	nor the shortest path's length between the sink and sensor nodes.
 	Simulations show TBDCS significantly reduces the traffic and achieves
 	longer system lifetime.},
   doi = {10.1109/ICNICONSMCL.2006.36},
@@ -1853,6 +2266,40 @@
 	engineering;Software prototyping;Standardization;Topology}
 }
 
+@INPROCEEDINGS{4025017,
+  author = {Nama, H. and Mung Chiang and Mandayam, N.},
+  title = {Utility-Lifetime Trade-off in Self-regulating Wireless Sensor Networks:
+	A Cross-Layer Design Approach},
+  booktitle = {Communications, 2006. ICC '06. IEEE International Conference on},
+  year = {2006},
+  volume = {8},
+  pages = {3511-3516},
+  abstract = {The performance of wireless sensor network applications is typically
+	a function of the amount of data collected by the individual sensors
+	and delivered to a set of sinks through multihop routing within the
+	network. However, the energy-constrained nature of the nodes limits
+	the operational lifetime of the network since energy is dissipated
+	both in sensing and in communicating data across the network. There
+	is thus an inherent trade-off in simultaneously maximizing the network
+	lifetime and the application performance (characterized here by a
+	network utility function). In this paper, we characterize this trade-off
+	by considering a cross-layer design problem in a wireless sensor
+	network with orthogonal link transmissions. We compute an optimal
+	set of source rates, network flows, and radio resources at the transport,
+	network, and radio resource layers respectively, while jointly maximizing
+	the network utility and lifetime. Using dual decomposition techniques,
+	we show that the cross-layer optimization problem decomposes vertically
+	into three subproblems - a joint transport and routing problem, a
+	radio resource allocation problem, and a network lifetime maximization
+	problem, all of which interact through the dual prices for capacities
+	of links and battery capacities of nodes.},
+  doi = {10.1109/ICC.2006.255616},
+  issn = {8164-9547},
+  keywords = {Batteries;Computer networks;Cross layer design;Routing;Sensor phenomena
+	and characterization;Spread spectrum communication;Temperature sensors;Utility
+	programs;Wireless application protocol;Wireless sensor networks}
+}
+
 @INPROCEEDINGS{Nethercote:2007:SBM:1254810.1254820,
   author = {Nethercote, Nicholas and Seward, Julian},
   title = {How to shadow every byte of memory used by a program},
@@ -1953,7 +2400,7 @@
 	system;parallel distributed compensation fuzzy control rules;stability
 	criterion;stabilization criterion;Actuators;Communication networks;Delay;Fuzzy
 	systems;Measurement uncertainty;Stability analysis;Event-triggered
-	communication scheme;Takagi–Sugeno (T–S) fuzzy systems;networked
+	communication scheme;Takagi-Sugeno (T-S) fuzzy systems;networked
 	control systems (NCSs)},
   owner = {Giles}
 }
@@ -1998,6 +2445,17 @@
   location = {San Diego, California, USA},
   numpages = {14},
   url = {http://doi.acm.org/10.1145/1098918.1098928}
+}
+
+@BOOK{pressman2010software,
+  title = {Software engineering: a practitioner's approach},
+  publisher = {McGraw-Hill Higher Education},
+  year = {2010},
+  author = {Pressman, R.S.},
+  series = {9780073375977},
+  owner = {Ivan},
+  timestamp = {2013.04.17},
+  url = {http://books.google.co.uk/books?id=y4k\_AQAAIAAJ}
 }
 
 @MISC{c++call-for-proposals,
@@ -2098,6 +2556,19 @@
   volume = {11},
   pages = {54-61},
   number = {6},
+  abstract = {In the recent past, wireless sensor networks have found their way
+	into a wide variety of applications and systems with vastly varying
+	requirements and characteristics. As a consequence, it is becoming
+	increasingly difficult to discuss typical requirements regarding
+	hardware issues and software support. This is particularly problematic
+	in a multidisciplinary research area such as wireless sensor networks,
+	where close collaboration between users, application domain experts,
+	hardware designers, and software developers is needed to implement
+	efficient systems. In this article we discuss the consequences of
+	this fact with regard to the design space of wireless sensor networks
+	by considering its various dimensions. We justify our view by demonstrating
+	that specific existing applications occupy different points in the
+	design space.},
   doi = {10.1109/MWC.2004.1368897},
   issn = {1536-1284},
   keywords = {design;wireless sensor networks;application domain expert;hardware
@@ -2144,6 +2615,48 @@
   pages = {376--378},
   number = {4},
   publisher = {JSTOR}
+}
+
+@ARTICLE{7382719,
+  author = {Sharma, Abhishek B. and Golubchik, Leana and Govindan, Ramesh},
+  title = {Sensor faults: Detection methods and prevalence in real-world datasets},
+  journal = {ACM Trans. Sen. Netw.},
+  year = {2010},
+  volume = {6},
+  pages = {1-39},
+  number = {3},
+  month = {jun},
+  abstract = {Various sensor network measurement studies have reported instances
+	of transient faults in sensor readings. In this work, we seek to
+	answer a simple question: How often are such faults observed in real
+	deployments\&quest; We focus on three types of transient faults,
+	caused by faulty sensor readings that appear abnormal. To understand
+	the prevalence of such faults, we first explore and characterize
+	four qualitatively different classes of fault detection methods.
+	Rule-based methods leverage domain knowledge to develop heuristic
+	rules for detecting and identifying faults. Estimation methods predict
+	normal sensor behavior by leveraging sensor correlations, flagging
+	anomalous sensor readings as faults. Time-series-analysis-based methods
+	start with an a priori model for sensor readings. A sensor measurement
+	is compared against its predicted value computed using time series
+	forecasting to determine if it is faulty. Learning-based methods
+	infer a model for the normal sensor readings using training data,
+	and then statistically detect and identify classes of faults. We
+	find that these four classes of methods sit at different points on
+	the accuracy/robustness spectrum. Rule-based methods can be highly
+	accurate, but their accuracy depends critically on the choice of
+	parameters. Learning methods can be cumbersome to train, but can
+	accurately detect and classify faults. Estimation methods are accurate,
+	but cannot classify faults. Time-series-analysis-based methods are
+	more effective for detecting short duration faults than long duration
+	ones, and incur more false positives than the other methods. We apply
+	these techniques to four real-world sensor datasets and find that
+	the prevalence of faults as well as their type varies with datasets.
+	All four methods are qualitatively consistent in identifying sensor
+	faults, lending credence to our observations. Our work is a first
+	step towards automated online fault detection and classification.},
+  owner = {Ivan},
+  timestamp = {2013.04.16}
 }
 
 @INPROCEEDINGS{6115161,
@@ -2249,6 +2762,26 @@
 	multiple access;data communication;packet radio networks;quality
 	of service;telecommunication traffic;wireless LAN;},
   location = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=779919}
+}
+
+@BOOK{stallman1992gdb,
+  title = {The GDB Manual: The GNU Source-level Debugger},
+  publisher = {Free Software Foundation},
+  year = {1992},
+  author = {Stallman, Richard and Pesch, Roland H},
+  pages = {162},
+  edition = {4.03},
+  month = {January},
+  isbn = {9781882114115}
+}
+
+@ARTICLE{stroustrup1994design,
+  author = {Stroustrup, Bjarne},
+  title = {{The Design and Evolution of C++}},
+  journal = {Reading, MA: Addison-Wesley,| c1994},
+  year = {1994},
+  volume = {1},
+  pages = {207}
 }
 
 @BOOK{Tanenbaum:2002:CN:572404,
@@ -2367,6 +2900,31 @@
 	computing;Software engineering;System testing}
 }
 
+@INPROCEEDINGS{898880,
+  author = {Viega, J. and Bloch, J. T. and Kohno, Y. and McGraw, Gary},
+  title = {ITS4: a static vulnerability scanner for C and C++ code},
+  booktitle = {Computer Security Applications, 2000. ACSAC '00. 16th Annual Conference},
+  year = {2000},
+  pages = {257-267},
+  abstract = {We describe ITS4, a tool for statically scanning security-critical
+	C source code for vulnerabilities. Compared to other approaches,
+	our scanning technique stakes out a new middle ground between accuracy
+	and efficiency. This method is efficient enough to offer real-time
+	feedback to developers during coding while producing few false negatives.
+	Unlike other techniques, our method is also simple enough to scan
+	C++ code despite the complexities inherent in the language. Using
+	ITS4 we found new remotely-exploitable vulnerabilities in a widely
+	distributed software package as well as in a major piece of e-commerce
+	software. The ITS4 source distribution is available at http://www.rstcorp.com/its4},
+  doi = {10.1109/ACSAC.2000.898880},
+  keywords = {C language;C++ language;security of data;software packages;software
+	tools;C code;C++ code;ITS4;e-commerce software;real-time feedback;security-critical
+	source code;software package;software vulnerabilities;static vulnerability
+	scanner;Buffer overflow;Computer languages;Data security;Feedback;Information
+	security;Libraries;Programming profession;Software packages;Software
+	tools;Writing}
+}
+
 @INPROCEEDINGS{dunkels2009efficient,
   author = {Yazar, Dogan and Dunkels, Adam},
   title = {Efficient application integration in IP-based sensor networks},
@@ -2407,6 +2965,21 @@
 	networks;Delay;Energy consumption;Energy efficiency;Media Access
 	Protocol;Sensor phenomena and characterization;Sleep;Wireless application
 	protocol;Wireless sensor networks}
+}
+
+@INPROCEEDINGS{Yu:2003:RFC:961322.961375,
+  author = {Yu, Yijun and Dayani-Fard, Homy and Mylopoulos, John},
+  title = {Removing false code dependencies to speedup software build processes},
+  booktitle = {Proceedings of the 2003 conference of the Centre for Advanced Studies
+	on Collaborative research},
+  year = {2003},
+  series = {CASCON '03},
+  pages = {343--352},
+  publisher = {IBM Press},
+  acmid = {961375},
+  location = {Toronto, Ontario, Canada},
+  numpages = {10},
+  url = {http://dl.acm.org/citation.cfm?id=961322.961375}
 }
 
 @INPROCEEDINGS{1203364,
@@ -2474,5 +3047,24 @@
 	sensor networks;access protocols;queueing theory;telecommunication
 	traffic;wireless channels;wireless sensor networks;},
   location = {http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=4469515}
+}
+
+@INPROCEEDINGS{4109116,
+  author = {Li Zheng},
+  title = {ZigBee Wireless Sensor Network in Industrial Applications},
+  booktitle = {SICE-ICASE, 2006. International Joint Conference},
+  year = {2006},
+  pages = {1067-1070},
+  abstract = {This paper describes an IEEE 802.15.4/ZigBee wireless sensor network
+	developed and reports on its experimental results of a wireless sensor
+	network in industrial automation facilities, Japan. It illustrates
+	that the ZigBee wireless sensor network can perform well even in
+	heavy industrial environments},
+  doi = {10.1109/SICE.2006.315751},
+  keywords = {IEEE standards;computerised monitoring;industrial control;wireless
+	sensor networks;IEEE 802.15.4 standard;ZigBee wireless sensor network;industrial
+	automation;Automatic control;Automation;Communication system control;Data
+	engineering;Instruments;Monitoring;Sensor phenomena and characterization;Transmitters;Wireless
+	sensor networks;ZigBee;Application;Sensor Network;Wireless;ZigBee}
 }
 

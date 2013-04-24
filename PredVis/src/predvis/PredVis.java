@@ -1,7 +1,6 @@
 package predvis;
 
-import edu.uci.ics.jung.algorithms.layout.CircleLayout;
-import edu.uci.ics.jung.algorithms.layout.DAGLayout;
+import edu.uci.ics.jung.algorithms.layout.KKLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.visualization.BasicVisualizationServer;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
@@ -11,7 +10,9 @@ import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;
@@ -57,7 +58,7 @@ class PredicateListRenderer extends DefaultListCellRenderer {
         Predicate p = (Predicate)value;
         List<PredicateData> l = predicateData.get(p);
         PredicateData pd = null;
-        if(!l.isEmpty()) {
+        if (!l.isEmpty()) {
             pd = l.get(l.size() - 1);
         }
         
@@ -94,7 +95,6 @@ public class PredVis extends JFrame {
     
     //Round data.
     private final Map<Integer, NetworkState> rounds = new HashMap<>();
-    private int visibleRound = 0;
     private final DefaultBoundedRangeModel roundSliderModel = new DefaultBoundedRangeModel(0, 0, 0, 0);
     
     //Predicate data.
@@ -121,8 +121,7 @@ public class PredVis extends JFrame {
     private JList<Predicate> predicateList = null;
     private JTextArea predicateScriptEditor = null;
     private JTextArea predicateAssemblyEditor = null;
-    private JPanel predicateStatsPanel = null;
-    private JLabel predicateDetails = null;
+    private JTextArea predicateDetails = null;
     private JButton savePredicateScriptButton = null;
     private JButton savePredicateAssemblyButton = null;
     private JButton deployPredicateButton = null;
@@ -246,20 +245,6 @@ public class PredVis extends JFrame {
         });
         menu.add(menuItem);
         
-        //Help menu
-        menu = new JMenu("Help");
-        menu.setMnemonic(KeyEvent.VK_H);
-        menuBar.add(menu);
-        
-        menuItem = new JMenuItem("About", KeyEvent.VK_A);
-        menuItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                //TODO
-            }
-        });
-        menu.add(menuItem);
-        
         setJMenuBar(menuBar);
     }
 
@@ -283,8 +268,7 @@ public class PredVis extends JFrame {
                 //if it is not the one we're already on.
                 JSlider source = (JSlider)e.getSource();
                 if (!source.getValueIsAdjusting()) {
-                    visibleRound = (int)source.getValue();
-                    showRound(visibleRound);
+                    showRound((int)source.getValue());
                 }
             }
         });
@@ -374,12 +358,15 @@ public class PredVis extends JFrame {
         predicateDetailPanel.add(scrollPane);
         
         //...Predicate statistics
-        predicateStatsPanel = new JPanel(new FlowLayout());
-        predicateStatsPanel.setPreferredSize(new Dimension(400, 200));
-        predicateStatsPanel.setBorder(new TitledBorder(WIDGET_BORDER, "Statistics"));
-        predicateDetails = new JLabel(NO_PREDICATE_SELECTED_MESSAGE);
-        predicateStatsPanel.add(predicateDetails);
-        predicateDetailPanel.add(predicateStatsPanel);
+        predicateDetails = new JTextArea(NO_PREDICATE_SELECTED_MESSAGE);
+        predicateDetails.setFont(SANS_FONT);
+        predicateDetails.setLineWrap(true);
+        predicateDetails.setWrapStyleWord(true);
+        predicateDetails.setBorder(new TitledBorder(WIDGET_BORDER, "Statistics"));
+        predicateDetails.setEditable(false);
+        scrollPane = new JScrollPane(predicateDetails);
+        scrollPane.setPreferredSize(new Dimension(400, 200));
+        predicateDetailPanel.add(scrollPane);
         
         panel = new JPanel(new FlowLayout());
         
@@ -524,6 +511,8 @@ public class PredVis extends JFrame {
         } else {
             predicateDetails.setText("No data available for this predicate.");
         }
+        
+        System.out.println("Received predicate data.");
     }
     
     private void showRound(int round) {
@@ -531,8 +520,17 @@ public class PredVis extends JFrame {
         updateNetworkView(rounds.get(round));
         
         //Show round # in bottom right.
-        visibleRoundNumber.setText((round + 1) + " / " + rounds.size());
-        visibleRound = round;
+        //Update slider values and rerender visible round.
+        int min = Integer.MAX_VALUE;
+        int max = 0;
+        for (Integer i : rounds.keySet()) {
+            if (i < min) min = i;
+            if (i > max) max = i;
+        }
+        roundSliderModel.setMinimum(min);
+        roundSliderModel.setMaximum(max);
+        roundSlider.setValue(roundSlider.getValue());
+        visibleRoundNumber.setText(round + " / " + max);
     }
     
     private void deployPredicate(Predicate p) {
@@ -556,9 +554,9 @@ public class PredVis extends JFrame {
         }
         
         //Initialise network viewer.
-        layout = new CircleLayout<NodeId, String>(ns.getGraph());
+        layout = new KKLayout<>(ns.getGraph());
         layout.setSize(new Dimension(550, 550));
-        vv = new BasicVisualizationServer<NodeId, String>(layout);
+        vv = new BasicVisualizationServer<>(layout);
         vv.setPreferredSize(new Dimension(600, 600));
         
         // Init. vertex painter.
@@ -566,8 +564,16 @@ public class PredVis extends JFrame {
             @Override
             public Paint transform(NodeId i) {
                 //Convert node id hash to colour.
-                int hash = i.hashCode();
-                return new Color(hash % 256, (hash % 128) * 2, (hash % 64) * 4);
+                MessageDigest md5 = null;
+                try {
+                    //Take first 3 bytes of md5 of node id as RGB values for semi random colour distribution.
+                    md5 = MessageDigest.getInstance("MD5");
+                    byte[] in = i.toString().getBytes("UTF-8");
+                    byte[] out = md5.digest(in);
+                    return new Color(out[0] + 128, out[1] + 128, out[2] + 128);
+                } catch(NoSuchAlgorithmException | UnsupportedEncodingException e) {
+                    return Color.RED;
+                }
             }
         };
         
@@ -600,33 +606,31 @@ public class PredVis extends JFrame {
             }
         } else {
             rounds.put(round, ns);
-            //Update slider values and rerender visible round.
-            int min = Integer.MAX_VALUE;
-            int max = 0;
-            for (Integer i : rounds.keySet()) {
-                if (i < min) min = i;
-                if (i > max) max = i;
-            }
-            roundSliderModel.setMinimum(min);
-            roundSliderModel.setMaximum(max);
-            visibleRoundNumber.setText(visibleRound + " / " + max);
-            repaint();
         }
         
         showRound(round);
+        repaint();
     }
     
     public void receivePredicateData(int id, PredicateData pd) {
+        final int idf = id;
+        final PredicateData pdf = pd;
+        
         //Store data with predicate.
-        for (Predicate p : predicateData.keySet()) {
-            if (p.getId() == id) {
-                List<PredicateData> l = predicateData.get(p);
-                l.add(pd);
-                
-                refreshPredicateDetails();
-                break;
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                for (Predicate p : predicateData.keySet()) {
+                    if (p.getId() == idf) {
+                        List<PredicateData> l = predicateData.get(p);
+                        l.add(pdf);
+
+                        refreshPredicateDetails();
+                        break;
+                    }
+                }
             }
-        }
+        });
     }
     
     /**
@@ -634,11 +638,18 @@ public class PredVis extends JFrame {
      */
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
-            System.err.println("Must supply communication port.");
+            System.err.println("Must supply communication device.");
             return;
         }
         
-        PredVis pv = new PredVis(args[0]);
-        pv.setVisible(true);
+        final String device = args[0];
+        
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                PredVis pv = new PredVis(device);
+                pv.setVisible(true);
+            }
+        });
     }
 }

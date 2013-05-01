@@ -55,9 +55,15 @@ public class NodeComms {
                                 break;
                             }
                             
-                            //Act on received line.
+                            // Act on received line.
                             assert(line != null);
-                            receivedLine(line);
+                            
+                            try {
+                                receivedLine(line);
+                            } catch (Exception e) {
+                                System.err.println("Bad line parsing `" + line + "' with " + e);
+                                e.printStackTrace();
+                            }
                         }
                         
                         closedConnection();

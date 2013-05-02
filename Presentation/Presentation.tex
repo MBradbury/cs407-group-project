@@ -384,7 +384,7 @@ Global & PEGP
 \end{frame}
 
 %Matt
-\begin{frame}{Predicate Evaluation --- Response}
+\begin{frame}{Predicate Evaluation --- Evaluation}
 \begin{itemize}
 	\item Implemented a virtual machine in C to evaluate predicates on the nodes
 		\begin{itemize}
@@ -408,6 +408,9 @@ Global & PEGP
 & \hspace{2em}		\forall n' \in \text{Neighbours}(n, 2) \cdot \\
 & \hspace{4em}				\text{slot}(n) \neq \text{slot}(n')
 \end{align*}
+
+\begin{center}
+\begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[language=Hoppy]
 [all]
 function 1 as slot returning int in
@@ -416,6 +419,9 @@ function 1 as slot returning int in
             slot(x) != slot(this)
         )
 \end{lstlisting}
+\end{minipage}
+\end{center}
+
 \end{frame}
 
 %Matt
@@ -427,6 +433,9 @@ function 1 as slot returning int in
 & \hspace{6em}				\text{addr}(n') \not= \text{addr}(n'') \\
 & \hspace{8em}					\implies \text{slot}(n') \neq \text{slot}(n'')
 \end{align*}
+
+\begin{center}
+\begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[language=Hoppy]
 [all]
 function 0 as addr returning int in
@@ -438,12 +447,14 @@ function 1 as slot returning int in
             & slot(a) != slot(this)
         )
 \end{lstlisting}
+\end{minipage}
+\end{center}
 \end{frame}
 
 %Matt
 \begin{frame}[fragile]{Predicate Evaluation --- DSL}
 \begin{columns}[t]
-	\begin{column}[T]{3cm}
+	\begin{column}[T]{3.1cm}
 \begin{lstlisting}[language=Dragon]
 //TARGETING all
 //FUNC 0 AS addr

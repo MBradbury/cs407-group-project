@@ -6,7 +6,6 @@
 \usepackage{epstopdf}
 \usepackage{graphicx}
 \usepackage{subfigure}
-\usepackage{comment}
 \usepackage{array}
 
 
@@ -56,12 +55,13 @@
 \setbeamercolor{block title}{use={frametitle},fg=frametitle.fg,bg=frametitle.bg}
 
 \newcommand{\subtitleframe}[1]{\begin{frame}\begin{block}{\centering\Large \vspace{1em} #1 \vspace{1em}}\end{block}\end{frame}}
+\newcommand{\subtitleframeimage}[2]{\begin{frame}\begin{block}{\centering\Large \vspace{1em} #1 \vspace{1em} }\end{block}\begin{figure}[H]\centering\includegraphics[scale=0.5]{#2}\end{figure}\end{frame}}
 
 %\usepackage{pgfpages}
 %\pgfpagesuselayout{4 on 1}[a4paper,landscape,border shrink=3mm]
 
 \title{Towards Practical Debugging of Wireless Sensor Networks}
-\author[M.~Bradbury, T.~Law, I.~Leong, D.~Robertson, A.~Shah, J.~Yarnall]{Matthew Bradbury\newline
+\author[Bradbury, Law, Leong, Robertson, Shah, Yarnall]{Matthew Bradbury\newline
 Tim Law\newline
 Ivan Leong\newline
 Dan Robertson\newline
@@ -76,7 +76,7 @@ Joe Yarnall}
 \titlepage
 \end{frame}
 
-\subtitleframe{Introduction}
+\subtitleframeimage{Introduction}{../Report/Images/CM5000.jpg}
 
 %Matt
 \begin{frame}{What is a Wireless Sensor Network}
@@ -155,6 +155,7 @@ WSNs perform data gathering tasks such as environment monitoring.
 		\item Array List
 		\item Unique Array
 		\item Map
+		\item Unit tests implemented for each
 	\end{itemize}
 \vspace{1em}
 Benefits:
@@ -169,7 +170,7 @@ Benefits:
 \begin{frame}{Implemented Libraries --- N--Hop Request}
 	\begin{itemize}
 		\item Used by predicate evaluation
-		\item Floods request N--Hops away from sink
+		\item Floods request N hops away from sink
 		\item Asks for mote's current state
 		\item Returned along the chain created by the flooding stage
 	\end{itemize}
@@ -241,6 +242,7 @@ Depends On:
 	\begin{itemize}
 		\item To debug a WSN we need to know the network topology
 		\item Uses Tree Aggregation to send neighbours to sink
+		\item Contiki library does neighbour detection
 	\end{itemize}
 
 \begin{figure}[H]
@@ -273,9 +275,9 @@ Consider:
 \begin{frame}[allowframebreaks]{Predicate Evaluation --- Libraries}
 \begin{table}[H]
 \centering
-\begin{tabular}{| l | p{4.2cm} | p{4.2cm} |}
+\begin{tabular}{| m{0.9cm} | m{4.2cm} | m{4.2cm} |}
 \hline
-~ & Periodic & Event\\
+~ & \centering Periodic & \centering Event\tabularnewline
 \hline
 Local & PELP
 	\begin{itemize}
@@ -295,17 +297,19 @@ Local & PELP
 
 \begin{table}[H]
 \centering
-\begin{tabular}{| l | p{4.2cm} | p{4.2cm} |}
+\begin{tabular}{| m{0.9cm} | m{4.2cm} | m{4.2cm} |}
 \hline
-~ & Periodic & Event\\
+~ & \centering Periodic & \centering Event\tabularnewline
 \hline
 Global & PEGP
 	\begin{itemize}
 		\item Similar to PELP, except data is aggregated to the base station
+		\item Predicate evaluation at base station
 	\end{itemize}
  & PEGE
 	\begin{itemize}
 		\item Similar to PELE, except data is aggregated to the base station
+		\item Predicate evaluation at base station
 	\end{itemize}\\
 \hline
 \end{tabular}
@@ -317,9 +321,9 @@ Global & PEGP
 \begin{frame}{Predicate Evaluation --- Libraries Used}
 \begin{table}[H]
 \centering
-\begin{tabular}{| l | p{4.2cm} | p{4.2cm} |}
+\begin{tabular}{| m{0.9cm} | m{4.2cm} | m{4.2cm} |}
 \hline
-~ & Periodic & Event\\
+~ & \centering Periodic & \centering Event\tabularnewline
 \hline
 Local & PELP
 	\begin{itemize}
@@ -402,7 +406,7 @@ Global & PEGP
 
 
 %Matt
-\begin{frame}[fragile]{Predicate Evaluation --- DSL}
+\begin{frame}[fragile]\frametitle{Predicate Evaluation --- DSL}
 \begin{align*}
 &				\forall n \in \text{Nodes} \cdot \\
 & \hspace{2em}		\forall n' \in \text{Neighbours}(n, 2) \cdot \\
@@ -421,11 +425,10 @@ function 1 as slot returning int in
 \end{lstlisting}
 \end{minipage}
 \end{center}
-
 \end{frame}
 
 %Matt
-\begin{frame}[fragile]{Predicate Evaluation --- DSL}
+\begin{frame}[fragile]\frametitle{Predicate Evaluation --- DSL}
 \begin{align*}
 &				\forall n \in \text{Nodes} \cdot \\
 & \hspace{2em}		\forall n' \in \text{Neighbours}(n, 1) \cup \{n\} \cdot \\
@@ -452,7 +455,7 @@ function 1 as slot returning int in
 \end{frame}
 
 %Matt
-\begin{frame}[fragile]{Predicate Evaluation --- DSL}
+\begin{frame}[fragile]\frametitle{Predicate Evaluation --- DSL}
 \begin{columns}[t]
 	\begin{column}[T]{3.1cm}
 \begin{lstlisting}[language=Dragon]

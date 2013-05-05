@@ -60,3 +60,7 @@ VarDepthClustering
 venv/
 
 /PredicateLanguage/PredicateLanguage.vcxproj.user
+
+/Presentation/Presentation.nav
+/Presentation/Presentation.snm
+/Presentation/Presentation.vrb

@@ -230,7 +230,7 @@ Depends On:
 	\begin{enumerate}
 		\item Leaf node generates data, forwards to parent
 		\item Parent waits for a period, aggregating received data
-		\item The node adds its own data to the aggregate
+		\item The node aggregates its own data with the stored data
 		\item The node then forwards the message to its parent
 		\item Repeat until the aggregated message reaches the base station
 	\end{enumerate}
@@ -624,8 +624,7 @@ Developed:
 Found:
 	\begin{itemize}
 		\item In--network, event--based evaluation suitable for ``small'' predicates
-		\item In--network, periodic--based evaluation suitable for ``large'' predicate where evaluation is concerned
-		\item Global evaluation more suitable for ``large'' predicates where energy is concerned
+		\item In--network, periodic--based evaluation suitable for ``large'' predicates
 	\end{itemize}
 \end{frame}
 
